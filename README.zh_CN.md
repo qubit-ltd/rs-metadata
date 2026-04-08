@@ -35,7 +35,8 @@
 ### 🗂 **`Metadata`**
 
 - 以 `String` 为键、`serde_json::Value` 为值的有序键值存储
-- 通过 `serde` 往返实现类型安全的 `get::<T>()` / `set()` 访问器
+- 提供两层类型化访问：便捷的 `get::<T>()` / `set()` 与显式的 `try_get::<T>()` / `try_set()`
+- 提供轻量的 JSON 类型检查能力 `MetadataValueKind`
 - 支持合并、扩展和迭代操作
 - 完整的 `serde` 序列化 / 反序列化支持
 - 派生 `Debug`、`Clone`、`PartialEq`、`Default`
@@ -65,11 +66,32 @@ meta.set("author", "alice");
 meta.set("priority", 3_i64);
 meta.set("reviewed", true);
 
+// 便捷 API：简洁、宽松。
 let author: Option<String> = meta.get("author");
 assert_eq!(author.as_deref(), Some("alice"));
 
-let priority: Option<i64> = meta.get("priority");
-assert_eq!(priority, Some(3));
+// 显式 API：保留失败原因。
+let priority = meta.try_get::<i64>("priority").unwrap();
+assert_eq!(priority, 3);
+```
+
+## 错误处理
+
+如果调用方需要区分“键不存在”和“类型不匹配”，应优先使用显式 API，
+并检查 `MetadataError`：
+
+```rust
+use qubit_metadata::{Metadata, MetadataError, MetadataValueKind};
+
+let mut meta = Metadata::new();
+meta.set("answer", "forty-two");
+
+match meta.try_get::<i64>("answer") {
+    Err(MetadataError::DeserializationError { actual, .. }) => {
+        assert_eq!(actual, MetadataValueKind::String);
+    }
+    other => panic!("unexpected result: {other:?}"),
+}
 ```
 
 ## 许可证

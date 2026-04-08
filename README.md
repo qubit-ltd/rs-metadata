@@ -37,7 +37,8 @@ point with type-safe access, `serde_json::Value` backing, and first-class
 ### 🗂 **`Metadata`**
 
 - Ordered key-value store with `String` keys and `serde_json::Value` values
-- Type-safe `get::<T>()` / `set()` accessors via `serde` round-trip
+- Two typed access layers: convenience `get::<T>()` / `set()` and explicit `try_get::<T>()` / `try_set()`
+- Lightweight JSON kind inspection via `MetadataValueKind`
 - Merge, extend, and iterate operations
 - Full `serde` serialization / deserialization support
 - `Debug`, `Clone`, `PartialEq`, `Default` derives
@@ -68,11 +69,32 @@ meta.set("author", "alice");
 meta.set("priority", 3_i64);
 meta.set("reviewed", true);
 
+// Convenience API: terse and forgiving.
 let author: Option<String> = meta.get("author");
 assert_eq!(author.as_deref(), Some("alice"));
 
-let priority: Option<i64> = meta.get("priority");
-assert_eq!(priority, Some(3));
+// Explicit API: preserves failure reasons.
+let priority = meta.try_get::<i64>("priority").unwrap();
+assert_eq!(priority, 3);
+```
+
+## Error Handling
+
+When callers need to distinguish missing keys from type mismatches, prefer the
+explicit APIs and inspect `MetadataError`:
+
+```rust
+use qubit_metadata::{Metadata, MetadataError, MetadataValueKind};
+
+let mut meta = Metadata::new();
+meta.set("answer", "forty-two");
+
+match meta.try_get::<i64>("answer") {
+    Err(MetadataError::DeserializationError { actual, .. }) => {
+        assert_eq!(actual, MetadataValueKind::String);
+    }
+    other => panic!("unexpected result: {other:?}"),
+}
 ```
 
 ## License
