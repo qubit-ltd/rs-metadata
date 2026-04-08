@@ -55,7 +55,7 @@
 
 ```toml
 [dependencies]
-qubit-metadata = "0.1.0"
+qubit-metadata = "0.2.0"
 ```
 
 ## 用法示例
