@@ -22,7 +22,7 @@ use serde_json::{
 use qubit_metadata::{
     Metadata,
     MetadataError,
-    MetadataValueKind,
+    MetadataValueType,
 };
 
 #[derive(Debug, PartialEq, serde::Deserialize)]
@@ -142,7 +142,7 @@ fn try_get_missing_key_reports_error() {
 }
 
 #[test]
-fn try_get_type_mismatch_reports_expected_and_actual_kind() {
+fn try_get_type_mismatch_reports_expected_and_actual_type() {
     let mut meta = Metadata::new();
     meta.set("key", "not-a-number");
 
@@ -156,7 +156,7 @@ fn try_get_type_mismatch_reports_expected_and_actual_kind() {
         } => {
             assert_eq!(key, "key");
             assert_eq!(expected, std::any::type_name::<i64>());
-            assert_eq!(actual, MetadataValueKind::String);
+            assert_eq!(actual, MetadataValueType::String);
             assert!(!message.is_empty());
         }
         other => panic!("expected DeserializationError, got {other:?}"),
@@ -217,7 +217,7 @@ fn set_raw_inserts_value() {
 }
 
 #[test]
-fn value_kind_reports_json_shape() {
+fn value_type_reports_json_shape() {
     let mut meta = Metadata::new();
     meta.set("flag", true);
     meta.set("count", 7_i64);
@@ -226,27 +226,27 @@ fn value_kind_reports_json_shape() {
     meta.set_raw("config", json!({"nested": true}));
     meta.set_raw("empty", Value::Null);
 
-    assert_eq!(meta.value_kind("flag"), Some(MetadataValueKind::Bool));
-    assert_eq!(meta.value_kind("count"), Some(MetadataValueKind::Number));
-    assert_eq!(meta.value_kind("name"), Some(MetadataValueKind::String));
-    assert_eq!(meta.value_kind("items"), Some(MetadataValueKind::Array));
-    assert_eq!(meta.value_kind("config"), Some(MetadataValueKind::Object));
-    assert_eq!(meta.value_kind("empty"), Some(MetadataValueKind::Null));
-    assert_eq!(meta.value_kind("missing"), None);
+    assert_eq!(meta.value_type("flag"), Some(MetadataValueType::Bool));
+    assert_eq!(meta.value_type("count"), Some(MetadataValueType::Number));
+    assert_eq!(meta.value_type("name"), Some(MetadataValueType::String));
+    assert_eq!(meta.value_type("items"), Some(MetadataValueType::Array));
+    assert_eq!(meta.value_type("config"), Some(MetadataValueType::Object));
+    assert_eq!(meta.value_type("empty"), Some(MetadataValueType::Null));
+    assert_eq!(meta.value_type("missing"), None);
 }
 
 #[test]
-fn metadata_value_kind_from_and_display() {
+fn metadata_value_type_from_and_display() {
     assert_eq!(
-        MetadataValueKind::from(&Value::Null),
-        MetadataValueKind::Null
+        MetadataValueType::from(&Value::Null),
+        MetadataValueType::Null
     );
-    assert_eq!(MetadataValueKind::Null.to_string(), "null");
-    assert_eq!(MetadataValueKind::Bool.to_string(), "bool");
-    assert_eq!(MetadataValueKind::Number.to_string(), "number");
-    assert_eq!(MetadataValueKind::String.to_string(), "string");
-    assert_eq!(MetadataValueKind::Array.to_string(), "array");
-    assert_eq!(MetadataValueKind::Object.to_string(), "object");
+    assert_eq!(MetadataValueType::Null.to_string(), "null");
+    assert_eq!(MetadataValueType::Bool.to_string(), "bool");
+    assert_eq!(MetadataValueType::Number.to_string(), "number");
+    assert_eq!(MetadataValueType::String.to_string(), "string");
+    assert_eq!(MetadataValueType::Array.to_string(), "array");
+    assert_eq!(MetadataValueType::Object.to_string(), "object");
 }
 
 #[test]
@@ -266,7 +266,7 @@ fn metadata_error_display_messages_are_human_readable() {
     let deserialization = MetadataError::DeserializationError {
         key: "answer".to_string(),
         expected: std::any::type_name::<i64>(),
-        actual: MetadataValueKind::String,
+        actual: MetadataValueType::String,
         message: "invalid type".to_string(),
     };
     assert_eq!(

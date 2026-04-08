@@ -30,7 +30,7 @@ point with type-safe access, `serde_json::Value` backing, and first-class
 - **Generality**: No domain-specific assumptions — usable in any Rust project
 - **Extensibility**: Acts as a structured extension point, not a stringly-typed bag
 - **Serialization**: First-class `serde` support for JSON interchange
-- **Filtering**: Optional `MetadataFilter` for composable query conditions
+- **Filtering**: `MetadataFilter` for composable predicates over `Metadata`
 
 ## Features
 
@@ -38,17 +38,17 @@ point with type-safe access, `serde_json::Value` backing, and first-class
 
 - Ordered key-value store with `String` keys and `serde_json::Value` values
 - Two typed access layers: convenience `get::<T>()` / `set()` and explicit `try_get::<T>()` / `try_set()`
-- Lightweight JSON kind inspection via `MetadataValueKind`
+- Lightweight JSON value type inspection via `MetadataValueType`
 - Merge, extend, and iterate operations
 - Full `serde` serialization / deserialization support
 - `Debug`, `Clone`, `PartialEq`, `Default` derives
 
-### 🔍 **`MetadataFilter`** *(optional, planned)*
+### 🔍 **`MetadataFilter`**
 
-- Composable filter expressions for metadata-based queries
-- Supports equality, range, and logical combinators (`and`, `or`, `not`)
-- Useful for filtering annotated records in databases, vector stores, or
-  in-memory collections
+- Composable tree of conditions over metadata keys, evaluated with `matches(&metadata)`
+- Comparison, existence, and set-membership leaves; logical `and`, `or`, and `not`
+- `Serialize` / `Deserialize` for persisting or exchanging filter definitions as JSON
+- Useful for in-memory filtering, query predicates, or any pipeline that needs a portable metadata predicate
 
 ## Installation
 
@@ -78,20 +78,87 @@ let priority = meta.try_get::<i64>("priority").unwrap();
 assert_eq!(priority, 3);
 ```
 
+## MetadataFilter
+
+`MetadataFilter` describes a predicate on a single [`Metadata`](https://docs.rs/qubit-metadata/latest/qubit_metadata/struct.Metadata.html) value. You build a tree of conditions, then call [`matches`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MetadataFilter.html#method.matches) to test whether a given `Metadata` satisfies it.
+
+### Leaf constructors
+
+Each leaf inspects one key (values are serialized to [`serde_json::Value`](https://docs.rs/serde_json/latest/serde_json/enum.Value.html) the same way as `Metadata::set`):
+
+| Constructor | Semantics |
+|-------------|-----------|
+| `equal`, `not_equal` | Equality / inequality of the stored JSON value |
+| `greater`, `greater_equal`, `less`, `less_equal` | Ordered comparison (numeric ordering, string lexicographic order, and mixed-type rules as implemented for your value shapes) |
+| `exists`, `not_exists` | Key present / absent |
+| `in_values`, `not_in_values` | Membership of the key’s value in a finite set |
+
+### Logical combinators
+
+- **`and`** — all sub-filters must match. If `self` is already an `And` node, the new filter is appended (flat structure).
+- **`or`** — at least one sub-filter must match (same flattening behavior as `and`).
+- **`not`** — negates a filter. The `!` operator is also implemented via [`Not`](https://doc.rust-lang.org/std/ops/trait.Not.html) for `MetadataFilter`.
+
+Edge cases: an `And` with **no** children matches **every** `Metadata`; an `Or` with **no** children matches **none**.
+
+### Evaluation
+
+Call `filter.matches(&meta)` to obtain a `bool`. How a missing key interacts with each leaf operator is defined on [`Condition`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.Condition.html) (for example, `equal` requires the key to exist; `not_equal` may still match when the key is absent).
+
+### Serde
+
+`MetadataFilter` implements `Serialize` and `Deserialize`, so you can store filters in configuration, databases, or JSON APIs alongside your metadata model.
+
+### Examples
+
+**AND — all conditions must hold:**
+
+```rust
+use qubit_metadata::{Metadata, MetadataFilter};
+
+let mut meta = Metadata::new();
+meta.set("status", "active");
+meta.set("score", 42_i64);
+
+let filter = MetadataFilter::equal("status", "active")
+    .and(MetadataFilter::greater_equal("score", 10_i64));
+
+assert!(filter.matches(&meta));
+```
+
+**OR, membership, and negation:**
+
+```rust
+use qubit_metadata::{Metadata, MetadataFilter};
+
+let mut meta = Metadata::new();
+meta.set("region", "eu");
+meta.set("tier", "pro");
+
+let filter = MetadataFilter::in_values("region", ["eu", "us"])
+    .or(MetadataFilter::equal("tier", "enterprise"));
+
+assert!(filter.matches(&meta));
+
+let hide_drafts = MetadataFilter::equal("status", "draft").not();
+// Equivalent: !MetadataFilter::equal("status", "draft")
+assert!(hide_drafts.matches(&meta));
+```
+
 ## Error Handling
 
 When callers need to distinguish missing keys from type mismatches, prefer the
 explicit APIs and inspect `MetadataError`:
 
 ```rust
-use qubit_metadata::{Metadata, MetadataError, MetadataValueKind};
+use qubit_metadata::{Metadata, MetadataError, MetadataValueType};
 
 let mut meta = Metadata::new();
 meta.set("answer", "forty-two");
 
 match meta.try_get::<i64>("answer") {
     Err(MetadataError::DeserializationError { actual, .. }) => {
-        assert_eq!(actual, MetadataValueKind::String);
+        assert_eq!(actual, MetadataValueType::String);
     }
     other => panic!("unexpected result: {other:?}"),
 }

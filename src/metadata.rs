@@ -20,7 +20,7 @@ use serde_json::Value;
 use crate::{
     MetadataError,
     MetadataResult,
-    MetadataValueKind,
+    MetadataValueType,
 };
 
 /// A structured, ordered, type-safe key-value store for attaching arbitrary
@@ -124,14 +124,14 @@ impl Metadata {
         self.0.get(key)
     }
 
-    /// Returns the coarse JSON kind of the value stored under `key`.
+    /// Returns the coarse JSON value type of the value stored under `key`.
     ///
     /// This is a lightweight inspection API inspired by the stricter type
     /// introspection facilities in `qubit-value`, adapted to `Metadata`'s
     /// open-ended JSON storage model.
     #[inline]
-    pub fn value_kind(&self, key: &str) -> Option<MetadataValueKind> {
-        self.0.get(key).map(MetadataValueKind::of)
+    pub fn value_type(&self, key: &str) -> Option<MetadataValueType> {
+        self.0.get(key).map(MetadataValueType::of)
     }
 
     /// Retrieves and deserializes the value associated with `key`, or returns

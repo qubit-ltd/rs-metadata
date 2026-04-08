@@ -6,69 +6,13 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! Error types and lightweight type introspection for [`Metadata`](crate::Metadata).
+//! [`MetadataError`] — failures from explicit `Metadata` accessors.
 
 use std::fmt;
 
 use serde_json::Value;
 
-/// Coarse-grained JSON value kinds used by [`MetadataError`] and inspection APIs.
-///
-/// `Metadata` stores arbitrary [`serde_json::Value`] instances, so it cannot
-/// recover the caller's original Rust type. `MetadataValueKind` is therefore a
-/// JSON-level classification, analogous to the stricter `data_type()` concept
-/// in `qubit-value`, but tailored to an open-ended JSON model.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MetadataValueKind {
-    /// JSON `null`.
-    Null,
-    /// JSON boolean.
-    Bool,
-    /// JSON number.
-    Number,
-    /// JSON string.
-    String,
-    /// JSON array.
-    Array,
-    /// JSON object.
-    Object,
-}
-
-impl MetadataValueKind {
-    /// Returns the JSON kind of `value`.
-    #[inline]
-    pub fn of(value: &Value) -> Self {
-        match value {
-            Value::Null => Self::Null,
-            Value::Bool(_) => Self::Bool,
-            Value::Number(_) => Self::Number,
-            Value::String(_) => Self::String,
-            Value::Array(_) => Self::Array,
-            Value::Object(_) => Self::Object,
-        }
-    }
-}
-
-impl From<&Value> for MetadataValueKind {
-    #[inline]
-    fn from(value: &Value) -> Self {
-        Self::of(value)
-    }
-}
-
-impl fmt::Display for MetadataValueKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let text = match self {
-            Self::Null => "null",
-            Self::Bool => "bool",
-            Self::Number => "number",
-            Self::String => "string",
-            Self::Array => "array",
-            Self::Object => "object",
-        };
-        f.write_str(text)
-    }
-}
+use crate::metadata_value_type::MetadataValueType;
 
 /// Errors produced by explicit `Metadata` accessors such as
 /// [`Metadata::try_get`](crate::Metadata::try_get) and
@@ -90,8 +34,8 @@ pub enum MetadataError {
         key: String,
         /// Fully-qualified Rust type name requested by the caller.
         expected: &'static str,
-        /// Actual JSON kind stored under the key.
-        actual: MetadataValueKind,
+        /// Actual JSON value type stored under the key.
+        actual: MetadataValueType,
         /// Human-readable serde error message.
         message: String,
     },
@@ -108,7 +52,7 @@ impl MetadataError {
         Self::DeserializationError {
             key: key.to_string(),
             expected: std::any::type_name::<T>(),
-            actual: MetadataValueKind::of(value),
+            actual: MetadataValueType::of(value),
             message: error.to_string(),
         }
     }
@@ -144,7 +88,3 @@ impl fmt::Display for MetadataError {
 }
 
 impl std::error::Error for MetadataError {}
-
-/// Result type used by explicit `Metadata` operations that report failure
-/// reasons instead of collapsing them into `None`.
-pub type MetadataResult<T> = Result<T, MetadataError>;

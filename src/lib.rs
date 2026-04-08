@@ -30,7 +30,7 @@
 //! - Filter type: [`MetadataFilter`] — composable filter expressions for metadata queries
 //! - Condition type: [`Condition`] — individual comparison predicates
 //! - Error type: [`MetadataError`] — explicit failure reporting for `try_*` APIs
-//! - Type inspection: [`MetadataValueKind`] — lightweight JSON kind inspection
+//! - Type inspection: [`MetadataValueType`] — lightweight JSON value type inspection
 //!
 //! ## Example
 //!
@@ -49,8 +49,8 @@
 //! let priority = meta.try_get::<i64>("priority").unwrap();
 //! assert_eq!(priority, 3);
 //!
-//! let filter = MetadataFilter::eq("author", "alice")
-//!     .and(MetadataFilter::gte("priority", 1_i64));
+//! let filter = MetadataFilter::equal("author", "alice")
+//!     .and(MetadataFilter::greater_equal("priority", 1_i64));
 //! assert!(filter.matches(&meta));
 //! ```
 //!
@@ -60,17 +60,16 @@
 
 #![deny(missing_docs)]
 
-mod error;
-mod filter;
+mod condition;
 mod metadata;
+mod metadata_error;
+mod metadata_filter;
+mod metadata_result;
+mod metadata_value_type;
 
-pub use error::{
-    MetadataError,
-    MetadataResult,
-    MetadataValueKind,
-};
-pub use filter::{
-    Condition,
-    MetadataFilter,
-};
+pub use condition::Condition;
 pub use metadata::Metadata;
+pub use metadata_error::MetadataError;
+pub use metadata_filter::MetadataFilter;
+pub use metadata_result::MetadataResult;
+pub use metadata_value_type::MetadataValueType;
