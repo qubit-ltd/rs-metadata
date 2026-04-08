@@ -10,9 +10,40 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{json, Value};
+use serde::{
+    Serialize,
+    Serializer,
+};
+use serde_json::{
+    json,
+    Value,
+};
 
-use qubit_metadata::Metadata;
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+    MetadataValueKind,
+};
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+struct AuditInfo {
+    enabled: bool,
+    level: String,
+}
+
+struct FailingSerialize;
+
+impl Serialize for FailingSerialize {
+    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        Err(serde::ser::Error::custom(format!(
+            "cannot serialize in {}",
+            std::any::type_name::<S>()
+        )))
+    }
+}
 
 // ── Construction ─────────────────────────────────────────────────────────────
 
@@ -58,9 +89,9 @@ fn set_and_get_bool() {
 #[test]
 fn set_and_get_f64() {
     let mut meta = Metadata::new();
-    meta.set("score", 3.14_f64);
+    meta.set("score", std::f64::consts::PI);
     let v: Option<f64> = meta.get("score");
-    assert!((v.unwrap() - 3.14).abs() < 1e-10);
+    assert!((v.unwrap() - std::f64::consts::PI).abs() < 1e-10);
 }
 
 #[test]
@@ -88,6 +119,87 @@ fn get_wrong_type_returns_none() {
     assert!(v.is_none());
 }
 
+#[test]
+fn try_get_returns_typed_value() {
+    let mut meta = Metadata::new();
+    meta.set_raw("audit", json!({"enabled": true, "level": "strict"}));
+
+    let audit = meta.try_get::<AuditInfo>("audit").unwrap();
+    assert_eq!(
+        audit,
+        AuditInfo {
+            enabled: true,
+            level: "strict".to_string(),
+        }
+    );
+}
+
+#[test]
+fn try_get_missing_key_reports_error() {
+    let meta = Metadata::new();
+    let error = meta.try_get::<String>("missing").unwrap_err();
+    assert_eq!(error, MetadataError::MissingKey("missing".to_string()));
+}
+
+#[test]
+fn try_get_type_mismatch_reports_expected_and_actual_kind() {
+    let mut meta = Metadata::new();
+    meta.set("key", "not-a-number");
+
+    let error = meta.try_get::<i64>("key").unwrap_err();
+    match error {
+        MetadataError::DeserializationError {
+            key,
+            expected,
+            actual,
+            message,
+        } => {
+            assert_eq!(key, "key");
+            assert_eq!(expected, std::any::type_name::<i64>());
+            assert_eq!(actual, MetadataValueKind::String);
+            assert!(!message.is_empty());
+        }
+        other => panic!("expected DeserializationError, got {other:?}"),
+    }
+}
+
+#[test]
+fn get_or_returns_default_for_missing_key() {
+    let meta = Metadata::new();
+    let value: i64 = meta.get_or("missing", 42);
+    assert_eq!(value, 42);
+}
+
+#[test]
+fn get_or_returns_default_for_type_mismatch() {
+    let mut meta = Metadata::new();
+    meta.set("key", "text");
+    let value: i64 = meta.get_or("key", 7);
+    assert_eq!(value, 7);
+}
+
+#[test]
+fn try_set_returns_previous_value() {
+    let mut meta = Metadata::new();
+    meta.try_set("key", "first").unwrap();
+    let old = meta.try_set("key", "second").unwrap();
+    assert_eq!(old, Some(json!("first")));
+}
+
+#[test]
+fn try_set_reports_serialization_error() {
+    let mut meta = Metadata::new();
+    let error = meta.try_set("key", FailingSerialize).unwrap_err();
+
+    match error {
+        MetadataError::SerializationError { key, message } => {
+            assert_eq!(key, "key");
+            assert!(message.contains("cannot serialize"));
+        }
+        other => panic!("expected SerializationError, got {other:?}"),
+    }
+}
+
 // ── get_raw / set_raw ────────────────────────────────────────────────────────
 
 #[test]
@@ -102,6 +214,70 @@ fn set_raw_inserts_value() {
     let mut meta = Metadata::new();
     meta.set_raw("raw", json!({"nested": true}));
     assert_eq!(meta.get_raw("raw"), Some(&json!({"nested": true})));
+}
+
+#[test]
+fn value_kind_reports_json_shape() {
+    let mut meta = Metadata::new();
+    meta.set("flag", true);
+    meta.set("count", 7_i64);
+    meta.set("name", "alice");
+    meta.set_raw("items", json!([1, 2, 3]));
+    meta.set_raw("config", json!({"nested": true}));
+    meta.set_raw("empty", Value::Null);
+
+    assert_eq!(meta.value_kind("flag"), Some(MetadataValueKind::Bool));
+    assert_eq!(meta.value_kind("count"), Some(MetadataValueKind::Number));
+    assert_eq!(meta.value_kind("name"), Some(MetadataValueKind::String));
+    assert_eq!(meta.value_kind("items"), Some(MetadataValueKind::Array));
+    assert_eq!(meta.value_kind("config"), Some(MetadataValueKind::Object));
+    assert_eq!(meta.value_kind("empty"), Some(MetadataValueKind::Null));
+    assert_eq!(meta.value_kind("missing"), None);
+}
+
+#[test]
+fn metadata_value_kind_from_and_display() {
+    assert_eq!(
+        MetadataValueKind::from(&Value::Null),
+        MetadataValueKind::Null
+    );
+    assert_eq!(MetadataValueKind::Null.to_string(), "null");
+    assert_eq!(MetadataValueKind::Bool.to_string(), "bool");
+    assert_eq!(MetadataValueKind::Number.to_string(), "number");
+    assert_eq!(MetadataValueKind::String.to_string(), "string");
+    assert_eq!(MetadataValueKind::Array.to_string(), "array");
+    assert_eq!(MetadataValueKind::Object.to_string(), "object");
+}
+
+#[test]
+fn metadata_error_display_messages_are_human_readable() {
+    let missing = MetadataError::MissingKey("missing".to_string());
+    assert_eq!(missing.to_string(), "Metadata key not found: missing");
+
+    let serialization = MetadataError::SerializationError {
+        key: "answer".to_string(),
+        message: "boom".to_string(),
+    };
+    assert_eq!(
+        serialization.to_string(),
+        "Failed to serialize metadata value for key 'answer': boom"
+    );
+
+    let deserialization = MetadataError::DeserializationError {
+        key: "answer".to_string(),
+        expected: std::any::type_name::<i64>(),
+        actual: MetadataValueKind::String,
+        message: "invalid type".to_string(),
+    };
+    assert_eq!(
+        deserialization.to_string(),
+        format!(
+            "Failed to deserialize metadata key 'answer' as {} from JSON string: invalid type",
+            std::any::type_name::<i64>()
+        )
+    );
+
+    let _error_ref: &dyn std::error::Error = &deserialization;
 }
 
 // ── contains_key / len / is_empty ────────────────────────────────────────────
@@ -282,10 +458,7 @@ fn into_inner() {
 
 #[test]
 fn from_iterator() {
-    let pairs = vec![
-        ("a".to_string(), json!(1)),
-        ("b".to_string(), json!(2)),
-    ];
+    let pairs = vec![("a".to_string(), json!(1)), ("b".to_string(), json!(2))];
     let meta: Metadata = pairs.into_iter().collect();
     assert_eq!(meta.len(), 2);
 }
@@ -294,7 +467,10 @@ fn from_iterator() {
 fn extend() {
     let mut meta = Metadata::new();
     meta.set("a", 1_i64);
-    meta.extend(vec![("b".to_string(), json!(2)), ("c".to_string(), json!(3))]);
+    meta.extend(vec![
+        ("b".to_string(), json!(2)),
+        ("c".to_string(), json!(3)),
+    ]);
     assert_eq!(meta.len(), 3);
 }
 

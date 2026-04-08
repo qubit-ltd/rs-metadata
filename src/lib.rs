@@ -29,6 +29,8 @@
 //! - Core type: [`Metadata`] — an ordered key-value store with typed accessors
 //! - Filter type: [`MetadataFilter`] — composable filter expressions for metadata queries
 //! - Condition type: [`Condition`] — individual comparison predicates
+//! - Error type: [`MetadataError`] — explicit failure reporting for `try_*` APIs
+//! - Type inspection: [`MetadataValueKind`] — lightweight JSON kind inspection
 //!
 //! ## Example
 //!
@@ -39,8 +41,13 @@
 //! meta.set("author", "alice");
 //! meta.set("priority", 3_i64);
 //!
+//! // Convenience API: missing key and type mismatch both collapse to None.
 //! let author: Option<String> = meta.get("author");
 //! assert_eq!(author.as_deref(), Some("alice"));
+//!
+//! // Explicit API: preserve failure reasons for diagnostics.
+//! let priority = meta.try_get::<i64>("priority").unwrap();
+//! assert_eq!(priority, 3);
 //!
 //! let filter = MetadataFilter::eq("author", "alice")
 //!     .and(MetadataFilter::gte("priority", 1_i64));
@@ -53,9 +60,15 @@
 
 #![deny(missing_docs)]
 
+mod error;
 mod filter;
 mod metadata;
 
+pub use error::{
+    MetadataError,
+    MetadataResult,
+    MetadataValueKind,
+};
 pub use filter::{
     Condition,
     MetadataFilter,

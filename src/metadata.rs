@@ -11,15 +11,32 @@
 
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::DeserializeOwned,
+    Serialize,
+};
 use serde_json::Value;
+
+use crate::{
+    MetadataError,
+    MetadataResult,
+    MetadataValueKind,
+};
 
 /// A structured, ordered, type-safe key-value store for attaching arbitrary
 /// annotations to domain objects.
 ///
 /// `Metadata` is backed by a [`BTreeMap<String, Value>`] (ordered by key) and
-/// provides a typed API via `serde` round-trips.  It is intentionally generic —
-/// no domain-specific assumptions are baked in.
+/// provides two layers of typed access:
+///
+/// - Convenience accessors like [`Metadata::get`] and [`Metadata::set`] keep the
+///   API terse and ergonomic.
+/// - Explicit accessors like [`Metadata::try_get`] and [`Metadata::try_set`]
+///   preserve failure reasons, which is useful for debugging and validation.
+///
+/// The type model intentionally stays JSON-shaped rather than closed over a
+/// fixed enum of Rust scalar types. This keeps the crate interoperable with
+/// `serde_json`, nested objects, and external JSON-based APIs.
 ///
 /// # Examples
 ///
@@ -31,13 +48,15 @@ use serde_json::Value;
 /// meta.set("priority", 3_i64);
 /// meta.set("reviewed", true);
 ///
+/// // Convenience API
 /// let author: Option<String> = meta.get("author");
 /// assert_eq!(author.as_deref(), Some("alice"));
 ///
-/// let priority: Option<i64> = meta.get("priority");
-/// assert_eq!(priority, Some(3));
+/// // Explicit API
+/// let priority = meta.try_get::<i64>("priority").unwrap();
+/// assert_eq!(priority, 3);
 /// ```
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, serde::Deserialize)]
 pub struct Metadata(BTreeMap<String, Value>);
 
 impl Metadata {
@@ -67,15 +86,36 @@ impl Metadata {
 
     /// Retrieves and deserializes the value associated with `key`.
     ///
-    /// Returns `None` if the key does not exist or if the stored value cannot
-    /// be deserialized into `T`.
+    /// This is the convenience version of [`Metadata::try_get`]. It returns
+    /// `None` when the key is absent or when deserialization into `T` fails.
+    ///
+    /// Use this when a concise, best-effort lookup is preferred over detailed
+    /// diagnostics.
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
-        T: for<'de> Deserialize<'de>,
+        T: DeserializeOwned,
     {
-        self.0
+        self.try_get(key).ok()
+    }
+
+    /// Retrieves and deserializes the value associated with `key`, preserving
+    /// the reason when retrieval fails.
+    ///
+    /// # Errors
+    ///
+    /// - [`MetadataError::MissingKey`] if `key` does not exist
+    /// - [`MetadataError::DeserializationError`] if the stored JSON value cannot
+    ///   be deserialized into `T`
+    pub fn try_get<T>(&self, key: &str) -> MetadataResult<T>
+    where
+        T: DeserializeOwned,
+    {
+        let value = self
+            .0
             .get(key)
-            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
+        serde_json::from_value(value.clone())
+            .map_err(|error| MetadataError::deserialization_error::<T>(key, value, error))
     }
 
     /// Returns a reference to the raw [`Value`] for `key`, or `None` if absent.
@@ -84,23 +124,57 @@ impl Metadata {
         self.0.get(key)
     }
 
+    /// Returns the coarse JSON kind of the value stored under `key`.
+    ///
+    /// This is a lightweight inspection API inspired by the stricter type
+    /// introspection facilities in `qubit-value`, adapted to `Metadata`'s
+    /// open-ended JSON storage model.
+    #[inline]
+    pub fn value_kind(&self, key: &str) -> Option<MetadataValueKind> {
+        self.0.get(key).map(MetadataValueKind::of)
+    }
+
+    /// Retrieves and deserializes the value associated with `key`, or returns
+    /// `default` if lookup fails for any reason.
+    ///
+    /// This mirrors the forgiving default-value style used by `qubit-config`.
+    /// It is intentionally convenience-oriented: both missing keys and type
+    /// mismatches fall back to the supplied default.
+    #[must_use]
+    pub fn get_or<T>(&self, key: &str, default: T) -> T
+    where
+        T: DeserializeOwned,
+    {
+        self.try_get(key).unwrap_or(default)
+    }
+
     /// Serializes `value` and inserts it under `key`.
     ///
-    /// Returns the previous raw [`Value`] if the key was already present, or
-    /// `None` otherwise.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `value` cannot be serialized to a [`Value`].  In practice
-    /// this only happens for types that are not serializable (e.g. custom
-    /// `Serialize` impls that always return an error).
+    /// This is the convenience version of [`Metadata::try_set`]. It preserves
+    /// the current ergonomic API and panics if serialization fails.
     pub fn set<T>(&mut self, key: impl Into<String>, value: T) -> Option<Value>
     where
         T: Serialize,
     {
+        self.try_set(key, value)
+            .expect("Metadata::set: value must be serializable to serde_json::Value")
+    }
+
+    /// Serializes `value` and inserts it under `key`, preserving serialization
+    /// failures instead of panicking.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::SerializationError`] when `value` fails to
+    /// serialize into [`serde_json::Value`].
+    pub fn try_set<T>(&mut self, key: impl Into<String>, value: T) -> MetadataResult<Option<Value>>
+    where
+        T: Serialize,
+    {
+        let key = key.into();
         let json = serde_json::to_value(value)
-            .expect("Metadata::set: value must be serializable to serde_json::Value");
-        self.0.insert(key.into(), json)
+            .map_err(|error| MetadataError::serialization_error(key.clone(), error))?;
+        Ok(self.0.insert(key, json))
     }
 
     /// Inserts a raw [`Value`] directly, bypassing serialization.

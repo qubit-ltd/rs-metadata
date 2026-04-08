@@ -28,8 +28,16 @@
 //! assert!(filter.matches(&meta));
 //! ```
 
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use std::cmp::Ordering;
+
+use serde_json::{
+    Number,
+    Value,
+};
 
 use crate::Metadata;
 
@@ -107,31 +115,29 @@ pub enum Condition {
 impl Condition {
     fn matches(&self, meta: &Metadata) -> bool {
         match self {
-            Condition::Eq { key, value } => meta.get_raw(key).map_or(false, |v| v == value),
-            Condition::Ne { key, value } => meta.get_raw(key).map_or(true, |v| v != value),
+            Condition::Eq { key, value } => meta.get_raw(key) == Some(value),
+            Condition::Ne { key, value } => meta.get_raw(key) != Some(value),
             Condition::Gt { key, value } => meta
                 .get_raw(key)
-                .map_or(false, |v| compare_values(v, value) == Some(std::cmp::Ordering::Greater)),
-            Condition::Gte { key, value } => meta.get_raw(key).map_or(false, |v| {
+                .is_some_and(|v| compare_values(v, value) == Some(Ordering::Greater)),
+            Condition::Gte { key, value } => meta.get_raw(key).is_some_and(|v| {
                 matches!(
                     compare_values(v, value),
-                    Some(std::cmp::Ordering::Greater) | Some(std::cmp::Ordering::Equal)
+                    Some(Ordering::Greater) | Some(Ordering::Equal)
                 )
             }),
             Condition::Lt { key, value } => meta
                 .get_raw(key)
-                .map_or(false, |v| compare_values(v, value) == Some(std::cmp::Ordering::Less)),
-            Condition::Lte { key, value } => meta.get_raw(key).map_or(false, |v| {
+                .is_some_and(|v| compare_values(v, value) == Some(Ordering::Less)),
+            Condition::Lte { key, value } => meta.get_raw(key).is_some_and(|v| {
                 matches!(
                     compare_values(v, value),
-                    Some(std::cmp::Ordering::Less) | Some(std::cmp::Ordering::Equal)
+                    Some(Ordering::Less) | Some(Ordering::Equal)
                 )
             }),
             Condition::Exists { key } => meta.contains_key(key),
             Condition::NotExists { key } => !meta.contains_key(key),
-            Condition::In { key, values } => {
-                meta.get_raw(key).map_or(false, |v| values.contains(v))
-            }
+            Condition::In { key, values } => meta.get_raw(key).is_some_and(|v| values.contains(v)),
             Condition::NotIn { key, values } => {
                 meta.get_raw(key).map_or(true, |v| !values.contains(v))
             }
@@ -141,23 +147,87 @@ impl Condition {
 
 /// Compares two [`Value`]s where both are the same numeric or string variant.
 /// Returns `None` when the values are incomparable (different types).
-fn compare_values(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
+fn compare_values(a: &Value, b: &Value) -> Option<Ordering> {
     match (a, b) {
-        (Value::Number(x), Value::Number(y)) => {
-            if let (Some(xi), Some(yi)) = (x.as_i64(), y.as_i64()) {
-                return xi.partial_cmp(&yi);
-            }
-            if let (Some(xu), Some(yu)) = (x.as_u64(), y.as_u64()) {
-                return xu.partial_cmp(&yu);
-            }
-            if let (Some(xf), Some(yf)) = (x.as_f64(), y.as_f64()) {
-                return xf.partial_cmp(&yf);
-            }
-            None
-        }
+        (Value::Number(x), Value::Number(y)) => compare_numbers(x, y),
         (Value::String(x), Value::String(y)) => x.partial_cmp(y),
         _ => None,
     }
+}
+
+const MAX_SAFE_INTEGER_F64_U64: u64 = 9_007_199_254_740_992; // 2^53
+const I64_MIN_F64: f64 = -9_223_372_036_854_775_808.0; // -2^63
+const I64_EXCLUSIVE_MAX_F64: f64 = 9_223_372_036_854_775_808.0; // 2^63
+const U64_EXCLUSIVE_MAX_F64: f64 = 18_446_744_073_709_551_616.0; // 2^64
+
+fn compare_numbers(a: &Number, b: &Number) -> Option<Ordering> {
+    if let (Some(xi), Some(yi)) = (a.as_i64(), b.as_i64()) {
+        return Some(xi.cmp(&yi));
+    }
+    if let (Some(xi), Some(yu)) = (a.as_i64(), b.as_u64()) {
+        return Some(compare_i64_u64(xi, yu));
+    }
+    if let (Some(xu), Some(yi)) = (a.as_u64(), b.as_i64()) {
+        return Some(compare_i64_u64(yi, xu).reverse());
+    }
+    if let (Some(xu), Some(yu)) = (a.as_u64(), b.as_u64()) {
+        return Some(xu.cmp(&yu));
+    }
+    if let (Some(xi), Some(yf)) = (a.as_i64(), b.as_f64()) {
+        return compare_i64_f64(xi, yf);
+    }
+    if let (Some(xf), Some(yi)) = (a.as_f64(), b.as_i64()) {
+        return compare_i64_f64(yi, xf).map(Ordering::reverse);
+    }
+    if let (Some(xu), Some(yf)) = (a.as_u64(), b.as_f64()) {
+        return compare_u64_f64(xu, yf);
+    }
+    if let (Some(xf), Some(yu)) = (a.as_f64(), b.as_u64()) {
+        return compare_u64_f64(yu, xf).map(Ordering::reverse);
+    }
+    if let (Some(xf), Some(yf)) = (a.as_f64(), b.as_f64()) {
+        return xf.partial_cmp(&yf);
+    }
+
+    // serde_json::Number always represents one of i64/u64/f64.
+    unreachable!("Number must be representable as i64/u64/f64")
+}
+
+#[inline]
+fn compare_i64_u64(x: i64, y: u64) -> Ordering {
+    if x < 0 {
+        Ordering::Less
+    } else {
+        (x as u64).cmp(&y)
+    }
+}
+
+#[inline]
+fn compare_i64_f64(x: i64, y: f64) -> Option<Ordering> {
+    if y.fract() == 0.0 && (I64_MIN_F64..I64_EXCLUSIVE_MAX_F64).contains(&y) {
+        // Integer-vs-integer path avoids precision loss for values > 2^53.
+        return Some(x.cmp(&(y as i64)));
+    }
+
+    if x.unsigned_abs() <= MAX_SAFE_INTEGER_F64_U64 {
+        return (x as f64).partial_cmp(&y);
+    }
+
+    None
+}
+
+#[inline]
+fn compare_u64_f64(x: u64, y: f64) -> Option<Ordering> {
+    if y < 0.0 {
+        return Some(Ordering::Greater);
+    }
+
+    if y.fract() == 0.0 && (0.0..U64_EXCLUSIVE_MAX_F64).contains(&y) {
+        // Integer-vs-integer path avoids precision loss for values > 2^53.
+        return Some(x.cmp(&(y as u64)));
+    }
+
+    None
 }
 
 /// A composable filter expression over [`Metadata`].
@@ -329,9 +399,10 @@ impl MetadataFilter {
     }
 
     /// Wraps `self` in a logical NOT.
+    #[allow(clippy::should_implement_trait)]
     #[must_use]
     pub fn not(self) -> Self {
-        MetadataFilter::Not(Box::new(self))
+        !self
     }
 
     // ── Evaluation ───────────────────────────────────────────────────────────
@@ -344,5 +415,13 @@ impl MetadataFilter {
             MetadataFilter::Or(children) => children.iter().any(|f| f.matches(meta)),
             MetadataFilter::Not(inner) => !inner.matches(meta),
         }
+    }
+}
+
+impl std::ops::Not for MetadataFilter {
+    type Output = MetadataFilter;
+
+    fn not(self) -> Self::Output {
+        MetadataFilter::Not(Box::new(self))
     }
 }
