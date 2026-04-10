@@ -1,4 +1,12 @@
 #!/bin/bash
+################################################################################
+#
+#    Copyright (c) 2026.
+#    Haixing Hu, Qubit Co. Ltd.
+#
+#    All rights reserved.
+#
+################################################################################
 #
 # Local CI check script
 # Run this script before committing code to ensure it passes all CircleCI checks
@@ -65,7 +73,7 @@ if cargo +nightly clippy --all-targets --all-features -- -D warnings 2>&1 | tee 
     cat /tmp/clippy-output.txt
     echo ""
     echo "Please try to auto-fix with:"
-    echo "  cargo +nightly clippy --fix"
+    echo "  cargo +nightly clippy --fix --all-targets --all-features"
     exit 1
 else
     print_success "Clippy checks passed"
@@ -136,10 +144,7 @@ echo ""
 # Check 6: Security audit
 print_step "6/6 Running security audit (cargo audit)..."
 if command -v cargo-audit &> /dev/null; then
-    ADVISORY_DB_URL="https://github.com/RustSec/advisory-db.git"
-    echo "Using advisory DB URL: $ADVISORY_DB_URL"
-    if GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
-        cargo audit --url "$ADVISORY_DB_URL"; then
+    if cargo audit; then
         print_success "Security audit passed, no known vulnerabilities found"
     else
         print_error "Security audit found issues"
@@ -168,3 +173,4 @@ echo ""
 
 # Clean up temporary files
 rm -f /tmp/clippy-output.txt
+
