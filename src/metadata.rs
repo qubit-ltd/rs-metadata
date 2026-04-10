@@ -91,6 +91,7 @@ impl Metadata {
     ///
     /// Use this when a concise, best-effort lookup is preferred over detailed
     /// diagnostics.
+    #[inline]
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
         T: DeserializeOwned,
@@ -140,6 +141,7 @@ impl Metadata {
     /// This mirrors the forgiving default-value style used by `qubit-config`.
     /// It is intentionally convenience-oriented: both missing keys and type
     /// mismatches fall back to the supplied default.
+    #[inline]
     #[must_use]
     pub fn get_or<T>(&self, key: &str, default: T) -> T
     where
@@ -152,6 +154,7 @@ impl Metadata {
     ///
     /// This is the convenience version of [`Metadata::try_set`]. It preserves
     /// the current ergonomic API and panics if serialization fails.
+    #[inline]
     pub fn set<T>(&mut self, key: impl Into<String>, value: T) -> Option<Value>
     where
         T: Serialize,
@@ -234,6 +237,7 @@ impl Metadata {
     }
 
     /// Retains only the entries for which `predicate` returns `true`.
+    #[inline]
     pub fn retain<F>(&mut self, mut predicate: F)
     where
         F: FnMut(&str, &Value) -> bool,
@@ -263,6 +267,7 @@ impl From<Metadata> for BTreeMap<String, Value> {
 }
 
 impl FromIterator<(String, Value)> for Metadata {
+    #[inline]
     fn from_iter<I: IntoIterator<Item = (String, Value)>>(iter: I) -> Self {
         Self(iter.into_iter().collect())
     }
@@ -289,6 +294,7 @@ impl<'a> IntoIterator for &'a Metadata {
 }
 
 impl Extend<(String, Value)> for Metadata {
+    #[inline]
     fn extend<I: IntoIterator<Item = (String, Value)>>(&mut self, iter: I) {
         self.0.extend(iter);
     }

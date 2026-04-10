@@ -73,6 +73,7 @@ impl MetadataFilter {
     // ── Leaf constructors ────────────────────────────────────────────────────
 
     /// Creates an equality filter: `key == value`.
+    #[inline]
     pub fn equal<T: Serialize>(key: impl Into<String>, value: T) -> Self {
         Self::Condition(Condition::Equal {
             key: key.into(),
@@ -82,6 +83,7 @@ impl MetadataFilter {
     }
 
     /// Creates a not-equal filter: `key != value`.
+    #[inline]
     pub fn not_equal<T: Serialize>(key: impl Into<String>, value: T) -> Self {
         Self::Condition(Condition::NotEqual {
             key: key.into(),
@@ -91,6 +93,7 @@ impl MetadataFilter {
     }
 
     /// Creates a greater-than filter: `key > value`.
+    #[inline]
     pub fn greater<T: Serialize>(key: impl Into<String>, value: T) -> Self {
         Self::Condition(Condition::Greater {
             key: key.into(),
@@ -100,6 +103,7 @@ impl MetadataFilter {
     }
 
     /// Creates a greater-than-or-equal filter: `key >= value`.
+    #[inline]
     pub fn greater_equal<T: Serialize>(key: impl Into<String>, value: T) -> Self {
         Self::Condition(Condition::GreaterEqual {
             key: key.into(),
@@ -109,6 +113,7 @@ impl MetadataFilter {
     }
 
     /// Creates a less-than filter: `key < value`.
+    #[inline]
     pub fn less<T: Serialize>(key: impl Into<String>, value: T) -> Self {
         Self::Condition(Condition::Less {
             key: key.into(),
@@ -118,6 +123,7 @@ impl MetadataFilter {
     }
 
     /// Creates a less-than-or-equal filter: `key <= value`.
+    #[inline]
     pub fn less_equal<T: Serialize>(key: impl Into<String>, value: T) -> Self {
         Self::Condition(Condition::LessEqual {
             key: key.into(),
@@ -127,16 +133,19 @@ impl MetadataFilter {
     }
 
     /// Creates an existence filter: the key must be present.
+    #[inline]
     pub fn exists(key: impl Into<String>) -> Self {
         Self::Condition(Condition::Exists { key: key.into() })
     }
 
     /// Creates a non-existence filter: the key must be absent.
+    #[inline]
     pub fn not_exists(key: impl Into<String>) -> Self {
         Self::Condition(Condition::NotExists { key: key.into() })
     }
 
     /// Creates an in-set filter: `key ∈ values`.
+    #[inline]
     pub fn in_values<T, I>(key: impl Into<String>, values: I) -> Self
     where
         T: Serialize,
@@ -156,6 +165,7 @@ impl MetadataFilter {
     }
 
     /// Creates a not-in-set filter: `key ∉ values`.
+    #[inline]
     pub fn not_in_values<T, I>(key: impl Into<String>, values: I) -> Self
     where
         T: Serialize,
@@ -180,6 +190,7 @@ impl MetadataFilter {
     ///
     /// If `self` is already an `And` node the new filter is appended to its
     /// children rather than creating a new nested node.
+    #[inline]
     #[must_use]
     pub fn and(self, other: MetadataFilter) -> Self {
         match self {
@@ -195,6 +206,7 @@ impl MetadataFilter {
     ///
     /// If `self` is already an `Or` node the new filter is appended to its
     /// children rather than creating a new nested node.
+    #[inline]
     #[must_use]
     pub fn or(self, other: MetadataFilter) -> Self {
         match self {
@@ -208,6 +220,7 @@ impl MetadataFilter {
 
     /// Wraps `self` in a logical NOT.
     #[allow(clippy::should_implement_trait)]
+    #[inline]
     #[must_use]
     pub fn not(self) -> Self {
         !self
@@ -216,6 +229,7 @@ impl MetadataFilter {
     // ── Evaluation ───────────────────────────────────────────────────────────
 
     /// Returns `true` if `meta` satisfies this filter.
+    #[inline]
     pub fn matches(&self, meta: &Metadata) -> bool {
         match self {
             MetadataFilter::Condition(cond) => cond.matches(meta),
@@ -229,6 +243,7 @@ impl MetadataFilter {
 impl std::ops::Not for MetadataFilter {
     type Output = MetadataFilter;
 
+    #[inline]
     fn not(self) -> Self::Output {
         MetadataFilter::Not(Box::new(self))
     }

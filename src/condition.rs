@@ -93,6 +93,7 @@ pub enum Condition {
 }
 
 impl Condition {
+    #[inline]
     pub(crate) fn matches(&self, meta: &Metadata) -> bool {
         match self {
             Condition::Equal { key, value } => meta.get_raw(key) == Some(value),
@@ -127,6 +128,7 @@ impl Condition {
 
 /// Compares two [`Value`]s where both are the same numeric or string variant.
 /// Returns `None` when the values are incomparable (different types).
+#[inline]
 fn compare_values(a: &Value, b: &Value) -> Option<Ordering> {
     match (a, b) {
         (Value::Number(x), Value::Number(y)) => compare_numbers(x, y),
