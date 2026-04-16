@@ -56,6 +56,22 @@ impl MissingKeyPolicy {
     }
 }
 
+/// Policy that controls mixed integer/float number comparisons.
+///
+/// This policy only applies to range predicates (`greater`, `greater_equal`,
+/// `less`, `less_equal`) when operands are numeric.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum NumberComparisonPolicy {
+    /// Preserve precision and return "incomparable" for risky mixed comparisons.
+    ///
+    /// This is the historical behavior and therefore the default.
+    #[default]
+    Conservative,
+    /// Allow lossy `f64` fallback for mixed comparisons that are otherwise
+    /// incomparable under [`NumberComparisonPolicy::Conservative`].
+    Approximate,
+}
+
 /// A composable filter expression over [`Metadata`].
 ///
 /// Filters can be built from primitive [`Condition`]s and combined with
@@ -274,7 +290,11 @@ impl MetadataFilter {
     /// Returns `true` if `meta` satisfies this filter.
     #[inline]
     pub fn matches(&self, meta: &Metadata) -> bool {
-        self.matches_with_missing_key_policy(meta, MissingKeyPolicy::default())
+        self.matches_with_policies(
+            meta,
+            MissingKeyPolicy::default(),
+            NumberComparisonPolicy::default(),
+        )
     }
 
     /// Returns `true` if `meta` satisfies this filter using `missing_key_policy`.
@@ -288,16 +308,33 @@ impl MetadataFilter {
         meta: &Metadata,
         missing_key_policy: MissingKeyPolicy,
     ) -> bool {
+        self.matches_with_policies(meta, missing_key_policy, NumberComparisonPolicy::default())
+    }
+
+    /// Returns `true` if `meta` satisfies this filter with explicit policies.
+    ///
+    /// `missing_key_policy` controls how missing keys are treated for negative
+    /// predicates, while `number_comparison_policy` controls mixed numeric
+    /// comparisons in range predicates.
+    #[inline]
+    pub fn matches_with_policies(
+        &self,
+        meta: &Metadata,
+        missing_key_policy: MissingKeyPolicy,
+        number_comparison_policy: NumberComparisonPolicy,
+    ) -> bool {
         match self {
-            MetadataFilter::Condition(cond) => cond.matches(meta, missing_key_policy),
-            MetadataFilter::And(children) => children
-                .iter()
-                .all(|f| f.matches_with_missing_key_policy(meta, missing_key_policy)),
-            MetadataFilter::Or(children) => children
-                .iter()
-                .any(|f| f.matches_with_missing_key_policy(meta, missing_key_policy)),
+            MetadataFilter::Condition(cond) => {
+                cond.matches(meta, missing_key_policy, number_comparison_policy)
+            }
+            MetadataFilter::And(children) => children.iter().all(|f| {
+                f.matches_with_policies(meta, missing_key_policy, number_comparison_policy)
+            }),
+            MetadataFilter::Or(children) => children.iter().any(|f| {
+                f.matches_with_policies(meta, missing_key_policy, number_comparison_policy)
+            }),
             MetadataFilter::Not(inner) => {
-                !inner.matches_with_missing_key_policy(meta, missing_key_policy)
+                !inner.matches_with_policies(meta, missing_key_policy, number_comparison_policy)
             }
         }
     }

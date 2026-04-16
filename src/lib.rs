@@ -71,6 +71,6 @@ mod metadata_value_type;
 pub use condition::Condition;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
-pub use metadata_filter::{MetadataFilter, MissingKeyPolicy};
+pub use metadata_filter::{MetadataFilter, MissingKeyPolicy, NumberComparisonPolicy};
 pub use metadata_result::MetadataResult;
 pub use metadata_value_type::MetadataValueType;

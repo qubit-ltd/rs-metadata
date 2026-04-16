@@ -9,7 +9,9 @@
 //! Unit tests for [`qubit_metadata::Condition`] (leaf predicates via
 //! [`qubit_metadata::MetadataFilter`] constructors).
 
-use qubit_metadata::{Condition, Metadata, MetadataFilter, MissingKeyPolicy};
+use qubit_metadata::{
+    Condition, Metadata, MetadataFilter, MissingKeyPolicy, NumberComparisonPolicy,
+};
 
 fn sample() -> Metadata {
     let mut m = Metadata::new();
@@ -289,6 +291,34 @@ fn range_filter_large_integer_float_non_integral_fallback() {
     assert!(MetadataFilter::greater("n", -1.0_f64)
         .unwrap()
         .matches(&unsigned));
+}
+
+#[test]
+fn approximate_number_policy_enables_lossy_fallback_for_large_i64() {
+    let mut m = Metadata::new();
+    m.set("n", 9_007_199_254_740_993_i64);
+    let f = MetadataFilter::greater("n", 0.5_f64).unwrap();
+
+    assert!(!f.matches(&m));
+    assert!(f.matches_with_policies(
+        &m,
+        MissingKeyPolicy::Match,
+        NumberComparisonPolicy::Approximate,
+    ));
+}
+
+#[test]
+fn approximate_number_policy_enables_lossy_fallback_for_large_u64() {
+    let mut m = Metadata::new();
+    m.set("n", (i64::MAX as u64) + 123);
+    let f = MetadataFilter::greater("n", 0.5_f64).unwrap();
+
+    assert!(!f.matches(&m));
+    assert!(f.matches_with_policies(
+        &m,
+        MissingKeyPolicy::Match,
+        NumberComparisonPolicy::Approximate,
+    ));
 }
 
 #[test]

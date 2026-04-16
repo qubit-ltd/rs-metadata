@@ -107,6 +107,8 @@ Call `filter.matches(&meta)` to obtain a `bool`. How a missing key interacts wit
 
 By default, missing keys satisfy `not_equal` and `not_in_values` (legacy behavior). If you want strict behavior, call [`matches_with_missing_key_policy`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MetadataFilter.html#method.matches_with_missing_key_policy) with [`MissingKeyPolicy::NoMatch`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MissingKeyPolicy.html).
 
+For numeric range predicates, mixed integer/float comparisons default to conservative precision-preserving behavior. Call [`matches_with_policies`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MetadataFilter.html#method.matches_with_policies) with [`NumberComparisonPolicy::Approximate`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.NumberComparisonPolicy.html) when you prefer lossy-but-comparable fallback semantics.
+
 ### Serde
 
 `MetadataFilter` implements `Serialize` and `Deserialize`, so you can store filters in configuration, databases, or JSON APIs alongside your metadata model.

@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 
 use serde_json::{Number, Value};
 
-use crate::{Metadata, MissingKeyPolicy};
+use crate::{Metadata, MissingKeyPolicy, NumberComparisonPolicy};
 
 /// A single comparison operator applied to one metadata key.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -88,28 +88,33 @@ pub enum Condition {
 
 impl Condition {
     #[inline]
-    pub(crate) fn matches(&self, meta: &Metadata, missing_key_policy: MissingKeyPolicy) -> bool {
+    pub(crate) fn matches(
+        &self,
+        meta: &Metadata,
+        missing_key_policy: MissingKeyPolicy,
+        number_comparison_policy: NumberComparisonPolicy,
+    ) -> bool {
         match self {
             Condition::Equal { key, value } => meta.get_raw(key) == Some(value),
             Condition::NotEqual { key, value } => match meta.get_raw(key) {
                 Some(stored) => stored != value,
                 None => missing_key_policy.matches_negative_predicates(),
             },
-            Condition::Less { key, value } => meta
-                .get_raw(key)
-                .is_some_and(|v| compare_values(v, value) == Some(Ordering::Less)),
+            Condition::Less { key, value } => meta.get_raw(key).is_some_and(|v| {
+                compare_values(v, value, number_comparison_policy) == Some(Ordering::Less)
+            }),
             Condition::LessEqual { key, value } => meta.get_raw(key).is_some_and(|v| {
                 matches!(
-                    compare_values(v, value),
+                    compare_values(v, value, number_comparison_policy),
                     Some(Ordering::Less) | Some(Ordering::Equal)
                 )
             }),
-            Condition::Greater { key, value } => meta
-                .get_raw(key)
-                .is_some_and(|v| compare_values(v, value) == Some(Ordering::Greater)),
+            Condition::Greater { key, value } => meta.get_raw(key).is_some_and(|v| {
+                compare_values(v, value, number_comparison_policy) == Some(Ordering::Greater)
+            }),
             Condition::GreaterEqual { key, value } => meta.get_raw(key).is_some_and(|v| {
                 matches!(
-                    compare_values(v, value),
+                    compare_values(v, value, number_comparison_policy),
                     Some(Ordering::Greater) | Some(Ordering::Equal)
                 )
             }),
@@ -127,9 +132,13 @@ impl Condition {
 /// Compares two [`Value`]s where both are the same numeric or string variant.
 /// Returns `None` when the values are incomparable (different types).
 #[inline]
-fn compare_values(a: &Value, b: &Value) -> Option<Ordering> {
+fn compare_values(
+    a: &Value,
+    b: &Value,
+    number_comparison_policy: NumberComparisonPolicy,
+) -> Option<Ordering> {
     match (a, b) {
-        (Value::Number(x), Value::Number(y)) => compare_numbers(x, y),
+        (Value::Number(x), Value::Number(y)) => compare_numbers(x, y, number_comparison_policy),
         (Value::String(x), Value::String(y)) => x.partial_cmp(y),
         _ => None,
     }
@@ -140,7 +149,11 @@ const I64_MIN_F64: f64 = -9_223_372_036_854_775_808.0; // -2^63
 const I64_EXCLUSIVE_MAX_F64: f64 = 9_223_372_036_854_775_808.0; // 2^63
 const U64_EXCLUSIVE_MAX_F64: f64 = 18_446_744_073_709_551_616.0; // 2^64
 
-fn compare_numbers(a: &Number, b: &Number) -> Option<Ordering> {
+fn compare_numbers(
+    a: &Number,
+    b: &Number,
+    number_comparison_policy: NumberComparisonPolicy,
+) -> Option<Ordering> {
     if let (Some(xi), Some(yi)) = (a.as_i64(), b.as_i64()) {
         return Some(xi.cmp(&yi));
     }
@@ -154,16 +167,16 @@ fn compare_numbers(a: &Number, b: &Number) -> Option<Ordering> {
         return Some(xu.cmp(&yu));
     }
     if let (Some(xi), Some(yf)) = (a.as_i64(), b.as_f64()) {
-        return compare_i64_f64(xi, yf);
+        return compare_i64_f64(xi, yf, number_comparison_policy);
     }
     if let (Some(xf), Some(yi)) = (a.as_f64(), b.as_i64()) {
-        return compare_i64_f64(yi, xf).map(Ordering::reverse);
+        return compare_i64_f64(yi, xf, number_comparison_policy).map(Ordering::reverse);
     }
     if let (Some(xu), Some(yf)) = (a.as_u64(), b.as_f64()) {
-        return compare_u64_f64(xu, yf);
+        return compare_u64_f64(xu, yf, number_comparison_policy);
     }
     if let (Some(xf), Some(yu)) = (a.as_f64(), b.as_u64()) {
-        return compare_u64_f64(yu, xf).map(Ordering::reverse);
+        return compare_u64_f64(yu, xf, number_comparison_policy).map(Ordering::reverse);
     }
     if let (Some(xf), Some(yf)) = (a.as_f64(), b.as_f64()) {
         return xf.partial_cmp(&yf);
@@ -182,8 +195,11 @@ fn compare_i64_u64(x: i64, y: u64) -> Ordering {
     }
 }
 
-#[inline]
-fn compare_i64_f64(x: i64, y: f64) -> Option<Ordering> {
+fn compare_i64_f64(
+    x: i64,
+    y: f64,
+    number_comparison_policy: NumberComparisonPolicy,
+) -> Option<Ordering> {
     if y.fract() == 0.0 && (I64_MIN_F64..I64_EXCLUSIVE_MAX_F64).contains(&y) {
         // Integer-vs-integer path avoids precision loss for values > 2^53.
         return Some(x.cmp(&(y as i64)));
@@ -193,11 +209,22 @@ fn compare_i64_f64(x: i64, y: f64) -> Option<Ordering> {
         return (x as f64).partial_cmp(&y);
     }
 
+    if matches!(
+        number_comparison_policy,
+        NumberComparisonPolicy::Approximate
+    ) {
+        return (x as f64).partial_cmp(&y);
+    }
+
     None
 }
 
 #[inline]
-fn compare_u64_f64(x: u64, y: f64) -> Option<Ordering> {
+fn compare_u64_f64(
+    x: u64,
+    y: f64,
+    number_comparison_policy: NumberComparisonPolicy,
+) -> Option<Ordering> {
     if y < 0.0 {
         return Some(Ordering::Greater);
     }
@@ -205,6 +232,13 @@ fn compare_u64_f64(x: u64, y: f64) -> Option<Ordering> {
     if y.fract() == 0.0 && (0.0..U64_EXCLUSIVE_MAX_F64).contains(&y) {
         // Integer-vs-integer path avoids precision loss for values > 2^53.
         return Some(x.cmp(&(y as u64)));
+    }
+
+    if matches!(
+        number_comparison_policy,
+        NumberComparisonPolicy::Approximate
+    ) {
+        return (x as f64).partial_cmp(&y);
     }
 
     None

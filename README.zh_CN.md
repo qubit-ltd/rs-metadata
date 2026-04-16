@@ -106,6 +106,8 @@ assert_eq!(priority, 3);
 
 默认情况下，缺失键会让 `not_equal` 和 `not_in_values` 返回匹配（兼容历史行为）。如果需要严格语义，可调用 [`matches_with_missing_key_policy`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MetadataFilter.html#method.matches_with_missing_key_policy) 并传入 [`MissingKeyPolicy::NoMatch`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MissingKeyPolicy.html)。
 
+对数值范围比较而言，整数/浮点混合比较默认采用“保守且尽量不丢精度”的策略。若你更希望“允许有损但可比较”的行为，可调用 [`matches_with_policies`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.MetadataFilter.html#method.matches_with_policies) 并传入 [`NumberComparisonPolicy::Approximate`](https://docs.rs/qubit-metadata/latest/qubit_metadata/enum.NumberComparisonPolicy.html)。
+
 ### 序列化
 
 `MetadataFilter` 实现了 `Serialize` / `Deserialize`，可将过滤条件存入配置、数据库或通过 JSON API 与元数据模型一并交换。
