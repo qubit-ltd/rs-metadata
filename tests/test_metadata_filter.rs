@@ -10,10 +10,7 @@
 //! `not`) and full-tree serde. Leaf [`qubit_metadata::Condition`] tests live
 //! in `test_condition.rs`.
 
-use qubit_metadata::{
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::{Metadata, MetadataFilter};
 
 fn sample() -> Metadata {
     let mut m = Metadata::new();

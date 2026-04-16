@@ -9,11 +9,7 @@
 //! Unit tests for [`qubit_metadata::Condition`] (leaf predicates via
 //! [`qubit_metadata::MetadataFilter`] constructors).
 
-use qubit_metadata::{
-    Condition,
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::{Condition, Metadata, MetadataFilter};
 
 fn sample() -> Metadata {
     let mut m = Metadata::new();

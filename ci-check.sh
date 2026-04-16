@@ -45,21 +45,15 @@ echo "🚀 Starting local CI checks..."
 echo ""
 
 # Check 1: Code formatting
-print_step "1/6 Checking code format (cargo +nightly fmt)..."
+print_step "1/6 Checking code format (cargo fmt)..."
 
-# Check if nightly toolchain is installed
-if ! rustup toolchain list | grep -q nightly; then
-    print_warning "Nightly toolchain not found, installing..."
-    rustup toolchain install nightly
-fi
-
-if cargo +nightly fmt -- --check > /dev/null 2>&1; then
+if cargo fmt -- --check > /dev/null 2>&1; then
     print_success "Code format check passed"
 else
     print_error "Code format check failed"
     echo ""
     echo "Please run the following command to fix formatting issues:"
-    echo "  cargo +nightly fmt"
+    echo "  cargo fmt"
     echo "Or use the format script:"
     echo "  ./format.sh"
     exit 1
@@ -67,13 +61,13 @@ fi
 echo ""
 
 # Check 2: Clippy linting
-print_step "2/6 Running Clippy checks (cargo +nightly clippy)..."
-if cargo +nightly clippy --all-targets --all-features -- -D warnings 2>&1 | tee /tmp/clippy-output.txt | grep -q "warning\|error"; then
+print_step "2/6 Running Clippy checks (cargo clippy)..."
+if cargo clippy --all-targets --all-features -- -D warnings 2>&1 | tee /tmp/clippy-output.txt | grep -q "warning\|error"; then
     print_error "Clippy found issues"
     cat /tmp/clippy-output.txt
     echo ""
     echo "Please try to auto-fix with:"
-    echo "  cargo +nightly clippy --fix --all-targets --all-features"
+    echo "  cargo clippy --fix --all-targets --all-features"
     exit 1
 else
     print_success "Clippy checks passed"
@@ -173,4 +167,3 @@ echo ""
 
 # Clean up temporary files
 rm -f /tmp/clippy-output.txt
-

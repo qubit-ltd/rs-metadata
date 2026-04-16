@@ -10,20 +10,10 @@
 
 use std::collections::BTreeMap;
 
-use serde::{
-    Serialize,
-    Serializer,
-};
-use serde_json::{
-    json,
-    Value,
-};
+use serde::{Serialize, Serializer};
+use serde_json::{json, Value};
 
-use qubit_metadata::{
-    Metadata,
-    MetadataError,
-    MetadataValueType,
-};
+use qubit_metadata::{Metadata, MetadataError, MetadataValueType};
 
 #[derive(Debug, PartialEq, serde::Deserialize)]
 struct AuditInfo {

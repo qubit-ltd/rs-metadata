@@ -28,15 +28,9 @@
 //! assert!(filter.matches(&meta));
 //! ```
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    Condition,
-    Metadata,
-};
+use crate::{Condition, Metadata};
 
 /// A composable filter expression over [`Metadata`].
 ///

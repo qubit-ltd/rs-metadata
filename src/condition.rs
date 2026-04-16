@@ -8,16 +8,10 @@
  ******************************************************************************/
 //! A single comparison predicate against one metadata key.
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-use serde_json::{
-    Number,
-    Value,
-};
+use serde_json::{Number, Value};
 
 use crate::Metadata;
 
@@ -118,7 +112,7 @@ impl Condition {
             }),
             Condition::In { key, values } => meta.get_raw(key).is_some_and(|v| values.contains(v)),
             Condition::NotIn { key, values } => {
-                meta.get_raw(key).map_or(true, |v| !values.contains(v))
+                meta.get_raw(key).is_none_or(|v| !values.contains(v))
             }
             Condition::Exists { key } => meta.contains_key(key),
             Condition::NotExists { key } => !meta.contains_key(key),

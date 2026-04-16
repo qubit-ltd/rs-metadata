@@ -8,10 +8,7 @@
  ******************************************************************************/
 //! Tests for [`qubit_metadata::MetadataValueType`].
 
-use serde_json::{
-    json,
-    Value,
-};
+use serde_json::{json, Value};
 
 use qubit_metadata::MetadataValueType;
 use std::str::FromStr;
@@ -62,10 +59,22 @@ fn display_uses_lowercase_json_type_names() {
 
 #[test]
 fn from_str_uses_lowercase_snake_case() {
-    assert_eq!(MetadataValueType::from_str("null").unwrap(), MetadataValueType::Null);
-    assert_eq!(MetadataValueType::from_str("BOOL").unwrap(), MetadataValueType::Bool);
-    assert_eq!(MetadataValueType::from_str("number").unwrap(), MetadataValueType::Number);
-    assert_eq!(MetadataValueType::from_str("object").unwrap(), MetadataValueType::Object);
+    assert_eq!(
+        MetadataValueType::from_str("null").unwrap(),
+        MetadataValueType::Null
+    );
+    assert_eq!(
+        MetadataValueType::from_str("BOOL").unwrap(),
+        MetadataValueType::Bool
+    );
+    assert_eq!(
+        MetadataValueType::from_str("number").unwrap(),
+        MetadataValueType::Number
+    );
+    assert_eq!(
+        MetadataValueType::from_str("object").unwrap(),
+        MetadataValueType::Object
+    );
 }
 
 #[test]
@@ -76,10 +85,7 @@ fn from_str_invalid_value() {
 #[test]
 fn equality_and_hash_consistent() {
     use std::collections::hash_map::DefaultHasher;
-    use std::hash::{
-        Hash,
-        Hasher,
-    };
+    use std::hash::{Hash, Hasher};
 
     let a = MetadataValueType::String;
     let b = MetadataValueType::String;

@@ -11,17 +11,10 @@
 
 use std::collections::BTreeMap;
 
-use serde::{
-    de::DeserializeOwned,
-    Serialize,
-};
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
-use crate::{
-    MetadataError,
-    MetadataResult,
-    MetadataValueType,
-};
+use crate::{MetadataError, MetadataResult, MetadataValueType};
 
 /// A structured, ordered, type-safe key-value store for attaching arbitrary
 /// annotations to domain objects.

@@ -11,10 +11,7 @@
 //! Deserialization/serialization error construction is also covered through
 //! `Metadata::try_get` / `try_set` in `test_metadata.rs`.
 
-use qubit_metadata::{
-    MetadataError,
-    MetadataValueType,
-};
+use qubit_metadata::{MetadataError, MetadataValueType};
 
 #[test]
 fn display_formats_all_variants() {
