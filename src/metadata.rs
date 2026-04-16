@@ -108,7 +108,7 @@ impl Metadata {
             .0
             .get(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        serde_json::from_value(value.clone())
+        T::deserialize(value)
             .map_err(|error| MetadataError::deserialization_error::<T>(key, value, error))
     }
 

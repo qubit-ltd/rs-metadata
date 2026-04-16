@@ -125,6 +125,18 @@ fn try_get_returns_typed_value() {
 }
 
 #[test]
+fn try_get_can_be_called_repeatedly_without_consuming_value() {
+    let mut meta = Metadata::new();
+    meta.set_raw("audit", json!({"enabled": true, "level": "strict"}));
+
+    let first = meta.try_get::<AuditInfo>("audit").unwrap();
+    let second = meta.try_get::<AuditInfo>("audit").unwrap();
+
+    assert_eq!(first, second);
+    assert!(meta.get_raw("audit").is_some());
+}
+
+#[test]
 fn try_get_missing_key_reports_error() {
     let meta = Metadata::new();
     let error = meta.try_get::<String>("missing").unwrap_err();
