@@ -63,19 +63,29 @@
 #![deny(missing_docs)]
 
 mod condition;
+mod filter_match_options;
 mod metadata;
+mod metadata_field;
 mod metadata_error;
 mod metadata_filter;
+mod metadata_filter_builder;
 mod metadata_result;
+mod metadata_schema;
+mod metadata_schema_builder;
 mod missing_key_policy;
 mod number_comparison_policy;
+mod unknown_field_policy;
 
 pub use condition::Condition;
-pub use metadata::{
-    Metadata, MetadataField, MetadataSchema, MetadataSchemaBuilder, UnknownFieldPolicy,
-};
+pub use filter_match_options::FilterMatchOptions;
+pub use metadata::Metadata;
+pub use metadata_field::MetadataField;
 pub use metadata_error::MetadataError;
-pub use metadata_filter::{FilterMatchOptions, MetadataFilter, MetadataFilterBuilder};
+pub use metadata_filter::MetadataFilter;
+pub use metadata_filter_builder::MetadataFilterBuilder;
 pub use metadata_result::MetadataResult;
+pub use metadata_schema::MetadataSchema;
+pub use metadata_schema_builder::MetadataSchemaBuilder;
 pub use missing_key_policy::MissingKeyPolicy;
 pub use number_comparison_policy::NumberComparisonPolicy;
+pub use unknown_field_policy::UnknownFieldPolicy;
