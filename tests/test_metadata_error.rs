@@ -7,11 +7,9 @@
  *
  ******************************************************************************/
 //! Tests for [`qubit_metadata::MetadataError`].
-//!
-//! Deserialization/serialization error construction is also covered through
-//! `Metadata::try_get` / `try_set` in `test_metadata.rs`.
 
-use qubit_metadata::{MetadataError, MetadataValueType};
+use qubit_common::DataType;
+use qubit_metadata::MetadataError;
 
 #[test]
 fn display_formats_all_variants() {
@@ -20,34 +18,58 @@ fn display_formats_all_variants() {
         "Metadata key not found: k"
     );
 
-    let ser = MetadataError::SerializationError {
-        key: "a".to_string(),
-        message: "oops".to_string(),
-    };
-    assert_eq!(
-        ser.to_string(),
-        "Failed to serialize metadata value for key 'a': oops"
-    );
-
-    let de = MetadataError::DeserializationError {
+    let mismatch = MetadataError::TypeMismatch {
         key: "b".to_string(),
-        expected: std::any::type_name::<bool>(),
-        actual: MetadataValueType::Number,
+        expected: DataType::Bool,
+        actual: DataType::Int64,
         message: "bad".to_string(),
     };
     assert_eq!(
-        de.to_string(),
-        format!(
-            "Failed to deserialize metadata key 'b' as {} from JSON number: bad",
-            std::any::type_name::<bool>()
-        )
+        mismatch.to_string(),
+        "Metadata key 'b' expected bool but actual int64: bad"
+    );
+
+    let missing = MetadataError::MissingRequiredField {
+        key: "score".to_string(),
+        expected: DataType::Int64,
+    };
+    assert_eq!(
+        missing.to_string(),
+        "Required metadata key 'score' is missing (expected int64)"
+    );
+
+    let unknown = MetadataError::UnknownField {
+        key: "extra".to_string(),
+    };
+    assert_eq!(
+        unknown.to_string(),
+        "Metadata key 'extra' is not defined in schema"
+    );
+
+    let unknown_filter = MetadataError::UnknownFilterField {
+        key: "extra".to_string(),
+    };
+    assert_eq!(
+        unknown_filter.to_string(),
+        "Metadata filter references key 'extra' not defined in schema"
+    );
+
+    let invalid_operator = MetadataError::InvalidFilterOperator {
+        key: "active".to_string(),
+        operator: "gt",
+        data_type: DataType::Bool,
+        message: "range operators require a numeric or string field".to_string(),
+    };
+    assert_eq!(
+        invalid_operator.to_string(),
+        "Metadata filter operator 'gt' is invalid for key 'active' with type bool: range operators require a numeric or string field"
     );
 }
 
 #[test]
 fn error_source_is_none() {
-    let e: MetadataError = MetadataError::MissingKey("x".to_string());
-    assert!(std::error::Error::source(&e).is_none());
+    let error = MetadataError::MissingKey("x".to_string());
+    assert!(std::error::Error::source(&error).is_none());
 }
 
 #[test]

@@ -6,63 +6,84 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! [`MetadataError`] — failures from explicit `Metadata` accessors.
+//! [`MetadataError`] — failures from explicit metadata APIs and schema checks.
 
 use std::fmt;
 
-use serde_json::Value;
+use qubit_common::DataType;
+use qubit_value::{Value, ValueError};
 
-use crate::metadata_value_type::MetadataValueType;
-
-/// Errors produced by explicit `Metadata` accessors such as
-/// [`Metadata::try_get`](crate::Metadata::try_get) and
-/// [`Metadata::try_set`](crate::Metadata::try_set).
+/// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MetadataError {
     /// The requested key does not exist.
     MissingKey(String),
-    /// Serialization into [`serde_json::Value`] failed while storing a value.
-    SerializationError {
-        /// Metadata key being written.
+    /// A stored value cannot be converted to the requested type.
+    TypeMismatch {
+        /// Metadata key being read or validated.
         key: String,
-        /// Human-readable serde error message.
+        /// Expected data type.
+        expected: DataType,
+        /// Actual stored data type.
+        actual: DataType,
+        /// Human-readable conversion or validation message.
         message: String,
     },
-    /// Deserialization from [`serde_json::Value`] failed while loading a value.
-    DeserializationError {
-        /// Metadata key being read.
+    /// A required schema field is missing from a metadata object.
+    MissingRequiredField {
+        /// Required metadata key.
         key: String,
-        /// Fully-qualified Rust type name requested by the caller.
-        expected: &'static str,
-        /// Actual JSON value type stored under the key.
-        actual: MetadataValueType,
-        /// Human-readable serde error message.
+        /// Expected data type for the missing field.
+        expected: DataType,
+    },
+    /// A metadata object contains a key not accepted by the schema.
+    UnknownField {
+        /// Unknown metadata key.
+        key: String,
+    },
+    /// A filter references a key that is not defined by the schema.
+    UnknownFilterField {
+        /// Unknown filter key.
+        key: String,
+    },
+    /// A filter uses an operator that is not compatible with the field type.
+    InvalidFilterOperator {
+        /// Metadata key being filtered.
+        key: String,
+        /// Filter operator name.
+        operator: &'static str,
+        /// Field data type defined by the schema.
+        data_type: DataType,
+        /// Human-readable validation message.
         message: String,
     },
 }
 
 impl MetadataError {
-    /// Constructs a deserialization error for key `key`.
+    /// Builds a conversion error for `key` using the requested type and stored value.
     #[inline]
-    pub(crate) fn deserialization_error<T>(
+    pub(crate) fn conversion_error(
         key: &str,
+        expected: DataType,
         value: &Value,
-        error: serde_json::Error,
+        error: ValueError,
     ) -> Self {
-        Self::DeserializationError {
+        Self::TypeMismatch {
             key: key.to_string(),
-            expected: std::any::type_name::<T>(),
-            actual: MetadataValueType::of(value),
+            expected,
+            actual: value.data_type(),
             message: error.to_string(),
         }
     }
 
-    /// Constructs a serialization error for key `key`.
+    /// Builds a schema type-mismatch error for `key`.
     #[inline]
-    pub(crate) fn serialization_error(key: String, error: serde_json::Error) -> Self {
-        Self::SerializationError {
-            key,
-            message: error.to_string(),
+    pub(crate) fn type_mismatch(key: &str, expected: DataType, actual: DataType) -> Self {
+        Self::TypeMismatch {
+            key: key.to_string(),
+            expected,
+            actual,
+            message: format!("expected {expected}, got {actual}"),
         }
     }
 }
@@ -71,20 +92,36 @@ impl fmt::Display for MetadataError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::MissingKey(key) => write!(f, "Metadata key not found: {key}"),
-            Self::SerializationError { key, message } => {
-                write!(
-                    f,
-                    "Failed to serialize metadata value for key '{key}': {message}"
-                )
-            }
-            Self::DeserializationError {
+            Self::TypeMismatch {
                 key,
                 expected,
                 actual,
                 message,
             } => write!(
                 f,
-                "Failed to deserialize metadata key '{key}' as {expected} from JSON {actual}: {message}"
+                "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
+            ),
+            Self::MissingRequiredField { key, expected } => write!(
+                f,
+                "Required metadata key '{key}' is missing (expected {expected})"
+            ),
+            Self::UnknownField { key } => {
+                write!(f, "Metadata key '{key}' is not defined in schema")
+            }
+            Self::UnknownFilterField { key } => {
+                write!(
+                    f,
+                    "Metadata filter references key '{key}' not defined in schema"
+                )
+            }
+            Self::InvalidFilterOperator {
+                key,
+                operator,
+                data_type,
+                message,
+            } => write!(
+                f,
+                "Metadata filter operator '{operator}' is invalid for key '{key}' with type {data_type}: {message}"
             ),
         }
     }

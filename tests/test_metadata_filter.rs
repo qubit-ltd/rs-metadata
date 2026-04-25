@@ -6,25 +6,11 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! Unit tests for [`qubit_metadata::MetadataFilter`] combinators (`and`, `or`,
-//! `not`) and full-tree serde. Leaf [`qubit_metadata::Condition`] tests live
-//! in `test_condition.rs`.
+//! Unit tests for [`qubit_metadata::MetadataFilter`] DSL composition.
 
-use qubit_metadata::{Metadata, MetadataFilter};
-use serde::{Serialize, Serializer};
-
-struct FailingSerialize;
-
-impl Serialize for FailingSerialize {
-    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        Err(serde::ser::Error::custom(
-            "intentional serialization failure",
-        ))
-    }
-}
+use qubit_metadata::{
+    FilterMatchOptions, Metadata, MetadataFilter, MissingKeyPolicy, NumberComparisonPolicy,
+};
 
 fn sample() -> Metadata {
     let mut m = Metadata::new();
@@ -36,160 +22,126 @@ fn sample() -> Metadata {
     m
 }
 
-// ── And ──────────────────────────────────────────────────────────────────────
-
 #[test]
-fn and_all_true() {
-    let f = MetadataFilter::equal("status", "active")
-        .unwrap()
-        .and(MetadataFilter::greater_equal("score", 10_i64).unwrap())
-        .and(MetadataFilter::exists("verified"));
-    assert!(f.matches(&sample()));
+fn and_predicates_all_match() {
+    let f = MetadataFilter::builder()
+        .eq("status", "active")
+        .and_ge("score", 10_i64)
+        .and_exists("verified");
+    assert!(f.build().matches(&sample()));
 }
 
 #[test]
-fn and_one_false() {
-    let f = MetadataFilter::equal("status", "active")
-        .unwrap()
-        .and(MetadataFilter::greater("score", 100_i64).unwrap());
-    assert!(!f.matches(&sample()));
+fn and_predicates_one_fails() {
+    let f = MetadataFilter::builder()
+        .eq("status", "active")
+        .and_gt("score", 100_i64);
+    assert!(!f.build().matches(&sample()));
 }
 
 #[test]
-fn and_flattens_children() {
-    let f = MetadataFilter::equal("status", "active")
-        .unwrap()
-        .and(MetadataFilter::exists("score"))
-        .and(MetadataFilter::exists("tag"));
-    if let MetadataFilter::And(children) = &f {
-        assert_eq!(children.len(), 3);
-    } else {
-        panic!("expected And node");
-    }
+fn or_predicates_one_matches() {
+    let f = MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_eq("status", "active");
+    assert!(f.build().matches(&sample()));
 }
 
 #[test]
-fn and_flattens_rhs_and_node() {
-    let rhs = MetadataFilter::And(vec![
-        MetadataFilter::exists("score"),
-        MetadataFilter::exists("tag"),
-    ]);
-    let f = MetadataFilter::equal("status", "active").unwrap().and(rhs);
-    if let MetadataFilter::And(children) = &f {
-        assert_eq!(children.len(), 3);
-    } else {
-        panic!("expected And node");
-    }
-}
-
-// ── Or ───────────────────────────────────────────────────────────────────────
-
-#[test]
-fn or_one_true() {
-    let f = MetadataFilter::equal("status", "inactive")
-        .unwrap()
-        .or(MetadataFilter::equal("status", "active").unwrap());
-    assert!(f.matches(&sample()));
+fn or_predicates_all_fail() {
+    let f = MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_eq("status", "pending");
+    assert!(!f.build().matches(&sample()));
 }
 
 #[test]
-fn or_all_false() {
-    let f = MetadataFilter::equal("status", "inactive")
-        .unwrap()
-        .or(MetadataFilter::equal("status", "pending").unwrap());
-    assert!(!f.matches(&sample()));
+fn not_inverts_expression_result() {
+    let yes = MetadataFilter::builder().eq("status", "active").not();
+    let no = MetadataFilter::builder().eq("status", "inactive").not();
+    assert!(!yes.build().matches(&sample()));
+    assert!(no.build().matches(&sample()));
 }
 
 #[test]
-fn or_flattens_children() {
-    let f = MetadataFilter::equal("status", "a")
-        .unwrap()
-        .or(MetadataFilter::equal("status", "b").unwrap())
-        .or(MetadataFilter::equal("status", "active").unwrap());
-    if let MetadataFilter::Or(children) = &f {
-        assert_eq!(children.len(), 3);
-    } else {
-        panic!("expected Or node");
-    }
-}
-
-#[test]
-fn or_flattens_rhs_or_node() {
-    let rhs = MetadataFilter::Or(vec![
-        MetadataFilter::equal("status", "b").unwrap(),
-        MetadataFilter::equal("status", "active").unwrap(),
-    ]);
-    let f = MetadataFilter::equal("status", "a").unwrap().or(rhs);
-    if let MetadataFilter::Or(children) = &f {
-        assert_eq!(children.len(), 3);
-    } else {
-        panic!("expected Or node");
-    }
-}
-
-// ── Not ──────────────────────────────────────────────────────────────────────
-
-#[test]
-fn not_inverts_true() {
-    let f = MetadataFilter::equal("status", "active").unwrap().not();
-    assert!(!f.matches(&sample()));
-}
-
-#[test]
-fn not_inverts_false() {
-    let f = MetadataFilter::equal("status", "inactive").unwrap().not();
-    assert!(f.matches(&sample()));
-}
-
-// ── Complex compositions ─────────────────────────────────────────────────────
-
-#[test]
-fn complex_and_or_not() {
-    // (status == "active" AND score >= 10) OR (NOT exists("nope"))
-    let f = MetadataFilter::equal("status", "active")
-        .unwrap()
-        .and(MetadataFilter::greater_equal("score", 10_i64).unwrap())
-        .or(MetadataFilter::exists("nope").not());
-    assert!(f.matches(&sample()));
-}
-
-#[test]
-fn empty_and_matches_everything() {
-    let f = MetadataFilter::And(vec![]);
+fn empty_filter_matches_anything() {
+    let f = MetadataFilter::builder().build();
     assert!(f.matches(&sample()));
     assert!(f.matches(&Metadata::new()));
 }
 
 #[test]
-fn empty_or_matches_nothing() {
-    let f = MetadataFilter::Or(vec![]);
-    assert!(!f.matches(&sample()));
-    assert!(!f.matches(&Metadata::new()));
+fn negated_empty_filter_matches_nothing() {
+    let f = MetadataFilter::builder().not();
+    assert!(!f.clone().build().matches(&sample()));
+    assert!(!f.build().matches(&Metadata::new()));
 }
 
-// ── Serde (MetadataFilter tree) ──────────────────────────────────────────────
+#[test]
+fn group_composition_works() {
+    // status == active AND (score >= 80 OR tag == rust)
+    let f = MetadataFilter::builder()
+        .eq("status", "active")
+        .and(|g| g.ge("score", 80_i64).or_eq("tag", "rust"));
+    assert!(f.build().matches(&sample()));
+}
+
+#[test]
+fn negated_group_composition_works() {
+    // status == active AND NOT (score >= 80 OR tag == java)
+    let f = MetadataFilter::builder()
+        .eq("status", "active")
+        .and_not(|g| g.ge("score", 80_i64).or_eq("tag", "java"));
+    assert!(f.build().matches(&sample()));
+}
+
+#[test]
+fn missing_key_policy_can_be_configured_on_filter() {
+    let f = MetadataFilter::builder()
+        .ne("missing", "x")
+        .missing_key_policy(MissingKeyPolicy::NoMatch);
+    assert!(!f.build().matches(&sample()));
+}
+
+#[test]
+fn number_comparison_policy_can_be_configured_on_filter() {
+    let mut m = Metadata::new();
+    m.set("n", 9_007_199_254_740_993_i64);
+
+    let conservative = MetadataFilter::builder().gt("n", 0.5_f64);
+    assert!(!conservative.clone().build().matches(&m));
+
+    let approximate = conservative
+        .clone()
+        .number_comparison_policy(NumberComparisonPolicy::Approximate);
+    assert!(approximate.build().matches(&m));
+}
+
+#[test]
+fn options_round_trip_works() {
+    let options = FilterMatchOptions {
+        missing_key_policy: MissingKeyPolicy::NoMatch,
+        number_comparison_policy: NumberComparisonPolicy::Approximate,
+    };
+    let f = MetadataFilter::builder()
+        .eq("status", "active")
+        .with_options(options)
+        .build();
+    assert_eq!(f.options(), options);
+}
 
 #[test]
 fn filter_serde_round_trip() {
-    let f = MetadataFilter::equal("status", "active")
-        .unwrap()
-        .and(MetadataFilter::greater_equal("score", 10_i64).unwrap())
-        .or(MetadataFilter::exists("tag").not());
+    let f = MetadataFilter::builder()
+        .eq("status", "active")
+        .and_ge("score", 10_i64)
+        .or_not(|g| g.exists("tag").and_eq("tag", "java"))
+        .missing_key_policy(MissingKeyPolicy::NoMatch)
+        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .build();
 
     let json = serde_json::to_string(&f).unwrap();
     let restored: MetadataFilter = serde_json::from_str(&json).unwrap();
     assert_eq!(f, restored);
     assert_eq!(f.matches(&sample()), restored.matches(&sample()));
-}
-
-#[test]
-fn leaf_constructor_reports_serialization_error_instead_of_panicking() {
-    let result = MetadataFilter::equal("broken", FailingSerialize);
-    assert!(result.is_err());
-}
-
-#[test]
-fn set_constructor_reports_serialization_error_instead_of_panicking() {
-    let result = MetadataFilter::in_values("broken", vec![FailingSerialize]);
-    assert!(result.is_err());
 }

@@ -10,32 +10,10 @@
 
 use std::collections::BTreeMap;
 
-use serde::{Serialize, Serializer};
-use serde_json::{Value, json};
-
-use qubit_metadata::{Metadata, MetadataError, MetadataValueType};
-
-#[derive(Debug, PartialEq, serde::Deserialize)]
-struct AuditInfo {
-    enabled: bool,
-    level: String,
-}
-
-struct FailingSerialize;
-
-impl Serialize for FailingSerialize {
-    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        Err(serde::ser::Error::custom(format!(
-            "cannot serialize in {}",
-            std::any::type_name::<S>()
-        )))
-    }
-}
-
-// ── Construction ─────────────────────────────────────────────────────────────
+use qubit_common::DataType;
+use qubit_metadata::{Metadata, MetadataError};
+use qubit_value::Value;
+use serde_json::json;
 
 #[test]
 fn new_is_empty() {
@@ -50,38 +28,30 @@ fn default_is_empty() {
     assert!(meta.is_empty());
 }
 
-// ── set / get ────────────────────────────────────────────────────────────────
+#[test]
+fn with_builds_metadata_fluently() {
+    let meta = Metadata::new()
+        .with("author", "alice")
+        .with("priority", 42_i64)
+        .with("reviewed", true);
+
+    assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
+    assert_eq!(meta.get::<i64>("priority"), Some(42));
+    assert_eq!(meta.get::<bool>("reviewed"), Some(true));
+}
 
 #[test]
-fn set_and_get_string() {
+fn set_and_get_scalar_values() {
     let mut meta = Metadata::new();
     meta.set("author", "alice");
-    let v: Option<String> = meta.get("author");
-    assert_eq!(v.as_deref(), Some("alice"));
-}
-
-#[test]
-fn set_and_get_i64() {
-    let mut meta = Metadata::new();
     meta.set("priority", 42_i64);
-    let v: Option<i64> = meta.get("priority");
-    assert_eq!(v, Some(42));
-}
-
-#[test]
-fn set_and_get_bool() {
-    let mut meta = Metadata::new();
     meta.set("reviewed", true);
-    let v: Option<bool> = meta.get("reviewed");
-    assert_eq!(v, Some(true));
-}
-
-#[test]
-fn set_and_get_f64() {
-    let mut meta = Metadata::new();
     meta.set("score", std::f64::consts::PI);
-    let v: Option<f64> = meta.get("score");
-    assert!((v.unwrap() - std::f64::consts::PI).abs() < 1e-10);
+
+    assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
+    assert_eq!(meta.get::<i64>("priority"), Some(42));
+    assert_eq!(meta.get::<bool>("reviewed"), Some(true));
+    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
 }
 
 #[test]
@@ -89,51 +59,24 @@ fn set_overwrites_previous_value() {
     let mut meta = Metadata::new();
     meta.set("key", "first");
     let old = meta.set("key", "second");
-    assert_eq!(old, Some(json!("first")));
-    let v: Option<String> = meta.get("key");
-    assert_eq!(v.as_deref(), Some("second"));
+
+    assert_eq!(old, Some(Value::String("first".to_string())));
+    assert_eq!(meta.get::<String>("key").as_deref(), Some("second"));
 }
 
 #[test]
 fn get_missing_key_returns_none() {
     let meta = Metadata::new();
-    let v: Option<String> = meta.get("missing");
-    assert!(v.is_none());
+    let value: Option<String> = meta.get("missing");
+    assert!(value.is_none());
 }
 
 #[test]
 fn get_wrong_type_returns_none() {
     let mut meta = Metadata::new();
     meta.set("key", "not-a-number");
-    let v: Option<i64> = meta.get("key");
-    assert!(v.is_none());
-}
-
-#[test]
-fn try_get_returns_typed_value() {
-    let mut meta = Metadata::new();
-    meta.set_raw("audit", json!({"enabled": true, "level": "strict"}));
-
-    let audit = meta.try_get::<AuditInfo>("audit").unwrap();
-    assert_eq!(
-        audit,
-        AuditInfo {
-            enabled: true,
-            level: "strict".to_string(),
-        }
-    );
-}
-
-#[test]
-fn try_get_can_be_called_repeatedly_without_consuming_value() {
-    let mut meta = Metadata::new();
-    meta.set_raw("audit", json!({"enabled": true, "level": "strict"}));
-
-    let first = meta.try_get::<AuditInfo>("audit").unwrap();
-    let second = meta.try_get::<AuditInfo>("audit").unwrap();
-
-    assert_eq!(first, second);
-    assert!(meta.get_raw("audit").is_some());
+    let value: Option<i64> = meta.get("key");
+    assert!(value.is_none());
 }
 
 #[test]
@@ -150,34 +93,28 @@ fn try_get_type_mismatch_reports_expected_and_actual_type() {
 
     let error = meta.try_get::<i64>("key").unwrap_err();
     match error {
-        MetadataError::DeserializationError {
+        MetadataError::TypeMismatch {
             key,
             expected,
             actual,
             message,
         } => {
             assert_eq!(key, "key");
-            assert_eq!(expected, std::any::type_name::<i64>());
-            assert_eq!(actual, MetadataValueType::String);
+            assert_eq!(expected, DataType::Int64);
+            assert_eq!(actual, DataType::String);
             assert!(!message.is_empty());
         }
-        other => panic!("expected DeserializationError, got {other:?}"),
+        other => panic!("expected TypeMismatch, got {other:?}"),
     }
 }
 
 #[test]
-fn get_or_returns_default_for_missing_key() {
-    let meta = Metadata::new();
-    let value: i64 = meta.get_or("missing", 42);
-    assert_eq!(value, 42);
-}
-
-#[test]
-fn get_or_returns_default_for_type_mismatch() {
+fn get_or_returns_default_for_missing_key_or_type_mismatch() {
     let mut meta = Metadata::new();
     meta.set("key", "text");
-    let value: i64 = meta.get_or("key", 7);
-    assert_eq!(value, 7);
+
+    assert_eq!(meta.get_or("missing", 42_i64), 42);
+    assert_eq!(meta.get_or("key", 7_i64), 7);
 }
 
 #[test]
@@ -185,80 +122,37 @@ fn try_set_returns_previous_value() {
     let mut meta = Metadata::new();
     meta.try_set("key", "first").unwrap();
     let old = meta.try_set("key", "second").unwrap();
-    assert_eq!(old, Some(json!("first")));
+    assert_eq!(old, Some(Value::String("first".to_string())));
 }
 
 #[test]
-fn try_set_reports_serialization_error() {
+fn get_raw_and_set_raw_use_qubit_value() {
     let mut meta = Metadata::new();
-    let error = meta.try_set("key", FailingSerialize).unwrap_err();
+    meta.set_raw("raw", Value::Json(json!({"nested": true})));
 
-    match error {
-        MetadataError::SerializationError { key, message } => {
-            assert_eq!(key, "key");
-            assert!(message.contains("cannot serialize"));
-        }
-        other => panic!("expected SerializationError, got {other:?}"),
-    }
+    assert_eq!(
+        meta.get_raw("raw"),
+        Some(&Value::Json(json!({"nested": true})))
+    );
+    assert_eq!(
+        meta.get::<serde_json::Value>("raw"),
+        Some(json!({"nested": true}))
+    );
 }
 
 #[test]
-fn set_does_not_panic_on_serialization_error() {
-    let mut meta = Metadata::new();
-    meta.set("key", "original");
-
-    let old = meta.set("key", FailingSerialize);
-    assert!(old.is_none());
-    assert_eq!(meta.get::<String>("key").as_deref(), Some("original"));
-}
-
-// ── get_raw / set_raw ────────────────────────────────────────────────────────
-
-#[test]
-fn get_raw_returns_value_ref() {
-    let mut meta = Metadata::new();
-    meta.set("x", 1_i64);
-    assert_eq!(meta.get_raw("x"), Some(&json!(1)));
-}
-
-#[test]
-fn set_raw_inserts_value() {
-    let mut meta = Metadata::new();
-    meta.set_raw("raw", json!({"nested": true}));
-    assert_eq!(meta.get_raw("raw"), Some(&json!({"nested": true})));
-}
-
-#[test]
-fn value_type_reports_json_shape() {
+fn data_type_reports_value_data_type() {
     let mut meta = Metadata::new();
     meta.set("flag", true);
     meta.set("count", 7_i64);
     meta.set("name", "alice");
-    meta.set_raw("items", json!([1, 2, 3]));
-    meta.set_raw("config", json!({"nested": true}));
-    meta.set_raw("empty", Value::Null);
+    meta.set_raw("payload", Value::Json(json!({"nested": true})));
 
-    assert_eq!(meta.value_type("flag"), Some(MetadataValueType::Bool));
-    assert_eq!(meta.value_type("count"), Some(MetadataValueType::Number));
-    assert_eq!(meta.value_type("name"), Some(MetadataValueType::String));
-    assert_eq!(meta.value_type("items"), Some(MetadataValueType::Array));
-    assert_eq!(meta.value_type("config"), Some(MetadataValueType::Object));
-    assert_eq!(meta.value_type("empty"), Some(MetadataValueType::Null));
-    assert_eq!(meta.value_type("missing"), None);
-}
-
-#[test]
-fn metadata_value_type_from_and_display() {
-    assert_eq!(
-        MetadataValueType::from(&Value::Null),
-        MetadataValueType::Null
-    );
-    assert_eq!(MetadataValueType::Null.to_string(), "null");
-    assert_eq!(MetadataValueType::Bool.to_string(), "bool");
-    assert_eq!(MetadataValueType::Number.to_string(), "number");
-    assert_eq!(MetadataValueType::String.to_string(), "string");
-    assert_eq!(MetadataValueType::Array.to_string(), "array");
-    assert_eq!(MetadataValueType::Object.to_string(), "object");
+    assert_eq!(meta.data_type("flag"), Some(DataType::Bool));
+    assert_eq!(meta.data_type("count"), Some(DataType::Int64));
+    assert_eq!(meta.data_type("name"), Some(DataType::String));
+    assert_eq!(meta.data_type("payload"), Some(DataType::Json));
+    assert_eq!(meta.data_type("missing"), None);
 }
 
 #[test]
@@ -266,139 +160,100 @@ fn metadata_error_display_messages_are_human_readable() {
     let missing = MetadataError::MissingKey("missing".to_string());
     assert_eq!(missing.to_string(), "Metadata key not found: missing");
 
-    let serialization = MetadataError::SerializationError {
+    let mismatch = MetadataError::TypeMismatch {
         key: "answer".to_string(),
-        message: "boom".to_string(),
-    };
-    assert_eq!(
-        serialization.to_string(),
-        "Failed to serialize metadata value for key 'answer': boom"
-    );
-
-    let deserialization = MetadataError::DeserializationError {
-        key: "answer".to_string(),
-        expected: std::any::type_name::<i64>(),
-        actual: MetadataValueType::String,
+        expected: DataType::Int64,
+        actual: DataType::String,
         message: "invalid type".to_string(),
     };
     assert_eq!(
-        deserialization.to_string(),
-        format!(
-            "Failed to deserialize metadata key 'answer' as {} from JSON string: invalid type",
-            std::any::type_name::<i64>()
-        )
+        mismatch.to_string(),
+        "Metadata key 'answer' expected int64 but actual string: invalid type"
     );
 
-    let _error_ref: &dyn std::error::Error = &deserialization;
+    let _error_ref: &dyn std::error::Error = &mismatch;
 }
 
-// ── contains_key / len / is_empty ────────────────────────────────────────────
-
 #[test]
-fn contains_key() {
+fn contains_key_and_len_track_entries() {
     let mut meta = Metadata::new();
     assert!(!meta.contains_key("k"));
+    assert_eq!(meta.len(), 0);
+
     meta.set("k", "v");
     assert!(meta.contains_key("k"));
-}
-
-#[test]
-fn len_tracks_entries() {
-    let mut meta = Metadata::new();
-    assert_eq!(meta.len(), 0);
-    meta.set("a", 1_i64);
     assert_eq!(meta.len(), 1);
-    meta.set("b", 2_i64);
-    assert_eq!(meta.len(), 2);
-    meta.set("a", 99_i64);
-    assert_eq!(meta.len(), 2);
-}
 
-// ── remove / clear ───────────────────────────────────────────────────────────
-
-#[test]
-fn remove_existing_key() {
-    let mut meta = Metadata::new();
-    meta.set("k", "v");
-    let removed = meta.remove("k");
-    assert_eq!(removed, Some(json!("v")));
-    assert!(!meta.contains_key("k"));
+    meta.set("k", "new");
+    assert_eq!(meta.len(), 1);
 }
 
 #[test]
-fn remove_missing_key_returns_none() {
-    let mut meta = Metadata::new();
-    assert!(meta.remove("missing").is_none());
-}
-
-#[test]
-fn clear_empties_metadata() {
+fn remove_and_clear_work() {
     let mut meta = Metadata::new();
     meta.set("a", 1_i64);
     meta.set("b", 2_i64);
+
+    assert_eq!(meta.remove("a"), Some(Value::Int64(1)));
+    assert!(!meta.contains_key("a"));
+
     meta.clear();
     assert!(meta.is_empty());
 }
 
-// ── Iteration ────────────────────────────────────────────────────────────────
-
 #[test]
-fn iter_returns_sorted_pairs() {
+fn iterators_return_sorted_entries() {
     let mut meta = Metadata::new();
     meta.set("z", "last");
-    meta.set("a", "first");
-    meta.set("m", "middle");
-
-    let keys: Vec<&str> = meta.iter().map(|(k, _)| k).collect();
-    assert_eq!(keys, vec!["a", "m", "z"]);
-}
-
-#[test]
-fn keys_iterator() {
-    let mut meta = Metadata::new();
-    meta.set("b", 1_i64);
-    meta.set("a", 2_i64);
-    let keys: Vec<&str> = meta.keys().collect();
-    assert_eq!(keys, vec!["a", "b"]);
-}
-
-#[test]
-fn values_iterator() {
-    let mut meta = Metadata::new();
     meta.set("a", 1_i64);
-    meta.set("b", 2_i64);
-    let vals: Vec<&Value> = meta.values().collect();
-    assert_eq!(vals, vec![&json!(1), &json!(2)]);
+    meta.set("m", true);
+
+    let keys: Vec<&str> = meta.iter().map(|(key, _)| key).collect();
+    assert_eq!(keys, vec!["a", "m", "z"]);
+
+    let keys: Vec<&str> = meta.keys().collect();
+    assert_eq!(keys, vec!["a", "m", "z"]);
+
+    let values: Vec<&Value> = meta.values().collect();
+    assert_eq!(
+        values,
+        vec![
+            &Value::Int64(1),
+            &Value::Bool(true),
+            &Value::String("last".to_string())
+        ]
+    );
 }
 
 #[test]
 fn into_iter_consumes_metadata() {
     let mut meta = Metadata::new();
     meta.set("x", 10_i64);
+
     let pairs: Vec<(String, Value)> = meta.into_iter().collect();
-    assert_eq!(pairs, vec![("x".to_string(), json!(10))]);
+    assert_eq!(pairs, vec![("x".to_string(), Value::Int64(10))]);
 }
 
 #[test]
-fn ref_into_iter() {
+fn ref_into_iter_counts_entries() {
     let mut meta = Metadata::new();
     meta.set("k", "v");
-    let count = (&meta).into_iter().count();
-    assert_eq!(count, 1);
+    assert_eq!((&meta).into_iter().count(), 1);
 }
 
-// ── merge / merged ───────────────────────────────────────────────────────────
-
 #[test]
-fn merge_adds_entries_from_other() {
+fn merge_and_merged_work() {
     let mut a = Metadata::new();
     a.set("x", 1_i64);
 
     let mut b = Metadata::new();
     b.set("y", 2_i64);
 
+    let c = a.merged(&b);
+    assert_eq!(a.len(), 1);
+    assert_eq!(c.len(), 2);
+
     a.merge(b);
-    assert_eq!(a.len(), 2);
     assert_eq!(a.get::<i64>("x"), Some(1));
     assert_eq!(a.get::<i64>("y"), Some(2));
 }
@@ -416,113 +271,78 @@ fn merge_overwrites_on_conflict() {
 }
 
 #[test]
-fn merged_does_not_mutate_self() {
-    let mut a = Metadata::new();
-    a.set("x", 1_i64);
-
-    let mut b = Metadata::new();
-    b.set("y", 2_i64);
-
-    let c = a.merged(&b);
-    assert_eq!(a.len(), 1);
-    assert_eq!(c.len(), 2);
-}
-
-// ── retain ───────────────────────────────────────────────────────────────────
-
-#[test]
 fn retain_keeps_matching_entries() {
     let mut meta = Metadata::new();
     meta.set("a", 1_i64);
     meta.set("b", 2_i64);
     meta.set("c", 3_i64);
 
-    meta.retain(|k, _| k != "b");
+    meta.retain(|key, _| key != "b");
     assert!(!meta.contains_key("b"));
     assert_eq!(meta.len(), 2);
 }
 
-// ── Conversions ──────────────────────────────────────────────────────────────
-
 #[test]
-fn from_btreemap() {
+fn btreemap_conversions_work() {
     let mut map = BTreeMap::new();
-    map.insert("k".to_string(), json!("v"));
+    map.insert("k".to_string(), Value::String("v".to_string()));
+
     let meta = Metadata::from(map);
     assert_eq!(meta.get::<String>("k").as_deref(), Some("v"));
-}
 
-#[test]
-fn into_btreemap() {
-    let mut meta = Metadata::new();
-    meta.set("k", "v");
     let map: BTreeMap<String, Value> = meta.into();
-    assert_eq!(map.get("k"), Some(&json!("v")));
+    assert_eq!(map.get("k"), Some(&Value::String("v".to_string())));
 }
 
 #[test]
-fn into_inner() {
+fn into_inner_returns_underlying_map() {
     let mut meta = Metadata::new();
     meta.set("k", 1_i64);
+
     let inner = meta.into_inner();
-    assert_eq!(inner.get("k"), Some(&json!(1)));
+    assert_eq!(inner.get("k"), Some(&Value::Int64(1)));
 }
 
 #[test]
-fn from_iterator() {
-    let pairs = vec![("a".to_string(), json!(1)), ("b".to_string(), json!(2))];
-    let meta: Metadata = pairs.into_iter().collect();
-    assert_eq!(meta.len(), 2);
-}
+fn from_iterator_and_extend_work() {
+    let pairs = vec![
+        ("a".to_string(), Value::Int64(1)),
+        ("b".to_string(), Value::Int64(2)),
+    ];
+    let mut meta: Metadata = pairs.into_iter().collect();
 
-#[test]
-fn extend() {
-    let mut meta = Metadata::new();
-    meta.set("a", 1_i64);
-    meta.extend(vec![
-        ("b".to_string(), json!(2)),
-        ("c".to_string(), json!(3)),
-    ]);
+    meta.extend(vec![("c".to_string(), Value::Int64(3))]);
     assert_eq!(meta.len(), 3);
 }
 
-// ── Serde round-trip ─────────────────────────────────────────────────────────
-
 #[test]
-fn serde_json_round_trip() {
-    let mut meta = Metadata::new();
-    meta.set("name", "bob");
-    meta.set("age", 30_i64);
-    meta.set("active", true);
+fn serde_round_trip_uses_value_encoding() {
+    let meta = Metadata::new()
+        .with("name", "bob")
+        .with("age", 30_i64)
+        .with("active", true);
 
-    let json_str = serde_json::to_string(&meta).unwrap();
-    let restored: Metadata = serde_json::from_str(&json_str).unwrap();
+    let json_text = serde_json::to_string(&meta).unwrap();
+    let restored: Metadata = serde_json::from_str(&json_text).unwrap();
     assert_eq!(meta, restored);
 }
-
-#[test]
-fn deserialize_from_json_object() {
-    let json_str = r#"{"city":"Paris","population":2161000}"#;
-    let meta: Metadata = serde_json::from_str(json_str).unwrap();
-    assert_eq!(meta.get::<String>("city").as_deref(), Some("Paris"));
-    assert_eq!(meta.get::<i64>("population"), Some(2_161_000));
-}
-
-// ── Clone / PartialEq ────────────────────────────────────────────────────────
 
 #[test]
 fn clone_is_independent() {
     let mut original = Metadata::new();
     original.set("k", "v");
+
     let mut cloned = original.clone();
     cloned.set("k", "changed");
+
     assert_eq!(original.get::<String>("k").as_deref(), Some("v"));
 }
 
 #[test]
-fn partial_eq() {
+fn partial_eq_compares_values() {
     let mut a = Metadata::new();
     a.set("x", 1_i64);
+
     let mut b = Metadata::new();
     b.set("x", 1_i64);
     assert_eq!(a, b);
