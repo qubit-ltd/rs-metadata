@@ -155,6 +155,15 @@ Missing-key behavior for negative predicates is controlled by
 `MissingKeyPolicy`. Mixed numeric comparison behavior is controlled by
 `NumberComparisonPolicy`.
 
+### 5) Versioned filter serde format
+
+Serialized `MetadataFilter` values use an explicit wire format with `version`,
+`expr`, and `options` fields. Expression nodes use `type`, and condition nodes
+use stable operator names in `op` such as `eq`, `ge`, `in`, and `not_exists`.
+The internal expression tree is not part of the serialization contract.
+Deserialization also accepts the previous private-enum shape for migration, but
+new serialization always emits the versioned format.
+
 ## Error Handling
 
 Use `try_get` and schema validation when the caller needs diagnostics instead of

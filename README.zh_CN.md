@@ -151,6 +151,13 @@ let filter = MetadataFilter::builder()
 负向谓词遇到缺失键时的行为由 `MissingKeyPolicy` 控制。整数、浮点数混合比较时的精度
 策略由 `NumberComparisonPolicy` 控制。
 
+### 5) 版本化 filter 序列化格式
+
+`MetadataFilter` 序列化后使用明确的 wire format，包含 `version`、`expr` 和
+`options` 字段。表达式节点使用 `type`，条件节点使用稳定的 `op` 操作符名，例如
+`eq`、`ge`、`in` 和 `not_exists`。内部表达式树不属于序列化契约。
+反序列化仍接受旧的私有枚举形状，便于迁移；新的序列化输出始终使用版本化格式。
+
 ## 错误处理
 
 当调用方需要明确区分“键不存在”和“类型不匹配”时，使用 `try_get` 或 schema 校验：
