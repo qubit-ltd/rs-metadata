@@ -6,12 +6,14 @@
  *    All rights reserved.
  *
  ******************************************************************************/
+//! Wire-format support for metadata filters.
 
-mod condition_tests;
-mod filter_match_options_tests;
-mod metadata_filter_builder_tests;
-mod metadata_filter_core_tests;
-mod metadata_filter_tests;
-mod missing_key_policy_tests;
-mod number_comparison_policy_tests;
-mod wire;
+mod condition;
+mod expr;
+mod input;
+mod legacy_expr;
+mod legacy_metadata_filter;
+mod metadata_filter;
+
+pub(crate) use input::MetadataFilterInput;
+pub(crate) use metadata_filter::MetadataFilterWire;

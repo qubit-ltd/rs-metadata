@@ -9,8 +9,8 @@
 //! [`LegacyFilterExpr`].
 use serde::Deserialize;
 
-use super::filter_expr::FilterExpr;
-use crate::Condition;
+use super::super::condition::Condition;
+use super::super::filter_expr::FilterExpr;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub(crate) enum LegacyFilterExpr {

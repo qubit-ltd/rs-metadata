@@ -7,10 +7,9 @@
  *
  ******************************************************************************/
 //! [`FilterExpr`].
+use super::condition::Condition;
 use crate::metadata::Metadata;
-use crate::{
-    Condition, FilterMatchOptions, MetadataResult,
-};
+use crate::{FilterMatchOptions, MetadataResult};
 
 /// Internal expression tree used by [`crate::MetadataFilter`].
 #[derive(Debug, Clone, PartialEq)]

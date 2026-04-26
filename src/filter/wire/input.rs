@@ -9,9 +9,9 @@
 //! [`MetadataFilterInput`].
 use serde::Deserialize;
 
-use super::legacy_metadata_filter_wire::LegacyMetadataFilterWire;
-use super::metadata_filter::MetadataFilter;
-use super::metadata_filter_wire::MetadataFilterWire;
+use super::legacy_metadata_filter::LegacyMetadataFilterWire;
+use super::metadata_filter::MetadataFilterWire;
+use super::super::metadata_filter::MetadataFilter;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]

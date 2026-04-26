@@ -14,6 +14,7 @@
 mod builder;
 mod field;
 mod definition;
+mod filter_validation;
 mod unknown_field_policy;
 
 pub use builder::MetadataSchemaBuilder;

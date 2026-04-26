@@ -10,9 +10,8 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use super::filter_expr::FilterExpr;
-use super::metadata_filter_input::MetadataFilterInput;
-use super::metadata_filter_wire::MetadataFilterWire;
 use super::metadata_filter_builder::MetadataFilterBuilder;
+use super::wire::{MetadataFilterInput, MetadataFilterWire};
 use crate::metadata::Metadata;
 use crate::{
     Condition, FilterMatchOptions, MetadataResult, MissingKeyPolicy, NumberComparisonPolicy,

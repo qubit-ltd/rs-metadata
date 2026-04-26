@@ -10,7 +10,7 @@
 use qubit_value::Value;
 use serde::{Deserialize, Serialize};
 
-use crate::Condition;
+use super::super::condition::Condition;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]

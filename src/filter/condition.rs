@@ -15,7 +15,9 @@ use num_bigint::BigInt;
 use qubit_value::Value;
 use serde::{Deserialize, Serialize};
 
-use crate::{Metadata, MissingKeyPolicy, NumberComparisonPolicy};
+use super::missing_key_policy::MissingKeyPolicy;
+use super::number_comparison_policy::NumberComparisonPolicy;
+use crate::Metadata;
 
 /// A single comparison operator applied to one metadata key.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

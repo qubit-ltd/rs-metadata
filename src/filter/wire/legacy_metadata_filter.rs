@@ -9,8 +9,8 @@
 //! [`LegacyMetadataFilterWire`].
 use serde::Deserialize;
 
-use super::legacy_filter_expr::LegacyFilterExpr;
-use super::metadata_filter::MetadataFilter;
+use super::legacy_expr::LegacyFilterExpr;
+use super::super::metadata_filter::MetadataFilter;
 use crate::FilterMatchOptions;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]

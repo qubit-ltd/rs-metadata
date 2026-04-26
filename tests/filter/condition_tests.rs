@@ -8,7 +8,7 @@
  ******************************************************************************/
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
-#[path = "support/test_support.rs"]
+#[path = "../support/test_support.rs"]
 mod test_support;
 
 use qubit_metadata::{

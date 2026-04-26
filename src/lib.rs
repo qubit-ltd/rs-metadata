@@ -62,14 +62,13 @@
 
 #![deny(missing_docs)]
 
-mod condition;
 mod metadata;
 mod metadata_error;
 mod filter;
 mod metadata_result;
 mod schema;
 
-pub use condition::Condition;
+pub use filter::Condition;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
 pub use schema::MetadataField;

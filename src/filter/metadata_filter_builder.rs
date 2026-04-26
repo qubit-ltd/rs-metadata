@@ -9,11 +9,11 @@
 //! [`MetadataFilterBuilder`] — fluent builder for composable filters.
 use qubit_value::{Value, ValueConstructor};
 
+use super::condition::Condition;
 use super::filter_expr::FilterExpr;
 use super::metadata_filter::MetadataFilter;
 use crate::{
-    Condition, FilterMatchOptions, MetadataResult, MetadataSchema, MissingKeyPolicy,
-    NumberComparisonPolicy,
+    FilterMatchOptions, MetadataResult, MetadataSchema, MissingKeyPolicy, NumberComparisonPolicy,
 };
 
 /// Builder for [`MetadataFilter`].
