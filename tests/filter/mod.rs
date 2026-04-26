@@ -7,7 +7,5 @@
  *
  ******************************************************************************/
 
-#[path = "support/test_support.rs"]
-mod test_support;
-
-mod filter;
+mod metadata_filter_core_tests;
+mod metadata_filter_serde_tests;

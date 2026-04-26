@@ -8,21 +8,15 @@
  ******************************************************************************/
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
+#[path = "support/test_support.rs"]
+mod test_support;
+
 use qubit_metadata::{
     Condition, FilterMatchOptions, Metadata, MetadataFilter, MissingKeyPolicy,
     NumberComparisonPolicy,
 };
 use qubit_value::Value;
-
-fn sample() -> Metadata {
-    let mut m = Metadata::new();
-    m.set("status", "active");
-    m.set("score", 42_i64);
-    m.set("ratio", 0.75_f64);
-    m.set("verified", true);
-    m.set("tag", "rust");
-    m
-}
+use test_support::sample;
 
 #[test]
 fn eq_matches_equal_string() {
