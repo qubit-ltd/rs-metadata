@@ -141,6 +141,16 @@ fn get_raw_and_set_raw_use_qubit_value() {
 }
 
 #[test]
+fn with_raw_builds_metadata_fluently() {
+    let meta = Metadata::new().with_raw("raw", Value::Json(json!({"nested": true})));
+
+    assert_eq!(
+        meta.get_raw("raw"),
+        Some(&Value::Json(json!({"nested": true})))
+    );
+}
+
+#[test]
 fn data_type_reports_value_data_type() {
     let mut meta = Metadata::new();
     meta.set("flag", true);

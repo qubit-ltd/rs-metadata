@@ -7,5 +7,5 @@
  *
  ******************************************************************************/
 
-#[path = "test_metadata_error.rs"]
-mod test_metadata_error;
+#[path = "common/metadata_error.rs"]
+mod metadata_error;

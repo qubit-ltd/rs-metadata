@@ -12,17 +12,22 @@
 # Run from repo root: ./align-ci.sh
 #
 
-set -e
+set -euo pipefail
 
 cd "$(dirname "$0")"
 
-echo "==> cargo fmt"
-cargo fmt
+if ! rustup toolchain list | grep -q nightly; then
+    echo "==> installing nightly toolchain"
+    rustup toolchain install nightly
+fi
 
-echo "==> cargo clippy --fix (all targets / features)"
-cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features
+echo "==> cargo +nightly fmt"
+cargo +nightly fmt
 
-echo "==> cargo clippy (verify, -D warnings)"
-cargo clippy --all-targets --all-features -- -D warnings
+echo "==> cargo +nightly clippy --fix (all targets / features)"
+cargo +nightly clippy --fix --allow-dirty --allow-staged --all-targets --all-features
+
+echo "==> cargo +nightly clippy (verify, -D warnings)"
+cargo +nightly clippy --all-targets --all-features -- -D warnings
 
 echo "Done. CI-style checks should pass; run ./ci-check.sh for the full pipeline."

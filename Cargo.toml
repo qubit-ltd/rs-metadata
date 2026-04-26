@@ -26,10 +26,11 @@ exclude = [
 name = "qubit_metadata"
 
 [dependencies]
+bigdecimal = "0.4"
+num-bigint = "0.4"
 qubit-common = { version = "0.6", path = "../rs-common" }
 qubit-value = { version = "0.4", path = "../rs-value" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 
 [dev-dependencies]
 serde_json = "1.0"

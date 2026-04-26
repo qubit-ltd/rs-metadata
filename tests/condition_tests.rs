@@ -7,5 +7,5 @@
  *
  ******************************************************************************/
 
-#[path = "test_condition.rs"]
-mod test_condition;
+#[path = "common/condition.rs"]
+mod condition;

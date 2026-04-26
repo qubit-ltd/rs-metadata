@@ -145,3 +145,155 @@ fn filter_serde_round_trip() {
     assert_eq!(f, restored);
     assert_eq!(f.matches(&sample()), restored.matches(&sample()));
 }
+
+#[test]
+fn filter_constructors_and_option_setters_work() {
+    let options = FilterMatchOptions {
+        missing_key_policy: MissingKeyPolicy::NoMatch,
+        number_comparison_policy: NumberComparisonPolicy::Approximate,
+    };
+
+    assert!(MetadataFilter::all().matches(&sample()));
+    assert!(!MetadataFilter::none().matches(&sample()));
+    assert!((!MetadataFilter::none()).matches(&sample()));
+
+    let strict = MetadataFilter::builder()
+        .ne("missing", "x")
+        .build()
+        .with_missing_key_policy(MissingKeyPolicy::NoMatch);
+    assert!(!strict.matches(&sample()));
+
+    let approximate = MetadataFilter::builder()
+        .gt("score", 0.5_f64)
+        .build()
+        .with_number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .with_options(options);
+    assert_eq!(approximate.options(), options);
+}
+
+#[test]
+fn or_operator_methods_cover_each_predicate() {
+    let meta = sample();
+
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_ne("status", "inactive")
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_lt("score", 50_i64)
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_le("score", 42_i64)
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_gt("score", 40_i64)
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_ge("score", 42_i64)
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_in_set("status", ["active", "pending"])
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_not_in_set("status", ["pending"])
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_exists("verified")
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "inactive")
+            .or_not_exists("missing")
+            .build()
+            .matches(&meta)
+    );
+}
+
+#[test]
+fn builder_aliases_and_empty_groups_preserve_expected_identities() {
+    let meta = sample();
+
+    assert!(
+        MetadataFilter::builder()
+            .not_in_set("status", ["inactive"])
+            .build()
+            .matches(&meta)
+    );
+    assert!(MetadataFilter::builder().or(|g| g).build().matches(&meta));
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "active")
+            .and(|g| g)
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .or(|g| g.eq("status", "active"))
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .not()
+            .or_eq("status", "active")
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .eq("status", "active")
+            .or_not(|g| g)
+            .build()
+            .matches(&meta)
+    );
+    assert!(
+        !MetadataFilter::builder()
+            .eq("status", "active")
+            .and_not(|g| g)
+            .build()
+            .matches(&meta)
+    );
+}
+
+#[test]
+fn chained_or_expressions_are_flattened() {
+    let filter = MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_eq("tag", "java")
+        .or_eq("status", "active")
+        .build();
+
+    assert!(filter.matches(&sample()));
+}

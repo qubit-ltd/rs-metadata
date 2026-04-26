@@ -12,7 +12,7 @@
 # Uses cargo-llvm-cov to generate code coverage reports
 #
 
-set -e
+set -euo pipefail
 
 echo "🔍 Starting code coverage testing..."
 
@@ -192,4 +192,3 @@ case "$FORMAT_ARG" in
 esac
 
 echo "✅ Code coverage testing completed!"
-

@@ -12,7 +12,7 @@
 # Run this script before committing code to ensure it passes all CircleCI checks
 #
 
-set -e  # Exit immediately on error
+set -euo pipefail
 
 # Color definitions
 RED='\033[0;31m'
@@ -20,6 +20,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+CLIPPY_OUTPUT=$(mktemp -t rs-metadata-clippy.XXXXXX)
+trap 'rm -f "$CLIPPY_OUTPUT"' EXIT
 
 # Print colored messages
 print_step() {
@@ -60,23 +62,23 @@ else
     echo ""
     echo "Please run the following command to fix formatting issues:"
     echo "  cargo +nightly fmt"
-    echo "Or use the format script:"
-    echo "  ./format.sh"
+    echo "Or run the CI alignment script:"
+    echo "  ./align-ci.sh"
     exit 1
 fi
 echo ""
 
 # Check 2: Clippy linting
 print_step "2/6 Running Clippy checks (cargo +nightly clippy)..."
-if cargo +nightly clippy --all-targets --all-features -- -D warnings 2>&1 | tee /tmp/clippy-output.txt | grep -q "warning\|error"; then
+if cargo +nightly clippy --all-targets --all-features -- -D warnings 2>&1 | tee "$CLIPPY_OUTPUT"; then
+    print_success "Clippy checks passed"
+else
     print_error "Clippy found issues"
-    cat /tmp/clippy-output.txt
+    cat "$CLIPPY_OUTPUT"
     echo ""
     echo "Please try to auto-fix with:"
     echo "  cargo +nightly clippy --fix --all-targets --all-features"
     exit 1
-else
-    print_success "Clippy checks passed"
 fi
 echo ""
 
@@ -113,6 +115,25 @@ echo ""
 print_step "5/6 Generating code coverage report..."
 if command -v cargo-llvm-cov &> /dev/null; then
     PACKAGE_NAME=$(grep "^name = " Cargo.toml | head -n 1 | sed 's/name = "\(.*\)"/\1/')
+    CURRENT_CRATE_DIR=$(pwd)
+    CURRENT_CRATE_NAME=$(basename "$CURRENT_CRATE_DIR")
+    WORKSPACE_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+    OTHER_CRATES=""
+    for crate_dir in "$WORKSPACE_ROOT"/*/; do
+        [ -d "$crate_dir" ] || continue
+        crate_name=$(basename "$crate_dir")
+        if [ "$crate_name" != "$CURRENT_CRATE_NAME" ]; then
+            if [ -z "$OTHER_CRATES" ]; then
+                OTHER_CRATES="$crate_name"
+            else
+                OTHER_CRATES="$OTHER_CRATES|$crate_name"
+            fi
+        fi
+    done
+    EXCLUDE_PATTERN="(\.cargo/registry|\.rustup/)"
+    if [ -n "$OTHER_CRATES" ]; then
+        EXCLUDE_PATTERN="(\.cargo/registry|\.rustup/|/($OTHER_CRATES)/)"
+    fi
 
     # cargo-llvm-cov needs llvm-profdata AND llvm-cov from llvm-tools-preview on the
     # SAME toolchain Cargo uses in this directory (may differ from `rustup default`).
@@ -165,7 +186,7 @@ if command -v cargo-llvm-cov &> /dev/null; then
     # temporarily allow failure, then print the log and exit explicitly.
     set +e
     COVERAGE_OUTPUT=$(cargo llvm-cov --package "$PACKAGE_NAME" \
-        --ignore-filename-regex "(\.cargo/registry|\.rustup/)" 2>&1)
+        --ignore-filename-regex "$EXCLUDE_PATTERN" 2>&1)
     COVERAGE_EXIT=$?
     set -e
     if [ "$COVERAGE_EXIT" -ne 0 ]; then
@@ -202,10 +223,19 @@ echo ""
 # Check 6: Security audit
 print_step "6/6 Running security audit (cargo audit)..."
 if command -v cargo-audit &> /dev/null; then
-    if cargo audit; then
+    set +e
+    AUDIT_OUTPUT=$(cargo audit 2>&1)
+    AUDIT_EXIT=$?
+    set -e
+    if [ "$AUDIT_EXIT" -eq 0 ]; then
+        echo "$AUDIT_OUTPUT"
         print_success "Security audit passed, no known vulnerabilities found"
+    elif echo "$AUDIT_OUTPUT" | grep -qi "couldn't fetch advisory database\\|failed to prepare fetch"; then
+        print_warning "Unable to fetch RustSec advisory database; skipping security audit."
+        echo "$AUDIT_OUTPUT"
     else
         print_error "Security audit found issues"
+        echo "$AUDIT_OUTPUT"
         echo ""
         echo "Please review the security issues and consider:"
         echo "  1. Update dependencies: cargo update"
@@ -228,7 +258,3 @@ echo ""
 echo "Your code is ready to commit."
 echo "After pushing, CircleCI will automatically run the same checks."
 echo ""
-
-# Clean up temporary files
-rm -f /tmp/clippy-output.txt
-

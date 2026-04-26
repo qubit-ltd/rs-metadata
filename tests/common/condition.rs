@@ -12,6 +12,7 @@ use qubit_metadata::{
     Condition, FilterMatchOptions, Metadata, MetadataFilter, MissingKeyPolicy,
     NumberComparisonPolicy,
 };
+use qubit_value::Value;
 
 fn sample() -> Metadata {
     let mut m = Metadata::new();
@@ -470,6 +471,190 @@ fn approximate_number_policy_enables_lossy_fallback_for_large_u64() {
 }
 
 #[test]
+fn range_filter_covers_numeric_value_variants() {
+    macro_rules! assert_gt {
+        ($stored:expr, $bound:expr) => {
+            let meta = Metadata::new().with("n", $stored);
+            assert!(
+                MetadataFilter::builder()
+                    .gt("n", $bound)
+                    .build()
+                    .matches(&meta)
+            );
+        };
+    }
+
+    assert_gt!(2_i8, 1_i8);
+    assert_gt!(2_i16, 1_i16);
+    assert_gt!(2_i32, 1_i32);
+    assert_gt!(2_i128, 1_i128);
+    assert_gt!(2_u8, 1_u8);
+    assert_gt!(2_u16, 1_u16);
+    assert_gt!(2_u32, 1_u32);
+    assert_gt!(2_u128, 1_u128);
+    assert_gt!(2_isize, 1_isize);
+    assert_gt!(2_usize, 1_usize);
+    assert_gt!(2.0_f32, 1.0_f32);
+}
+
+#[test]
+fn range_filter_i128_and_u128_float_edges_respect_policy() {
+    let signed = Metadata::new().with("n", i128::MAX);
+    let signed_conservative = MetadataFilter::builder().gt("n", 0.5_f64);
+    assert!(!signed_conservative.clone().build().matches(&signed));
+    assert!(
+        signed_conservative
+            .number_comparison_policy(NumberComparisonPolicy::Approximate)
+            .build()
+            .matches(&signed)
+    );
+
+    let unsigned = Metadata::new().with("n", u128::MAX);
+    let unsigned_conservative = MetadataFilter::builder().gt("n", 0.5_f64);
+    assert!(!unsigned_conservative.clone().build().matches(&unsigned));
+    assert!(
+        unsigned_conservative
+            .number_comparison_policy(NumberComparisonPolicy::Approximate)
+            .build()
+            .matches(&unsigned)
+    );
+}
+
+#[test]
+fn range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
+    let negative = Metadata::new().with("n", -1_i128);
+    assert!(
+        MetadataFilter::builder()
+            .lt("n", 0_u128)
+            .build()
+            .matches(&negative)
+    );
+
+    let huge = Metadata::new().with("n", u128::MAX);
+    assert!(
+        MetadataFilter::builder()
+            .gt("n", i128::MAX)
+            .build()
+            .matches(&huge)
+    );
+}
+
+#[test]
+fn big_integer_equality_matches_in_conservative_policy() {
+    let mut m = Metadata::new();
+    m.set("n", num_bigint::BigInt::from(i128::MAX) + 1_i32);
+
+    let exact = num_bigint::BigInt::from(i128::MAX) + 1_i32;
+    assert!(MetadataFilter::builder().eq("n", exact).build().matches(&m));
+    assert!(
+        !MetadataFilter::builder()
+            .eq("n", num_bigint::BigInt::from(i128::MAX))
+            .build()
+            .matches(&m)
+    );
+}
+
+#[test]
+fn big_integer_range_matches_integral_values_exactly() {
+    let mut m = Metadata::new();
+    m.set("n", num_bigint::BigInt::from(u128::MAX) + 1_u32);
+
+    assert!(
+        MetadataFilter::builder()
+            .gt("n", u128::MAX)
+            .build()
+            .matches(&m)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .ge("n", num_bigint::BigInt::from(u128::MAX) + 1_u32)
+            .build()
+            .matches(&m)
+    );
+}
+
+#[test]
+fn big_decimal_equality_matches_integral_values_exactly() {
+    let mut m = Metadata::new();
+    m.set("n", bigdecimal::BigDecimal::from(10_i64));
+
+    assert!(
+        MetadataFilter::builder()
+            .eq("n", 10_i64)
+            .build()
+            .matches(&m)
+    );
+    assert!(
+        !MetadataFilter::builder()
+            .eq("n", 11_i64)
+            .build()
+            .matches(&m)
+    );
+}
+
+#[test]
+fn big_decimal_range_matches_big_integer_exactly() {
+    let mut m = Metadata::new();
+    m.set(
+        "n",
+        bigdecimal::BigDecimal::from(num_bigint::BigInt::from(u128::MAX)),
+    );
+
+    assert!(
+        MetadataFilter::builder()
+            .ge("n", num_bigint::BigInt::from(u128::MAX))
+            .build()
+            .matches(&m)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .lt("n", num_bigint::BigInt::from(u128::MAX) + 1_u32)
+            .build()
+            .matches(&m)
+    );
+}
+
+#[test]
+fn big_decimal_float_comparison_requires_approximate_policy() {
+    let mut m = Metadata::new();
+    m.set("n", bigdecimal::BigDecimal::from(10_i64));
+
+    let conservative = MetadataFilter::builder().eq("n", 10.0_f64);
+    assert!(!conservative.clone().build().matches(&m));
+
+    let approximate = conservative.number_comparison_policy(NumberComparisonPolicy::Approximate);
+    assert!(approximate.build().matches(&m));
+}
+
+#[test]
+fn big_integer_comparison_accepts_integral_variants() {
+    macro_rules! assert_eq_big_integer {
+        ($stored:expr) => {
+            let meta = Metadata::new().with("n", $stored);
+            assert!(
+                MetadataFilter::builder()
+                    .eq("n", num_bigint::BigInt::from(5_i32))
+                    .build()
+                    .matches(&meta)
+            );
+        };
+    }
+
+    assert_eq_big_integer!(5_i8);
+    assert_eq_big_integer!(5_i16);
+    assert_eq_big_integer!(5_i32);
+    assert_eq_big_integer!(5_i64);
+    assert_eq_big_integer!(5_i128);
+    assert_eq_big_integer!(5_u8);
+    assert_eq_big_integer!(5_u16);
+    assert_eq_big_integer!(5_u32);
+    assert_eq_big_integer!(5_u64);
+    assert_eq_big_integer!(5_u128);
+    assert_eq_big_integer!(5_isize);
+    assert_eq_big_integer!(5_usize);
+}
+
+#[test]
 fn range_filter_incomparable_types_do_not_match() {
     assert!(
         !MetadataFilter::builder()
@@ -585,7 +770,7 @@ fn missing_key_policy_applies_recursively_in_filter_tree() {
 fn condition_serde_round_trip() {
     let c = Condition::Equal {
         key: "status".into(),
-        value: qubit_value::Value::from_json_value(serde_json::json!("active")),
+        value: Value::from_json_value(serde_json::json!("active")),
     };
     let json = serde_json::to_string(&c).unwrap();
     let restored: Condition = serde_json::from_str(&json).unwrap();

@@ -7,5 +7,5 @@
  *
  ******************************************************************************/
 
-#[path = "test_metadata_value_type.rs"]
-mod test_metadata_value_type;
+#[path = "common/metadata_schema.rs"]
+mod metadata_schema;

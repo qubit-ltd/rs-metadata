@@ -7,5 +7,5 @@
  *
  ******************************************************************************/
 
-#[path = "test_metadata.rs"]
-mod test_metadata;
+#[path = "common/metadata.rs"]
+mod metadata;

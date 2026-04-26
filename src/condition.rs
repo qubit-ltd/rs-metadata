@@ -10,6 +10,8 @@
 
 use std::cmp::Ordering;
 
+use bigdecimal::BigDecimal;
+use num_bigint::BigInt;
 use qubit_value::Value;
 use serde::{Deserialize, Serialize};
 
@@ -200,7 +202,7 @@ fn is_numeric_value(value: &Value) -> bool {
 
 /// Converts a `Value` into the normalized numeric representation when supported.
 #[inline]
-fn number_value(value: &Value, policy: NumberComparisonPolicy) -> Option<NumberValue> {
+fn number_value(value: &Value) -> Option<NumberValue> {
     match value {
         Value::Int8(v) => Some(NumberValue::Signed(i128::from(*v))),
         Value::Int16(v) => Some(NumberValue::Signed(i128::from(*v))),
@@ -216,11 +218,6 @@ fn number_value(value: &Value, policy: NumberComparisonPolicy) -> Option<NumberV
         Value::UIntSize(v) => Some(NumberValue::Unsigned(*v as u128)),
         Value::Float32(v) => Some(NumberValue::Float(f64::from(*v))),
         Value::Float64(v) => Some(NumberValue::Float(*v)),
-        Value::BigInteger(_) | Value::BigDecimal(_)
-            if matches!(policy, NumberComparisonPolicy::Approximate) =>
-        {
-            value.to::<f64>().ok().map(NumberValue::Float)
-        }
         _ => None,
     }
 }
@@ -232,10 +229,10 @@ fn compare_numbers(
     b: &Value,
     number_comparison_policy: NumberComparisonPolicy,
 ) -> Option<Ordering> {
-    match (
-        number_value(a, number_comparison_policy)?,
-        number_value(b, number_comparison_policy)?,
-    ) {
+    if contains_big_number(a, b) {
+        return compare_big_numbers(a, b, number_comparison_policy);
+    }
+    match (number_value(a)?, number_value(b)?) {
         (NumberValue::Signed(x), NumberValue::Signed(y)) => Some(x.cmp(&y)),
         (NumberValue::Unsigned(x), NumberValue::Unsigned(y)) => Some(x.cmp(&y)),
         (NumberValue::Signed(x), NumberValue::Unsigned(y)) => Some(compare_i128_u128(x, y)),
@@ -256,6 +253,68 @@ fn compare_numbers(
         }
         (NumberValue::Float(x), NumberValue::Float(y)) => x.partial_cmp(&y),
     }
+}
+
+/// Returns `true` if either value is a big-number variant.
+#[inline]
+fn contains_big_number(a: &Value, b: &Value) -> bool {
+    matches!(a, Value::BigInteger(_) | Value::BigDecimal(_))
+        || matches!(b, Value::BigInteger(_) | Value::BigDecimal(_))
+}
+
+/// Compares values when at least one side is `BigInteger` or `BigDecimal`.
+fn compare_big_numbers(
+    a: &Value,
+    b: &Value,
+    number_comparison_policy: NumberComparisonPolicy,
+) -> Option<Ordering> {
+    if let (Some(x), Some(y)) = (big_integer_value(a), big_integer_value(b)) {
+        return Some(x.cmp(&y));
+    }
+    if let (Some(x), Some(y)) = (big_decimal_value(a), big_decimal_value(b)) {
+        return Some(x.cmp(&y));
+    }
+    if matches!(
+        number_comparison_policy,
+        NumberComparisonPolicy::Approximate
+    ) {
+        return compare_as_f64(a, b);
+    }
+    None
+}
+
+/// Converts integral numeric values to `BigInt` for exact comparison.
+fn big_integer_value(value: &Value) -> Option<BigInt> {
+    match value {
+        Value::Int8(v) => Some(BigInt::from(*v)),
+        Value::Int16(v) => Some(BigInt::from(*v)),
+        Value::Int32(v) => Some(BigInt::from(*v)),
+        Value::Int64(v) => Some(BigInt::from(*v)),
+        Value::Int128(v) => Some(BigInt::from(*v)),
+        Value::UInt8(v) => Some(BigInt::from(*v)),
+        Value::UInt16(v) => Some(BigInt::from(*v)),
+        Value::UInt32(v) => Some(BigInt::from(*v)),
+        Value::UInt64(v) => Some(BigInt::from(*v)),
+        Value::UInt128(v) => Some(BigInt::from(*v)),
+        Value::IntSize(v) => Some(BigInt::from(*v)),
+        Value::UIntSize(v) => Some(BigInt::from(*v)),
+        Value::BigInteger(v) => Some(v.clone()),
+        _ => None,
+    }
+}
+
+/// Converts integral and decimal numeric values to `BigDecimal`.
+fn big_decimal_value(value: &Value) -> Option<BigDecimal> {
+    match value {
+        Value::BigDecimal(v) => Some(v.clone()),
+        _ => big_integer_value(value).map(BigDecimal::from),
+    }
+}
+
+/// Compares two numeric values through the approximate `f64` fallback.
+#[inline]
+fn compare_as_f64(a: &Value, b: &Value) -> Option<Ordering> {
+    a.to::<f64>().ok()?.partial_cmp(&b.to::<f64>().ok()?)
 }
 
 const MAX_SAFE_INTEGER_F64_U64: u64 = 9_007_199_254_740_992;

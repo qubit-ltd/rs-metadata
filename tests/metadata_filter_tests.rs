@@ -7,5 +7,5 @@
  *
  ******************************************************************************/
 
-#[path = "test_metadata_filter.rs"]
-mod test_metadata_filter;
+#[path = "common/metadata_filter.rs"]
+mod metadata_filter;

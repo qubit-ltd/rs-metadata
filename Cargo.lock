@@ -482,6 +482,8 @@ dependencies = [
 name = "qubit-metadata"
 version = "0.3.0"
 dependencies = [
+ "bigdecimal",
+ "num-bigint",
  "qubit-common",
  "qubit-value",
  "serde",
