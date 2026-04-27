@@ -64,6 +64,14 @@ fn display_formats_all_variants() {
         invalid_operator.to_string(),
         "Metadata filter operator 'gt' is invalid for key 'active' with type bool: range operators require a numeric or string field"
     );
+
+    let invalid_expression = MetadataError::InvalidFilterExpression {
+        message: "empty 'and' filter group is not allowed".to_string(),
+    };
+    assert_eq!(
+        invalid_expression.to_string(),
+        "Metadata filter expression is invalid: empty 'and' filter group is not allowed"
+    );
 }
 
 #[test]
