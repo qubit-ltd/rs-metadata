@@ -20,7 +20,7 @@ use crate::{Metadata, MetadataError, MetadataResult};
 ///
 /// A schema declares valid keys, their concrete [`DataType`], and whether they
 /// are required. It can validate actual [`Metadata`] values and validate that a
-/// [`MetadataFilter`] references known fields with compatible operators.
+/// [`crate::MetadataFilter`] references known fields with compatible operators.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MetadataSchema {
     /// Field definitions keyed by metadata key.
@@ -113,7 +113,6 @@ impl MetadataSchema {
         }
         Ok(())
     }
-
 }
 
 impl Default for MetadataSchema {

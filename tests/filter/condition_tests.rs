@@ -8,15 +8,12 @@
  ******************************************************************************/
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
-#[path = "../support/test_support.rs"]
-mod test_support;
-
+use crate::test_support::sample;
 use qubit_metadata::{
     Condition, FilterMatchOptions, Metadata, MetadataFilter, MissingKeyPolicy,
     NumberComparisonPolicy,
 };
 use qubit_value::Value;
-use test_support::sample;
 
 #[test]
 fn eq_matches_equal_string() {

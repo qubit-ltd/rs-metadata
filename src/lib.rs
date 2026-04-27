@@ -62,22 +62,22 @@
 
 #![deny(missing_docs)]
 
+mod filter;
 mod metadata;
 mod metadata_error;
-mod filter;
 mod metadata_result;
 mod schema;
 
 pub use filter::Condition;
-pub use metadata::Metadata;
-pub use metadata_error::MetadataError;
-pub use schema::MetadataField;
 pub use filter::FilterMatchOptions;
 pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
 pub use filter::MissingKeyPolicy;
 pub use filter::NumberComparisonPolicy;
+pub use metadata::Metadata;
+pub use metadata_error::MetadataError;
 pub use metadata_result::MetadataResult;
+pub use schema::MetadataField;
 pub use schema::MetadataSchema;
 pub use schema::MetadataSchemaBuilder;
 pub use schema::UnknownFieldPolicy;

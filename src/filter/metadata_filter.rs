@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use super::filter_expr::FilterExpr;
 use super::metadata_filter_builder::MetadataFilterBuilder;
-use super::wire::{MetadataFilterInput, MetadataFilterWire};
+use super::wire::MetadataFilterWire;
 use crate::metadata::Metadata;
 use crate::{
     Condition, FilterMatchOptions, MetadataResult, MissingKeyPolicy, NumberComparisonPolicy,
@@ -146,7 +146,7 @@ impl<'de> Deserialize<'de> for MetadataFilter {
     where
         D: Deserializer<'de>,
     {
-        MetadataFilterInput::deserialize(deserializer)?
+        MetadataFilterWire::deserialize(deserializer)?
             .into_filter()
             .map_err(de::Error::custom)
     }

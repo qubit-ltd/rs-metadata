@@ -9,8 +9,8 @@
 //! [`MetadataFilterWire`] and wire version.
 use serde::{Deserialize, Serialize};
 
-use super::expr::FilterExprWire;
 use super::super::metadata_filter::MetadataFilter;
+use super::expr::FilterExprWire;
 use crate::FilterMatchOptions;
 
 pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 1;

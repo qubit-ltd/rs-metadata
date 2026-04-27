@@ -9,8 +9,8 @@
 //! [`FilterExprWire`].
 use serde::{Deserialize, Serialize};
 
-use super::condition::ConditionWire;
 use super::super::filter_expr::FilterExpr;
+use super::condition::ConditionWire;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
@@ -45,9 +45,7 @@ impl From<&FilterExpr> for FilterExprWire {
 impl FilterExprWire {
     pub(crate) fn into_expr(self) -> FilterExpr {
         match self {
-            Self::Condition { condition } => {
-                FilterExpr::Condition(condition.into_condition())
-            }
+            Self::Condition { condition } => FilterExpr::Condition(condition.into_condition()),
             Self::And { children } => {
                 FilterExpr::And(children.into_iter().map(Self::into_expr).collect())
             }

@@ -9,7 +9,7 @@
 //! Tests for metadata schema data types.
 
 use qubit_common::DataType;
-use qubit_metadata::{MetadataError, MetadataFilter, MetadataSchema};
+use qubit_metadata::{Metadata, MetadataError, MetadataFilter, MetadataSchema};
 
 #[test]
 fn schema_validate_filter_accepts_numeric_literal_compatibility() {
@@ -236,4 +236,3 @@ fn schema_validate_filter_rejects_range_on_bool() {
         other => panic!("expected InvalidFilterOperator, got {other:?}"),
     }
 }
-

@@ -8,6 +8,7 @@
  ******************************************************************************/
 use qubit_metadata::Metadata;
 
+#[allow(dead_code)]
 pub fn sample() -> Metadata {
     let mut m = Metadata::new();
     m.set("status", "active");

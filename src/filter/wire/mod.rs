@@ -10,10 +10,6 @@
 
 mod condition;
 mod expr;
-mod input;
-mod legacy_expr;
-mod legacy_metadata_filter;
 mod metadata_filter;
 
-pub(crate) use input::MetadataFilterInput;
 pub(crate) use metadata_filter::MetadataFilterWire;

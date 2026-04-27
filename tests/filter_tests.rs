@@ -7,4 +7,8 @@
  *
  ******************************************************************************/
 
+#[allow(dead_code)]
+#[path = "support/test_support.rs"]
+mod test_support;
+
 mod filter;

@@ -148,8 +148,8 @@ fn filter_deserialize_accepts_missing_wire_version_as_current() {
 }
 
 #[test]
-fn filter_deserialize_accepts_legacy_private_expr_format() {
-    let f: MetadataFilter = serde_json::from_value(json!({
+fn filter_deserialize_rejects_legacy_private_expr_format() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
         "expr": {
             "Or": [
                 {
@@ -189,15 +189,10 @@ fn filter_deserialize_accepts_legacy_private_expr_format() {
             "number_comparison_policy": "Conservative"
         }
     }))
-    .unwrap();
+    .unwrap_err()
+    .to_string();
 
-    assert!(f.matches(&sample()));
-
-    let json = serde_json::to_string(&f).unwrap();
-    assert!(json.contains("\"version\":1"));
-    assert!(json.contains("\"type\":\"or\""));
-    assert!(!json.contains("\"Or\""));
-    assert!(!json.contains("\"GreaterEqual\""));
+    assert!(error.contains("missing field"));
 }
 
 #[test]

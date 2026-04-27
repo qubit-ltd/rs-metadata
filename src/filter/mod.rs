@@ -18,7 +18,7 @@ mod wire;
 
 pub use condition::Condition;
 pub use filter_match_options::FilterMatchOptions;
-pub use missing_key_policy::MissingKeyPolicy;
-pub use number_comparison_policy::NumberComparisonPolicy;
 pub use metadata_filter::MetadataFilter;
 pub use metadata_filter_builder::MetadataFilterBuilder;
+pub use missing_key_policy::MissingKeyPolicy;
+pub use number_comparison_policy::NumberComparisonPolicy;

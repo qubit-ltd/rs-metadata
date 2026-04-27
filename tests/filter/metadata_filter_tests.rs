@@ -6,7 +6,3 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-
-#[path = "../support/test_support.rs"]
-mod test_support;
-
