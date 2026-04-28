@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::super::filter_expr::FilterExpr;
-use super::condition::ConditionWire;
+use super::condition_wire::ConditionWire;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]

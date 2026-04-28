@@ -7,8 +7,8 @@
  *
  ******************************************************************************/
 
-mod builder_tests;
-mod definition_tests;
-mod field_tests;
 mod filter_validation_tests;
+mod metadata_field_tests;
+mod metadata_schema_builder_tests;
+mod metadata_schema_tests;
 mod unknown_field_policy_tests;

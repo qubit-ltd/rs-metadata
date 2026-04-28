@@ -8,9 +8,9 @@
  ******************************************************************************/
 //! Wire-format support for metadata filters.
 
-mod condition;
-mod expr;
-mod metadata_filter;
+mod condition_wire;
+mod filter_expr_wire;
+mod metadata_filter_wire;
 
-pub(crate) use condition::ConditionWire;
-pub(crate) use metadata_filter::MetadataFilterWire;
+pub(crate) use condition_wire::ConditionWire;
+pub(crate) use metadata_filter_wire::MetadataFilterWire;

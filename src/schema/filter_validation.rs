@@ -11,8 +11,8 @@
 use qubit_common::DataType;
 use qubit_value::Value;
 
-use super::definition::MetadataSchema;
-use super::field::MetadataField;
+use super::metadata_field::MetadataField;
+use super::metadata_schema::MetadataSchema;
 use crate::{Condition, MetadataError, MetadataFilter, MetadataResult};
 
 impl MetadataSchema {
