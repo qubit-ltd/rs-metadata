@@ -54,12 +54,12 @@ assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
 
 ### 2) 用 schema 做校验和存储规划
 
-`MetadataSchema` 使用 `qubit_common::DataType`。当存储后端要求预先声明 metadata 字段时，
+`MetadataSchema` 使用 `qubit_datatype::DataType`。当存储后端要求预先声明 metadata 字段时，
 schema 可以直接作为字段定义来源；在构造 filter 时，也可以提前校验字段、操作符和
 过滤值类型是否匹配。
 
 ```rust
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataSchema};
 
 let schema = MetadataSchema::builder()
@@ -83,7 +83,7 @@ schema.validate(&meta).unwrap();
 是否存在、操作符是否适用于字段类型、过滤值类型是否兼容。
 
 ```rust
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataFilter, MetadataSchema};
 
 let schema = MetadataSchema::builder()
@@ -175,7 +175,7 @@ wire 表示。内部表达式树不属于序列化契约。新的序列化输出
 当调用方需要明确区分“键不存在”和“类型不匹配”时，使用 `try_get` 或 schema 校验：
 
 ```rust
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataError};
 
 let meta = Metadata::new().with("answer", "forty-two");

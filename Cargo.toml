@@ -28,7 +28,7 @@ name = "qubit_metadata"
 [dependencies]
 bigdecimal = "0.4"
 num-bigint = "0.4"
-qubit-datatype = { version = "0.2", path = "../rs-datatype" }
+qubit-datatype = "0.2"
 qubit-value = { version = "0.6", path = "../rs-value" }
 serde = { version = "1.0", features = ["derive"] }
 
