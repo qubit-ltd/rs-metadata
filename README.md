@@ -56,12 +56,12 @@ assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
 
 ### 2) Schema for validation and storage planning
 
-`MetadataSchema` uses `qubit_common::DataType`. This is useful when a storage
+`MetadataSchema` uses `qubit_datatype::DataType`. This is useful when a storage
 backend requires metadata fields to be declared in advance, and it also lets the
 filter builder validate field/operator compatibility early.
 
 ```rust
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataSchema};
 
 let schema = MetadataSchema::builder()
@@ -86,7 +86,7 @@ as empty grouped expressions are reported instead of silently becoming no-ops.
 compatibility, and filter value types.
 
 ```rust
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataFilter, MetadataSchema};
 
 let schema = MetadataSchema::builder()
@@ -184,7 +184,7 @@ Use `try_get` and schema validation when the caller needs diagnostics instead of
 `Option`:
 
 ```rust
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataError};
 
 let meta = Metadata::new().with("answer", "forty-two");
