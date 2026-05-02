@@ -1,6 +1,6 @@
 [package]
 name = "qubit-metadata"
-version = "0.3.4"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.94"
 authors = ["Haixing Hu <starfish.hu@gmail.com>"]
@@ -28,9 +28,9 @@ name = "qubit_metadata"
 [dependencies]
 bigdecimal = "0.4"
 num-bigint = "0.4"
-qubit-datatype = "0.2"
-qubit-value = { version = "0.6", path = "../rs-value" }
 serde = { version = "1.0", features = ["derive"] }
+qubit-datatype = "0.2"
+qubit-value = "0.6"
 
 [dev-dependencies]
 serde_json = "1.0"
