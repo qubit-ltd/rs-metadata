@@ -58,9 +58,6 @@
 //! assert!(filter.matches(&meta));
 //! ```
 //!
-//! ## Author
-//!
-//! Haixing Hu
 
 #![deny(missing_docs)]
 
