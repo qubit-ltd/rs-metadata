@@ -1,16 +1,17 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025 - 2026.
- *    Haixing Hu, Qubit Co. Ltd.
+ *    Copyright (c) 2025 - 2026 Haixing Hu.
  *
- *    All rights reserved.
+ *    SPDX-License-Identifier: Apache-2.0
+ *
+ *    Licensed under the Apache License, Version 2.0.
  *
  ******************************************************************************/
 //! Unit tests for [`qubit_metadata::Metadata`].
 
 use std::collections::BTreeMap;
 
-use qubit_common::DataType;
+use qubit_datatype::DataType;
 use qubit_metadata::{Metadata, MetadataError, MetadataSchema};
 use qubit_value::Value;
 use serde_json::json;

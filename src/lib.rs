@@ -1,9 +1,10 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025 - 2026.
- *    Haixing Hu, Qubit Co. Ltd.
+ *    Copyright (c) 2025 - 2026 Haixing Hu.
  *
- *    All rights reserved.
+ *    SPDX-License-Identifier: Apache-2.0
+ *
+ *    Licensed under the Apache License, Version 2.0.
  *
  ******************************************************************************/
 //! # qubit-metadata
@@ -27,7 +28,7 @@
 //! ## Features
 //!
 //! - Core type: [`Metadata`] — an ordered key-value store with typed accessors
-//! - Schema type: [`MetadataSchema`] — field definitions based on [`qubit_common::DataType`]
+//! - Schema type: [`MetadataSchema`] — field definitions based on [`qubit_datatype::DataType`]
 //! - Filter type: [`MetadataFilter`] — composable filter expressions for metadata queries
 //! - Condition type: [`Condition`] — individual comparison predicates
 //! - Error type: [`MetadataError`] — explicit failure reporting for `try_*` APIs
