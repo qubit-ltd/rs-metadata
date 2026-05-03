@@ -10,7 +10,12 @@
 //! Tests for metadata schema data types.
 
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError, MetadataSchema, UnknownFieldPolicy};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+    MetadataSchema,
+    UnknownFieldPolicy,
+};
 
 #[test]
 fn schema_builder_defines_required_and_optional_fields() {

@@ -9,7 +9,11 @@
  ******************************************************************************/
 //! Serde and wire format tests for [`qubit_metadata::MetadataFilter`].
 use crate::test_support::sample;
-use qubit_metadata::{MetadataFilter, MissingKeyPolicy, NumberComparisonPolicy};
+use qubit_metadata::{
+    MetadataFilter,
+    MissingKeyPolicy,
+    NumberComparisonPolicy,
+};
 use serde_json::json;
 
 #[test]

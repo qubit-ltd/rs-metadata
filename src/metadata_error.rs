@@ -12,7 +12,10 @@
 use std::fmt;
 
 use qubit_datatype::DataType;
-use qubit_value::{Value, ValueError};
+use qubit_value::{
+    Value,
+    ValueError,
+};
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]

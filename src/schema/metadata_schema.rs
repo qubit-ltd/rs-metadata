@@ -13,10 +13,21 @@ use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
 use qubit_value::Value;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
-use crate::schema::{MetadataField, MetadataSchemaBuilder, UnknownFieldPolicy};
-use crate::{Metadata, MetadataError, MetadataResult};
+use crate::schema::{
+    MetadataField,
+    MetadataSchemaBuilder,
+    UnknownFieldPolicy,
+};
+use crate::{
+    Metadata,
+    MetadataError,
+    MetadataResult,
+};
 
 /// Schema for metadata fields.
 ///

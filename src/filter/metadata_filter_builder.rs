@@ -14,8 +14,13 @@ use super::condition::Condition;
 use super::filter_expr::FilterExpr;
 use super::metadata_filter::MetadataFilter;
 use crate::{
-    FilterMatchOptions, IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema,
-    MissingKeyPolicy, NumberComparisonPolicy,
+    FilterMatchOptions,
+    IntoMetadataValue,
+    MetadataError,
+    MetadataResult,
+    MetadataSchema,
+    MissingKeyPolicy,
+    NumberComparisonPolicy,
 };
 
 /// Builder for [`MetadataFilter`].

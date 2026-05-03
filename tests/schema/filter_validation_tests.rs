@@ -10,7 +10,13 @@
 //! Tests for metadata schema data types.
 
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError, MetadataFilter, MetadataSchema, UnknownFieldPolicy};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+    MetadataFilter,
+    MetadataSchema,
+    UnknownFieldPolicy,
+};
 
 #[test]
 fn schema_validate_filter_accepts_numeric_literal_compatibility() {

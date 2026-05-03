@@ -9,7 +9,10 @@
  ******************************************************************************/
 //! [`ConditionWire`].
 use qubit_value::Value;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use super::super::condition::Condition;
 

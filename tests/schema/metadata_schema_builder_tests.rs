@@ -9,7 +9,10 @@
  ******************************************************************************/
 
 use qubit_datatype::DataType;
-use qubit_metadata::{MetadataSchemaBuilder, UnknownFieldPolicy};
+use qubit_metadata::{
+    MetadataSchemaBuilder,
+    UnknownFieldPolicy,
+};
 
 #[test]
 fn schema_builder_default_builds_empty_schema() {

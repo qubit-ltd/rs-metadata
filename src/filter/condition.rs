@@ -14,7 +14,12 @@ use std::cmp::Ordering;
 use bigdecimal::BigDecimal;
 use num_bigint::BigInt;
 use qubit_value::Value;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+};
 
 use super::missing_key_policy::MissingKeyPolicy;
 use super::number_comparison_policy::NumberComparisonPolicy;

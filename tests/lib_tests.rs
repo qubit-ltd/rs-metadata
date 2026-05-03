@@ -8,7 +8,10 @@
  *
  ******************************************************************************/
 
-use qubit_metadata::{Metadata, MetadataFilter};
+use qubit_metadata::{
+    Metadata,
+    MetadataFilter,
+};
 
 #[test]
 fn public_exports_are_usable() {
