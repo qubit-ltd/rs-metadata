@@ -12,10 +12,10 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::{DataType, DataTypeOf};
-use qubit_value::{Value, ValueConstructor, ValueConverter};
+use qubit_value::Value;
 use serde::{Deserialize, Serialize};
 
-use crate::{MetadataError, MetadataResult, MetadataSchema};
+use crate::{FromMetadataValue, IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -65,8 +65,7 @@ impl Metadata {
     #[inline]
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
-        T: DataTypeOf,
-        Value: ValueConverter<T>,
+        T: DataTypeOf + FromMetadataValue,
     {
         self.try_get(key).ok()
     }
@@ -80,15 +79,13 @@ impl Metadata {
     /// to the requested type.
     pub fn try_get<T>(&self, key: &str) -> MetadataResult<T>
     where
-        T: DataTypeOf,
-        Value: ValueConverter<T>,
+        T: DataTypeOf + FromMetadataValue,
     {
         let value = self
             .0
             .get(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        value
-            .to::<T>()
+        T::from_metadata_value(value)
             .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
     }
 
@@ -112,8 +109,7 @@ impl Metadata {
     #[must_use]
     pub fn get_or<T>(&self, key: &str, default: T) -> T
     where
-        T: DataTypeOf,
-        Value: ValueConverter<T>,
+        T: DataTypeOf + FromMetadataValue,
     {
         self.try_get(key).unwrap_or(default)
     }
@@ -122,9 +118,9 @@ impl Metadata {
     #[inline]
     pub fn set<T>(&mut self, key: &str, value: T) -> Option<Value>
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
-        self.0.insert(key.to_string(), to_value(value))
+        self.0.insert(key.to_string(), value.into_metadata_value())
     }
 
     /// Inserts a typed value after validating it against `schema`.
@@ -142,9 +138,9 @@ impl Metadata {
         value: T,
     ) -> MetadataResult<Option<Value>>
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
-        let value = to_value(value);
+        let value = value.into_metadata_value();
         schema.validate_entry(key, &value)?;
         Ok(self.set_raw(key, value))
     }
@@ -164,7 +160,7 @@ impl Metadata {
         value: T,
     ) -> MetadataResult<Self>
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.set_checked(schema, key, value)?;
         Ok(self)
@@ -175,7 +171,7 @@ impl Metadata {
     #[must_use]
     pub fn with<T>(mut self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.set(key, value);
         self
@@ -259,14 +255,6 @@ impl Metadata {
     pub fn into_inner(self) -> BTreeMap<String, Value> {
         self.0
     }
-}
-
-#[inline]
-fn to_value<T>(value: T) -> Value
-where
-    Value: ValueConstructor<T>,
-{
-    <Value as ValueConstructor<T>>::from_type(value)
 }
 
 impl From<BTreeMap<String, Value>> for Metadata {
