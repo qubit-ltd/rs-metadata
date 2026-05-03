@@ -14,6 +14,7 @@ use qubit_value::Value;
 
 use super::metadata_field::MetadataField;
 use super::metadata_schema::MetadataSchema;
+use super::unknown_field_policy::UnknownFieldPolicy;
 use crate::{Condition, MetadataError, MetadataFilter, MetadataResult};
 
 impl MetadataSchema {
@@ -21,9 +22,11 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an error when the filter references an unknown field, uses a range
-    /// operator on a non-comparable field, or compares a field with an incompatible
-    /// value type.
+    /// Returns an error when the filter references an unknown field and this
+    /// schema rejects unknown fields, uses a range operator on a non-comparable
+    /// declared field, or compares a declared field with an incompatible value
+    /// type. Unknown filter fields are accepted when the schema's
+    /// [`UnknownFieldPolicy`] is [`UnknownFieldPolicy::Allow`].
     pub fn validate_filter(&self, filter: &MetadataFilter) -> MetadataResult<()> {
         filter.visit_conditions(|condition| self.validate_condition(condition))
     }
@@ -52,7 +55,7 @@ impl MetadataSchema {
                 Ok(())
             }
             Condition::Exists { key } | Condition::NotExists { key } => {
-                self.require_field(key)?;
+                self.filter_field(key)?;
                 Ok(())
             }
         }
@@ -65,7 +68,9 @@ impl MetadataSchema {
         operator: &'static str,
         value: &Value,
     ) -> MetadataResult<()> {
-        let field = self.require_field(key)?;
+        let Some(field) = self.filter_field(key)? else {
+            return Ok(());
+        };
         if value_matches_field_type(value, field.data_type()) {
             return Ok(());
         }
@@ -88,7 +93,9 @@ impl MetadataSchema {
         operator: &'static str,
         value: &Value,
     ) -> MetadataResult<()> {
-        let field = self.require_field(key)?;
+        let Some(field) = self.filter_field(key)? else {
+            return Ok(());
+        };
         if !is_range_comparable_type(field.data_type()) {
             return Err(MetadataError::InvalidFilterOperator {
                 key: key.to_string(),
@@ -112,12 +119,15 @@ impl MetadataSchema {
         })
     }
 
-    /// Returns the field for `key` or a schema error if it is unknown.
-    fn require_field(&self, key: &str) -> MetadataResult<&MetadataField> {
-        self.field(key)
-            .ok_or_else(|| MetadataError::UnknownFilterField {
+    /// Returns the declared filter field, or accepts unknown fields when allowed.
+    fn filter_field(&self, key: &str) -> MetadataResult<Option<&MetadataField>> {
+        match self.field(key) {
+            Some(field) => Ok(Some(field)),
+            None if matches!(self.unknown_field_policy(), UnknownFieldPolicy::Allow) => Ok(None),
+            None => Err(MetadataError::UnknownFilterField {
                 key: key.to_string(),
-            })
+            }),
+        }
     }
 }
 

@@ -7,14 +7,14 @@
  *    Licensed under the Apache License, Version 2.0.
  *
  ******************************************************************************/
-//! [`NumberComparisonPolicy`] — mixed integer/float handling for range predicates.
+//! [`NumberComparisonPolicy`] — mixed numeric comparison handling.
 
 use serde::{Deserialize, Serialize};
 
-/// Policy that controls mixed integer/float number comparisons.
+/// Policy that controls mixed numeric comparisons.
 ///
-/// This policy only applies to range predicates (`greater`, `greater_equal`,
-/// `less`, `less_equal`) when operands are numeric.
+/// This policy applies to numeric equality, membership, and range predicates
+/// when operands use different numeric representations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum NumberComparisonPolicy {
     /// Preserve precision and return "incomparable" for risky mixed comparisons.

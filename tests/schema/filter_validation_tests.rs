@@ -10,7 +10,7 @@
 //! Tests for metadata schema data types.
 
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError, MetadataFilter, MetadataSchema};
+use qubit_metadata::{Metadata, MetadataError, MetadataFilter, MetadataSchema, UnknownFieldPolicy};
 
 #[test]
 fn schema_validate_filter_accepts_numeric_literal_compatibility() {
@@ -149,6 +149,49 @@ fn schema_validate_filter_rejects_unknown_value_predicate_field() {
             key: "missing".to_string(),
         }
     );
+}
+
+#[test]
+fn schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
+        .unknown_field_policy(UnknownFieldPolicy::Allow)
+        .build();
+
+    MetadataFilter::builder()
+        .eq("dynamic", "value")
+        .and_ge("dynamic_score", 10_i64)
+        .and_exists("dynamic_flag")
+        .build_checked(&schema)
+        .unwrap();
+}
+
+#[test]
+fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed() {
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
+        .unknown_field_policy(UnknownFieldPolicy::Allow)
+        .build();
+    let error = MetadataFilter::builder()
+        .eq("status", 1_i64)
+        .and_eq("dynamic", "value")
+        .build_checked(&schema)
+        .unwrap_err();
+
+    match error {
+        MetadataError::InvalidFilterOperator {
+            key,
+            operator,
+            data_type,
+            message,
+        } => {
+            assert_eq!(key, "status");
+            assert_eq!(operator, "eq");
+            assert_eq!(data_type, DataType::String);
+            assert!(message.contains("not compatible"));
+        }
+        other => panic!("expected InvalidFilterOperator, got {other:?}"),
+    }
 }
 
 #[test]

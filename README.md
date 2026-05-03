@@ -58,7 +58,10 @@ assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
 
 `MetadataSchema` uses `qubit_datatype::DataType`. This is useful when a storage
 backend requires metadata fields to be declared in advance, and it also lets the
-filter builder validate field/operator compatibility early.
+filter builder validate field/operator compatibility early. Its
+`UnknownFieldPolicy` applies to both metadata validation and filter validation:
+declared fields are still checked strictly, while unknown filter fields are
+accepted only when the policy is `Allow`.
 
 ```rust
 use qubit_datatype::DataType;
@@ -156,12 +159,16 @@ let filter = MetadataFilter::builder()
 ```
 
 Missing-key behavior for negative predicates is controlled by
-`MissingKeyPolicy`. Mixed numeric comparison behavior is controlled by
-`NumberComparisonPolicy`.
+`MissingKeyPolicy`. Mixed numeric comparison behavior for equality, membership,
+and range predicates is controlled by `NumberComparisonPolicy`.
 
 Grouped expressions must contain at least one predicate. For example,
 `and(|g| g)` and `or_not(|g| g)` are rejected by `build()` because an empty group
 is usually a caller bug.
+
+Empty value sets are allowed. `in_set("key", [])` matches no metadata object.
+`not_in_set("key", [])` matches when `key` exists; when `key` is missing, it
+follows the configured `MissingKeyPolicy`, just like other negative predicates.
 
 When a schema validates filters, all numeric `DataType` variants are considered
 compatible with each other. This intentionally lets callers write convenient
@@ -204,7 +211,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-metadata = "0.3.0"
+qubit-metadata = "0.4.0"
 ```
 
 ## License

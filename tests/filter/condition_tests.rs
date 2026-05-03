@@ -807,6 +807,13 @@ fn in_values_missing_key() {
 }
 
 #[test]
+fn in_values_empty_set_matches_nothing() {
+    let f = MetadataFilter::builder().in_set("status", [] as [&str; 0]);
+    assert!(!f.clone().build().unwrap().matches(&sample()));
+    assert!(!f.build().unwrap().matches(&Metadata::new()));
+}
+
+#[test]
 fn not_in_values_matches() {
     let f = MetadataFilter::builder().not_in_set("status", ["inactive", "pending"]);
     assert!(f.build().unwrap().matches(&sample()));
@@ -829,6 +836,19 @@ fn not_in_values_missing_key_respects_policy() {
     let f = MetadataFilter::builder().not_in_set("missing", ["x"]);
     let strict = f.clone().missing_key_policy(MissingKeyPolicy::NoMatch);
     assert!(f.build().unwrap().matches(&sample()));
+    assert!(!strict.build().unwrap().matches(&sample()));
+}
+
+#[test]
+fn not_in_values_empty_set_matches_present_keys_and_respects_missing_key_policy() {
+    let f = MetadataFilter::builder().not_in_set("status", [] as [&str; 0]);
+    assert!(f.build().unwrap().matches(&sample()));
+
+    let missing = MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
+    let strict = missing
+        .clone()
+        .missing_key_policy(MissingKeyPolicy::NoMatch);
+    assert!(missing.build().unwrap().matches(&sample()));
     assert!(!strict.build().unwrap().matches(&sample()));
 }
 

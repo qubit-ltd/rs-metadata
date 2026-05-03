@@ -56,7 +56,8 @@ assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
 
 `MetadataSchema` 使用 `qubit_datatype::DataType`。当存储后端要求预先声明 metadata 字段时，
 schema 可以直接作为字段定义来源；在构造 filter 时，也可以提前校验字段、操作符和
-过滤值类型是否匹配。
+过滤值类型是否匹配。`UnknownFieldPolicy` 同时作用于 metadata 校验和 filter 校验：
+已声明字段仍然严格校验，未知 filter 字段只有在策略为 `Allow` 时才会被接受。
 
 ```rust
 use qubit_datatype::DataType;
@@ -152,11 +153,15 @@ let filter = MetadataFilter::builder()
     .unwrap();
 ```
 
-负向谓词遇到缺失键时的行为由 `MissingKeyPolicy` 控制。整数、浮点数混合比较时的精度
-策略由 `NumberComparisonPolicy` 控制。
+负向谓词遇到缺失键时的行为由 `MissingKeyPolicy` 控制。数值相等、集合成员判断和范围
+谓词中的混合数值比较策略由 `NumberComparisonPolicy` 控制。
 
 分组表达式必须至少包含一个谓词。例如 `and(|g| g)` 和 `or_not(|g| g)` 会被
 `build()` 拒绝，因为空分组通常代表调用方构造条件时漏传了约束。
+
+空集合是允许的。`in_set("key", [])` 不匹配任何 metadata 对象。
+`not_in_set("key", [])` 在 `key` 存在时匹配；如果 `key` 缺失，则和其他负向谓词一样，
+遵循当前配置的 `MissingKeyPolicy`。
 
 schema 校验 filter 时，所有数值型 `DataType` 之间视为兼容。这是有意放松：
 调用方构造过滤条件时经常只能给出方便的数值字面量，未必能精确匹配存储字段的具体
@@ -195,7 +200,7 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.3.0"
+qubit-metadata = "0.4.0"
 ```
 
 ## 许可证
