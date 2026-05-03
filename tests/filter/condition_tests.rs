@@ -11,7 +11,11 @@
 
 use crate::test_support::sample;
 use qubit_metadata::{
-    Condition, FilterMatchOptions, Metadata, MetadataFilter, MissingKeyPolicy,
+    Condition,
+    FilterMatchOptions,
+    Metadata,
+    MetadataFilter,
+    MissingKeyPolicy,
     NumberComparisonPolicy,
 };
 use qubit_value::Value;

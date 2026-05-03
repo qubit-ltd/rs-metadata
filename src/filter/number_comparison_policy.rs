@@ -9,7 +9,10 @@
  ******************************************************************************/
 //! [`NumberComparisonPolicy`] — mixed numeric comparison handling.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Policy that controls mixed numeric comparisons.
 ///

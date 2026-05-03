@@ -9,7 +9,10 @@
  ******************************************************************************/
 //! [`MissingKeyPolicy`] — how filters treat missing keys for negative predicates.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Policy that controls how filters treat missing keys for negative predicates.
 ///

@@ -8,7 +8,11 @@
  *
  ******************************************************************************/
 
-use qubit_metadata::{FilterMatchOptions, MissingKeyPolicy, NumberComparisonPolicy};
+use qubit_metadata::{
+    FilterMatchOptions,
+    MissingKeyPolicy,
+    NumberComparisonPolicy,
+};
 
 #[test]
 fn default_options_are_stable() {

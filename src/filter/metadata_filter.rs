@@ -8,14 +8,24 @@
  *
  ******************************************************************************/
 //! [`MetadataFilter`].
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de,
+};
 
 use super::filter_expr::FilterExpr;
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
 use crate::metadata::Metadata;
 use crate::{
-    Condition, FilterMatchOptions, MetadataResult, MissingKeyPolicy, NumberComparisonPolicy,
+    Condition,
+    FilterMatchOptions,
+    MetadataResult,
+    MissingKeyPolicy,
+    NumberComparisonPolicy,
 };
 
 /// An immutable, composable filter expression over [`Metadata`].

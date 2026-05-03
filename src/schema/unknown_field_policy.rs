@@ -9,7 +9,10 @@
  ******************************************************************************/
 //! [`UnknownFieldPolicy`] — handling for schema-unknown metadata and filter keys.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Policy for fields that appear in metadata or filters but are not declared by
 /// a schema.

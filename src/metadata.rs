@@ -11,11 +11,23 @@
 
 use std::collections::BTreeMap;
 
-use qubit_datatype::{DataType, DataTypeOf};
+use qubit_datatype::{
+    DataType,
+    DataTypeOf,
+};
 use qubit_value::Value;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
-use crate::{FromMetadataValue, IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema};
+use crate::{
+    FromMetadataValue,
+    IntoMetadataValue,
+    MetadataError,
+    MetadataResult,
+    MetadataSchema,
+};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///

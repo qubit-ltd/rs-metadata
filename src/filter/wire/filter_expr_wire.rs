@@ -8,7 +8,10 @@
  *
  ******************************************************************************/
 //! [`FilterExprWire`].
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use super::super::filter_expr::FilterExpr;
 use super::condition_wire::ConditionWire;

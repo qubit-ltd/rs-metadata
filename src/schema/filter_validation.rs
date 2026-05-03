@@ -15,7 +15,12 @@ use qubit_value::Value;
 use super::metadata_field::MetadataField;
 use super::metadata_schema::MetadataSchema;
 use super::unknown_field_policy::UnknownFieldPolicy;
-use crate::{Condition, MetadataError, MetadataFilter, MetadataResult};
+use crate::{
+    Condition,
+    MetadataError,
+    MetadataFilter,
+    MetadataResult,
+};
 
 impl MetadataSchema {
     /// Validates a metadata filter against this schema.

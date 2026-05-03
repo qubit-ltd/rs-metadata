@@ -12,7 +12,11 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError, MetadataSchema};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+    MetadataSchema,
+};
 use qubit_value::Value;
 use serde_json::json;
 
