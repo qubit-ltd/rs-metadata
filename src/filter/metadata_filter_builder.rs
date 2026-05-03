@@ -8,14 +8,14 @@
  *
  ******************************************************************************/
 //! [`MetadataFilterBuilder`] — fluent builder for composable filters.
-use qubit_value::{Value, ValueConstructor};
+use qubit_value::Value;
 
 use super::condition::Condition;
 use super::filter_expr::FilterExpr;
 use super::metadata_filter::MetadataFilter;
 use crate::{
-    FilterMatchOptions, MetadataError, MetadataResult, MetadataSchema, MissingKeyPolicy,
-    NumberComparisonPolicy,
+    FilterMatchOptions, IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema,
+    MissingKeyPolicy, NumberComparisonPolicy,
 };
 
 /// Builder for [`MetadataFilter`].
@@ -97,7 +97,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn eq<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_eq(key, value)
     }
@@ -107,7 +107,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn ne<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_ne(key, value)
     }
@@ -117,7 +117,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn lt<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_lt(key, value)
     }
@@ -127,7 +127,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn le<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_le(key, value)
     }
@@ -137,7 +137,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn gt<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_gt(key, value)
     }
@@ -147,7 +147,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn ge<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_ge(key, value)
     }
@@ -158,7 +158,7 @@ impl MetadataFilterBuilder {
     pub fn in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_in_set(key, values)
     }
@@ -169,7 +169,7 @@ impl MetadataFilterBuilder {
     pub fn not_in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_not_in_set(key, values)
     }
@@ -193,7 +193,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn and_eq<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::Equal {
             key: key.to_string(),
@@ -206,7 +206,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn and_ne<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::NotEqual {
             key: key.to_string(),
@@ -219,7 +219,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn and_lt<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::Less {
             key: key.to_string(),
@@ -232,7 +232,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn and_le<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::LessEqual {
             key: key.to_string(),
@@ -245,7 +245,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn and_gt<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::Greater {
             key: key.to_string(),
@@ -258,7 +258,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn and_ge<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::GreaterEqual {
             key: key.to_string(),
@@ -272,7 +272,7 @@ impl MetadataFilterBuilder {
     pub fn and_in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::In {
             key: key.to_string(),
@@ -286,7 +286,7 @@ impl MetadataFilterBuilder {
     pub fn and_not_in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.and_condition(Condition::NotIn {
             key: key.to_string(),
@@ -317,7 +317,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn or_eq<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::Equal {
             key: key.to_string(),
@@ -330,7 +330,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn or_ne<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::NotEqual {
             key: key.to_string(),
@@ -343,7 +343,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn or_lt<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::Less {
             key: key.to_string(),
@@ -356,7 +356,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn or_le<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::LessEqual {
             key: key.to_string(),
@@ -369,7 +369,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn or_gt<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::Greater {
             key: key.to_string(),
@@ -382,7 +382,7 @@ impl MetadataFilterBuilder {
     #[must_use]
     pub fn or_ge<T>(self, key: &str, value: T) -> Self
     where
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::GreaterEqual {
             key: key.to_string(),
@@ -396,7 +396,7 @@ impl MetadataFilterBuilder {
     pub fn or_in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::In {
             key: key.to_string(),
@@ -410,7 +410,7 @@ impl MetadataFilterBuilder {
     pub fn or_not_in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         self.or_condition(Condition::NotIn {
             key: key.to_string(),
@@ -500,7 +500,7 @@ impl MetadataFilterBuilder {
     fn collect_values<I, T>(values: I) -> Vec<Value>
     where
         I: IntoIterator<Item = T>,
-        Value: ValueConstructor<T>,
+        T: IntoMetadataValue,
     {
         values.into_iter().map(to_value).collect()
     }
@@ -615,7 +615,7 @@ impl MetadataFilterBuilder {
 #[inline]
 fn to_value<T>(value: T) -> Value
 where
-    Value: ValueConstructor<T>,
+    T: IntoMetadataValue,
 {
-    <Value as ValueConstructor<T>>::from_type(value)
+    value.into_metadata_value()
 }
