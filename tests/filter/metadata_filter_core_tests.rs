@@ -8,7 +8,7 @@
  *
  ******************************************************************************/
 //! Unit tests for [`qubit_metadata::MetadataFilter`] (match semantics and builder DSL).
-use crate::test_support::sample;
+use crate::support::test_support::sample;
 use qubit_metadata::{
     FilterMatchOptions,
     Metadata,

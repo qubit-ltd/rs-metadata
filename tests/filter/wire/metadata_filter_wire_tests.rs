@@ -9,7 +9,7 @@
  ******************************************************************************/
 //! Tests for the top-level metadata filter wire envelope.
 
-use crate::test_support::sample;
+use crate::support::test_support::sample;
 use qubit_metadata::{
     MetadataFilter,
     MissingKeyPolicy,

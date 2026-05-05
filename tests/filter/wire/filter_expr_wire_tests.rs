@@ -9,7 +9,7 @@
  ******************************************************************************/
 //! Tests for the serialized filter expression wire representation.
 
-use crate::test_support::sample;
+use crate::support::test_support::sample;
 use qubit_metadata::MetadataFilter;
 use serde_json::json;
 
