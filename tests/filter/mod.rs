@@ -9,6 +9,7 @@
  ******************************************************************************/
 
 mod condition_tests;
+mod filter_expr_tests;
 mod filter_match_options_tests;
 mod metadata_filter_builder_tests;
 mod metadata_filter_core_tests;
