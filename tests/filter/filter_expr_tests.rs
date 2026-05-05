@@ -9,7 +9,7 @@
  ******************************************************************************/
 //! Tests for filter expression composition through the public filter API.
 
-use crate::test_support::sample;
+use crate::support::test_support::sample;
 use qubit_metadata::MetadataFilter;
 
 #[test]

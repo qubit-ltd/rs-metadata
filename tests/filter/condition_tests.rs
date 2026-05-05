@@ -9,7 +9,7 @@
  ******************************************************************************/
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
-use crate::test_support::sample;
+use crate::support::test_support::sample;
 use qubit_metadata::{
     Condition,
     FilterMatchOptions,
