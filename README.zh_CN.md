@@ -81,7 +81,8 @@ schema.validate(&meta).unwrap();
 `MetadataFilter::builder()` 返回 builder，调用 `build()` 后得到
 `Result<MetadataFilter, MetadataError>`。这样空分组这类结构非法的表达式会明确报错，
 不会静默变成 no-op。如果已有 schema，可以用 `build_checked(&schema)` 在构建时校验字段
-是否存在、操作符是否适用于字段类型、过滤值类型是否兼容。
+是否存在、操作符是否适用于字段类型、过滤值类型是否兼容。schema 级校验会返回聚合错误，
+调用方可以一次拿到所有相互独立的问题。
 
 ```rust
 use qubit_datatype::DataType;
@@ -163,9 +164,10 @@ let filter = MetadataFilter::builder()
 `not_in_set("key", [])` 在 `key` 存在时匹配；如果 `key` 缺失，则和其他负向谓词一样，
 遵循当前配置的 `MissingKeyPolicy`。
 
-schema 校验 filter 时，所有数值型 `DataType` 之间视为兼容。这是有意放松：
-调用方构造过滤条件时经常只能给出方便的数值字面量，未必能精确匹配存储字段的具体
-整数/浮点类型。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
+schema 校验 filter 时，混合数值兼容性遵循 filter 配置的 `NumberComparisonPolicy`，
+和实际匹配时使用同一套策略。`Conservative` 只接受精确或可安全比较的数值组合，
+会拒绝有精度损失风险的比较；`Approximate` 接受运行时 matcher 可以近似计算的混合
+数值组合。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
 metadata 中存储的值必须和 schema 声明的具体字段类型一致。
 
 ### 5) 版本化 filter 序列化格式
@@ -173,11 +175,15 @@ metadata 中存储的值必须和 schema 声明的具体字段类型一致。
 `MetadataFilter` 序列化后使用明确的 wire format，包含 `version`、`expr` 和
 `options` 字段。表达式节点使用 `type`，条件节点使用稳定的 `op` 操作符名，例如
 `eq`、`ge`、`in` 和 `not_exists`。单独序列化 `Condition` 时也使用同一套条件
-wire 表示。内部表达式树不属于序列化契约。新的序列化输出始终使用版本化格式。
+wire 表示。内部表达式树不属于序列化契约。`options` 中的策略枚举序列化为
+lowercase underscore 值，例如 `match`、`no_match`、`conservative` 和 `approximate`。
+新的序列化输出始终使用版本化格式。
 
 ## 错误处理
 
-当调用方需要明确区分“键不存在”和“类型不匹配”时，使用 `try_get` 或 schema 校验：
+当调用方需要明确区分“键不存在”和“类型不匹配”时，使用 `try_get` 或 schema 校验。
+单字段访问返回 `MetadataError`；schema 级校验返回 `MetadataValidationError`，
+可以通过 `issues()` 拿到本轮收集到的全部 `MetadataError`：
 
 ```rust
 use qubit_datatype::DataType;
@@ -200,7 +206,7 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.4.5"
+qubit-metadata = "0.5.0"
 ```
 
 ## 许可证
