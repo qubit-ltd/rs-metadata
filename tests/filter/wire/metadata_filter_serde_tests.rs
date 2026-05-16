@@ -68,8 +68,8 @@ fn filter_serde_uses_versioned_wire_format() {
                 ]
             },
             "options": {
-                "missing_key_policy": "Match",
-                "number_comparison_policy": "Conservative"
+                "missing_key_policy": "match",
+                "number_comparison_policy": "conservative"
             }
         })
     );
@@ -113,14 +113,52 @@ fn filter_serde_round_trips_all_condition_ops() {
 }
 
 #[test]
+fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
+    let filter = MetadataFilter::builder()
+        .eq("status", "active")
+        .missing_key_policy(MissingKeyPolicy::NoMatch)
+        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .build()
+        .unwrap();
+
+    let json = serde_json::to_value(&filter).unwrap();
+    assert_eq!(
+        json["options"],
+        json!({
+            "missing_key_policy": "no_match",
+            "number_comparison_policy": "approximate"
+        })
+    );
+
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 1,
+        "expr": {
+            "type": "condition",
+            "condition": {
+                "op": "exists",
+                "key": "status"
+            }
+        },
+        "options": {
+            "missing_key_policy": "NoMatch",
+            "number_comparison_policy": "Approximate"
+        }
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("unknown variant"));
+}
+
+#[test]
 fn filter_serde_encodes_match_all_and_match_none() {
     assert_eq!(
         serde_json::to_value(MetadataFilter::all()).unwrap(),
         json!({
             "version": 1,
             "options": {
-                "missing_key_policy": "Match",
-                "number_comparison_policy": "Conservative"
+                "missing_key_policy": "match",
+                "number_comparison_policy": "conservative"
             }
         })
     );
@@ -132,8 +170,8 @@ fn filter_serde_encodes_match_all_and_match_none() {
                 "type": "false"
             },
             "options": {
-                "missing_key_policy": "Match",
-                "number_comparison_policy": "Conservative"
+                "missing_key_policy": "match",
+                "number_comparison_policy": "conservative"
             }
         })
     );
@@ -193,8 +231,8 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
             ]
         },
         "options": {
-            "missing_key_policy": "NoMatch",
-            "number_comparison_policy": "Conservative"
+            "missing_key_policy": "no_match",
+            "number_comparison_policy": "conservative"
         }
     }))
     .unwrap_err()
