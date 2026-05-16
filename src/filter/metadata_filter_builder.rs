@@ -19,6 +19,8 @@ use crate::{
     MetadataError,
     MetadataResult,
     MetadataSchema,
+    MetadataValidationError,
+    MetadataValidationResult,
     MissingKeyPolicy,
     NumberComparisonPolicy,
 };
@@ -59,13 +61,16 @@ impl MetadataFilterBuilder {
     ///
     /// # Errors
     ///
-    /// Returns an error when the filter expression is structurally invalid, the
-    /// filter references unknown schema fields, uses range operators on
-    /// non-comparable field types, or compares a field with an incompatible value
-    /// type.
+    /// Returns an aggregate validation error when the filter expression is
+    /// structurally invalid, the filter references unknown schema fields, uses
+    /// range operators on non-comparable field types, or compares a field with an
+    /// incompatible value type.
     #[inline]
-    pub fn build_checked(self, schema: &MetadataSchema) -> MetadataResult<MetadataFilter> {
-        let filter = self.build()?;
+    pub fn build_checked(
+        self,
+        schema: &MetadataSchema,
+    ) -> MetadataValidationResult<MetadataFilter> {
+        let filter = self.build().map_err(MetadataValidationError::from_issue)?;
         schema.validate_filter(&filter)?;
         Ok(filter)
     }

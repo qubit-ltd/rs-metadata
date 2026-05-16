@@ -15,8 +15,16 @@ use qubit_metadata::{
     MetadataError,
     MetadataFilter,
     MetadataSchema,
+    MetadataValidationError,
+    NumberComparisonPolicy,
     UnknownFieldPolicy,
 };
+
+fn single_issue(error: MetadataValidationError) -> MetadataError {
+    let mut issues = error.into_issues();
+    assert_eq!(issues.len(), 1);
+    issues.remove(0)
+}
 
 #[test]
 fn schema_validate_filter_accepts_numeric_literal_compatibility() {
@@ -92,10 +100,12 @@ fn schema_validate_filter_reports_ne_operator_for_incompatible_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
-    let error = MetadataFilter::builder()
-        .ne("status", 1_i64)
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .ne("status", 1_i64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     match error {
         MetadataError::InvalidFilterOperator {
@@ -118,10 +128,12 @@ fn schema_validate_filter_rejects_incompatible_value_predicate() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
-    let error = MetadataFilter::builder()
-        .eq("status", 1_i64)
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .eq("status", 1_i64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     match error {
         MetadataError::InvalidFilterOperator {
@@ -144,10 +156,12 @@ fn schema_validate_filter_rejects_unknown_value_predicate_field() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
-    let error = MetadataFilter::builder()
-        .eq("missing", "active")
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .eq("missing", "active")
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     assert_eq!(
         error,
@@ -178,11 +192,13 @@ fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allo
         .required("status", DataType::String)
         .unknown_field_policy(UnknownFieldPolicy::Allow)
         .build();
-    let error = MetadataFilter::builder()
-        .eq("status", 1_i64)
-        .and_eq("dynamic", "value")
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .eq("status", 1_i64)
+            .and_eq("dynamic", "value")
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     match error {
         MetadataError::InvalidFilterOperator {
@@ -205,10 +221,12 @@ fn schema_validate_filter_rejects_incompatible_not_in_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
-    let error = MetadataFilter::builder()
-        .not_in_set("status", [1_i64])
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .not_in_set("status", [1_i64])
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     match error {
         MetadataError::InvalidFilterOperator {
@@ -231,10 +249,12 @@ fn schema_validate_filter_rejects_unknown_exists_field() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
-    let error = MetadataFilter::builder()
-        .exists("missing")
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .exists("missing")
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     assert_eq!(
         error,
@@ -249,10 +269,12 @@ fn schema_validate_filter_rejects_incompatible_range_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
-    let error = MetadataFilter::builder()
-        .gt("status", 1_i64)
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .gt("status", 1_i64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     match error {
         MetadataError::InvalidFilterOperator {
@@ -275,10 +297,12 @@ fn schema_validate_filter_reports_unknown_field() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
         .build();
-    let error = MetadataFilter::builder()
-        .ge("unknown", 10_i64)
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .ge("unknown", 10_i64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     assert_eq!(
         error,
@@ -289,14 +313,75 @@ fn schema_validate_filter_reports_unknown_field() {
 }
 
 #[test]
+fn schema_validate_filter_collects_all_condition_issues() {
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
+        .required("score", DataType::Int64)
+        .required("active", DataType::Bool)
+        .build();
+
+    let error = MetadataFilter::builder()
+        .eq("status", 1_i64)
+        .and_ge("missing_score", 10_i64)
+        .and_gt("active", true)
+        .build_checked(&schema)
+        .unwrap_err();
+    let issues = error.issues();
+
+    assert_eq!(issues.len(), 3);
+    assert!(matches!(
+        &issues[0],
+        MetadataError::InvalidFilterOperator { key, operator, .. }
+            if key == "status" && operator == &"eq"
+    ));
+    assert!(matches!(
+        &issues[1],
+        MetadataError::UnknownFilterField { key } if key == "missing_score"
+    ));
+    assert!(matches!(
+        &issues[2],
+        MetadataError::InvalidFilterOperator { key, operator, .. }
+            if key == "active" && operator == &"gt"
+    ));
+}
+
+#[test]
+fn schema_validate_filter_collects_all_set_value_issues() {
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
+        .build();
+
+    let error = MetadataFilter::builder()
+        .in_set("status", [1_i64, 2_i64])
+        .build_checked(&schema)
+        .unwrap_err();
+    let issues = error.issues();
+
+    assert_eq!(issues.len(), 2);
+    for issue in issues {
+        assert!(matches!(
+            issue,
+            MetadataError::InvalidFilterOperator {
+                key,
+                operator,
+                data_type,
+                ..
+            } if key == "status" && operator == &"in_set" && *data_type == DataType::String
+        ));
+    }
+}
+
+#[test]
 fn schema_validate_filter_rejects_range_on_bool() {
     let schema = MetadataSchema::builder()
         .required("active", DataType::Bool)
         .build();
-    let error = MetadataFilter::builder()
-        .gt("active", true)
-        .build_checked(&schema)
-        .unwrap_err();
+    let error = single_issue(
+        MetadataFilter::builder()
+            .gt("active", true)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
 
     match error {
         MetadataError::InvalidFilterOperator {
@@ -311,4 +396,88 @@ fn schema_validate_filter_rejects_range_on_bool() {
         }
         other => panic!("expected InvalidFilterOperator, got {other:?}"),
     }
+}
+
+#[test]
+fn schema_validate_filter_respects_number_comparison_policy_for_big_decimal_float() {
+    let schema = MetadataSchema::builder()
+        .required("amount", DataType::BigDecimal)
+        .build();
+
+    let error = single_issue(
+        MetadataFilter::builder()
+            .ge("amount", 1.5_f64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
+
+    match error {
+        MetadataError::InvalidFilterOperator {
+            key,
+            operator,
+            data_type,
+            message,
+        } => {
+            assert_eq!(key, "amount");
+            assert_eq!(operator, "ge");
+            assert_eq!(data_type, DataType::BigDecimal);
+            assert!(message.contains("number comparison policy"));
+        }
+        other => panic!("expected InvalidFilterOperator, got {other:?}"),
+    }
+
+    MetadataFilter::builder()
+        .ge("amount", 1.5_f64)
+        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .build_checked(&schema)
+        .unwrap();
+}
+
+#[test]
+fn schema_validate_filter_respects_conservative_float_integer_edges() {
+    let schema = MetadataSchema::builder()
+        .required("signed", DataType::Int64)
+        .required("unsigned", DataType::UInt64)
+        .required("float", DataType::Float64)
+        .build();
+
+    MetadataFilter::builder()
+        .ge("signed", 10.0_f64)
+        .and_ge("unsigned", 10.0_f64)
+        .and_ge("float", 10_i64)
+        .build_checked(&schema)
+        .unwrap();
+
+    let non_integral_float = single_issue(
+        MetadataFilter::builder()
+            .ge("signed", 1.5_f64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
+    assert!(matches!(
+        non_integral_float,
+        MetadataError::InvalidFilterOperator { .. }
+    ));
+
+    let unsafe_integer = single_issue(
+        MetadataFilter::builder()
+            .ge("float", 9_007_199_254_740_993_i64)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
+    assert!(matches!(
+        unsafe_integer,
+        MetadataError::InvalidFilterOperator { .. }
+    ));
+
+    let huge_unsigned = single_issue(
+        MetadataFilter::builder()
+            .ge("float", u128::MAX)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
+    assert!(matches!(
+        huge_unsigned,
+        MetadataError::InvalidFilterOperator { .. }
+    ));
 }

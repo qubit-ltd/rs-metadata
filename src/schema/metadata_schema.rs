@@ -27,6 +27,8 @@ use crate::{
     Metadata,
     MetadataError,
     MetadataResult,
+    MetadataValidationError,
+    MetadataValidationResult,
 };
 
 /// Schema for metadata fields.
@@ -93,13 +95,13 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an error when a required field is missing, a declared field has a
-    /// different concrete type, or an unknown field is present while the schema
-    /// rejects unknown fields.
-    pub fn validate(&self, meta: &Metadata) -> MetadataResult<()> {
+    /// Returns an aggregate error containing every required-field, declared-type,
+    /// and unknown-field issue discovered during this validation pass.
+    pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
+        let mut issues = Vec::new();
         for (key, field) in &self.fields {
             if field.is_required() && !meta.contains_key(key) {
-                return Err(MetadataError::MissingRequiredField {
+                issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),
                 });
@@ -107,9 +109,15 @@ impl MetadataSchema {
         }
 
         for (key, value) in meta.iter() {
-            self.validate_entry(key, value)?;
+            if let Err(error) = self.validate_entry(key, value) {
+                issues.push(error);
+            }
         }
-        Ok(())
+        if let Some(error) = MetadataValidationError::from_issues(issues) {
+            Err(error)
+        } else {
+            Ok(())
+        }
     }
 
     /// Validates one metadata entry against this schema.

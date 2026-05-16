@@ -14,8 +14,15 @@ use qubit_metadata::{
     Metadata,
     MetadataError,
     MetadataSchema,
+    MetadataValidationError,
     UnknownFieldPolicy,
 };
+
+fn single_issue(error: MetadataValidationError) -> MetadataError {
+    let mut issues = error.into_issues();
+    assert_eq!(issues.len(), 1);
+    issues.remove(0)
+}
 
 #[test]
 fn schema_builder_defines_required_and_optional_fields() {
@@ -51,7 +58,7 @@ fn schema_validate_reports_missing_required_field() {
         .build();
     let meta = Metadata::new();
 
-    let error = schema.validate(&meta).unwrap_err();
+    let error = single_issue(schema.validate(&meta).unwrap_err());
     assert_eq!(
         error,
         MetadataError::MissingRequiredField {
@@ -68,7 +75,7 @@ fn schema_validate_reports_type_mismatch() {
         .build();
     let meta = Metadata::new().with("score", "high");
 
-    match schema.validate(&meta).unwrap_err() {
+    match single_issue(schema.validate(&meta).unwrap_err()) {
         MetadataError::TypeMismatch {
             key,
             expected,
@@ -92,10 +99,38 @@ fn schema_validate_reports_unknown_field_by_default() {
 
     assert_eq!(
         schema.validate(&meta),
-        Err(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        })
+        Err(MetadataValidationError::from_issue(
+            MetadataError::UnknownField {
+                key: "extra".to_string(),
+            },
+        ))
     );
+}
+
+#[test]
+fn schema_validate_collects_all_metadata_issues() {
+    let schema = MetadataSchema::builder()
+        .required("id", DataType::String)
+        .required("score", DataType::Int64)
+        .build();
+    let meta = Metadata::new().with("score", "high").with("extra", true);
+
+    let error = schema.validate(&meta).unwrap_err();
+    let issues = error.issues();
+
+    assert_eq!(issues.len(), 3);
+    assert!(matches!(
+        &issues[0],
+        MetadataError::MissingRequiredField { key, .. } if key == "id"
+    ));
+    assert!(matches!(
+        &issues[1],
+        MetadataError::UnknownField { key } if key == "extra"
+    ));
+    assert!(matches!(
+        &issues[2],
+        MetadataError::TypeMismatch { key, .. } if key == "score"
+    ));
 }
 
 #[test]
@@ -116,9 +151,11 @@ fn schema_default_rejects_unknown_fields() {
 
     assert_eq!(
         schema.validate(&meta),
-        Err(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        })
+        Err(MetadataValidationError::from_issue(
+            MetadataError::UnknownField {
+                key: "extra".to_string(),
+            },
+        ))
     );
 }
 
