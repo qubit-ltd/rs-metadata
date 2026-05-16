@@ -86,7 +86,8 @@ schema.validate(&meta).unwrap();
 `Result<MetadataFilter, MetadataError>` so structurally invalid expressions such
 as empty grouped expressions are reported instead of silently becoming no-ops.
 `build_checked(&schema)` also validates referenced fields, operator
-compatibility, and filter value types.
+compatibility, and filter value types. Schema-level validation returns an
+aggregate error so callers can report all independent issues in one pass.
 
 ```rust
 use qubit_datatype::DataType;
@@ -170,11 +171,13 @@ Empty value sets are allowed. `in_set("key", [])` matches no metadata object.
 `not_in_set("key", [])` matches when `key` exists; when `key` is missing, it
 follows the configured `MissingKeyPolicy`, just like other negative predicates.
 
-When a schema validates filters, all numeric `DataType` variants are considered
-compatible with each other. This intentionally lets callers write convenient
-numeric literals in filter conditions even when they cannot precisely mirror the
-storage field type. Actual `MetadataSchema::validate(&metadata)` remains strict:
-stored metadata values must use the concrete field type declared by the schema.
+When a schema validates filters, mixed numeric compatibility follows the
+filter's configured `NumberComparisonPolicy`, the same policy used at match
+time. `Conservative` accepts exact or safely comparable numeric pairs and
+rejects risky lossy comparisons; `Approximate` accepts mixed numeric pairs that
+the runtime matcher can evaluate approximately. Actual
+`MetadataSchema::validate(&metadata)` remains strict: stored metadata values
+must use the concrete field type declared by the schema.
 
 ### 5) Versioned filter serde format
 
@@ -182,13 +185,17 @@ Serialized `MetadataFilter` values use an explicit wire format with `version`,
 `expr`, and `options` fields. Expression nodes use `type`, and condition nodes
 use stable operator names in `op` such as `eq`, `ge`, `in`, and `not_exists`.
 Serialized `Condition` values use the same condition wire representation. The
-internal expression tree is not part of the serialization contract. New
-serialization always emits the versioned format.
+internal expression tree is not part of the serialization contract. Policy enum
+values in `options` are serialized as lowercase underscore values such as
+`match`, `no_match`, `conservative`, and `approximate`. New serialization always
+emits the versioned format.
 
 ## Error Handling
 
 Use `try_get` and schema validation when the caller needs diagnostics instead of
-`Option`:
+`Option`. Single-entry accessors return `MetadataError`; schema-level validation
+returns `MetadataValidationError`, whose `issues()` method exposes all collected
+`MetadataError` values:
 
 ```rust
 use qubit_datatype::DataType;
@@ -211,7 +218,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-metadata = "0.4.5"
+qubit-metadata = "0.5.0"
 ```
 
 ## License
