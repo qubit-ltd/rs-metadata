@@ -9,11 +9,40 @@
  ******************************************************************************/
 //! Tests for [`qubit_metadata::MetadataError`].
 
+use std::fmt::{
+    self,
+    Write,
+};
+
 use qubit_datatype::DataType;
 use qubit_metadata::{
     MetadataError,
     MetadataValidationError,
 };
+
+struct CountingWriter {
+    write_count: usize,
+    fail_on_write: Option<usize>,
+}
+
+impl CountingWriter {
+    fn new(fail_on_write: Option<usize>) -> Self {
+        Self {
+            write_count: 0,
+            fail_on_write,
+        }
+    }
+}
+
+impl Write for CountingWriter {
+    fn write_str(&mut self, _: &str) -> fmt::Result {
+        self.write_count += 1;
+        if self.fail_on_write == Some(self.write_count) {
+            return Err(fmt::Error);
+        }
+        Ok(())
+    }
+}
 
 #[test]
 fn display_formats_all_variants() {
@@ -123,6 +152,28 @@ fn validation_error_can_wrap_single_issue() {
         error.to_string(),
         "1 metadata validation issue(s); 1: Metadata filter references key 'missing' not defined in schema"
     );
+}
+
+#[test]
+fn validation_error_display_streams_formatter_writes() {
+    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
+        key: "extra".to_string(),
+    });
+    let mut writer = CountingWriter::new(None);
+
+    write!(&mut writer, "{error}").unwrap();
+
+    assert!(writer.write_count > 1);
+}
+
+#[test]
+fn validation_error_display_propagates_formatter_errors() {
+    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
+        key: "extra".to_string(),
+    });
+    let mut writer = CountingWriter::new(Some(2));
+
+    assert!(write!(&mut writer, "{error}").is_err());
 }
 
 #[test]

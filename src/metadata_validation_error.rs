@@ -75,11 +75,11 @@ impl MetadataValidationError {
 
 impl fmt::Display for MetadataValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut message = format!("{} metadata validation issue(s)", self.issues.len());
+        write!(f, "{} metadata validation issue(s)", self.issues.len())?;
         for (index, issue) in self.issues.iter().enumerate() {
-            message.push_str(&format!("; {}: {issue}", index + 1));
+            write!(f, "; {}: {issue}", index + 1)?;
         }
-        f.write_str(&message)
+        Ok(())
     }
 }
 
