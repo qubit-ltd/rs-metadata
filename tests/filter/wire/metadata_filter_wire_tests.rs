@@ -31,8 +31,8 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
     assert_eq!(
         encoded["options"],
         json!({
-            "missing_key_policy": "NoMatch",
-            "number_comparison_policy": "Approximate"
+            "missing_key_policy": "no_match",
+            "number_comparison_policy": "approximate"
         })
     );
 
@@ -52,8 +52,8 @@ fn metadata_filter_wire_omits_expression_for_match_all() {
         json!({
             "version": 1,
             "options": {
-                "missing_key_policy": "Match",
-                "number_comparison_policy": "Conservative"
+                "missing_key_policy": "match",
+                "number_comparison_policy": "conservative"
             }
         })
     );
