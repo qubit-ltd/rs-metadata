@@ -83,34 +83,63 @@ impl MetadataSchema {
                 self.validate_range_condition(key, "ge", value, number_comparison_policy),
             ),
             Condition::In { key, values } => {
-                for value in values {
-                    collect_issue(
-                        issues,
-                        self.validate_value_condition(
-                            key,
-                            "in_set",
-                            value,
-                            number_comparison_policy,
-                        ),
-                    );
-                }
+                self.collect_set_value_condition_issues(
+                    key,
+                    "in_set",
+                    values,
+                    number_comparison_policy,
+                    issues,
+                );
             }
             Condition::NotIn { key, values } => {
-                for value in values {
-                    collect_issue(
-                        issues,
-                        self.validate_value_condition(
-                            key,
-                            "not_in_set",
-                            value,
-                            number_comparison_policy,
-                        ),
-                    );
-                }
+                self.collect_set_value_condition_issues(
+                    key,
+                    "not_in_set",
+                    values,
+                    number_comparison_policy,
+                    issues,
+                );
             }
             Condition::Exists { key } | Condition::NotExists { key } => {
                 collect_issue(issues, self.filter_field(key).map(|_| ()));
             }
+        }
+    }
+
+    /// Collects field and value issues for a set-membership condition.
+    fn collect_set_value_condition_issues(
+        &self,
+        key: &str,
+        operator: &'static str,
+        values: &[Value],
+        number_comparison_policy: NumberComparisonPolicy,
+        issues: &mut Vec<MetadataError>,
+    ) {
+        let field = match self.filter_field(key) {
+            Ok(field) => field,
+            Err(error) => {
+                issues.push(error);
+                return;
+            }
+        };
+        let Some(field) = field else {
+            return;
+        };
+        for value in values {
+            if value_matches_field_type(value, field.data_type(), number_comparison_policy) {
+                continue;
+            }
+            issues.push(MetadataError::InvalidFilterOperator {
+                key: key.to_string(),
+                operator,
+                data_type: field.data_type(),
+                message: format!(
+                    "filter value type {} is not compatible with field type {} under {:?} number comparison policy",
+                    value.data_type(),
+                    field.data_type(),
+                    number_comparison_policy
+                ),
+            });
         }
     }
 

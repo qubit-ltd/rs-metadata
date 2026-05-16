@@ -372,6 +372,26 @@ fn schema_validate_filter_collects_all_set_value_issues() {
 }
 
 #[test]
+fn schema_validate_filter_reports_unknown_set_field_once() {
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
+        .build();
+
+    let error = MetadataFilter::builder()
+        .in_set("missing", [1_i64, 2_i64])
+        .build_checked(&schema)
+        .unwrap_err();
+    let issues = error.issues();
+
+    assert_eq!(
+        issues,
+        [MetadataError::UnknownFilterField {
+            key: "missing".to_string(),
+        }]
+    );
+}
+
+#[test]
 fn schema_validate_filter_rejects_range_on_bool() {
     let schema = MetadataSchema::builder()
         .required("active", DataType::Bool)
