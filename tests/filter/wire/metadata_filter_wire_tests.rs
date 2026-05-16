@@ -27,7 +27,7 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
         .expect("filter should build");
 
     let encoded = serde_json::to_value(&filter).expect("filter should serialize");
-    assert_eq!(encoded["version"], json!(1));
+    assert_eq!(encoded["version"], json!(2));
     assert_eq!(
         encoded["options"],
         json!({
@@ -50,7 +50,7 @@ fn metadata_filter_wire_omits_expression_for_match_all() {
     assert_eq!(
         encoded,
         json!({
-            "version": 1,
+            "version": 2,
             "options": {
                 "missing_key_policy": "match",
                 "number_comparison_policy": "conservative"
@@ -62,10 +62,21 @@ fn metadata_filter_wire_omits_expression_for_match_all() {
 #[test]
 fn metadata_filter_wire_rejects_unsupported_version() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 2
+        "version": 3
     }))
     .expect_err("unsupported wire version should be rejected")
     .to_string();
 
-    assert!(error.contains("unsupported MetadataFilter wire format version 2"));
+    assert!(error.contains("unsupported MetadataFilter wire format version 3"));
+}
+
+#[test]
+fn metadata_filter_wire_rejects_previous_version() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 1
+    }))
+    .expect_err("previous wire version should be rejected")
+    .to_string();
+
+    assert!(error.contains("unsupported MetadataFilter wire format version 1"));
 }
