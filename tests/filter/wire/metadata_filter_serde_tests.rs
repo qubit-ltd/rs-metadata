@@ -45,7 +45,7 @@ fn filter_serde_uses_versioned_wire_format() {
     assert_eq!(
         json,
         json!({
-            "version": 1,
+            "version": 2,
             "expr": {
                 "type": "and",
                 "children": [
@@ -131,7 +131,7 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
     );
 
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 1,
+        "version": 2,
         "expr": {
             "type": "condition",
             "condition": {
@@ -155,7 +155,7 @@ fn filter_serde_encodes_match_all_and_match_none() {
     assert_eq!(
         serde_json::to_value(MetadataFilter::all()).unwrap(),
         json!({
-            "version": 1,
+            "version": 2,
             "options": {
                 "missing_key_policy": "match",
                 "number_comparison_policy": "conservative"
@@ -165,7 +165,7 @@ fn filter_serde_encodes_match_all_and_match_none() {
     assert_eq!(
         serde_json::to_value(MetadataFilter::none()).unwrap(),
         json!({
-            "version": 1,
+            "version": 2,
             "expr": {
                 "type": "false"
             },
@@ -244,18 +244,29 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
 #[test]
 fn filter_deserialize_rejects_unsupported_wire_version() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 2
+        "version": 3
     }))
     .unwrap_err()
     .to_string();
 
-    assert!(error.contains("unsupported MetadataFilter wire format version 2"));
+    assert!(error.contains("unsupported MetadataFilter wire format version 3"));
+}
+
+#[test]
+fn filter_deserialize_rejects_v1_wire_version() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 1
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("unsupported MetadataFilter wire format version 1"));
 }
 
 #[test]
 fn filter_deserialize_rejects_empty_wire_group() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 1,
+        "version": 2,
         "expr": {
             "type": "and",
             "children": []

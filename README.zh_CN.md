@@ -177,7 +177,8 @@ metadata 中存储的值必须和 schema 声明的具体字段类型一致。
 `eq`、`ge`、`in` 和 `not_exists`。单独序列化 `Condition` 时也使用同一套条件
 wire 表示。内部表达式树不属于序列化契约。`options` 中的策略枚举序列化为
 lowercase underscore 值，例如 `match`、`no_match`、`conservative` 和 `approximate`。
-新的序列化输出始终使用版本化格式。
+新的 `MetadataFilter` 序列化输出使用 wire version `2`；更早的 filter wire version
+会被拒绝。
 
 ## 错误处理
 

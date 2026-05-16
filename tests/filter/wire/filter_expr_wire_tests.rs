@@ -85,7 +85,7 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
 #[test]
 fn filter_expr_wire_rejects_empty_groups() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 1,
+        "version": 2,
         "expr": {
             "type": "or",
             "children": []

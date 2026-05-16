@@ -187,8 +187,8 @@ use stable operator names in `op` such as `eq`, `ge`, `in`, and `not_exists`.
 Serialized `Condition` values use the same condition wire representation. The
 internal expression tree is not part of the serialization contract. Policy enum
 values in `options` are serialized as lowercase underscore values such as
-`match`, `no_match`, `conservative`, and `approximate`. New serialization always
-emits the versioned format.
+`match`, `no_match`, `conservative`, and `approximate`. New serialization emits
+MetadataFilter wire version `2`; earlier filter wire versions are rejected.
 
 ## Error Handling
 
