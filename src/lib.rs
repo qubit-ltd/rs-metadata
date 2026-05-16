@@ -32,6 +32,7 @@
 //! - Filter type: [`MetadataFilter`] — composable filter expressions for metadata queries
 //! - Condition type: [`Condition`] — individual comparison predicates
 //! - Error type: [`MetadataError`] — explicit failure reporting for `try_*` APIs
+//! - Validation error type: [`MetadataValidationError`] — aggregate schema validation issues
 //!
 //! ## Example
 //!
