@@ -207,7 +207,7 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.5.0"
+qubit-metadata = "0.5"
 ```
 
 ## 许可证
