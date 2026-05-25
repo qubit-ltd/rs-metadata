@@ -18,8 +18,5 @@ use qubit_metadata::{
 fn default_options_are_stable() {
     let options = FilterMatchOptions::default();
     assert_eq!(options.missing_key_policy, MissingKeyPolicy::Match);
-    assert_eq!(
-        options.number_comparison_policy,
-        NumberComparisonPolicy::Conservative
-    );
+    assert_eq!(options.number_comparison_policy, NumberComparisonPolicy::Conservative);
 }

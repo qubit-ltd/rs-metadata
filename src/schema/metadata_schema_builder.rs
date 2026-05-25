@@ -33,8 +33,7 @@ impl MetadataSchemaBuilder {
     #[inline]
     #[must_use]
     pub fn required(mut self, key: &str, data_type: DataType) -> Self {
-        self.fields
-            .insert(key.to_string(), MetadataField::new(data_type, true));
+        self.fields.insert(key.to_string(), MetadataField::new(data_type, true));
         self
     }
 

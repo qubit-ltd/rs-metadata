@@ -83,22 +83,10 @@ impl MetadataSchema {
                 self.validate_range_condition(key, "ge", value, number_comparison_policy),
             ),
             Condition::In { key, values } => {
-                self.collect_set_value_condition_issues(
-                    key,
-                    "in_set",
-                    values,
-                    number_comparison_policy,
-                    issues,
-                );
+                self.collect_set_value_condition_issues(key, "in_set", values, number_comparison_policy, issues);
             }
             Condition::NotIn { key, values } => {
-                self.collect_set_value_condition_issues(
-                    key,
-                    "not_in_set",
-                    values,
-                    number_comparison_policy,
-                    issues,
-                );
+                self.collect_set_value_condition_issues(key, "not_in_set", values, number_comparison_policy, issues);
             }
             Condition::Exists { key } | Condition::NotExists { key } => {
                 collect_issue(issues, self.filter_field(key).map(|_| ()));
@@ -210,9 +198,7 @@ impl MetadataSchema {
         match self.field(key) {
             Some(field) => Ok(Some(field)),
             None if matches!(self.unknown_field_policy(), UnknownFieldPolicy::Allow) => Ok(None),
-            None => Err(MetadataError::UnknownFilterField {
-                key: key.to_string(),
-            }),
+            None => Err(MetadataError::UnknownFilterField { key: key.to_string() }),
         }
     }
 }
@@ -281,10 +267,7 @@ fn value_matches_field_type(
     if !is_numeric_data_type(value_type) || !is_numeric_data_type(field_type) {
         return false;
     }
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
+    if matches!(number_comparison_policy, NumberComparisonPolicy::Approximate) {
         return true;
     }
     value_matches_numeric_field_conservatively(value, field_type)
@@ -339,11 +322,7 @@ fn float_value_fits_integer_field(value: &Value, field_type: DataType) -> bool {
     }
     matches!(
         field_type,
-        DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-            | DataType::UIntSize
+        DataType::UInt8 | DataType::UInt16 | DataType::UInt32 | DataType::UInt64 | DataType::UIntSize
     ) && (0.0..U64_EXCLUSIVE_MAX_F64).contains(&number)
 }
 
@@ -352,7 +331,5 @@ fn integer_value_is_safe_for_float_field(value: &Value) -> bool {
     if let Ok(value) = value.to::<i128>() {
         return value.unsigned_abs() <= MAX_SAFE_INTEGER_F64_U128;
     }
-    value
-        .to::<u128>()
-        .is_ok_and(|value| value <= MAX_SAFE_INTEGER_F64_U128)
+    value.to::<u128>().is_ok_and(|value| value <= MAX_SAFE_INTEGER_F64_U128)
 }

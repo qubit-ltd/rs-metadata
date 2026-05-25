@@ -80,11 +80,9 @@ impl FilterExpr {
     #[inline]
     pub(crate) fn matches(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
         match self {
-            FilterExpr::Condition(condition) => condition.matches(
-                meta,
-                options.missing_key_policy,
-                options.number_comparison_policy,
-            ),
+            FilterExpr::Condition(condition) => {
+                condition.matches(meta, options.missing_key_policy, options.number_comparison_policy)
+            }
             FilterExpr::And(children) => children.iter().all(|expr| expr.matches(meta, options)),
             FilterExpr::Or(children) => children.iter().any(|expr| expr.matches(meta, options)),
             FilterExpr::Not(inner) => !inner.matches(meta, options),

@@ -66,10 +66,7 @@ impl MetadataFilterBuilder {
     /// range operators on non-comparable field types, or compares a field with an
     /// incompatible value type.
     #[inline]
-    pub fn build_checked(
-        self,
-        schema: &MetadataSchema,
-    ) -> MetadataValidationResult<MetadataFilter> {
+    pub fn build_checked(self, schema: &MetadataSchema) -> MetadataValidationResult<MetadataFilter> {
         let filter = self.build().map_err(MetadataValidationError::from_issue)?;
         schema.validate_filter(&filter)?;
         Ok(filter)
@@ -94,10 +91,7 @@ impl MetadataFilterBuilder {
     /// Sets how the built filter handles mixed numeric comparisons.
     #[inline]
     #[must_use]
-    pub fn number_comparison_policy(
-        mut self,
-        number_comparison_policy: NumberComparisonPolicy,
-    ) -> Self {
+    pub fn number_comparison_policy(mut self, number_comparison_policy: NumberComparisonPolicy) -> Self {
         self.options.number_comparison_policy = number_comparison_policy;
         self
     }
@@ -308,18 +302,14 @@ impl MetadataFilterBuilder {
     #[inline]
     #[must_use]
     pub fn and_exists(self, key: &str) -> Self {
-        self.and_condition(Condition::Exists {
-            key: key.to_string(),
-        })
+        self.and_condition(Condition::Exists { key: key.to_string() })
     }
 
     /// Appends a non-existence predicate with AND.
     #[inline]
     #[must_use]
     pub fn and_not_exists(self, key: &str) -> Self {
-        self.and_condition(Condition::NotExists {
-            key: key.to_string(),
-        })
+        self.and_condition(Condition::NotExists { key: key.to_string() })
     }
 
     /// Appends an equality predicate with OR: `key == value`.
@@ -432,18 +422,14 @@ impl MetadataFilterBuilder {
     #[inline]
     #[must_use]
     pub fn or_exists(self, key: &str) -> Self {
-        self.or_condition(Condition::Exists {
-            key: key.to_string(),
-        })
+        self.or_condition(Condition::Exists { key: key.to_string() })
     }
 
     /// Appends a non-existence predicate with OR.
     #[inline]
     #[must_use]
     pub fn or_not_exists(self, key: &str) -> Self {
-        self.or_condition(Condition::NotExists {
-            key: key.to_string(),
-        })
+        self.or_condition(Condition::NotExists { key: key.to_string() })
     }
 
     /// Appends a grouped expression with AND.
@@ -567,12 +553,7 @@ impl MetadataFilterBuilder {
 
     /// Combines a grouped expression and records empty-group errors.
     #[inline]
-    fn combine_group(
-        self,
-        operator: &'static str,
-        group: Self,
-        combine: fn(Self, Option<FilterExpr>) -> Self,
-    ) -> Self {
+    fn combine_group(self, operator: &'static str, group: Self, combine: fn(Self, Option<FilterExpr>) -> Self) -> Self {
         if let Some(error) = group.error {
             return self.with_error(error);
         }

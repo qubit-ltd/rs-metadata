@@ -29,9 +29,7 @@ impl MetadataValidationError {
     #[inline]
     #[must_use]
     pub fn from_issue(issue: MetadataError) -> Self {
-        Self {
-            issues: vec![issue],
-        }
+        Self { issues: vec![issue] }
     }
 
     /// Creates an aggregate validation error from a non-empty issue list.
