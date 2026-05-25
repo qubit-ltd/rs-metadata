@@ -54,10 +54,7 @@ impl MetadataSchema {
 
     /// Creates a schema from field definitions and unknown-field policy.
     #[inline]
-    pub(crate) fn new(
-        fields: BTreeMap<String, MetadataField>,
-        unknown_field_policy: UnknownFieldPolicy,
-    ) -> Self {
+    pub(crate) fn new(fields: BTreeMap<String, MetadataField>, unknown_field_policy: UnknownFieldPolicy) -> Self {
         Self {
             fields,
             unknown_field_policy,
@@ -123,14 +120,12 @@ impl MetadataSchema {
     /// Validates one metadata entry against this schema.
     pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
-            Some(field) if field.data_type() != value.data_type() => Err(
-                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
-            ),
+            Some(field) if field.data_type() != value.data_type() => {
+                Err(MetadataError::type_mismatch(key, field.data_type(), value.data_type()))
+            }
             Some(_) => Ok(()),
             None if matches!(self.unknown_field_policy, UnknownFieldPolicy::Reject) => {
-                Err(MetadataError::UnknownField {
-                    key: key.to_string(),
-                })
+                Err(MetadataError::UnknownField { key: key.to_string() })
             }
             None => Ok(()),
         }

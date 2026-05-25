@@ -76,8 +76,7 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
         })
     );
 
-    let decoded: MetadataFilter =
-        serde_json::from_value(encoded).expect("filter should deserialize");
+    let decoded: MetadataFilter = serde_json::from_value(encoded).expect("filter should deserialize");
     assert_eq!(decoded, filter);
     assert!(decoded.matches(&sample()));
 }

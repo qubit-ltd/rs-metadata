@@ -36,8 +36,7 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
         })
     );
 
-    let decoded: MetadataFilter =
-        serde_json::from_value(encoded).expect("filter should deserialize");
+    let decoded: MetadataFilter = serde_json::from_value(encoded).expect("filter should deserialize");
     assert_eq!(decoded, filter);
     assert_eq!(decoded.options(), filter.options());
     assert!(decoded.matches(&sample()));

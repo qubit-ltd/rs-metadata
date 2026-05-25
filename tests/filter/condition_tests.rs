@@ -73,11 +73,7 @@ fn ne_missing_key_respects_policy() {
             .unwrap()
             .matches_with_options(&sample(), match_options)
     );
-    assert!(
-        !f.build()
-            .unwrap()
-            .matches_with_options(&sample(), no_match_options)
-    );
+    assert!(!f.build().unwrap().matches_with_options(&sample(), no_match_options));
 }
 
 #[test]
@@ -547,13 +543,7 @@ fn range_filter_covers_numeric_value_variants() {
 fn range_filter_i128_and_u128_float_edges_respect_policy() {
     let signed = Metadata::new().with("n", i128::MAX);
     let signed_conservative = MetadataFilter::builder().gt("n", 0.5_f64);
-    assert!(
-        !signed_conservative
-            .clone()
-            .build()
-            .unwrap()
-            .matches(&signed)
-    );
+    assert!(!signed_conservative.clone().build().unwrap().matches(&signed));
     assert!(
         signed_conservative
             .number_comparison_policy(NumberComparisonPolicy::Approximate)
@@ -564,13 +554,7 @@ fn range_filter_i128_and_u128_float_edges_respect_policy() {
 
     let unsigned = Metadata::new().with("n", u128::MAX);
     let unsigned_conservative = MetadataFilter::builder().gt("n", 0.5_f64);
-    assert!(
-        !unsigned_conservative
-            .clone()
-            .build()
-            .unwrap()
-            .matches(&unsigned)
-    );
+    assert!(!unsigned_conservative.clone().build().unwrap().matches(&unsigned));
     assert!(
         unsigned_conservative
             .number_comparison_policy(NumberComparisonPolicy::Approximate)
@@ -607,13 +591,7 @@ fn big_integer_equality_matches_in_conservative_policy() {
     m.set("n", num_bigint::BigInt::from(i128::MAX) + 1_i32);
 
     let exact = num_bigint::BigInt::from(i128::MAX) + 1_i32;
-    assert!(
-        MetadataFilter::builder()
-            .eq("n", exact)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder().eq("n", exact).build().unwrap().matches(&m));
     assert!(
         !MetadataFilter::builder()
             .eq("n", num_bigint::BigInt::from(i128::MAX))
@@ -649,29 +627,14 @@ fn big_decimal_equality_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", bigdecimal::BigDecimal::from(10_i64));
 
-    assert!(
-        MetadataFilter::builder()
-            .eq("n", 10_i64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .eq("n", 11_i64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder().eq("n", 10_i64).build().unwrap().matches(&m));
+    assert!(!MetadataFilter::builder().eq("n", 11_i64).build().unwrap().matches(&m));
 }
 
 #[test]
 fn big_decimal_range_matches_big_integer_exactly() {
     let mut m = Metadata::new();
-    m.set(
-        "n",
-        bigdecimal::BigDecimal::from(num_bigint::BigInt::from(u128::MAX)),
-    );
+    m.set("n", bigdecimal::BigDecimal::from(num_bigint::BigInt::from(u128::MAX)));
 
     assert!(
         MetadataFilter::builder()
@@ -849,9 +812,7 @@ fn not_in_values_empty_set_matches_present_keys_and_respects_missing_key_policy(
     assert!(f.build().unwrap().matches(&sample()));
 
     let missing = MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
-    let strict = missing
-        .clone()
-        .missing_key_policy(MissingKeyPolicy::NoMatch);
+    let strict = missing.clone().missing_key_policy(MissingKeyPolicy::NoMatch);
     assert!(missing.build().unwrap().matches(&sample()));
     assert!(!strict.build().unwrap().matches(&sample()));
 }

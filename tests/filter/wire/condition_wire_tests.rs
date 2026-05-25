@@ -89,8 +89,7 @@ fn condition_wire_serializes_all_operator_tags() {
     for (condition, op) in conditions {
         let encoded = serde_json::to_value(&condition).expect("condition should serialize");
         assert_eq!(encoded.get("op"), Some(&json!(op)));
-        let decoded: Condition =
-            serde_json::from_value(encoded).expect("condition should deserialize");
+        let decoded: Condition = serde_json::from_value(encoded).expect("condition should deserialize");
         assert_eq!(decoded, condition);
     }
 }

@@ -97,8 +97,7 @@ impl Metadata {
             .0
             .get(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        T::from_metadata_value(value)
-            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
+        T::from_metadata_value(value).map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if absent.
@@ -143,12 +142,7 @@ impl Metadata {
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
     #[inline]
-    pub fn set_checked<T>(
-        &mut self,
-        schema: &MetadataSchema,
-        key: &str,
-        value: T,
-    ) -> MetadataResult<Option<Value>>
+    pub fn set_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Option<Value>>
     where
         T: IntoMetadataValue,
     {
@@ -165,12 +159,7 @@ impl Metadata {
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
     #[inline]
-    pub fn with_checked<T>(
-        mut self,
-        schema: &MetadataSchema,
-        key: &str,
-        value: T,
-    ) -> MetadataResult<Self>
+    pub fn with_checked<T>(mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Self>
     where
         T: IntoMetadataValue,
     {

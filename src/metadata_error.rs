@@ -71,12 +71,7 @@ pub enum MetadataError {
 impl MetadataError {
     /// Builds a conversion error for `key` using the requested type and stored value.
     #[inline]
-    pub(crate) fn conversion_error(
-        key: &str,
-        expected: DataType,
-        value: &Value,
-        error: ValueError,
-    ) -> Self {
+    pub(crate) fn conversion_error(key: &str, expected: DataType, value: &Value, error: ValueError) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,
@@ -110,18 +105,14 @@ impl fmt::Display for MetadataError {
                 f,
                 "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
             ),
-            Self::MissingRequiredField { key, expected } => write!(
-                f,
-                "Required metadata key '{key}' is missing (expected {expected})"
-            ),
+            Self::MissingRequiredField { key, expected } => {
+                write!(f, "Required metadata key '{key}' is missing (expected {expected})")
+            }
             Self::UnknownField { key } => {
                 write!(f, "Metadata key '{key}' is not defined in schema")
             }
             Self::UnknownFilterField { key } => {
-                write!(
-                    f,
-                    "Metadata filter references key '{key}' not defined in schema"
-                )
+                write!(f, "Metadata filter references key '{key}' not defined in schema")
             }
             Self::InvalidFilterOperator {
                 key,

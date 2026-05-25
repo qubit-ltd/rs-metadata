@@ -98,10 +98,7 @@ impl MetadataFilter {
     /// Returns a new filter with the supplied number-comparison policy.
     #[inline]
     #[must_use]
-    pub fn with_number_comparison_policy(
-        mut self,
-        number_comparison_policy: NumberComparisonPolicy,
-    ) -> Self {
+    pub fn with_number_comparison_policy(mut self, number_comparison_policy: NumberComparisonPolicy) -> Self {
         self.options.number_comparison_policy = number_comparison_policy;
         self
     }
@@ -126,9 +123,7 @@ impl MetadataFilter {
     #[inline]
     #[must_use]
     pub fn matches_with_options(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
-        self.expr
-            .as_ref()
-            .is_none_or(|expr| expr.matches(meta, options))
+        self.expr.as_ref().is_none_or(|expr| expr.matches(meta, options))
     }
 
     /// Visits all leaf conditions in this filter.

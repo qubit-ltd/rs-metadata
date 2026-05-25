@@ -74,10 +74,7 @@ fn display_formats_all_variants() {
     let unknown = MetadataError::UnknownField {
         key: "extra".to_string(),
     };
-    assert_eq!(
-        unknown.to_string(),
-        "Metadata key 'extra' is not defined in schema"
-    );
+    assert_eq!(unknown.to_string(), "Metadata key 'extra' is not defined in schema");
 
     let unknown_filter = MetadataError::UnknownFilterField {
         key: "extra".to_string(),
