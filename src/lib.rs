@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! # qubit-metadata
 //!
 //! A general-purpose, type-safe, extensible metadata model for Rust.
@@ -20,19 +18,25 @@
 //! ## Design Goals
 //!
 //! - **Type Safety**: Typed get/set API backed by [`qubit_value::Value`]
-//! - **Generality**: No domain-specific assumptions — usable in any Rust project
-//! - **Schema Support**: Optional [`MetadataSchema`] validation for metadata and filters
+//! - **Generality**: No domain-specific assumptions — usable in any Rust
+//!   project
+//! - **Schema Support**: Optional [`MetadataSchema`] validation for metadata
+//!   and filters
 //! - **Serialization**: First-class `serde` support for JSON interchange
 //! - **Filtering**: [`MetadataFilter`] for composable query conditions
 //!
 //! ## Features
 //!
 //! - Core type: [`Metadata`] — an ordered key-value store with typed accessors
-//! - Schema type: [`MetadataSchema`] — field definitions based on [`qubit_datatype::DataType`]
-//! - Filter type: [`MetadataFilter`] — composable filter expressions for metadata queries
+//! - Schema type: [`MetadataSchema`] — field definitions based on
+//!   [`qubit_datatype::DataType`]
+//! - Filter type: [`MetadataFilter`] — composable filter expressions for
+//!   metadata queries
 //! - Condition type: [`Condition`] — individual comparison predicates
-//! - Error type: [`MetadataError`] — explicit failure reporting for `try_*` APIs
-//! - Validation error type: [`MetadataValidationError`] — aggregate schema validation issues
+//! - Error type: [`MetadataError`] — explicit failure reporting for `try_*`
+//!   APIs
+//! - Validation error type: [`MetadataValidationError`] — aggregate schema
+//!   validation issues
 //!
 //! ## Example
 //!
@@ -58,7 +62,6 @@
 //!     .unwrap();
 //! assert!(filter.matches(&meta));
 //! ```
-//!
 
 #![deny(missing_docs)]
 

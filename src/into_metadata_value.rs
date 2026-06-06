@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Provides conversion from supported Rust values into metadata values.
 
 use std::collections::HashMap;
@@ -29,7 +27,8 @@ use url::Url;
 /// [`Value::new`]. It exists so [`crate::Metadata`] can keep a generic public
 /// API while `qubit-value` keeps its internal constructor trait private.
 pub trait IntoMetadataValue {
-    /// Converts this value into a [`Value`] without changing its concrete data type.
+    /// Converts this value into a [`Value`] without changing its concrete data
+    /// type.
     ///
     /// # Returns
     ///

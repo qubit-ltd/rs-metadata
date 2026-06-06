@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Unit tests for [`qubit_metadata::Metadata`].
 
 use std::collections::BTreeMap;
@@ -56,7 +54,10 @@ fn set_and_get_scalar_values() {
     assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
     assert_eq!(meta.get::<i64>("priority"), Some(42));
     assert_eq!(meta.get::<bool>("reviewed"), Some(true));
-    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
+    assert!(
+        (meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs()
+            < 1e-10
+    );
 }
 
 #[test]
@@ -124,7 +125,9 @@ fn get_or_returns_default_for_missing_key_or_type_mismatch() {
 
 #[test]
 fn set_checked_returns_previous_value() {
-    let schema = MetadataSchema::builder().required("key", DataType::String).build();
+    let schema = MetadataSchema::builder()
+        .required("key", DataType::String)
+        .build();
     let mut meta = Metadata::new();
     meta.set_checked(&schema, "key", "first").unwrap();
     let old = meta.set_checked(&schema, "key", "second").unwrap();
@@ -133,13 +136,18 @@ fn set_checked_returns_previous_value() {
 
 #[test]
 fn set_checked_rejects_type_mismatch() {
-    let schema = MetadataSchema::builder().required("key", DataType::String).build();
+    let schema = MetadataSchema::builder()
+        .required("key", DataType::String)
+        .build();
     let mut meta = Metadata::new();
     let error = meta.set_checked(&schema, "key", 1_i64).unwrap_err();
 
     match error {
         MetadataError::TypeMismatch {
-            key, expected, actual, ..
+            key,
+            expected,
+            actual,
+            ..
         } => {
             assert_eq!(key, "key");
             assert_eq!(expected, DataType::String);
@@ -151,8 +159,12 @@ fn set_checked_rejects_type_mismatch() {
 
 #[test]
 fn with_checked_rejects_unknown_field() {
-    let schema = MetadataSchema::builder().required("known", DataType::String).build();
-    let error = Metadata::new().with_checked(&schema, "unknown", "value").unwrap_err();
+    let schema = MetadataSchema::builder()
+        .required("known", DataType::String)
+        .build();
+    let error = Metadata::new()
+        .with_checked(&schema, "unknown", "value")
+        .unwrap_err();
 
     assert_eq!(
         error,
@@ -167,15 +179,25 @@ fn get_raw_and_set_raw_use_qubit_value() {
     let mut meta = Metadata::new();
     meta.set_raw("raw", Value::Json(json!({"nested": true})));
 
-    assert_eq!(meta.get_raw("raw"), Some(&Value::Json(json!({"nested": true}))));
-    assert_eq!(meta.get::<serde_json::Value>("raw"), Some(json!({"nested": true})));
+    assert_eq!(
+        meta.get_raw("raw"),
+        Some(&Value::Json(json!({"nested": true})))
+    );
+    assert_eq!(
+        meta.get::<serde_json::Value>("raw"),
+        Some(json!({"nested": true}))
+    );
 }
 
 #[test]
 fn with_raw_builds_metadata_fluently() {
-    let meta = Metadata::new().with_raw("raw", Value::Json(json!({"nested": true})));
+    let meta =
+        Metadata::new().with_raw("raw", Value::Json(json!({"nested": true})));
 
-    assert_eq!(meta.get_raw("raw"), Some(&Value::Json(json!({"nested": true}))));
+    assert_eq!(
+        meta.get_raw("raw"),
+        Some(&Value::Json(json!({"nested": true})))
+    );
 }
 
 #[test]
@@ -255,7 +277,11 @@ fn iterators_return_sorted_entries() {
     let values: Vec<&Value> = meta.values().collect();
     assert_eq!(
         values,
-        vec![&Value::Int64(1), &Value::Bool(true), &Value::String("last".to_string())]
+        vec![
+            &Value::Int64(1),
+            &Value::Bool(true),
+            &Value::String("last".to_string())
+        ]
     );
 }
 
@@ -339,7 +365,10 @@ fn into_inner_returns_underlying_map() {
 
 #[test]
 fn from_iterator_and_extend_work() {
-    let pairs = vec![("a".to_string(), Value::Int64(1)), ("b".to_string(), Value::Int64(2))];
+    let pairs = vec![
+        ("a".to_string(), Value::Int64(1)),
+        ("b".to_string(), Value::Int64(2)),
+    ];
     let mut meta: Metadata = pairs.into_iter().collect();
 
     meta.extend(vec![("c".to_string(), Value::Int64(3))]);
