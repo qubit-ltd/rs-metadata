@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`MetadataValidationError`] — aggregate schema validation failures.
 
 use std::fmt;
@@ -29,7 +27,9 @@ impl MetadataValidationError {
     #[inline]
     #[must_use]
     pub fn from_issue(issue: MetadataError) -> Self {
-        Self { issues: vec![issue] }
+        Self {
+            issues: vec![issue],
+        }
     }
 
     /// Creates an aggregate validation error from a non-empty issue list.

@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Tests for [`qubit_metadata::MetadataError`].
 
 use std::fmt::{
@@ -74,7 +72,10 @@ fn display_formats_all_variants() {
     let unknown = MetadataError::UnknownField {
         key: "extra".to_string(),
     };
-    assert_eq!(unknown.to_string(), "Metadata key 'extra' is not defined in schema");
+    assert_eq!(
+        unknown.to_string(),
+        "Metadata key 'extra' is not defined in schema"
+    );
 
     let unknown_filter = MetadataError::UnknownFilterField {
         key: "extra".to_string(),
@@ -88,7 +89,8 @@ fn display_formats_all_variants() {
         key: "active".to_string(),
         operator: "gt",
         data_type: DataType::Bool,
-        message: "range operators require a numeric or string field".to_string(),
+        message: "range operators require a numeric or string field"
+            .to_string(),
     };
     assert_eq!(
         invalid_operator.to_string(),
@@ -153,9 +155,10 @@ fn validation_error_can_wrap_single_issue() {
 
 #[test]
 fn validation_error_display_streams_formatter_writes() {
-    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
-        key: "extra".to_string(),
-    });
+    let error =
+        MetadataValidationError::from_issue(MetadataError::UnknownField {
+            key: "extra".to_string(),
+        });
     let mut writer = CountingWriter::new(None);
 
     write!(&mut writer, "{error}").unwrap();
@@ -165,9 +168,10 @@ fn validation_error_display_streams_formatter_writes() {
 
 #[test]
 fn validation_error_display_propagates_formatter_errors() {
-    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
-        key: "extra".to_string(),
-    });
+    let error =
+        MetadataValidationError::from_issue(MetadataError::UnknownField {
+            key: "extra".to_string(),
+        });
     let mut writer = CountingWriter::new(Some(2));
 
     assert!(write!(&mut writer, "{error}").is_err());

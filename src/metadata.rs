@@ -1,13 +1,12 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
-//! Provides the [`Metadata`] type — a structured, ordered, typed key-value store.
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+//! Provides the [`Metadata`] type — a structured, ordered, typed key-value
+//! store.
 
 use std::collections::BTreeMap;
 
@@ -72,8 +71,8 @@ impl Metadata {
 
     /// Retrieves the value associated with `key` and converts it to `T`.
     ///
-    /// This convenience method returns `None` when the key is absent or when the
-    /// stored [`Value`] cannot be converted to `T`.
+    /// This convenience method returns `None` when the key is absent or when
+    /// the stored [`Value`] cannot be converted to `T`.
     #[inline]
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
@@ -87,8 +86,8 @@ impl Metadata {
     /// # Errors
     ///
     /// Returns [`MetadataError::MissingKey`] when the key is absent, or
-    /// [`MetadataError::TypeMismatch`] when the stored value cannot be converted
-    /// to the requested type.
+    /// [`MetadataError::TypeMismatch`] when the stored value cannot be
+    /// converted to the requested type.
     pub fn try_get<T>(&self, key: &str) -> MetadataResult<T>
     where
         T: DataTypeOf + FromMetadataValue,
@@ -97,10 +96,13 @@ impl Metadata {
             .0
             .get(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        T::from_metadata_value(value).map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
+        T::from_metadata_value(value).map_err(|error| {
+            MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
+        })
     }
 
-    /// Returns a reference to the stored [`Value`] for `key`, or `None` if absent.
+    /// Returns a reference to the stored [`Value`] for `key`, or `None` if
+    /// absent.
     #[inline]
     #[must_use]
     pub fn get_raw(&self, key: &str) -> Option<&Value> {
@@ -125,7 +127,8 @@ impl Metadata {
         self.try_get(key).unwrap_or(default)
     }
 
-    /// Inserts a typed value under `key` and returns the previous value if present.
+    /// Inserts a typed value under `key` and returns the previous value if
+    /// present.
     #[inline]
     pub fn set<T>(&mut self, key: &str, value: T) -> Option<Value>
     where
@@ -142,7 +145,12 @@ impl Metadata {
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
     #[inline]
-    pub fn set_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Option<Value>>
+    pub fn set_checked<T>(
+        &mut self,
+        schema: &MetadataSchema,
+        key: &str,
+        value: T,
+    ) -> MetadataResult<Option<Value>>
     where
         T: IntoMetadataValue,
     {
@@ -159,7 +167,12 @@ impl Metadata {
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
     #[inline]
-    pub fn with_checked<T>(mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Self>
+    pub fn with_checked<T>(
+        mut self,
+        schema: &MetadataSchema,
+        key: &str,
+        value: T,
+    ) -> MetadataResult<Self>
     where
         T: IntoMetadataValue,
     {
@@ -178,7 +191,8 @@ impl Metadata {
         self
     }
 
-    /// Inserts a raw [`Value`] directly and returns the previous value if present.
+    /// Inserts a raw [`Value`] directly and returns the previous value if
+    /// present.
     #[inline]
     pub fn set_raw(&mut self, key: &str, value: Value) -> Option<Value> {
         self.0.insert(key.to_string(), value)
@@ -192,7 +206,8 @@ impl Metadata {
         self
     }
 
-    /// Removes the entry for `key` and returns the stored [`Value`] if it existed.
+    /// Removes the entry for `key` and returns the stored [`Value`] if it
+    /// existed.
     #[inline]
     pub fn remove(&mut self, key: &str) -> Option<Value> {
         self.0.remove(key)

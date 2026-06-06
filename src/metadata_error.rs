@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`MetadataError`] — failures from explicit metadata APIs and schema checks.
 
 use std::fmt;
@@ -69,9 +67,15 @@ pub enum MetadataError {
 }
 
 impl MetadataError {
-    /// Builds a conversion error for `key` using the requested type and stored value.
+    /// Builds a conversion error for `key` using the requested type and stored
+    /// value.
     #[inline]
-    pub(crate) fn conversion_error(key: &str, expected: DataType, value: &Value, error: ValueError) -> Self {
+    pub(crate) fn conversion_error(
+        key: &str,
+        expected: DataType,
+        value: &Value,
+        error: ValueError,
+    ) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,
@@ -82,7 +86,11 @@ impl MetadataError {
 
     /// Builds a schema type-mismatch error for `key`.
     #[inline]
-    pub(crate) fn type_mismatch(key: &str, expected: DataType, actual: DataType) -> Self {
+    pub(crate) fn type_mismatch(
+        key: &str,
+        expected: DataType,
+        actual: DataType,
+    ) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,
@@ -106,13 +114,19 @@ impl fmt::Display for MetadataError {
                 "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
             ),
             Self::MissingRequiredField { key, expected } => {
-                write!(f, "Required metadata key '{key}' is missing (expected {expected})")
+                write!(
+                    f,
+                    "Required metadata key '{key}' is missing (expected {expected})"
+                )
             }
             Self::UnknownField { key } => {
                 write!(f, "Metadata key '{key}' is not defined in schema")
             }
             Self::UnknownFilterField { key } => {
-                write!(f, "Metadata filter references key '{key}' not defined in schema")
+                write!(
+                    f,
+                    "Metadata filter references key '{key}' not defined in schema"
+                )
             }
             Self::InvalidFilterOperator {
                 key,
