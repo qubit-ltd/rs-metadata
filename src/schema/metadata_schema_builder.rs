@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`MetadataSchemaBuilder`] — fluent schema construction API.
 
 use std::collections::BTreeMap;
@@ -33,7 +31,8 @@ impl MetadataSchemaBuilder {
     #[inline]
     #[must_use]
     pub fn required(mut self, key: &str, data_type: DataType) -> Self {
-        self.fields.insert(key.to_string(), MetadataField::new(data_type, true));
+        self.fields
+            .insert(key.to_string(), MetadataField::new(data_type, true));
         self
     }
 

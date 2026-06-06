@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Tests for metadata schema data types.
 
 use qubit_datatype::DataType;
@@ -53,7 +51,9 @@ fn schema_validate_accepts_matching_metadata() {
 
 #[test]
 fn schema_validate_reports_missing_required_field() {
-    let schema = MetadataSchema::builder().required("id", DataType::String).build();
+    let schema = MetadataSchema::builder()
+        .required("id", DataType::String)
+        .build();
     let meta = Metadata::new();
 
     let error = single_issue(schema.validate(&meta).unwrap_err());
@@ -68,12 +68,17 @@ fn schema_validate_reports_missing_required_field() {
 
 #[test]
 fn schema_validate_reports_type_mismatch() {
-    let schema = MetadataSchema::builder().required("score", DataType::Int64).build();
+    let schema = MetadataSchema::builder()
+        .required("score", DataType::Int64)
+        .build();
     let meta = Metadata::new().with("score", "high");
 
     match single_issue(schema.validate(&meta).unwrap_err()) {
         MetadataError::TypeMismatch {
-            key, expected, actual, ..
+            key,
+            expected,
+            actual,
+            ..
         } => {
             assert_eq!(key, "score");
             assert_eq!(expected, DataType::Int64);
@@ -85,14 +90,18 @@ fn schema_validate_reports_type_mismatch() {
 
 #[test]
 fn schema_validate_reports_unknown_field_by_default() {
-    let schema = MetadataSchema::builder().required("id", DataType::String).build();
+    let schema = MetadataSchema::builder()
+        .required("id", DataType::String)
+        .build();
     let meta = Metadata::new().with("id", "doc-1").with("extra", true);
 
     assert_eq!(
         schema.validate(&meta),
-        Err(MetadataValidationError::from_issue(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        },))
+        Err(MetadataValidationError::from_issue(
+            MetadataError::UnknownField {
+                key: "extra".to_string(),
+            },
+        ))
     );
 }
 
@@ -140,9 +149,11 @@ fn schema_default_rejects_unknown_fields() {
 
     assert_eq!(
         schema.validate(&meta),
-        Err(MetadataValidationError::from_issue(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        },))
+        Err(MetadataValidationError::from_issue(
+            MetadataError::UnknownField {
+                key: "extra".to_string(),
+            },
+        ))
     );
 }
 

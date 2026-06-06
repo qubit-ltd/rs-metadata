@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 
 use qubit_metadata::UnknownFieldPolicy;
 
@@ -21,5 +19,10 @@ fn unknown_field_policy_serde_uses_snake_case() {
         serde_json::to_value(UnknownFieldPolicy::Allow).unwrap(),
         serde_json::json!("allow")
     );
-    assert!(serde_json::from_value::<UnknownFieldPolicy>(serde_json::json!("Allow")).is_err());
+    assert!(
+        serde_json::from_value::<UnknownFieldPolicy>(serde_json::json!(
+            "Allow"
+        ))
+        .is_err()
+    );
 }

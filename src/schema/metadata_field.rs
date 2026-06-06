@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`MetadataField`] — one field definition in a metadata schema.
 
 use qubit_datatype::DataType;
@@ -29,7 +27,10 @@ impl MetadataField {
     #[inline]
     #[must_use]
     pub fn new(data_type: DataType, required: bool) -> Self {
-        Self { data_type, required }
+        Self {
+            data_type,
+            required,
+        }
     }
 
     /// Returns the runtime data type of this field.

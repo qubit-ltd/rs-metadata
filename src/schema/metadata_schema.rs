@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`MetadataSchema`] — schema validation for metadata and filters.
 
 use std::collections::BTreeMap;
@@ -54,7 +52,10 @@ impl MetadataSchema {
 
     /// Creates a schema from field definitions and unknown-field policy.
     #[inline]
-    pub(crate) fn new(fields: BTreeMap<String, MetadataField>, unknown_field_policy: UnknownFieldPolicy) -> Self {
+    pub(crate) fn new(
+        fields: BTreeMap<String, MetadataField>,
+        unknown_field_policy: UnknownFieldPolicy,
+    ) -> Self {
         Self {
             fields,
             unknown_field_policy,
@@ -92,8 +93,9 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an aggregate error containing every required-field, declared-type,
-    /// and unknown-field issue discovered during this validation pass.
+    /// Returns an aggregate error containing every required-field,
+    /// declared-type, and unknown-field issue discovered during this
+    /// validation pass.
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
@@ -118,14 +120,28 @@ impl MetadataSchema {
     }
 
     /// Validates one metadata entry against this schema.
-    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(
+        &self,
+        key: &str,
+        value: &Value,
+    ) -> MetadataResult<()> {
         match self.field(key) {
             Some(field) if field.data_type() != value.data_type() => {
-                Err(MetadataError::type_mismatch(key, field.data_type(), value.data_type()))
+                Err(MetadataError::type_mismatch(
+                    key,
+                    field.data_type(),
+                    value.data_type(),
+                ))
             }
             Some(_) => Ok(()),
-            None if matches!(self.unknown_field_policy, UnknownFieldPolicy::Reject) => {
-                Err(MetadataError::UnknownField { key: key.to_string() })
+            None if matches!(
+                self.unknown_field_policy,
+                UnknownFieldPolicy::Reject
+            ) =>
+            {
+                Err(MetadataError::UnknownField {
+                    key: key.to_string(),
+                })
             }
             None => Ok(()),
         }

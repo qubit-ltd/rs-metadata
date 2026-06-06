@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Filter validation support for [`MetadataSchema`].
 
 use qubit_datatype::DataType;
@@ -31,14 +29,22 @@ impl MetadataSchema {
     /// # Errors
     ///
     /// Returns an aggregate error containing every unknown field, invalid range
-    /// operator, and incompatible filter value discovered during this validation
-    /// pass. Unknown filter fields are accepted when the schema's
-    /// [`UnknownFieldPolicy`] is [`UnknownFieldPolicy::Allow`].
-    pub fn validate_filter(&self, filter: &MetadataFilter) -> MetadataValidationResult<()> {
+    /// operator, and incompatible filter value discovered during this
+    /// validation pass. Unknown filter fields are accepted when the
+    /// schema's [`UnknownFieldPolicy`] is [`UnknownFieldPolicy::Allow`].
+    pub fn validate_filter(
+        &self,
+        filter: &MetadataFilter,
+    ) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
-        let number_comparison_policy = filter.options().number_comparison_policy;
+        let number_comparison_policy =
+            filter.options().number_comparison_policy;
         if let Err(error) = filter.visit_conditions(|condition| {
-            self.collect_condition_issues(condition, number_comparison_policy, &mut issues);
+            self.collect_condition_issues(
+                condition,
+                number_comparison_policy,
+                &mut issues,
+            );
             Ok(())
         }) {
             issues.push(error);
@@ -60,33 +66,75 @@ impl MetadataSchema {
         match condition {
             Condition::Equal { key, value } => collect_issue(
                 issues,
-                self.validate_value_condition(key, "eq", value, number_comparison_policy),
+                self.validate_value_condition(
+                    key,
+                    "eq",
+                    value,
+                    number_comparison_policy,
+                ),
             ),
             Condition::NotEqual { key, value } => collect_issue(
                 issues,
-                self.validate_value_condition(key, "ne", value, number_comparison_policy),
+                self.validate_value_condition(
+                    key,
+                    "ne",
+                    value,
+                    number_comparison_policy,
+                ),
             ),
             Condition::Less { key, value } => collect_issue(
                 issues,
-                self.validate_range_condition(key, "lt", value, number_comparison_policy),
+                self.validate_range_condition(
+                    key,
+                    "lt",
+                    value,
+                    number_comparison_policy,
+                ),
             ),
             Condition::LessEqual { key, value } => collect_issue(
                 issues,
-                self.validate_range_condition(key, "le", value, number_comparison_policy),
+                self.validate_range_condition(
+                    key,
+                    "le",
+                    value,
+                    number_comparison_policy,
+                ),
             ),
             Condition::Greater { key, value } => collect_issue(
                 issues,
-                self.validate_range_condition(key, "gt", value, number_comparison_policy),
+                self.validate_range_condition(
+                    key,
+                    "gt",
+                    value,
+                    number_comparison_policy,
+                ),
             ),
             Condition::GreaterEqual { key, value } => collect_issue(
                 issues,
-                self.validate_range_condition(key, "ge", value, number_comparison_policy),
+                self.validate_range_condition(
+                    key,
+                    "ge",
+                    value,
+                    number_comparison_policy,
+                ),
             ),
             Condition::In { key, values } => {
-                self.collect_set_value_condition_issues(key, "in_set", values, number_comparison_policy, issues);
+                self.collect_set_value_condition_issues(
+                    key,
+                    "in_set",
+                    values,
+                    number_comparison_policy,
+                    issues,
+                );
             }
             Condition::NotIn { key, values } => {
-                self.collect_set_value_condition_issues(key, "not_in_set", values, number_comparison_policy, issues);
+                self.collect_set_value_condition_issues(
+                    key,
+                    "not_in_set",
+                    values,
+                    number_comparison_policy,
+                    issues,
+                );
             }
             Condition::Exists { key } | Condition::NotExists { key } => {
                 collect_issue(issues, self.filter_field(key).map(|_| ()));
@@ -114,7 +162,11 @@ impl MetadataSchema {
             return;
         };
         for value in values {
-            if value_matches_field_type(value, field.data_type(), number_comparison_policy) {
+            if value_matches_field_type(
+                value,
+                field.data_type(),
+                number_comparison_policy,
+            ) {
                 continue;
             }
             issues.push(MetadataError::InvalidFilterOperator {
@@ -142,7 +194,11 @@ impl MetadataSchema {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
         };
-        if value_matches_field_type(value, field.data_type(), number_comparison_policy) {
+        if value_matches_field_type(
+            value,
+            field.data_type(),
+            number_comparison_policy,
+        ) {
             return Ok(());
         }
         Err(MetadataError::InvalidFilterOperator {
@@ -174,10 +230,15 @@ impl MetadataSchema {
                 key: key.to_string(),
                 operator,
                 data_type: field.data_type(),
-                message: "range operators require a numeric or string field".to_string(),
+                message: "range operators require a numeric or string field"
+                    .to_string(),
             });
         }
-        if value_matches_field_type(value, field.data_type(), number_comparison_policy) {
+        if value_matches_field_type(
+            value,
+            field.data_type(),
+            number_comparison_policy,
+        ) {
             return Ok(());
         }
         Err(MetadataError::InvalidFilterOperator {
@@ -193,12 +254,24 @@ impl MetadataSchema {
         })
     }
 
-    /// Returns the declared filter field, or accepts unknown fields when allowed.
-    fn filter_field(&self, key: &str) -> MetadataResult<Option<&MetadataField>> {
+    /// Returns the declared filter field, or accepts unknown fields when
+    /// allowed.
+    fn filter_field(
+        &self,
+        key: &str,
+    ) -> MetadataResult<Option<&MetadataField>> {
         match self.field(key) {
             Some(field) => Ok(Some(field)),
-            None if matches!(self.unknown_field_policy(), UnknownFieldPolicy::Allow) => Ok(None),
-            None => Err(MetadataError::UnknownFilterField { key: key.to_string() }),
+            None if matches!(
+                self.unknown_field_policy(),
+                UnknownFieldPolicy::Allow
+            ) =>
+            {
+                Ok(None)
+            }
+            None => Err(MetadataError::UnknownFilterField {
+                key: key.to_string(),
+            }),
         }
     }
 }
@@ -267,14 +340,21 @@ fn value_matches_field_type(
     if !is_numeric_data_type(value_type) || !is_numeric_data_type(field_type) {
         return false;
     }
-    if matches!(number_comparison_policy, NumberComparisonPolicy::Approximate) {
+    if matches!(
+        number_comparison_policy,
+        NumberComparisonPolicy::Approximate
+    ) {
         return true;
     }
     value_matches_numeric_field_conservatively(value, field_type)
 }
 
-/// Returns `true` when conservative runtime numeric comparison can handle the pair.
-fn value_matches_numeric_field_conservatively(value: &Value, field_type: DataType) -> bool {
+/// Returns `true` when conservative runtime numeric comparison can handle the
+/// pair.
+fn value_matches_numeric_field_conservatively(
+    value: &Value,
+    field_type: DataType,
+) -> bool {
     let value_type = value.data_type();
     if !is_float_data_type(value_type) && !is_float_data_type(field_type) {
         return true;
@@ -282,7 +362,9 @@ fn value_matches_numeric_field_conservatively(value: &Value, field_type: DataTyp
     if is_float_data_type(value_type) && is_float_data_type(field_type) {
         return true;
     }
-    if is_big_number_data_type(value_type) || is_big_number_data_type(field_type) {
+    if is_big_number_data_type(value_type)
+        || is_big_number_data_type(field_type)
+    {
         return false;
     }
     if is_float_data_type(value_type) {
@@ -303,7 +385,8 @@ fn finite_float_value(value: &Value) -> Option<f64> {
     number.is_finite().then_some(number)
 }
 
-/// Returns `true` when a float literal can be compared exactly to an integer field.
+/// Returns `true` when a float literal can be compared exactly to an integer
+/// field.
 fn float_value_fits_integer_field(value: &Value, field_type: DataType) -> bool {
     let Some(number) = finite_float_value(value) else {
         return false;
@@ -316,20 +399,31 @@ fn float_value_fits_integer_field(value: &Value, field_type: DataType) -> bool {
     }
     if matches!(
         field_type,
-        DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 | DataType::IntSize
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::IntSize
     ) {
         return (I64_MIN_F64..I64_EXCLUSIVE_MAX_F64).contains(&number);
     }
     matches!(
         field_type,
-        DataType::UInt8 | DataType::UInt16 | DataType::UInt32 | DataType::UInt64 | DataType::UIntSize
+        DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::UIntSize
     ) && (0.0..U64_EXCLUSIVE_MAX_F64).contains(&number)
 }
 
-/// Returns `true` when an integer literal can be compared exactly to a float field.
+/// Returns `true` when an integer literal can be compared exactly to a float
+/// field.
 fn integer_value_is_safe_for_float_field(value: &Value) -> bool {
     if let Ok(value) = value.to::<i128>() {
         return value.unsigned_abs() <= MAX_SAFE_INTEGER_F64_U128;
     }
-    value.to::<u128>().is_ok_and(|value| value <= MAX_SAFE_INTEGER_F64_U128)
+    value
+        .to::<u128>()
+        .is_ok_and(|value| value <= MAX_SAFE_INTEGER_F64_U128)
 }
