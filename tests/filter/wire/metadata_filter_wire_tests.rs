@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Tests for the top-level metadata filter wire envelope.
 
 use crate::support::test_support::sample;
@@ -26,7 +24,8 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
         .build()
         .expect("filter should build");
 
-    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded =
+        serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(encoded["version"], json!(2));
     assert_eq!(
         encoded["options"],
@@ -36,7 +35,8 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
         })
     );
 
-    let decoded: MetadataFilter = serde_json::from_value(encoded).expect("filter should deserialize");
+    let decoded: MetadataFilter =
+        serde_json::from_value(encoded).expect("filter should deserialize");
     assert_eq!(decoded, filter);
     assert_eq!(decoded.options(), filter.options());
     assert!(decoded.matches(&sample()));
@@ -44,7 +44,8 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
 
 #[test]
 fn metadata_filter_wire_omits_expression_for_match_all() {
-    let encoded = serde_json::to_value(MetadataFilter::all()).expect("filter should serialize");
+    let encoded = serde_json::to_value(MetadataFilter::all())
+        .expect("filter should serialize");
 
     assert_eq!(
         encoded,

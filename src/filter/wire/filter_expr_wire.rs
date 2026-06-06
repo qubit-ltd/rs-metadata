@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`FilterExprWire`].
 use serde::{
     Deserialize,
@@ -49,10 +47,14 @@ impl From<&FilterExpr> for FilterExprWire {
 impl FilterExprWire {
     pub(crate) fn into_expr(self) -> Result<FilterExpr, String> {
         match self {
-            Self::Condition { condition } => Ok(FilterExpr::Condition(condition.into_condition())),
+            Self::Condition { condition } => {
+                Ok(FilterExpr::Condition(condition.into_condition()))
+            }
             Self::And { children } => {
                 if children.is_empty() {
-                    return Err("empty 'and' filter group is not allowed".to_string());
+                    return Err(
+                        "empty 'and' filter group is not allowed".to_string()
+                    );
                 }
                 children
                     .into_iter()
@@ -62,7 +64,9 @@ impl FilterExprWire {
             }
             Self::Or { children } => {
                 if children.is_empty() {
-                    return Err("empty 'or' filter group is not allowed".to_string());
+                    return Err(
+                        "empty 'or' filter group is not allowed".to_string()
+                    );
                 }
                 children
                     .into_iter()
@@ -70,7 +74,9 @@ impl FilterExprWire {
                     .collect::<Result<Vec<_>, _>>()
                     .map(FilterExpr::Or)
             }
-            Self::Not { expr } => expr.into_expr().map(|expr| FilterExpr::Not(Box::new(expr))),
+            Self::Not { expr } => {
+                expr.into_expr().map(|expr| FilterExpr::Not(Box::new(expr)))
+            }
             Self::False => Ok(FilterExpr::False),
         }
     }
