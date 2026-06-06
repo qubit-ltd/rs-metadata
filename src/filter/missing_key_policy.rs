@@ -1,13 +1,12 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
-//! [`MissingKeyPolicy`] — how filters treat missing keys for negative predicates.
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+//! [`MissingKeyPolicy`] — how filters treat missing keys for negative
+//! predicates.
 
 use serde::{
     Deserialize,
@@ -16,10 +15,13 @@ use serde::{
 
 /// Policy that controls how filters treat missing keys for negative predicates.
 ///
-/// The policy only affects [`crate::Condition::NotEqual`] and [`crate::Condition::NotIn`].
-/// Other predicates keep their existing semantics (`equal` requires presence,
-/// `exists` / `not_exists` check presence directly, etc.).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+/// The policy only affects [`crate::Condition::NotEqual`] and
+/// [`crate::Condition::NotIn`]. Other predicates keep their existing semantics
+/// (`equal` requires presence, `exists` / `not_exists` check presence directly,
+/// etc.).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum MissingKeyPolicy {
     /// Missing keys satisfy negative predicates (`not_equal`, `not_in_values`).

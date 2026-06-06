@@ -1,13 +1,12 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
-//! Unit tests for [`qubit_metadata::MetadataFilter`] (match semantics and builder DSL).
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+//! Unit tests for [`qubit_metadata::MetadataFilter`] (match semantics and
+//! builder DSL).
 use crate::support::test_support::sample;
 use qubit_metadata::{
     FilterMatchOptions,
@@ -263,11 +262,32 @@ fn builder_aliases_preserve_expected_identities() {
 #[test]
 fn empty_group_build_returns_error() {
     for (operator, error) in [
-        ("and", MetadataFilter::builder().and(|g| g).build().unwrap_err()),
-        ("or", MetadataFilter::builder().or(|g| g).build().unwrap_err()),
-        ("and_not", MetadataFilter::builder().and_not(|g| g).build().unwrap_err()),
-        ("or_not", MetadataFilter::builder().or_not(|g| g).build().unwrap_err()),
-        ("and", MetadataFilter::builder().and(|g| g.not()).build().unwrap_err()),
+        (
+            "and",
+            MetadataFilter::builder().and(|g| g).build().unwrap_err(),
+        ),
+        (
+            "or",
+            MetadataFilter::builder().or(|g| g).build().unwrap_err(),
+        ),
+        (
+            "and_not",
+            MetadataFilter::builder()
+                .and_not(|g| g)
+                .build()
+                .unwrap_err(),
+        ),
+        (
+            "or_not",
+            MetadataFilter::builder().or_not(|g| g).build().unwrap_err(),
+        ),
+        (
+            "and",
+            MetadataFilter::builder()
+                .and(|g| g.not())
+                .build()
+                .unwrap_err(),
+        ),
     ] {
         match error {
             MetadataError::InvalidFilterExpression { message } => {

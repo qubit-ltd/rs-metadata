@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`FilterExpr`].
 use super::condition::Condition;
 use crate::metadata::Metadata;
@@ -52,7 +50,8 @@ impl FilterExpr {
     /// Builds an optimized AND expression from two child expressions.
     #[inline]
     pub(crate) fn and(lhs: FilterExpr, rhs: FilterExpr) -> FilterExpr {
-        if matches!(lhs, FilterExpr::False) || matches!(rhs, FilterExpr::False) {
+        if matches!(lhs, FilterExpr::False) || matches!(rhs, FilterExpr::False)
+        {
             return FilterExpr::False;
         }
         let mut children = Vec::new();
@@ -78,20 +77,33 @@ impl FilterExpr {
 
     /// Evaluates this expression tree against one metadata object.
     #[inline]
-    pub(crate) fn matches(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
+    pub(crate) fn matches(
+        &self,
+        meta: &Metadata,
+        options: FilterMatchOptions,
+    ) -> bool {
         match self {
-            FilterExpr::Condition(condition) => {
-                condition.matches(meta, options.missing_key_policy, options.number_comparison_policy)
+            FilterExpr::Condition(condition) => condition.matches(
+                meta,
+                options.missing_key_policy,
+                options.number_comparison_policy,
+            ),
+            FilterExpr::And(children) => {
+                children.iter().all(|expr| expr.matches(meta, options))
             }
-            FilterExpr::And(children) => children.iter().all(|expr| expr.matches(meta, options)),
-            FilterExpr::Or(children) => children.iter().any(|expr| expr.matches(meta, options)),
+            FilterExpr::Or(children) => {
+                children.iter().any(|expr| expr.matches(meta, options))
+            }
             FilterExpr::Not(inner) => !inner.matches(meta, options),
             FilterExpr::False => false,
         }
     }
 
     /// Visits all leaf conditions in this expression tree.
-    pub(crate) fn visit_conditions<F>(&self, visitor: &mut F) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(
+        &self,
+        visitor: &mut F,
+    ) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {

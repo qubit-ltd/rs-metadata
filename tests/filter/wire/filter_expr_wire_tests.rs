@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Tests for the serialized filter expression wire representation.
 
 use crate::support::test_support::sample;
@@ -22,7 +20,8 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
         .build()
         .expect("nested filter should build");
 
-    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded =
+        serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(
         encoded["expr"],
         json!({
@@ -76,7 +75,8 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
         })
     );
 
-    let decoded: MetadataFilter = serde_json::from_value(encoded).expect("filter should deserialize");
+    let decoded: MetadataFilter =
+        serde_json::from_value(encoded).expect("filter should deserialize");
     assert_eq!(decoded, filter);
     assert!(decoded.matches(&sample()));
 }

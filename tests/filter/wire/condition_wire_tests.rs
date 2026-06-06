@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Tests for the serialized condition wire representation.
 
 use qubit_metadata::Condition;
@@ -87,9 +85,11 @@ fn condition_wire_serializes_all_operator_tags() {
     ];
 
     for (condition, op) in conditions {
-        let encoded = serde_json::to_value(&condition).expect("condition should serialize");
+        let encoded = serde_json::to_value(&condition)
+            .expect("condition should serialize");
         assert_eq!(encoded.get("op"), Some(&json!(op)));
-        let decoded: Condition = serde_json::from_value(encoded).expect("condition should deserialize");
+        let decoded: Condition = serde_json::from_value(encoded)
+            .expect("condition should deserialize");
         assert_eq!(decoded, condition);
     }
 }

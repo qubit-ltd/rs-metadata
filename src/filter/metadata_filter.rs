@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! [`MetadataFilter`].
 use serde::{
     Deserialize,
@@ -30,9 +28,9 @@ use crate::{
 
 /// An immutable, composable filter expression over [`Metadata`].
 ///
-/// Construct filters with [`MetadataFilter::builder`]. An empty builder builds a
-/// match-all filter, while structurally invalid expressions such as empty groups
-/// are rejected by [`MetadataFilterBuilder::build`].
+/// Construct filters with [`MetadataFilter::builder`]. An empty builder builds
+/// a match-all filter, while structurally invalid expressions such as empty
+/// groups are rejected by [`MetadataFilterBuilder::build`].
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct MetadataFilter {
     /// Root expression tree. `None` means match all.
@@ -44,7 +42,10 @@ pub struct MetadataFilter {
 impl MetadataFilter {
     /// Creates a filter from expression and options.
     #[inline]
-    pub(crate) fn new(expr: Option<FilterExpr>, options: FilterMatchOptions) -> Self {
+    pub(crate) fn new(
+        expr: Option<FilterExpr>,
+        options: FilterMatchOptions,
+    ) -> Self {
         Self { expr, options }
     }
 
@@ -90,7 +91,10 @@ impl MetadataFilter {
     /// Returns a new filter with the supplied missing-key policy.
     #[inline]
     #[must_use]
-    pub fn with_missing_key_policy(mut self, missing_key_policy: MissingKeyPolicy) -> Self {
+    pub fn with_missing_key_policy(
+        mut self,
+        missing_key_policy: MissingKeyPolicy,
+    ) -> Self {
         self.options.missing_key_policy = missing_key_policy;
         self
     }
@@ -98,7 +102,10 @@ impl MetadataFilter {
     /// Returns a new filter with the supplied number-comparison policy.
     #[inline]
     #[must_use]
-    pub fn with_number_comparison_policy(mut self, number_comparison_policy: NumberComparisonPolicy) -> Self {
+    pub fn with_number_comparison_policy(
+        mut self,
+        number_comparison_policy: NumberComparisonPolicy,
+    ) -> Self {
         self.options.number_comparison_policy = number_comparison_policy;
         self
     }
@@ -122,12 +129,21 @@ impl MetadataFilter {
     /// Returns `true` if `meta` satisfies this filter with explicit options.
     #[inline]
     #[must_use]
-    pub fn matches_with_options(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
-        self.expr.as_ref().is_none_or(|expr| expr.matches(meta, options))
+    pub fn matches_with_options(
+        &self,
+        meta: &Metadata,
+        options: FilterMatchOptions,
+    ) -> bool {
+        self.expr
+            .as_ref()
+            .is_none_or(|expr| expr.matches(meta, options))
     }
 
     /// Visits all leaf conditions in this filter.
-    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(
+        &self,
+        mut visitor: F,
+    ) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
