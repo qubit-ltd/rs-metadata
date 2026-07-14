@@ -11,22 +11,11 @@ use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
 use qubit_value::Value;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use crate::schema::{
-    MetadataField,
-    MetadataSchemaBuilder,
-    UnknownFieldPolicy,
-};
+use crate::schema::{MetadataField, MetadataSchemaBuilder, UnknownFieldPolicy};
 use crate::{
-    Metadata,
-    MetadataError,
-    MetadataResult,
-    MetadataValidationError,
-    MetadataValidationResult,
+    Metadata, MetadataError, MetadataResult, MetadataValidationError, MetadataValidationResult,
 };
 
 /// Schema for metadata fields.
@@ -120,25 +109,13 @@ impl MetadataSchema {
     }
 
     /// Validates one metadata entry against this schema.
-    pub(crate) fn validate_entry(
-        &self,
-        key: &str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
-            Some(field) if field.data_type() != value.data_type() => {
-                Err(MetadataError::type_mismatch(
-                    key,
-                    field.data_type(),
-                    value.data_type(),
-                ))
-            }
+            Some(field) if field.data_type() != value.data_type() => Err(
+                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
+            ),
             Some(_) => Ok(()),
-            None if matches!(
-                self.unknown_field_policy,
-                UnknownFieldPolicy::Reject
-            ) =>
-            {
+            None if matches!(self.unknown_field_policy, UnknownFieldPolicy::Reject) => {
                 Err(MetadataError::UnknownField {
                     key: key.to_string(),
                 })

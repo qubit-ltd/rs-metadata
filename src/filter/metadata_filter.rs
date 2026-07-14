@@ -6,24 +6,14 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! [`MetadataFilter`].
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de,
-};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use super::filter_expr::FilterExpr;
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
 use crate::metadata::Metadata;
 use crate::{
-    Condition,
-    FilterMatchOptions,
-    MetadataResult,
-    MissingKeyPolicy,
-    NumberComparisonPolicy,
+    Condition, FilterMatchOptions, MetadataResult, MissingKeyPolicy, NumberComparisonPolicy,
 };
 
 /// An immutable, composable filter expression over [`Metadata`].
@@ -42,10 +32,7 @@ pub struct MetadataFilter {
 impl MetadataFilter {
     /// Creates a filter from expression and options.
     #[inline]
-    pub(crate) fn new(
-        expr: Option<FilterExpr>,
-        options: FilterMatchOptions,
-    ) -> Self {
+    pub(crate) fn new(expr: Option<FilterExpr>, options: FilterMatchOptions) -> Self {
         Self { expr, options }
     }
 
@@ -91,10 +78,7 @@ impl MetadataFilter {
     /// Returns a new filter with the supplied missing-key policy.
     #[inline]
     #[must_use]
-    pub fn with_missing_key_policy(
-        mut self,
-        missing_key_policy: MissingKeyPolicy,
-    ) -> Self {
+    pub fn with_missing_key_policy(mut self, missing_key_policy: MissingKeyPolicy) -> Self {
         self.options.missing_key_policy = missing_key_policy;
         self
     }
@@ -129,21 +113,14 @@ impl MetadataFilter {
     /// Returns `true` if `meta` satisfies this filter with explicit options.
     #[inline]
     #[must_use]
-    pub fn matches_with_options(
-        &self,
-        meta: &Metadata,
-        options: FilterMatchOptions,
-    ) -> bool {
+    pub fn matches_with_options(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
         self.expr
             .as_ref()
             .is_none_or(|expr| expr.matches(meta, options))
     }
 
     /// Visits all leaf conditions in this filter.
-    pub(crate) fn visit_conditions<F>(
-        &self,
-        mut visitor: F,
-    ) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {

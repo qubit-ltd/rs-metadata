@@ -6,10 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! [`MetadataFilterWire`] and wire version.
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use super::super::metadata_filter::MetadataFilter;
 use super::filter_expr_wire::FilterExprWire;

@@ -9,19 +9,85 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    Metadata,
-    MetadataError,
-    MetadataFilter,
-    MetadataSchema,
-    MetadataValidationError,
-    NumberComparisonPolicy,
-    UnknownFieldPolicy,
+    Metadata, MetadataError, MetadataFilter, MetadataSchema, MetadataValidationError,
+    NumberComparisonPolicy, UnknownFieldPolicy,
 };
+use qubit_value::Value;
+use serde_json::json;
 
 fn single_issue(error: MetadataValidationError) -> MetadataError {
     let mut issues = error.into_issues();
     assert_eq!(issues.len(), 1);
     issues.remove(0)
+}
+
+fn equality_filter_with_value(value: &Value) -> MetadataFilter {
+    serde_json::from_value(json!({
+        "version": 2,
+        "expr": {
+            "type": "condition",
+            "condition": {
+                "op": "eq",
+                "key": "field",
+                "value": serde_json::to_value(value).unwrap(),
+            },
+        },
+    }))
+    .unwrap()
+}
+
+#[test]
+fn schema_validate_filter_uses_state_aware_numeric_classification() {
+    macro_rules! assert_numeric_compatible {
+        ($value:expr) => {{
+            let value = $value;
+            let data_type = Value::new(value.clone()).data_type();
+            let schema = MetadataSchema::builder()
+                .required("field", data_type)
+                .build();
+            let filter = MetadataFilter::builder()
+                .eq("field", value)
+                .build()
+                .unwrap();
+            assert!(
+                schema.validate_filter(&filter).is_ok(),
+                "numeric value should match its declared type: {data_type}",
+            );
+        }};
+    }
+
+    assert_numeric_compatible!(1_i8);
+    assert_numeric_compatible!(1_i16);
+    assert_numeric_compatible!(1_i32);
+    assert_numeric_compatible!(1_i64);
+    assert_numeric_compatible!(1_i128);
+    assert_numeric_compatible!(1_u8);
+    assert_numeric_compatible!(1_u16);
+    assert_numeric_compatible!(1_u32);
+    assert_numeric_compatible!(1_u64);
+    assert_numeric_compatible!(1_u128);
+    assert_numeric_compatible!(1_isize);
+    assert_numeric_compatible!(1_usize);
+    assert_numeric_compatible!(1.0_f32);
+    assert_numeric_compatible!(1.0_f64);
+    assert_numeric_compatible!(num_bigint::BigInt::from(1));
+    assert_numeric_compatible!(bigdecimal::BigDecimal::from(1));
+
+    let schema = MetadataSchema::builder()
+        .required("field", DataType::Int64)
+        .build();
+    assert!(
+        schema
+            .validate_filter(&equality_filter_with_value(&Value::Empty(DataType::Int64,)))
+            .is_err(),
+        "a typed unset value is not a numeric literal",
+    );
+
+    let non_numeric = MetadataFilter::builder().eq("field", "1").build().unwrap();
+    assert!(
+        schema.validate_filter(&non_numeric).is_err(),
+        "a non-numeric value must not match a numeric field",
+    );
 }
 
 #[test]
@@ -36,6 +102,30 @@ fn schema_validate_filter_accepts_numeric_literal_compatibility() {
     let meta = Metadata::new().with("score", 42_i64);
 
     assert!(filter.matches(&meta));
+}
+
+#[test]
+fn schema_validate_filter_classifies_every_data_type_for_ranges() {
+    for data_type in DataType::ALL {
+        let schema = MetadataSchema::builder()
+            .required("field", data_type)
+            .build();
+        let result = if data_type == DataType::String {
+            MetadataFilter::builder()
+                .gt("field", "lower")
+                .build_checked(&schema)
+        } else {
+            MetadataFilter::builder()
+                .gt("field", 1_i64)
+                .build_checked(&schema)
+        };
+
+        assert_eq!(
+            result.is_ok(),
+            data_type.is_numeric() || data_type == DataType::String,
+            "unexpected range classification for {data_type}"
+        );
+    }
 }
 
 #[test]
@@ -185,8 +275,7 @@ fn schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
 }
 
 #[test]
-fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed()
- {
+fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .unknown_field_policy(UnknownFieldPolicy::Allow)
@@ -418,8 +507,7 @@ fn schema_validate_filter_rejects_range_on_bool() {
 }
 
 #[test]
-fn schema_validate_filter_respects_number_comparison_policy_for_big_decimal_float()
- {
+fn schema_validate_filter_respects_number_comparison_policy_for_big_decimal_float() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
         .build();

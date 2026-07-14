@@ -6,10 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use qubit_metadata::{
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::{Metadata, MetadataFilter};
 
 #[test]
 fn public_exports_are_usable() {

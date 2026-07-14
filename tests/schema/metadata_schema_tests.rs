@@ -9,11 +9,7 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    Metadata,
-    MetadataError,
-    MetadataSchema,
-    MetadataValidationError,
-    UnknownFieldPolicy,
+    Metadata, MetadataError, MetadataSchema, MetadataValidationError, UnknownFieldPolicy,
 };
 
 fn single_issue(error: MetadataValidationError) -> MetadataError {
