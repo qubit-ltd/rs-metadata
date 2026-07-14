@@ -184,7 +184,8 @@ lowercase underscore 值，例如 `match`、`no_match`、`conservative` 和 `app
 
 当调用方需要明确区分“键不存在”和“类型不匹配”时，使用 `try_get` 或 schema 校验。
 单字段访问返回 `MetadataError`；schema 级校验返回 `MetadataValidationError`，
-可以通过 `issues()` 拿到本轮收集到的全部 `MetadataError`：
+可以通过 `issues()` 拿到本轮收集到的全部 `MetadataError`。转换诊断会保留结构化
+失败原因，但不会嵌入被拒绝的原始值：
 
 ```rust
 use qubit_datatype::DataType;
@@ -207,7 +208,7 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.5"
+qubit-metadata = "0.6"
 ```
 
 ## 许可证
