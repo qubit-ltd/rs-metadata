@@ -195,7 +195,8 @@ MetadataFilter wire version `2`; earlier filter wire versions are rejected.
 Use `try_get` and schema validation when the caller needs diagnostics instead of
 `Option`. Single-entry accessors return `MetadataError`; schema-level validation
 returns `MetadataValidationError`, whose `issues()` method exposes all collected
-`MetadataError` values:
+`MetadataError` values. Conversion diagnostics report structured reasons
+without embedding the rejected source value:
 
 ```rust
 use qubit_datatype::DataType;
@@ -218,7 +219,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-metadata = "0.5"
+qubit-metadata = "0.6"
 ```
 
 ## License
