@@ -8,7 +8,7 @@
 //! Tests for the serialized condition wire representation.
 
 use qubit_metadata::Condition;
-use qubit_value::Value;
+use qubit_value::{MultiValues, Value};
 use serde_json::json;
 
 #[test]
@@ -85,11 +85,80 @@ fn condition_wire_serializes_all_operator_tags() {
     ];
 
     for (condition, op) in conditions {
-        let encoded = serde_json::to_value(&condition)
-            .expect("condition should serialize");
+        let encoded = serde_json::to_value(&condition).expect("condition should serialize");
         assert_eq!(encoded.get("op"), Some(&json!(op)));
-        let decoded: Condition = serde_json::from_value(encoded)
-            .expect("condition should deserialize");
+        let decoded: Condition =
+            serde_json::from_value(encoded).expect("condition should deserialize");
         assert_eq!(decoded, condition);
     }
+}
+
+#[test]
+fn condition_wire_round_trips_finite_float_value() {
+    let condition = Condition::Equal {
+        key: "score".to_string(),
+        value: Value::Float64(1.5),
+    };
+
+    let encoded = serde_json::to_value(&condition).unwrap();
+    assert_eq!(
+        encoded,
+        json!({"op": "eq", "key": "score", "value": {"Float64": 1.5}}),
+    );
+    assert_eq!(
+        serde_json::from_value::<Condition>(encoded).unwrap(),
+        condition,
+    );
+}
+
+#[test]
+fn condition_wire_round_trips_wide_integer_values() {
+    for (condition, expected) in [
+        (
+            Condition::Equal {
+                key: "signed".to_string(),
+                value: Value::Int128(i128::MIN),
+            },
+            json!({
+                "op": "eq",
+                "key": "signed",
+                "value": {"Int128": i128::MIN.to_string()},
+            }),
+        ),
+        (
+            Condition::Equal {
+                key: "unsigned".to_string(),
+                value: Value::UInt128(u128::MAX),
+            },
+            json!({
+                "op": "eq",
+                "key": "unsigned",
+                "value": {"UInt128": u128::MAX.to_string()},
+            }),
+        ),
+    ] {
+        let encoded = serde_json::to_value(&condition).unwrap();
+        assert_eq!(encoded, expected);
+        assert_eq!(
+            serde_json::from_value::<Condition>(encoded).unwrap(),
+            condition,
+        );
+    }
+}
+
+#[test]
+fn metadata_wire_rejects_non_finite_float_values() {
+    for value in [
+        Value::Float32(f32::NAN),
+        Value::Float64(f64::INFINITY),
+        Value::Float64(f64::NEG_INFINITY),
+    ] {
+        let condition = Condition::Equal {
+            key: "score".to_string(),
+            value,
+        };
+        assert!(serde_json::to_value(condition).is_err());
+    }
+
+    assert!(serde_json::to_value(MultiValues::Float64(vec![1.0, f64::INFINITY,])).is_err());
 }

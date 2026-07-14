@@ -12,15 +12,8 @@ use super::condition::Condition;
 use super::filter_expr::FilterExpr;
 use super::metadata_filter::MetadataFilter;
 use crate::{
-    FilterMatchOptions,
-    IntoMetadataValue,
-    MetadataError,
-    MetadataResult,
-    MetadataSchema,
-    MetadataValidationError,
-    MetadataValidationResult,
-    MissingKeyPolicy,
-    NumberComparisonPolicy,
+    FilterMatchOptions, IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema,
+    MetadataValidationError, MetadataValidationResult, MissingKeyPolicy, NumberComparisonPolicy,
 };
 
 /// Builder for [`MetadataFilter`].
@@ -69,8 +62,7 @@ impl MetadataFilterBuilder {
         self,
         schema: &MetadataSchema,
     ) -> MetadataValidationResult<MetadataFilter> {
-        let filter =
-            self.build().map_err(MetadataValidationError::from_issue)?;
+        let filter = self.build().map_err(MetadataValidationError::from_issue)?;
         schema.validate_filter(&filter)?;
         Ok(filter)
     }
@@ -86,10 +78,7 @@ impl MetadataFilterBuilder {
     /// Sets how the built filter treats missing keys in negative predicates.
     #[inline]
     #[must_use]
-    pub fn missing_key_policy(
-        mut self,
-        missing_key_policy: MissingKeyPolicy,
-    ) -> Self {
+    pub fn missing_key_policy(mut self, missing_key_policy: MissingKeyPolicy) -> Self {
         self.options.missing_key_policy = missing_key_policy;
         self
     }

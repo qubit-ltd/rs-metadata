@@ -12,12 +12,7 @@ use std::cmp::Ordering;
 use bigdecimal::BigDecimal;
 use num_bigint::BigInt;
 use qubit_value::Value;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::missing_key_policy::MissingKeyPolicy;
 use super::number_comparison_policy::NumberComparisonPolicy;
@@ -123,56 +118,40 @@ impl Condition {
         number_comparison_policy: NumberComparisonPolicy,
     ) -> bool {
         match self {
-            Condition::Equal { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
-                    values_equal(stored, value, number_comparison_policy)
-                })
-            }
+            Condition::Equal { key, value } => meta
+                .get_raw(key)
+                .is_some_and(|stored| values_equal(stored, value, number_comparison_policy)),
             Condition::NotEqual { key, value } => match meta.get_raw(key) {
-                Some(stored) => {
-                    !values_equal(stored, value, number_comparison_policy)
-                }
+                Some(stored) => !values_equal(stored, value, number_comparison_policy),
                 None => missing_key_policy.matches_negative_predicates(),
             },
-            Condition::Less { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
-                    compare_values(stored, value, number_comparison_policy)
-                        == Some(Ordering::Less)
-                })
-            }
-            Condition::LessEqual { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
-                    matches!(
-                        compare_values(stored, value, number_comparison_policy),
-                        Some(Ordering::Less) | Some(Ordering::Equal)
-                    )
-                })
-            }
-            Condition::Greater { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
-                    compare_values(stored, value, number_comparison_policy)
-                        == Some(Ordering::Greater)
-                })
-            }
-            Condition::GreaterEqual { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
-                    matches!(
-                        compare_values(stored, value, number_comparison_policy),
-                        Some(Ordering::Greater) | Some(Ordering::Equal)
-                    )
-                })
-            }
-            Condition::In { key, values } => {
-                meta.get_raw(key).is_some_and(|stored| {
-                    values.iter().any(|value| {
-                        values_equal(stored, value, number_comparison_policy)
-                    })
-                })
-            }
+            Condition::Less { key, value } => meta.get_raw(key).is_some_and(|stored| {
+                compare_values(stored, value, number_comparison_policy) == Some(Ordering::Less)
+            }),
+            Condition::LessEqual { key, value } => meta.get_raw(key).is_some_and(|stored| {
+                matches!(
+                    compare_values(stored, value, number_comparison_policy),
+                    Some(Ordering::Less) | Some(Ordering::Equal)
+                )
+            }),
+            Condition::Greater { key, value } => meta.get_raw(key).is_some_and(|stored| {
+                compare_values(stored, value, number_comparison_policy) == Some(Ordering::Greater)
+            }),
+            Condition::GreaterEqual { key, value } => meta.get_raw(key).is_some_and(|stored| {
+                matches!(
+                    compare_values(stored, value, number_comparison_policy),
+                    Some(Ordering::Greater) | Some(Ordering::Equal)
+                )
+            }),
+            Condition::In { key, values } => meta.get_raw(key).is_some_and(|stored| {
+                values
+                    .iter()
+                    .any(|value| values_equal(stored, value, number_comparison_policy))
+            }),
             Condition::NotIn { key, values } => match meta.get_raw(key) {
-                Some(stored) => values.iter().all(|value| {
-                    !values_equal(stored, value, number_comparison_policy)
-                }),
+                Some(stored) => values
+                    .iter()
+                    .all(|value| !values_equal(stored, value, number_comparison_policy)),
                 None => missing_key_policy.matches_negative_predicates(),
             },
             Condition::Exists { key } => meta.contains_key(key),
@@ -184,14 +163,9 @@ impl Condition {
 /// Compares two values for equality, treating numeric variants by numeric
 /// value.
 #[inline]
-fn values_equal(
-    a: &Value,
-    b: &Value,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> bool {
-    if is_numeric_value(a) && is_numeric_value(b) {
-        return compare_numbers(a, b, number_comparison_policy)
-            == Some(Ordering::Equal);
+fn values_equal(a: &Value, b: &Value, number_comparison_policy: NumberComparisonPolicy) -> bool {
+    if a.is_numeric() && b.is_numeric() {
+        return compare_numbers(a, b, number_comparison_policy) == Some(Ordering::Equal);
     }
     a == b
 }
@@ -203,7 +177,7 @@ fn compare_values(
     b: &Value,
     number_comparison_policy: NumberComparisonPolicy,
 ) -> Option<Ordering> {
-    if is_numeric_value(a) && is_numeric_value(b) {
+    if a.is_numeric() && b.is_numeric() {
         return compare_numbers(a, b, number_comparison_policy);
     }
     match (a, b) {
@@ -221,30 +195,6 @@ enum NumberValue {
     Unsigned(u128),
     /// Floating-point value.
     Float(f64),
-}
-
-/// Returns `true` when `value` is one of the numeric `Value` variants.
-#[inline]
-fn is_numeric_value(value: &Value) -> bool {
-    matches!(
-        value,
-        Value::Int8(_)
-            | Value::Int16(_)
-            | Value::Int32(_)
-            | Value::Int64(_)
-            | Value::Int128(_)
-            | Value::UInt8(_)
-            | Value::UInt16(_)
-            | Value::UInt32(_)
-            | Value::UInt64(_)
-            | Value::UInt128(_)
-            | Value::IntSize(_)
-            | Value::UIntSize(_)
-            | Value::Float32(_)
-            | Value::Float64(_)
-            | Value::BigInteger(_)
-            | Value::BigDecimal(_)
-    )
 }
 
 /// Converts a `Value` into the normalized numeric representation when
@@ -283,9 +233,7 @@ fn compare_numbers(
     match (number_value(a)?, number_value(b)?) {
         (NumberValue::Signed(x), NumberValue::Signed(y)) => Some(x.cmp(&y)),
         (NumberValue::Unsigned(x), NumberValue::Unsigned(y)) => Some(x.cmp(&y)),
-        (NumberValue::Signed(x), NumberValue::Unsigned(y)) => {
-            Some(compare_i128_u128(x, y))
-        }
+        (NumberValue::Signed(x), NumberValue::Unsigned(y)) => Some(compare_i128_u128(x, y)),
         (NumberValue::Unsigned(x), NumberValue::Signed(y)) => {
             Some(compare_i128_u128(y, x).reverse())
         }
@@ -293,15 +241,13 @@ fn compare_numbers(
             compare_i128_f64(x, y, number_comparison_policy)
         }
         (NumberValue::Float(x), NumberValue::Signed(y)) => {
-            compare_i128_f64(y, x, number_comparison_policy)
-                .map(Ordering::reverse)
+            compare_i128_f64(y, x, number_comparison_policy).map(Ordering::reverse)
         }
         (NumberValue::Unsigned(x), NumberValue::Float(y)) => {
             compare_u128_f64(x, y, number_comparison_policy)
         }
         (NumberValue::Float(x), NumberValue::Unsigned(y)) => {
-            compare_u128_f64(y, x, number_comparison_policy)
-                .map(Ordering::reverse)
+            compare_u128_f64(y, x, number_comparison_policy).map(Ordering::reverse)
         }
         (NumberValue::Float(x), NumberValue::Float(y)) => x.partial_cmp(&y),
     }
@@ -310,8 +256,7 @@ fn compare_numbers(
 /// Returns `true` if either value is a big-number variant.
 #[inline]
 fn contains_big_number(a: &Value, b: &Value) -> bool {
-    matches!(a, Value::BigInteger(_) | Value::BigDecimal(_))
-        || matches!(b, Value::BigInteger(_) | Value::BigDecimal(_))
+    a.data_type().is_big_number() || b.data_type().is_big_number()
 }
 
 /// Compares values when at least one side is `BigInteger` or `BigDecimal`.

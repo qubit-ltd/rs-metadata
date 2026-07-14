@@ -7,20 +7,12 @@
 // =============================================================================
 //! [`FilterMatchOptions`] — policies for filter evaluation.
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    MissingKeyPolicy,
-    NumberComparisonPolicy,
-};
+use crate::{MissingKeyPolicy, NumberComparisonPolicy};
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct FilterMatchOptions {
     /// Policy for missing keys in negative predicates.
     pub missing_key_policy: MissingKeyPolicy,

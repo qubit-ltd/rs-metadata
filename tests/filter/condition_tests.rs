@@ -9,11 +9,7 @@
 
 use crate::support::test_support::sample;
 use qubit_metadata::{
-    Condition,
-    FilterMatchOptions,
-    Metadata,
-    MetadataFilter,
-    MissingKeyPolicy,
+    Condition, FilterMatchOptions, Metadata, MetadataFilter, MissingKeyPolicy,
     NumberComparisonPolicy,
 };
 use qubit_value::Value;
@@ -695,8 +691,7 @@ fn big_decimal_float_comparison_requires_approximate_policy() {
     let conservative = MetadataFilter::builder().eq("n", 10.0_f64);
     assert!(!conservative.clone().build().unwrap().matches(&m));
 
-    let approximate = conservative
-        .number_comparison_policy(NumberComparisonPolicy::Approximate);
+    let approximate = conservative.number_comparison_policy(NumberComparisonPolicy::Approximate);
     assert!(approximate.build().unwrap().matches(&m));
 }
 
@@ -818,15 +813,13 @@ fn in_values_empty_set_matches_nothing() {
 
 #[test]
 fn not_in_values_matches() {
-    let f =
-        MetadataFilter::builder().not_in_set("status", ["inactive", "pending"]);
+    let f = MetadataFilter::builder().not_in_set("status", ["inactive", "pending"]);
     assert!(f.build().unwrap().matches(&sample()));
 }
 
 #[test]
 fn not_in_values_no_match() {
-    let f =
-        MetadataFilter::builder().not_in_set("status", ["active", "pending"]);
+    let f = MetadataFilter::builder().not_in_set("status", ["active", "pending"]);
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
@@ -845,13 +838,11 @@ fn not_in_values_missing_key_respects_policy() {
 }
 
 #[test]
-fn not_in_values_empty_set_matches_present_keys_and_respects_missing_key_policy()
- {
+fn not_in_values_empty_set_matches_present_keys_and_respects_missing_key_policy() {
     let f = MetadataFilter::builder().not_in_set("status", [] as [&str; 0]);
     assert!(f.build().unwrap().matches(&sample()));
 
-    let missing =
-        MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
+    let missing = MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
     let strict = missing
         .clone()
         .missing_key_policy(MissingKeyPolicy::NoMatch);
