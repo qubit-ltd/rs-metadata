@@ -7,7 +7,10 @@
 // =============================================================================
 //! [`ConditionWire`].
 use qubit_value::Value;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use super::super::condition::Condition;
 
@@ -62,7 +65,9 @@ impl From<&Condition> for ConditionWire {
                 values: values.clone(),
             },
             Condition::Exists { key } => Self::Exists { key: key.clone() },
-            Condition::NotExists { key } => Self::NotExists { key: key.clone() },
+            Condition::NotExists { key } => {
+                Self::NotExists { key: key.clone() }
+            }
         }
     }
 }

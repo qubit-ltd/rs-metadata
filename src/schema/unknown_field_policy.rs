@@ -8,11 +8,16 @@
 //! [`UnknownFieldPolicy`] — handling for schema-unknown metadata and filter
 //! keys.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Policy for fields that appear in metadata or filters but are not declared by
 /// a schema.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum UnknownFieldPolicy {
     /// Reject fields that are not declared in the schema.

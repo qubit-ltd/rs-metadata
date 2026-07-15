@@ -11,15 +11,22 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{
+    DateTime,
+    NaiveDate,
+    NaiveDateTime,
+    NaiveTime,
+    Utc,
+};
 use qubit_value::Value;
 use url::Url;
 
 /// Converts supported Rust values into the metadata backing [`Value`] type.
 ///
-/// This trait is implemented for the same concrete input types accepted by
-/// [`Value::new`]. It exists so [`crate::Metadata`] can keep a generic public
-/// API while `qubit-value` keeps its internal constructor trait private.
+/// This trait is implemented for the concrete input types accepted by
+/// [`crate::Metadata`]. It keeps metadata's generic public API constrained to
+/// its deliberate domain allowlist instead of accepting every future
+/// conversion into [`Value`].
 pub trait IntoMetadataValue {
     /// Converts this value into a [`Value`] without changing its concrete data
     /// type.
@@ -66,8 +73,6 @@ impl_into_metadata_value!(
     DateTime<Utc>,
     num_bigint::BigInt,
     BigDecimal,
-    isize,
-    usize,
     Duration,
     Url,
     HashMap<String, String>,

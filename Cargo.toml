@@ -35,8 +35,8 @@ chrono = { version = "0.4", features = ["serde"] }
 num-bigint = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-qubit-datatype = { version = "0.5", features = ["converter"] }
-qubit-value = { version = "0.8", features = ["all"] }
+qubit-datatype = { version = "0.6", features = ["converter"] }
+qubit-value = { path = "../rs-value", version = "0.9", features = ["all"] }
 url = "2.5"
 
 [profile.release]

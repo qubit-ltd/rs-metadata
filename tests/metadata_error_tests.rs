@@ -7,10 +7,16 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::MetadataError`].
 
-use std::fmt::{self, Write};
+use std::fmt::{
+    self,
+    Write,
+};
 
 use qubit_datatype::DataType;
-use qubit_metadata::{MetadataError, MetadataValidationError};
+use qubit_metadata::{
+    MetadataError,
+    MetadataValidationError,
+};
 
 struct CountingWriter {
     write_count: usize,
@@ -83,7 +89,8 @@ fn display_formats_all_variants() {
         key: "active".to_string(),
         operator: "gt",
         data_type: DataType::Bool,
-        message: "range operators require a numeric or string field".to_string(),
+        message: "range operators require a numeric or string field"
+            .to_string(),
     };
     assert_eq!(
         invalid_operator.to_string(),
@@ -148,9 +155,10 @@ fn validation_error_can_wrap_single_issue() {
 
 #[test]
 fn validation_error_display_streams_formatter_writes() {
-    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
-        key: "extra".to_string(),
-    });
+    let error =
+        MetadataValidationError::from_issue(MetadataError::UnknownField {
+            key: "extra".to_string(),
+        });
     let mut writer = CountingWriter::new(None);
 
     write!(&mut writer, "{error}").unwrap();
@@ -160,9 +168,10 @@ fn validation_error_display_streams_formatter_writes() {
 
 #[test]
 fn validation_error_display_propagates_formatter_errors() {
-    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
-        key: "extra".to_string(),
-    });
+    let error =
+        MetadataValidationError::from_issue(MetadataError::UnknownField {
+            key: "extra".to_string(),
+        });
     let mut writer = CountingWriter::new(Some(2));
 
     assert!(write!(&mut writer, "{error}").is_err());

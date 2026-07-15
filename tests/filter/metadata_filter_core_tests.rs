@@ -9,7 +9,11 @@
 //! builder DSL).
 use crate::support::test_support::sample;
 use qubit_metadata::{
-    FilterMatchOptions, Metadata, MetadataError, MetadataFilter, MissingKeyPolicy,
+    FilterMatchOptions,
+    Metadata,
+    MetadataError,
+    MetadataFilter,
+    MissingKeyPolicy,
     NumberComparisonPolicy,
 };
 

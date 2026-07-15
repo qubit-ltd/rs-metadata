@@ -10,7 +10,11 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError, MetadataSchema};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+    MetadataSchema,
+};
 use qubit_value::Value;
 use serde_json::json;
 
@@ -50,7 +54,10 @@ fn set_and_get_scalar_values() {
     assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
     assert_eq!(meta.get::<i64>("priority"), Some(42));
     assert_eq!(meta.get::<bool>("reviewed"), Some(true));
-    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
+    assert!(
+        (meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs()
+            < 1e-10
+    );
 }
 
 #[test]
@@ -184,7 +191,8 @@ fn get_raw_and_set_raw_use_qubit_value() {
 
 #[test]
 fn with_raw_builds_metadata_fluently() {
-    let meta = Metadata::new().with_raw("raw", Value::Json(json!({"nested": true})));
+    let meta =
+        Metadata::new().with_raw("raw", Value::Json(json!({"nested": true})));
 
     assert_eq!(
         meta.get_raw("raw"),
