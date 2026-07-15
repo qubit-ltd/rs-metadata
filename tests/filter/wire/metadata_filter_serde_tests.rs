@@ -52,7 +52,10 @@ fn filter_serde_uses_versioned_wire_format() {
                         "condition": {
                             "op": "eq",
                             "key": "status",
-                            "value": { "String": "active" }
+                            "value": {
+                                "version": 1,
+                                "value": {"scalar": {"string": "active"}}
+                            }
                         }
                     },
                     {
@@ -60,7 +63,10 @@ fn filter_serde_uses_versioned_wire_format() {
                         "condition": {
                             "op": "ge",
                             "key": "score",
-                            "value": { "Int64": 10 }
+                            "value": {
+                                "version": 1,
+                                "value": {"scalar": {"int64": 10}}
+                            }
                         }
                     }
                 ]
@@ -202,7 +208,10 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
                             "Condition": {
                                 "Equal": {
                                     "key": "status",
-                                    "value": { "String": "active" }
+                                    "value": {
+                                        "version": 1,
+                                        "value": {"scalar": {"string": "active"}}
+                                    }
                                 }
                             }
                         },
@@ -210,7 +219,10 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
                             "Condition": {
                                 "GreaterEqual": {
                                     "key": "score",
-                                    "value": { "Int64": 10 }
+                                    "value": {
+                                        "version": 1,
+                                        "value": {"scalar": {"int64": 10}}
+                                    }
                                 }
                             }
                         }

@@ -107,7 +107,11 @@ fn condition_wire_round_trips_finite_float_value() {
     let encoded = serde_json::to_value(&condition).unwrap();
     assert_eq!(
         encoded,
-        json!({"op": "eq", "key": "score", "value": {"Float64": 1.5}}),
+        json!({
+            "op": "eq",
+            "key": "score",
+            "value": {"version": 1, "value": {"scalar": {"float64": 1.5}}},
+        }),
     );
     assert_eq!(
         serde_json::from_value::<Condition>(encoded).unwrap(),
@@ -126,7 +130,10 @@ fn condition_wire_round_trips_wide_integer_values() {
             json!({
                 "op": "eq",
                 "key": "signed",
-                "value": {"Int128": i128::MIN.to_string()},
+                "value": {
+                    "version": 1,
+                    "value": {"scalar": {"int128": i128::MIN.to_string()}},
+                },
             }),
         ),
         (
@@ -137,7 +144,10 @@ fn condition_wire_round_trips_wide_integer_values() {
             json!({
                 "op": "eq",
                 "key": "unsigned",
-                "value": {"UInt128": u128::MAX.to_string()},
+                "value": {
+                    "version": 1,
+                    "value": {"scalar": {"uint128": u128::MAX.to_string()}},
+                },
             }),
         ),
     ] {

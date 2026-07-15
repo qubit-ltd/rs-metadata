@@ -35,7 +35,10 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
                             "condition": {
                                 "op": "eq",
                                 "key": "status",
-                                "value": { "String": "active" }
+                                "value": {
+                                    "version": 1,
+                                    "value": {"scalar": {"string": "active"}}
+                                }
                             }
                         },
                         {
@@ -43,7 +46,10 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
                             "condition": {
                                 "op": "ge",
                                 "key": "score",
-                                "value": { "Int64": 10 }
+                                "value": {
+                                    "version": 1,
+                                    "value": {"scalar": {"int64": 10}}
+                                }
                             }
                         }
                     ]
@@ -65,7 +71,10 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
                                 "condition": {
                                     "op": "eq",
                                     "key": "tag",
-                                    "value": { "String": "java" }
+                                    "value": {
+                                        "version": 1,
+                                        "value": {"scalar": {"string": "java"}}
+                                    }
                                 }
                             }
                         ]
