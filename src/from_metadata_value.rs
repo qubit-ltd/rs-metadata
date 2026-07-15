@@ -11,8 +11,17 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use qubit_value::{Value, ValueResult};
+use chrono::{
+    DateTime,
+    NaiveDate,
+    NaiveDateTime,
+    NaiveTime,
+    Utc,
+};
+use qubit_value::{
+    Value,
+    ValueResult,
+};
 use url::Url;
 
 /// Converts metadata backing [`Value`] instances into supported Rust types.
@@ -65,8 +74,6 @@ impl_from_metadata_value!(
     DateTime<Utc>,
     num_bigint::BigInt,
     BigDecimal,
-    isize,
-    usize,
     Duration,
     Url,
     HashMap<String, String>,

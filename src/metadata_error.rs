@@ -10,7 +10,10 @@
 use std::fmt;
 
 use qubit_datatype::DataType;
-use qubit_value::{Value, ValueError};
+use qubit_value::{
+    Value,
+    ValueError,
+};
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,7 +86,11 @@ impl MetadataError {
 
     /// Builds a schema type-mismatch error for `key`.
     #[inline]
-    pub(crate) fn type_mismatch(key: &str, expected: DataType, actual: DataType) -> Self {
+    pub(crate) fn type_mismatch(
+        key: &str,
+        expected: DataType,
+        actual: DataType,
+    ) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,

@@ -8,7 +8,11 @@
 //! Tests for the top-level metadata filter wire envelope.
 
 use crate::support::test_support::sample;
-use qubit_metadata::{MetadataFilter, MissingKeyPolicy, NumberComparisonPolicy};
+use qubit_metadata::{
+    MetadataFilter,
+    MissingKeyPolicy,
+    NumberComparisonPolicy,
+};
 use serde_json::json;
 
 #[test]
@@ -20,7 +24,8 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
         .build()
         .expect("filter should build");
 
-    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded =
+        serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(encoded["version"], json!(2));
     assert_eq!(
         encoded["options"],
@@ -39,7 +44,8 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
 
 #[test]
 fn metadata_filter_wire_omits_expression_for_match_all() {
-    let encoded = serde_json::to_value(MetadataFilter::all()).expect("filter should serialize");
+    let encoded = serde_json::to_value(MetadataFilter::all())
+        .expect("filter should serialize");
 
     assert_eq!(
         encoded,

@@ -9,8 +9,13 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    Metadata, MetadataError, MetadataFilter, MetadataSchema, MetadataValidationError,
-    NumberComparisonPolicy, UnknownFieldPolicy,
+    Metadata,
+    MetadataError,
+    MetadataFilter,
+    MetadataSchema,
+    MetadataValidationError,
+    NumberComparisonPolicy,
+    UnknownFieldPolicy,
 };
 use qubit_value::Value;
 use serde_json::json;
@@ -66,8 +71,6 @@ fn schema_validate_filter_uses_state_aware_numeric_classification() {
     assert_numeric_compatible!(1_u32);
     assert_numeric_compatible!(1_u64);
     assert_numeric_compatible!(1_u128);
-    assert_numeric_compatible!(1_isize);
-    assert_numeric_compatible!(1_usize);
     assert_numeric_compatible!(1.0_f32);
     assert_numeric_compatible!(1.0_f64);
     assert_numeric_compatible!(num_bigint::BigInt::from(1));
@@ -78,12 +81,15 @@ fn schema_validate_filter_uses_state_aware_numeric_classification() {
         .build();
     assert!(
         schema
-            .validate_filter(&equality_filter_with_value(&Value::Empty(DataType::Int64,)))
+            .validate_filter(&equality_filter_with_value(&Value::Unset(
+                DataType::Int64,
+            )))
             .is_err(),
         "a typed unset value is not a numeric literal",
     );
 
-    let non_numeric = MetadataFilter::builder().eq("field", "1").build().unwrap();
+    let non_numeric =
+        MetadataFilter::builder().eq("field", "1").build().unwrap();
     assert!(
         schema.validate_filter(&non_numeric).is_err(),
         "a non-numeric value must not match a numeric field",
@@ -275,7 +281,8 @@ fn schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
 }
 
 #[test]
-fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed() {
+fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed()
+ {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .unknown_field_policy(UnknownFieldPolicy::Allow)
@@ -507,7 +514,8 @@ fn schema_validate_filter_rejects_range_on_bool() {
 }
 
 #[test]
-fn schema_validate_filter_respects_number_comparison_policy_for_big_decimal_float() {
+fn schema_validate_filter_respects_number_comparison_policy_for_big_decimal_float()
+ {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
         .build();
