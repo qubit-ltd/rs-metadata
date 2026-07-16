@@ -155,7 +155,7 @@ let filter = MetadataFilter::builder()
 ```
 
 负向谓词遇到缺失键时的行为由 `MissingKeyPolicy` 控制。数值相等、集合成员判断和范围
-谓词中的混合数值比较策略由 `NumberComparisonPolicy` 控制。
+谓词中的混合数值比较策略由 `NumericComparisonPolicy` 控制。
 
 分组表达式必须至少包含一个谓词。例如 `and(|g| g)` 和 `or_not(|g| g)` 会被
 `build()` 拒绝，因为空分组通常代表调用方构造条件时漏传了约束。
@@ -164,10 +164,10 @@ let filter = MetadataFilter::builder()
 `not_in_set("key", [])` 在 `key` 存在时匹配；如果 `key` 缺失，则和其他负向谓词一样，
 遵循当前配置的 `MissingKeyPolicy`。
 
-schema 校验 filter 时，混合数值兼容性遵循 filter 配置的 `NumberComparisonPolicy`，
-和实际匹配时使用同一套策略。`Conservative` 只接受精确或可安全比较的数值组合，
-会拒绝有精度损失风险的比较；`Approximate` 接受运行时 matcher 可以近似计算的混合
-数值组合。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
+schema 校验 filter 时，混合数值兼容性遵循 filter 配置的 `NumericComparisonPolicy`，
+和实际匹配时使用同一套策略。任意非 NaN 数值表示都与任意数值字段兼容。
+`Exact` 不经舍入地比较表示出来的数学值；`Approximate` 仅在至少一侧是浮点变体时
+使用有限 `f64` 投影。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
 metadata 中存储的值必须和 schema 声明的具体字段类型一致。
 
 ### 5) 版本化 filter 序列化格式
@@ -176,7 +176,7 @@ metadata 中存储的值必须和 schema 声明的具体字段类型一致。
 `options` 字段。表达式节点使用 `type`，条件节点使用稳定的 `op` 操作符名，例如
 `eq`、`ge`、`in` 和 `not_exists`。单独序列化 `Condition` 时也使用同一套条件
 wire 表示。内部表达式树不属于序列化契约。`options` 中的策略枚举序列化为
-lowercase underscore 值，例如 `match`、`no_match`、`conservative` 和 `approximate`。
+lowercase underscore 值，例如 `match`、`no_match`、`exact` 和 `approximate`。
 新的 `MetadataFilter` 序列化输出使用 wire version `2`；更早的 filter wire version
 会被拒绝。
 

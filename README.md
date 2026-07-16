@@ -161,7 +161,7 @@ let filter = MetadataFilter::builder()
 
 Missing-key behavior for negative predicates is controlled by
 `MissingKeyPolicy`. Mixed numeric comparison behavior for equality, membership,
-and range predicates is controlled by `NumberComparisonPolicy`.
+and range predicates is controlled by `NumericComparisonPolicy`.
 
 Grouped expressions must contain at least one predicate. For example,
 `and(|g| g)` and `or_not(|g| g)` are rejected by `build()` because an empty group
@@ -172,10 +172,11 @@ Empty value sets are allowed. `in_set("key", [])` matches no metadata object.
 follows the configured `MissingKeyPolicy`, just like other negative predicates.
 
 When a schema validates filters, mixed numeric compatibility follows the
-filter's configured `NumberComparisonPolicy`, the same policy used at match
-time. `Conservative` accepts exact or safely comparable numeric pairs and
-rejects risky lossy comparisons; `Approximate` accepts mixed numeric pairs that
-the runtime matcher can evaluate approximately. Actual
+filter's configured `NumericComparisonPolicy`, the same policy used at match
+time. Every non-NaN numeric representation is schema-compatible with every
+numeric field. `Exact` compares the represented mathematical values without
+rounding; `Approximate` uses finite `f64` projection only when a floating
+operand participates. Actual
 `MetadataSchema::validate(&metadata)` remains strict: stored metadata values
 must use the concrete field type declared by the schema.
 
@@ -187,7 +188,7 @@ use stable operator names in `op` such as `eq`, `ge`, `in`, and `not_exists`.
 Serialized `Condition` values use the same condition wire representation. The
 internal expression tree is not part of the serialization contract. Policy enum
 values in `options` are serialized as lowercase underscore values such as
-`match`, `no_match`, `conservative`, and `approximate`. New serialization emits
+`match`, `no_match`, `exact`, and `approximate`. New serialization emits
 MetadataFilter wire version `2`; earlier filter wire versions are rejected.
 
 ## Error Handling
