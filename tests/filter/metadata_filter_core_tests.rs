@@ -14,7 +14,7 @@ use qubit_metadata::{
     MetadataError,
     MetadataFilter,
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 
 #[test]
@@ -99,16 +99,16 @@ fn missing_key_policy_can_be_configured_on_filter() {
 }
 
 #[test]
-fn number_comparison_policy_can_be_configured_on_filter() {
+fn numeric_comparison_policy_can_be_configured_on_filter() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_i64);
 
-    let conservative = MetadataFilter::builder().gt("n", 0.5_f64);
-    assert!(!conservative.clone().build().unwrap().matches(&m));
+    let exact = MetadataFilter::builder().eq("n", 9_007_199_254_740_992_f64);
+    assert!(!exact.clone().build().unwrap().matches(&m));
 
-    let approximate = conservative
+    let approximate = exact
         .clone()
-        .number_comparison_policy(NumberComparisonPolicy::Approximate);
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     assert!(approximate.build().unwrap().matches(&m));
 }
 
@@ -116,7 +116,7 @@ fn number_comparison_policy_can_be_configured_on_filter() {
 fn options_round_trip_works() {
     let options = FilterMatchOptions {
         missing_key_policy: MissingKeyPolicy::NoMatch,
-        number_comparison_policy: NumberComparisonPolicy::Approximate,
+        numeric_comparison_policy: NumericComparisonPolicy::Approximate,
     };
     let f = MetadataFilter::builder()
         .eq("status", "active")
@@ -130,7 +130,7 @@ fn options_round_trip_works() {
 fn filter_constructors_and_option_setters_work() {
     let options = FilterMatchOptions {
         missing_key_policy: MissingKeyPolicy::NoMatch,
-        number_comparison_policy: NumberComparisonPolicy::Approximate,
+        numeric_comparison_policy: NumericComparisonPolicy::Approximate,
     };
 
     assert!(MetadataFilter::all().matches(&sample()));
@@ -148,7 +148,7 @@ fn filter_constructors_and_option_setters_work() {
         .gt("score", 0.5_f64)
         .build()
         .unwrap()
-        .with_number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .with_numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .with_options(options);
     assert_eq!(approximate.options(), options);
 }

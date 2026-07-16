@@ -23,7 +23,7 @@ use crate::{
     FilterMatchOptions,
     MetadataResult,
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 
 /// An immutable, composable filter expression over [`Metadata`].
@@ -102,11 +102,11 @@ impl MetadataFilter {
     /// Returns a new filter with the supplied number-comparison policy.
     #[inline]
     #[must_use]
-    pub fn with_number_comparison_policy(
+    pub fn with_numeric_comparison_policy(
         mut self,
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
     ) -> Self {
-        self.options.number_comparison_policy = number_comparison_policy;
+        self.options.numeric_comparison_policy = numeric_comparison_policy;
         self
     }
 

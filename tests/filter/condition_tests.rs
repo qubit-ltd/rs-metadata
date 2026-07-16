@@ -14,7 +14,7 @@ use qubit_metadata::{
     Metadata,
     MetadataFilter,
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 use qubit_value::Value;
 
@@ -59,11 +59,11 @@ fn ne_missing_key_respects_policy() {
     let f = MetadataFilter::builder().ne("missing", "anything");
     let match_options = FilterMatchOptions {
         missing_key_policy: MissingKeyPolicy::Match,
-        number_comparison_policy: NumberComparisonPolicy::Conservative,
+        numeric_comparison_policy: NumericComparisonPolicy::Exact,
     };
     let no_match_options = FilterMatchOptions {
         missing_key_policy: MissingKeyPolicy::NoMatch,
-        number_comparison_policy: NumberComparisonPolicy::Conservative,
+        numeric_comparison_policy: NumericComparisonPolicy::Exact,
     };
     assert!(
         f.clone()
@@ -460,7 +460,7 @@ fn range_filter_large_integer_float_non_integral_fallback() {
     let mut signed = Metadata::new();
     signed.set("n", 9_007_199_254_740_993_i64);
     assert!(
-        !MetadataFilter::builder()
+        MetadataFilter::builder()
             .gt("n", 0.5_f64)
             .build()
             .unwrap()
@@ -470,7 +470,7 @@ fn range_filter_large_integer_float_non_integral_fallback() {
     let mut unsigned = Metadata::new();
     unsigned.set("n", (i64::MAX as u64) + 123);
     assert!(
-        !MetadataFilter::builder()
+        MetadataFilter::builder()
             .gt("n", 0.5_f64)
             .build()
             .unwrap()
@@ -486,30 +486,30 @@ fn range_filter_large_integer_float_non_integral_fallback() {
 }
 
 #[test]
-fn approximate_number_policy_enables_lossy_fallback_for_large_i64() {
+fn approximate_number_policy_projects_float_pairs_for_large_i64() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_i64);
 
-    let conservative = MetadataFilter::builder().gt("n", 0.5_f64);
-    assert!(!conservative.clone().build().unwrap().matches(&m));
+    let exact = MetadataFilter::builder().eq("n", 9_007_199_254_740_992_f64);
+    assert!(!exact.clone().build().unwrap().matches(&m));
 
-    let approximate = conservative
+    let approximate = exact
         .clone()
-        .number_comparison_policy(NumberComparisonPolicy::Approximate);
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     assert!(approximate.build().unwrap().matches(&m));
 }
 
 #[test]
-fn approximate_number_policy_enables_lossy_fallback_for_large_u64() {
+fn approximate_number_policy_projects_float_pairs_for_large_u64() {
     let mut m = Metadata::new();
-    m.set("n", (i64::MAX as u64) + 123);
+    m.set("n", 9_007_199_254_740_993_u64);
 
-    let conservative = MetadataFilter::builder().gt("n", 0.5_f64);
-    assert!(!conservative.clone().build().unwrap().matches(&m));
+    let exact = MetadataFilter::builder().eq("n", 9_007_199_254_740_992_f64);
+    assert!(!exact.clone().build().unwrap().matches(&m));
 
-    let approximate = conservative
+    let approximate = exact
         .clone()
-        .number_comparison_policy(NumberComparisonPolicy::Approximate);
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     assert!(approximate.build().unwrap().matches(&m));
 }
 
@@ -542,34 +542,22 @@ fn range_filter_covers_numeric_value_variants() {
 #[test]
 fn range_filter_i128_and_u128_float_edges_respect_policy() {
     let signed = Metadata::new().with("n", i128::MAX);
-    let signed_conservative = MetadataFilter::builder().gt("n", 0.5_f64);
+    let signed_exact = MetadataFilter::builder().gt("n", 0.5_f64);
+    assert!(signed_exact.clone().build().unwrap().matches(&signed));
     assert!(
-        !signed_conservative
-            .clone()
-            .build()
-            .unwrap()
-            .matches(&signed)
-    );
-    assert!(
-        signed_conservative
-            .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        signed_exact
+            .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
             .build()
             .unwrap()
             .matches(&signed)
     );
 
     let unsigned = Metadata::new().with("n", u128::MAX);
-    let unsigned_conservative = MetadataFilter::builder().gt("n", 0.5_f64);
+    let unsigned_exact = MetadataFilter::builder().gt("n", 0.5_f64);
+    assert!(unsigned_exact.clone().build().unwrap().matches(&unsigned));
     assert!(
-        !unsigned_conservative
-            .clone()
-            .build()
-            .unwrap()
-            .matches(&unsigned)
-    );
-    assert!(
-        unsigned_conservative
-            .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        unsigned_exact
+            .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
             .build()
             .unwrap()
             .matches(&unsigned)
@@ -598,7 +586,7 @@ fn range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
 }
 
 #[test]
-fn big_integer_equality_matches_in_conservative_policy() {
+fn big_integer_equality_matches_in_exact_policy() {
     let mut m = Metadata::new();
     m.set("n", num_bigint::BigInt::from(i128::MAX) + 1_i32);
 
@@ -686,15 +674,15 @@ fn big_decimal_range_matches_big_integer_exactly() {
 }
 
 #[test]
-fn big_decimal_float_comparison_requires_approximate_policy() {
+fn big_decimal_float_comparison_distinguishes_exact_and_approximate() {
     let mut m = Metadata::new();
-    m.set("n", bigdecimal::BigDecimal::from(10_i64));
+    m.set("n", "0.1".parse::<bigdecimal::BigDecimal>().unwrap());
 
-    let conservative = MetadataFilter::builder().eq("n", 10.0_f64);
-    assert!(!conservative.clone().build().unwrap().matches(&m));
+    let exact = MetadataFilter::builder().eq("n", 0.1_f64);
+    assert!(!exact.clone().build().unwrap().matches(&m));
 
-    let approximate = conservative
-        .number_comparison_policy(NumberComparisonPolicy::Approximate);
+    let approximate =
+        exact.numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     assert!(approximate.build().unwrap().matches(&m));
 }
 

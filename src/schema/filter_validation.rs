@@ -20,7 +20,7 @@ use crate::{
     MetadataResult,
     MetadataValidationError,
     MetadataValidationResult,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 
 impl MetadataSchema {
@@ -37,12 +37,12 @@ impl MetadataSchema {
         filter: &MetadataFilter,
     ) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
-        let number_comparison_policy =
-            filter.options().number_comparison_policy;
+        let numeric_comparison_policy =
+            filter.options().numeric_comparison_policy;
         if let Err(error) = filter.visit_conditions(|condition| {
             self.collect_condition_issues(
                 condition,
-                number_comparison_policy,
+                numeric_comparison_policy,
                 &mut issues,
             );
             Ok(())
@@ -60,7 +60,7 @@ impl MetadataSchema {
     fn collect_condition_issues(
         &self,
         condition: &Condition,
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
         issues: &mut Vec<MetadataError>,
     ) {
         match condition {
@@ -70,7 +70,7 @@ impl MetadataSchema {
                     key,
                     "eq",
                     value,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                 ),
             ),
             Condition::NotEqual { key, value } => collect_issue(
@@ -79,7 +79,7 @@ impl MetadataSchema {
                     key,
                     "ne",
                     value,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                 ),
             ),
             Condition::Less { key, value } => collect_issue(
@@ -88,7 +88,7 @@ impl MetadataSchema {
                     key,
                     "lt",
                     value,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                 ),
             ),
             Condition::LessEqual { key, value } => collect_issue(
@@ -97,7 +97,7 @@ impl MetadataSchema {
                     key,
                     "le",
                     value,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                 ),
             ),
             Condition::Greater { key, value } => collect_issue(
@@ -106,7 +106,7 @@ impl MetadataSchema {
                     key,
                     "gt",
                     value,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                 ),
             ),
             Condition::GreaterEqual { key, value } => collect_issue(
@@ -115,7 +115,7 @@ impl MetadataSchema {
                     key,
                     "ge",
                     value,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                 ),
             ),
             Condition::In { key, values } => {
@@ -123,7 +123,7 @@ impl MetadataSchema {
                     key,
                     "in_set",
                     values,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                     issues,
                 );
             }
@@ -132,7 +132,7 @@ impl MetadataSchema {
                     key,
                     "not_in_set",
                     values,
-                    number_comparison_policy,
+                    numeric_comparison_policy,
                     issues,
                 );
             }
@@ -148,7 +148,7 @@ impl MetadataSchema {
         key: &str,
         operator: &'static str,
         values: &[Value],
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
         issues: &mut Vec<MetadataError>,
     ) {
         let field = match self.filter_field(key) {
@@ -165,7 +165,7 @@ impl MetadataSchema {
             if value_matches_field_type(
                 value,
                 field.data_type(),
-                number_comparison_policy,
+                numeric_comparison_policy,
             ) {
                 continue;
             }
@@ -177,7 +177,7 @@ impl MetadataSchema {
                     "filter value type {} is not compatible with field type {} under {:?} number comparison policy",
                     value.data_type(),
                     field.data_type(),
-                    number_comparison_policy
+                    numeric_comparison_policy
                 ),
             });
         }
@@ -189,7 +189,7 @@ impl MetadataSchema {
         key: &str,
         operator: &'static str,
         value: &Value,
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
     ) -> MetadataResult<()> {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
@@ -197,7 +197,7 @@ impl MetadataSchema {
         if value_matches_field_type(
             value,
             field.data_type(),
-            number_comparison_policy,
+            numeric_comparison_policy,
         ) {
             return Ok(());
         }
@@ -209,7 +209,7 @@ impl MetadataSchema {
                 "filter value type {} is not compatible with field type {} under {:?} number comparison policy",
                 value.data_type(),
                 field.data_type(),
-                number_comparison_policy
+                numeric_comparison_policy
             ),
         })
     }
@@ -220,7 +220,7 @@ impl MetadataSchema {
         key: &str,
         operator: &'static str,
         value: &Value,
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
     ) -> MetadataResult<()> {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
@@ -237,7 +237,7 @@ impl MetadataSchema {
         if value_matches_field_type(
             value,
             field.data_type(),
-            number_comparison_policy,
+            numeric_comparison_policy,
         ) {
             return Ok(());
         }
@@ -249,7 +249,7 @@ impl MetadataSchema {
                 "filter value type {} is not compatible with field type {} under {:?} number comparison policy",
                 value.data_type(),
                 field.data_type(),
-                number_comparison_policy
+                numeric_comparison_policy
             ),
         })
     }
@@ -295,95 +295,16 @@ fn is_range_comparable_type(data_type: DataType) -> bool {
 fn value_matches_field_type(
     value: &Value,
     field_type: DataType,
-    number_comparison_policy: NumberComparisonPolicy,
+    _numeric_comparison_policy: NumericComparisonPolicy,
 ) -> bool {
     if value.is_unset() {
         return false;
     }
     let value_type = value.data_type();
-    if value_type == field_type {
-        return true;
+    if value.is_numeric() && field_type.is_numeric() {
+        return value
+            .numeric_cmp(value, NumericComparisonPolicy::Exact)
+            .is_ok();
     }
-    if !value.is_numeric() || !field_type.is_numeric() {
-        return false;
-    }
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
-        return true;
-    }
-    value_matches_numeric_field_conservatively(value, field_type)
-}
-
-/// Returns `true` when conservative runtime numeric comparison can handle the
-/// pair.
-fn value_matches_numeric_field_conservatively(
-    value: &Value,
-    field_type: DataType,
-) -> bool {
-    let value_type = value.data_type();
-    if !value_type.is_float() && !field_type.is_float() {
-        return true;
-    }
-    if value_type.is_float() && field_type.is_float() {
-        return true;
-    }
-    if value_type.is_big_number() || field_type.is_big_number() {
-        return false;
-    }
-    if value_type.is_float() {
-        return float_value_fits_integer_field(value, field_type);
-    }
-    integer_value_is_safe_for_float_field(value)
-}
-
-const MAX_SAFE_INTEGER_F64_U128: u128 = 9_007_199_254_740_992;
-const I64_MIN_F64: f64 = -9_223_372_036_854_775_808.0;
-const I64_EXCLUSIVE_MAX_F64: f64 = 9_223_372_036_854_775_808.0;
-const U64_EXCLUSIVE_MAX_F64: f64 = 18_446_744_073_709_551_616.0;
-
-/// Extracts a finite floating-point literal from a filter value.
-#[inline]
-fn finite_float_value(value: &Value) -> Option<f64> {
-    let number = value.to::<f64>().ok()?;
-    number.is_finite().then_some(number)
-}
-
-/// Returns `true` when a float literal can be compared exactly to an integer
-/// field.
-fn float_value_fits_integer_field(value: &Value, field_type: DataType) -> bool {
-    let Some(number) = finite_float_value(value) else {
-        return false;
-    };
-    if number.fract() != 0.0 {
-        return false;
-    }
-    if matches!(field_type, DataType::Int128 | DataType::UInt128) {
-        return false;
-    }
-    if matches!(
-        field_type,
-        DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64
-    ) {
-        return (I64_MIN_F64..I64_EXCLUSIVE_MAX_F64).contains(&number);
-    }
-    matches!(
-        field_type,
-        DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-    ) && (0.0..U64_EXCLUSIVE_MAX_F64).contains(&number)
-}
-
-/// Returns `true` when an integer literal can be compared exactly to a float
-/// field.
-fn integer_value_is_safe_for_float_field(value: &Value) -> bool {
-    if let Ok(value) = value.to::<i128>() {
-        return value.unsigned_abs() <= MAX_SAFE_INTEGER_F64_U128;
-    }
-    value
-        .to::<u128>()
-        .is_ok_and(|value| value <= MAX_SAFE_INTEGER_F64_U128)
+    value_type == field_type
 }

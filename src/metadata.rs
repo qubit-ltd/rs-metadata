@@ -11,8 +11,8 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::{
+    DataConversionTarget,
     DataType,
-    DataTypeOf,
 };
 use qubit_value::Value;
 use serde::{
@@ -21,7 +21,6 @@ use serde::{
 };
 
 use crate::{
-    FromMetadataValue,
     IntoMetadataValue,
     MetadataError,
     MetadataResult,
@@ -76,7 +75,7 @@ impl Metadata {
     #[inline]
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
-        T: DataTypeOf + FromMetadataValue,
+        T: DataConversionTarget,
     {
         self.try_get(key).ok()
     }
@@ -90,13 +89,13 @@ impl Metadata {
     /// converted to the requested type.
     pub fn try_get<T>(&self, key: &str) -> MetadataResult<T>
     where
-        T: DataTypeOf + FromMetadataValue,
+        T: DataConversionTarget,
     {
         let value = self
             .0
             .get(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        T::from_metadata_value(value).map_err(|error| {
+        value.to::<T>().map_err(|error| {
             MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
         })
     }
@@ -122,7 +121,7 @@ impl Metadata {
     #[must_use]
     pub fn get_or<T>(&self, key: &str, default: T) -> T
     where
-        T: DataTypeOf + FromMetadataValue,
+        T: DataConversionTarget,
     {
         self.try_get(key).unwrap_or(default)
     }

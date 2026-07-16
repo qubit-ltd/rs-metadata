@@ -86,7 +86,7 @@ impl FilterExpr {
             FilterExpr::Condition(condition) => condition.matches(
                 meta,
                 options.missing_key_policy,
-                options.number_comparison_policy,
+                options.numeric_comparison_policy,
             ),
             FilterExpr::And(children) => {
                 children.iter().all(|expr| expr.matches(meta, options))

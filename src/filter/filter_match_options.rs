@@ -14,7 +14,7 @@ use serde::{
 
 use crate::{
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
@@ -25,5 +25,5 @@ pub struct FilterMatchOptions {
     /// Policy for missing keys in negative predicates.
     pub missing_key_policy: MissingKeyPolicy,
     /// Policy for mixed numeric comparisons.
-    pub number_comparison_policy: NumberComparisonPolicy,
+    pub numeric_comparison_policy: NumericComparisonPolicy,
 }
