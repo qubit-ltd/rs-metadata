@@ -11,7 +11,7 @@ use crate::support::test_support::sample;
 use qubit_metadata::{
     MetadataFilter,
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 use serde_json::json;
 
@@ -20,7 +20,7 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
     let filter = MetadataFilter::builder()
         .eq("status", "active")
         .missing_key_policy(MissingKeyPolicy::NoMatch)
-        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build()
         .expect("filter should build");
 
@@ -31,7 +31,7 @@ fn metadata_filter_wire_round_trips_options_and_expression() {
         encoded["options"],
         json!({
             "missing_key_policy": "no_match",
-            "number_comparison_policy": "approximate"
+            "numeric_comparison_policy": "approximate"
         })
     );
 
@@ -53,7 +53,7 @@ fn metadata_filter_wire_omits_expression_for_match_all() {
             "version": 2,
             "options": {
                 "missing_key_policy": "match",
-                "number_comparison_policy": "conservative"
+                "numeric_comparison_policy": "exact"
             }
         })
     );

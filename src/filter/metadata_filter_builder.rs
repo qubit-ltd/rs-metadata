@@ -20,7 +20,7 @@ use crate::{
     MetadataValidationError,
     MetadataValidationResult,
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 
 /// Builder for [`MetadataFilter`].
@@ -97,11 +97,11 @@ impl MetadataFilterBuilder {
     /// Sets how the built filter handles mixed numeric comparisons.
     #[inline]
     #[must_use]
-    pub fn number_comparison_policy(
+    pub fn numeric_comparison_policy(
         mut self,
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
     ) -> Self {
-        self.options.number_comparison_policy = number_comparison_policy;
+        self.options.numeric_comparison_policy = numeric_comparison_policy;
         self
     }
 

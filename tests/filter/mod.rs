@@ -13,5 +13,4 @@ mod metadata_filter_builder_tests;
 mod metadata_filter_core_tests;
 mod metadata_filter_tests;
 mod missing_key_policy_tests;
-mod number_comparison_policy_tests;
 mod wire;

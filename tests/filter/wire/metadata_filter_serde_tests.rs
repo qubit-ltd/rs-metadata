@@ -10,7 +10,7 @@ use crate::support::test_support::sample;
 use qubit_metadata::{
     MetadataFilter,
     MissingKeyPolicy,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
 };
 use serde_json::json;
 
@@ -21,7 +21,7 @@ fn filter_serde_round_trip() {
         .and_ge("score", 10_i64)
         .or_not(|g| g.exists("tag").and_eq("tag", "java"))
         .missing_key_policy(MissingKeyPolicy::NoMatch)
-        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build()
         .unwrap();
 
@@ -73,7 +73,7 @@ fn filter_serde_uses_versioned_wire_format() {
             },
             "options": {
                 "missing_key_policy": "match",
-                "number_comparison_policy": "conservative"
+                "numeric_comparison_policy": "exact"
             }
         })
     );
@@ -121,7 +121,7 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
     let filter = MetadataFilter::builder()
         .eq("status", "active")
         .missing_key_policy(MissingKeyPolicy::NoMatch)
-        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build()
         .unwrap();
 
@@ -130,7 +130,7 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
         json["options"],
         json!({
             "missing_key_policy": "no_match",
-            "number_comparison_policy": "approximate"
+            "numeric_comparison_policy": "approximate"
         })
     );
 
@@ -145,7 +145,7 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
         },
         "options": {
             "missing_key_policy": "NoMatch",
-            "number_comparison_policy": "Approximate"
+            "numeric_comparison_policy": "Approximate"
         }
     }))
     .unwrap_err()
@@ -162,7 +162,7 @@ fn filter_serde_encodes_match_all_and_match_none() {
             "version": 2,
             "options": {
                 "missing_key_policy": "match",
-                "number_comparison_policy": "conservative"
+                "numeric_comparison_policy": "exact"
             }
         })
     );
@@ -175,7 +175,7 @@ fn filter_serde_encodes_match_all_and_match_none() {
             },
             "options": {
                 "missing_key_policy": "match",
-                "number_comparison_policy": "conservative"
+                "numeric_comparison_policy": "exact"
             }
         })
     );
@@ -242,7 +242,7 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
         },
         "options": {
             "missing_key_policy": "no_match",
-            "number_comparison_policy": "conservative"
+            "numeric_comparison_policy": "exact"
         }
     }))
     .unwrap_err()

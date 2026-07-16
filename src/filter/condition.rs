@@ -9,8 +9,6 @@
 
 use std::cmp::Ordering;
 
-use bigdecimal::BigDecimal;
-use num_bigint::BigInt;
 use qubit_value::Value;
 use serde::{
     Deserialize,
@@ -20,9 +18,9 @@ use serde::{
 };
 
 use super::missing_key_policy::MissingKeyPolicy;
-use super::number_comparison_policy::NumberComparisonPolicy;
 use super::wire::ConditionWire;
 use crate::Metadata;
+use qubit_datatype::NumericComparisonPolicy;
 
 /// A single comparison operator applied to one metadata key.
 #[derive(Debug, Clone, PartialEq)]
@@ -120,44 +118,52 @@ impl Condition {
         &self,
         meta: &Metadata,
         missing_key_policy: MissingKeyPolicy,
-        number_comparison_policy: NumberComparisonPolicy,
+        numeric_comparison_policy: NumericComparisonPolicy,
     ) -> bool {
         match self {
             Condition::Equal { key, value } => {
                 meta.get_raw(key).is_some_and(|stored| {
-                    values_equal(stored, value, number_comparison_policy)
+                    values_equal(stored, value, numeric_comparison_policy)
                 })
             }
             Condition::NotEqual { key, value } => match meta.get_raw(key) {
                 Some(stored) => {
-                    !values_equal(stored, value, number_comparison_policy)
+                    !values_equal(stored, value, numeric_comparison_policy)
                 }
                 None => missing_key_policy.matches_negative_predicates(),
             },
             Condition::Less { key, value } => {
                 meta.get_raw(key).is_some_and(|stored| {
-                    compare_values(stored, value, number_comparison_policy)
+                    compare_values(stored, value, numeric_comparison_policy)
                         == Some(Ordering::Less)
                 })
             }
             Condition::LessEqual { key, value } => {
                 meta.get_raw(key).is_some_and(|stored| {
                     matches!(
-                        compare_values(stored, value, number_comparison_policy),
+                        compare_values(
+                            stored,
+                            value,
+                            numeric_comparison_policy
+                        ),
                         Some(Ordering::Less) | Some(Ordering::Equal)
                     )
                 })
             }
             Condition::Greater { key, value } => {
                 meta.get_raw(key).is_some_and(|stored| {
-                    compare_values(stored, value, number_comparison_policy)
+                    compare_values(stored, value, numeric_comparison_policy)
                         == Some(Ordering::Greater)
                 })
             }
             Condition::GreaterEqual { key, value } => {
                 meta.get_raw(key).is_some_and(|stored| {
                     matches!(
-                        compare_values(stored, value, number_comparison_policy),
+                        compare_values(
+                            stored,
+                            value,
+                            numeric_comparison_policy
+                        ),
                         Some(Ordering::Greater) | Some(Ordering::Equal)
                     )
                 })
@@ -165,13 +171,13 @@ impl Condition {
             Condition::In { key, values } => {
                 meta.get_raw(key).is_some_and(|stored| {
                     values.iter().any(|value| {
-                        values_equal(stored, value, number_comparison_policy)
+                        values_equal(stored, value, numeric_comparison_policy)
                     })
                 })
             }
             Condition::NotIn { key, values } => match meta.get_raw(key) {
                 Some(stored) => values.iter().all(|value| {
-                    !values_equal(stored, value, number_comparison_policy)
+                    !values_equal(stored, value, numeric_comparison_policy)
                 }),
                 None => missing_key_policy.matches_negative_predicates(),
             },
@@ -185,260 +191,30 @@ impl Condition {
 /// value.
 #[inline]
 fn values_equal(
-    a: &Value,
-    b: &Value,
-    number_comparison_policy: NumberComparisonPolicy,
+    left: &Value,
+    right: &Value,
+    numeric_comparison_policy: NumericComparisonPolicy,
 ) -> bool {
-    if a.is_numeric() && b.is_numeric() {
-        return compare_numbers(a, b, number_comparison_policy)
-            == Some(Ordering::Equal);
+    if left.is_numeric() && right.is_numeric() {
+        return left
+            .numeric_cmp(right, numeric_comparison_policy)
+            .is_ok_and(|ordering| ordering == Ordering::Equal);
     }
-    a == b
+    left == right
 }
 
-/// Compares two values where both are compatible numeric or string variants.
+/// Compares two numeric values or two strings.
 #[inline]
 fn compare_values(
-    a: &Value,
-    b: &Value,
-    number_comparison_policy: NumberComparisonPolicy,
+    left: &Value,
+    right: &Value,
+    numeric_comparison_policy: NumericComparisonPolicy,
 ) -> Option<Ordering> {
-    if a.is_numeric() && b.is_numeric() {
-        return compare_numbers(a, b, number_comparison_policy);
+    if left.is_numeric() && right.is_numeric() {
+        return left.numeric_cmp(right, numeric_comparison_policy).ok();
     }
-    match (a, b) {
-        (Value::String(x), Value::String(y)) => x.partial_cmp(y),
+    match (left, right) {
+        (Value::String(left), Value::String(right)) => left.partial_cmp(right),
         _ => None,
     }
-}
-
-/// Internal normalized representation for scalar numeric comparisons.
-#[derive(Debug, Clone, Copy)]
-enum NumberValue {
-    /// Signed integer value.
-    Signed(i128),
-    /// Unsigned integer value.
-    Unsigned(u128),
-    /// Floating-point value.
-    Float(f64),
-}
-
-/// Converts a `Value` into the normalized numeric representation when
-/// supported.
-#[inline]
-fn number_value(value: &Value) -> Option<NumberValue> {
-    match value {
-        Value::Int8(v) => Some(NumberValue::Signed(i128::from(*v))),
-        Value::Int16(v) => Some(NumberValue::Signed(i128::from(*v))),
-        Value::Int32(v) => Some(NumberValue::Signed(i128::from(*v))),
-        Value::Int64(v) => Some(NumberValue::Signed(i128::from(*v))),
-        Value::Int128(v) => Some(NumberValue::Signed(*v)),
-        Value::UInt8(v) => Some(NumberValue::Unsigned(u128::from(*v))),
-        Value::UInt16(v) => Some(NumberValue::Unsigned(u128::from(*v))),
-        Value::UInt32(v) => Some(NumberValue::Unsigned(u128::from(*v))),
-        Value::UInt64(v) => Some(NumberValue::Unsigned(u128::from(*v))),
-        Value::UInt128(v) => Some(NumberValue::Unsigned(*v)),
-        Value::Float32(v) => Some(NumberValue::Float(f64::from(*v))),
-        Value::Float64(v) => Some(NumberValue::Float(*v)),
-        _ => None,
-    }
-}
-
-/// Compares two numeric `Value` variants with the configured precision policy.
-#[inline]
-fn compare_numbers(
-    a: &Value,
-    b: &Value,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> Option<Ordering> {
-    if contains_big_number(a, b) {
-        return compare_big_numbers(a, b, number_comparison_policy);
-    }
-    match (number_value(a)?, number_value(b)?) {
-        (NumberValue::Signed(x), NumberValue::Signed(y)) => Some(x.cmp(&y)),
-        (NumberValue::Unsigned(x), NumberValue::Unsigned(y)) => Some(x.cmp(&y)),
-        (NumberValue::Signed(x), NumberValue::Unsigned(y)) => {
-            Some(compare_i128_u128(x, y))
-        }
-        (NumberValue::Unsigned(x), NumberValue::Signed(y)) => {
-            Some(compare_i128_u128(y, x).reverse())
-        }
-        (NumberValue::Signed(x), NumberValue::Float(y)) => {
-            compare_i128_f64(x, y, number_comparison_policy)
-        }
-        (NumberValue::Float(x), NumberValue::Signed(y)) => {
-            compare_i128_f64(y, x, number_comparison_policy)
-                .map(Ordering::reverse)
-        }
-        (NumberValue::Unsigned(x), NumberValue::Float(y)) => {
-            compare_u128_f64(x, y, number_comparison_policy)
-        }
-        (NumberValue::Float(x), NumberValue::Unsigned(y)) => {
-            compare_u128_f64(y, x, number_comparison_policy)
-                .map(Ordering::reverse)
-        }
-        (NumberValue::Float(x), NumberValue::Float(y)) => x.partial_cmp(&y),
-    }
-}
-
-/// Returns `true` if either value is a big-number variant.
-#[inline]
-fn contains_big_number(a: &Value, b: &Value) -> bool {
-    a.data_type().is_big_number() || b.data_type().is_big_number()
-}
-
-/// Compares values when at least one side is `BigInteger` or `BigDecimal`.
-fn compare_big_numbers(
-    a: &Value,
-    b: &Value,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> Option<Ordering> {
-    if let (Some(x), Some(y)) = (big_integer_value(a), big_integer_value(b)) {
-        return Some(x.cmp(&y));
-    }
-    if let (Some(x), Some(y)) = (big_decimal_value(a), big_decimal_value(b)) {
-        return Some(x.cmp(&y));
-    }
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
-        return compare_as_f64(a, b);
-    }
-    None
-}
-
-/// Converts integral numeric values to `BigInt` for exact comparison.
-fn big_integer_value(value: &Value) -> Option<BigInt> {
-    match value {
-        Value::Int8(v) => Some(BigInt::from(*v)),
-        Value::Int16(v) => Some(BigInt::from(*v)),
-        Value::Int32(v) => Some(BigInt::from(*v)),
-        Value::Int64(v) => Some(BigInt::from(*v)),
-        Value::Int128(v) => Some(BigInt::from(*v)),
-        Value::UInt8(v) => Some(BigInt::from(*v)),
-        Value::UInt16(v) => Some(BigInt::from(*v)),
-        Value::UInt32(v) => Some(BigInt::from(*v)),
-        Value::UInt64(v) => Some(BigInt::from(*v)),
-        Value::UInt128(v) => Some(BigInt::from(*v)),
-        Value::BigInteger(v) => Some(v.clone()),
-        _ => None,
-    }
-}
-
-/// Converts integral and decimal numeric values to `BigDecimal`.
-fn big_decimal_value(value: &Value) -> Option<BigDecimal> {
-    match value {
-        Value::BigDecimal(v) => Some(v.clone()),
-        _ => big_integer_value(value).map(BigDecimal::from),
-    }
-}
-
-/// Compares two numeric values through the approximate `f64` fallback.
-#[inline]
-fn compare_as_f64(a: &Value, b: &Value) -> Option<Ordering> {
-    a.to::<f64>().ok()?.partial_cmp(&b.to::<f64>().ok()?)
-}
-
-const MAX_SAFE_INTEGER_F64_U64: u64 = 9_007_199_254_740_992;
-const I64_MIN_F64: f64 = -9_223_372_036_854_775_808.0;
-const I64_EXCLUSIVE_MAX_F64: f64 = 9_223_372_036_854_775_808.0;
-const U64_EXCLUSIVE_MAX_F64: f64 = 18_446_744_073_709_551_616.0;
-
-/// Compares a signed integer and an unsigned integer without lossy casts.
-#[inline]
-fn compare_i128_u128(x: i128, y: u128) -> Ordering {
-    if x < 0 {
-        Ordering::Less
-    } else {
-        (x as u128).cmp(&y)
-    }
-}
-
-/// Compares a signed integer and a float, returning `None` for risky cases.
-fn compare_i128_f64(
-    x: i128,
-    y: f64,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> Option<Ordering> {
-    if let Ok(x64) = i64::try_from(x) {
-        return compare_i64_f64(x64, y, number_comparison_policy);
-    }
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
-        return (x as f64).partial_cmp(&y);
-    }
-    None
-}
-
-/// Compares an unsigned integer and a float, returning `None` for risky cases.
-fn compare_u128_f64(
-    x: u128,
-    y: f64,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> Option<Ordering> {
-    if let Ok(x64) = u64::try_from(x) {
-        return compare_u64_f64(x64, y, number_comparison_policy);
-    }
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
-        return (x as f64).partial_cmp(&y);
-    }
-    None
-}
-
-/// Compares an `i64` and a float using the conservative JSON-era rules.
-fn compare_i64_f64(
-    x: i64,
-    y: f64,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> Option<Ordering> {
-    if y.fract() == 0.0 && (I64_MIN_F64..I64_EXCLUSIVE_MAX_F64).contains(&y) {
-        return Some(x.cmp(&(y as i64)));
-    }
-
-    if x.unsigned_abs() <= MAX_SAFE_INTEGER_F64_U64 {
-        return (x as f64).partial_cmp(&y);
-    }
-
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
-        return (x as f64).partial_cmp(&y);
-    }
-
-    None
-}
-
-/// Compares a `u64` and a float using the conservative JSON-era rules.
-fn compare_u64_f64(
-    x: u64,
-    y: f64,
-    number_comparison_policy: NumberComparisonPolicy,
-) -> Option<Ordering> {
-    if y < 0.0 {
-        return Some(Ordering::Greater);
-    }
-
-    if y.fract() == 0.0 && (0.0..U64_EXCLUSIVE_MAX_F64).contains(&y) {
-        return Some(x.cmp(&(y as u64)));
-    }
-
-    if x <= MAX_SAFE_INTEGER_F64_U64 {
-        return (x as f64).partial_cmp(&y);
-    }
-
-    if matches!(
-        number_comparison_policy,
-        NumberComparisonPolicy::Approximate
-    ) {
-        return (x as f64).partial_cmp(&y);
-    }
-
-    None
 }

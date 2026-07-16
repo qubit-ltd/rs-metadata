@@ -9,7 +9,14 @@
 
 use std::collections::BTreeMap;
 
-use qubit_datatype::DataType;
+use qubit_datatype::{
+    DataConversionError,
+    DataConversionOptions,
+    DataConversionTarget,
+    DataConverter,
+    DataType,
+    DataTypeOf,
+};
 use qubit_metadata::{
     Metadata,
     MetadataError,
@@ -17,6 +24,29 @@ use qubit_metadata::{
 };
 use qubit_value::Value;
 use serde_json::json;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Port(u16);
+
+impl DataTypeOf for Port {
+    const DATA_TYPE: DataType = DataType::UInt16;
+}
+
+impl DataConversionTarget for Port {
+    fn convert_from(
+        source: &DataConverter<'_>,
+        options: &DataConversionOptions,
+    ) -> Result<Self, DataConversionError> {
+        u16::convert_from(source, options).map(Self)
+    }
+}
+
+#[test]
+fn typed_reads_accept_downstream_conversion_targets() {
+    let metadata =
+        Metadata::new().with_raw("port", Value::String("8080".to_owned()));
+    assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
+}
 
 #[test]
 fn new_is_empty() {

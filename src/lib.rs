@@ -66,7 +66,6 @@
 #![deny(missing_docs)]
 
 mod filter;
-mod from_metadata_value;
 mod into_metadata_value;
 mod metadata;
 mod metadata_error;
@@ -79,14 +78,13 @@ pub use filter::FilterMatchOptions;
 pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
 pub use filter::MissingKeyPolicy;
-pub use filter::NumberComparisonPolicy;
-pub use from_metadata_value::FromMetadataValue;
 pub use into_metadata_value::IntoMetadataValue;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
 pub use metadata_result::MetadataResult;
 pub use metadata_result::MetadataValidationResult;
 pub use metadata_validation_error::MetadataValidationError;
+pub use qubit_datatype::NumericComparisonPolicy;
 pub use schema::MetadataField;
 pub use schema::MetadataSchema;
 pub use schema::MetadataSchemaBuilder;

@@ -14,7 +14,7 @@ use qubit_metadata::{
     MetadataFilter,
     MetadataSchema,
     MetadataValidationError,
-    NumberComparisonPolicy,
+    NumericComparisonPolicy,
     UnknownFieldPolicy,
 };
 use qubit_value::Value;
@@ -514,43 +514,33 @@ fn schema_validate_filter_rejects_range_on_bool() {
 }
 
 #[test]
-fn schema_validate_filter_respects_number_comparison_policy_for_big_decimal_float()
- {
+fn schema_validate_filter_accepts_exact_big_decimal_float_comparison() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
         .build();
 
-    let error = single_issue(
-        MetadataFilter::builder()
-            .ge("amount", 1.5_f64)
-            .build_checked(&schema)
-            .unwrap_err(),
-    );
-
-    match error {
-        MetadataError::InvalidFilterOperator {
-            key,
-            operator,
-            data_type,
-            message,
-        } => {
-            assert_eq!(key, "amount");
-            assert_eq!(operator, "ge");
-            assert_eq!(data_type, DataType::BigDecimal);
-            assert!(message.contains("number comparison policy"));
-        }
-        other => panic!("expected InvalidFilterOperator, got {other:?}"),
-    }
+    MetadataFilter::builder()
+        .ge("amount", 1.5_f64)
+        .build_checked(&schema)
+        .unwrap();
 
     MetadataFilter::builder()
         .ge("amount", 1.5_f64)
-        .number_comparison_policy(NumberComparisonPolicy::Approximate)
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build_checked(&schema)
         .unwrap();
+
+    let error = single_issue(
+        MetadataFilter::builder()
+            .ge("amount", f64::NAN)
+            .build_checked(&schema)
+            .unwrap_err(),
+    );
+    assert!(matches!(error, MetadataError::InvalidFilterOperator { .. }));
 }
 
 #[test]
-fn schema_validate_filter_respects_conservative_float_integer_edges() {
+fn schema_validate_filter_accepts_all_non_nan_numeric_pairs() {
     let schema = MetadataSchema::builder()
         .required("signed", DataType::Int64)
         .required("unsigned", DataType::UInt64)
@@ -564,36 +554,10 @@ fn schema_validate_filter_respects_conservative_float_integer_edges() {
         .build_checked(&schema)
         .unwrap();
 
-    let non_integral_float = single_issue(
-        MetadataFilter::builder()
-            .ge("signed", 1.5_f64)
-            .build_checked(&schema)
-            .unwrap_err(),
-    );
-    assert!(matches!(
-        non_integral_float,
-        MetadataError::InvalidFilterOperator { .. }
-    ));
-
-    let unsafe_integer = single_issue(
-        MetadataFilter::builder()
-            .ge("float", 9_007_199_254_740_993_i64)
-            .build_checked(&schema)
-            .unwrap_err(),
-    );
-    assert!(matches!(
-        unsafe_integer,
-        MetadataError::InvalidFilterOperator { .. }
-    ));
-
-    let huge_unsigned = single_issue(
-        MetadataFilter::builder()
-            .ge("float", u128::MAX)
-            .build_checked(&schema)
-            .unwrap_err(),
-    );
-    assert!(matches!(
-        huge_unsigned,
-        MetadataError::InvalidFilterOperator { .. }
-    ));
+    MetadataFilter::builder()
+        .ge("signed", 1.5_f64)
+        .and_ge("float", 9_007_199_254_740_993_i64)
+        .and_ge("float", u128::MAX)
+        .build_checked(&schema)
+        .unwrap();
 }
