@@ -162,11 +162,7 @@ impl MetadataSchema {
             return;
         };
         for value in values {
-            if value_matches_field_type(
-                value,
-                field.data_type(),
-                numeric_comparison_policy,
-            ) {
+            if value_matches_field_type(value, field.data_type()) {
                 continue;
             }
             issues.push(MetadataError::InvalidFilterOperator {
@@ -194,11 +190,7 @@ impl MetadataSchema {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
         };
-        if value_matches_field_type(
-            value,
-            field.data_type(),
-            numeric_comparison_policy,
-        ) {
+        if value_matches_field_type(value, field.data_type()) {
             return Ok(());
         }
         Err(MetadataError::InvalidFilterOperator {
@@ -234,11 +226,7 @@ impl MetadataSchema {
                     .to_string(),
             });
         }
-        if value_matches_field_type(
-            value,
-            field.data_type(),
-            numeric_comparison_policy,
-        ) {
+        if value_matches_field_type(value, field.data_type()) {
             return Ok(());
         }
         Err(MetadataError::InvalidFilterOperator {
@@ -292,19 +280,13 @@ fn is_range_comparable_type(data_type: DataType) -> bool {
 
 /// Returns `true` when a filter value is compatible with a schema field type.
 #[inline]
-fn value_matches_field_type(
-    value: &Value,
-    field_type: DataType,
-    _numeric_comparison_policy: NumericComparisonPolicy,
-) -> bool {
+fn value_matches_field_type(value: &Value, field_type: DataType) -> bool {
     if value.is_unset() {
         return false;
     }
     let value_type = value.data_type();
     if value.is_numeric() && field_type.is_numeric() {
-        return value
-            .numeric_cmp(value, NumericComparisonPolicy::Exact)
-            .is_ok();
+        return !value.is_nan();
     }
     value_type == field_type
 }
