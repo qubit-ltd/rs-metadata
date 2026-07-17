@@ -175,8 +175,11 @@ When a schema validates filters, mixed numeric compatibility follows the
 filter's configured `NumericComparisonPolicy`, the same policy used at match
 time. Every non-NaN numeric representation is schema-compatible with every
 numeric field. `Exact` compares the represented mathematical values without
-rounding; `Approximate` uses finite `f64` projection only when a floating
-operand participates. Actual
+rounding. `Approximate` orders primitive infinities separately; when a finite
+primitive float participates, it attempts to project both operands to finite
+`f64` values, and falls back to exact comparison if either operand cannot be
+projected that way. Projected comparison is pair-dependent and non-transitive,
+so it must not be used for sorting, grouping, `Ord`, or ordered keys. Actual
 `MetadataSchema::validate(&metadata)` remains strict: stored metadata values
 must use the concrete field type declared by the schema.
 
