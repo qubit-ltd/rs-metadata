@@ -166,8 +166,10 @@ let filter = MetadataFilter::builder()
 
 schema 校验 filter 时，混合数值兼容性遵循 filter 配置的 `NumericComparisonPolicy`，
 和实际匹配时使用同一套策略。任意非 NaN 数值表示都与任意数值字段兼容。
-`Exact` 不经舍入地比较表示出来的数学值；`Approximate` 仅在至少一侧是浮点变体时
-使用有限 `f64` 投影。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
+`Exact` 不经舍入地比较表示出来的数学值。`Approximate` 会单独排序原生无穷值；有限
+原生浮点数参与时，它尝试把两个操作数投影为有限 `f64`，任一操作数无法完成这种投影
+时回退到精确比较。投影比较取决于当前操作数对且不满足传递性，因此不得用于排序、
+分组、实现 `Ord` 或有序键。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
 metadata 中存储的值必须和 schema 声明的具体字段类型一致。
 
 ### 5) 版本化 filter 序列化格式
