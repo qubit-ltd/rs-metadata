@@ -35,7 +35,6 @@ impl MetadataField {
 
     /// Returns the runtime data type of this field.
     #[inline]
-    #[must_use]
     pub fn data_type(&self) -> DataType {
         self.data_type
     }
