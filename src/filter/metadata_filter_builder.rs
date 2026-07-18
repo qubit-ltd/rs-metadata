@@ -13,6 +13,7 @@ use super::condition::Condition;
 use super::filter_expression::FilterExpression;
 use super::metadata_filter::MetadataFilter;
 use crate::{
+    FilterLimits,
     FilterMatchOptions,
     IntoMetadataValue,
     MetadataError,
@@ -56,10 +57,12 @@ impl MetadataFilterBuilder {
         if let Some(error) = self.error {
             return Err(error);
         }
-        Ok(MetadataFilter::new(
+        let filter = MetadataFilter::new(
             self.expression.unwrap_or_default(),
             self.options,
-        ))
+        );
+        filter.validate_limits(FilterLimits::default())?;
+        Ok(filter)
     }
 
     /// Builds an immutable filter and validates it against `schema`.

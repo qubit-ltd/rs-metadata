@@ -14,7 +14,12 @@ use serde::{
 
 use super::super::metadata_filter::MetadataFilter;
 use super::filter_expression_wire::FilterExpressionWire;
-use crate::FilterMatchOptions;
+use crate::{
+    FilterLimits,
+    FilterMatchOptions,
+    MetadataError,
+    MetadataResult,
+};
 
 /// Current serialized metadata-filter format version.
 pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 3;
@@ -42,15 +47,19 @@ impl MetadataFilterWire {
     /// # Errors
     ///
     /// Returns an error for unsupported versions or invalid expression trees.
-    pub(crate) fn into_filter(self) -> Result<MetadataFilter, String> {
+    pub(crate) fn into_filter(self) -> MetadataResult<MetadataFilter> {
         if self.version != METADATA_FILTER_WIRE_VERSION {
-            return Err(format!(
-                "unsupported MetadataFilter wire format version {}; expected {}",
-                self.version, METADATA_FILTER_WIRE_VERSION
-            ));
+            return Err(MetadataError::InvalidFilterExpression {
+                message: format!(
+                    "unsupported MetadataFilter wire format version {}; expected {}",
+                    self.version, METADATA_FILTER_WIRE_VERSION
+                ),
+            });
         }
         let expression = self.expression.into_expression()?;
-        Ok(MetadataFilter::new(expression, self.options))
+        let filter = MetadataFilter::new(expression, self.options);
+        filter.validate_limits(FilterLimits::default())?;
+        Ok(filter)
     }
 }
 

@@ -16,7 +16,7 @@ use qubit_metadata::{
     MetadataFilter,
     MetadataSchema,
     MetadataValidationError,
-    UnknownFieldPolicy,
+    UnknownFilterFieldPolicy,
 };
 use qubit_value::Value;
 use serde_json::json;
@@ -50,7 +50,8 @@ fn test_schema_validate_filter_uses_state_aware_numeric_classification() {
             let data_type = Value::new(value.clone()).data_type();
             let schema = MetadataSchema::builder()
                 .required("field", data_type)
-                .build();
+                .build()
+                .expect("schema should build");
             let filter = MetadataFilter::builder()
                 .eq("field", value)
                 .build()
@@ -81,7 +82,8 @@ fn test_schema_validate_filter_uses_state_aware_numeric_classification() {
 
     let schema = MetadataSchema::builder()
         .required("field", DataType::Int64)
-        .build();
+        .build()
+        .expect("schema should build");
     assert!(
         schema
             .validate_filter(&equality_filter_with_value(&Value::Unset(
@@ -103,7 +105,8 @@ fn test_schema_validate_filter_uses_state_aware_numeric_classification() {
 fn test_schema_validate_filter_accepts_numeric_literal_compatibility() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
-        .build();
+        .build()
+        .expect("schema should build");
     let filter = MetadataFilter::builder()
         .ge("score", 10)
         .build_checked(&schema)
@@ -118,7 +121,8 @@ fn test_schema_validate_filter_classifies_every_data_type_for_ranges() {
     for &data_type in DataType::ALL {
         let schema = MetadataSchema::builder()
             .required("field", data_type)
-            .build();
+            .build()
+            .expect("schema should build");
         let result = if data_type == DataType::String {
             MetadataFilter::builder()
                 .gt("field", "lower")
@@ -143,7 +147,8 @@ fn test_schema_validate_filter_accepts_big_number_fields() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
         .required("count", DataType::BigInteger)
-        .build();
+        .build()
+        .expect("schema should build");
 
     let filter = MetadataFilter::builder()
         .ge("amount", bigdecimal::BigDecimal::from(10_i64))
@@ -163,7 +168,8 @@ fn test_schema_validate_filter_visits_all_condition_kinds() {
         .required("score", DataType::Int64)
         .required("status", DataType::String)
         .optional("tag", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
 
     let filter = MetadataFilter::builder()
         .lt("score", 100_i64)
@@ -185,7 +191,8 @@ fn test_schema_validate_filter_visits_all_condition_kinds() {
 fn test_schema_validate_filter_accepts_not_equal_condition() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
 
     MetadataFilter::builder()
         .ne("status", "inactive")
@@ -197,7 +204,8 @@ fn test_schema_validate_filter_accepts_not_equal_condition() {
 fn test_schema_validate_filter_reports_ne_operator_for_incompatible_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .ne("status", 1_i64)
@@ -225,7 +233,8 @@ fn test_schema_validate_filter_reports_ne_operator_for_incompatible_value() {
 fn test_schema_validate_filter_rejects_incompatible_value_predicate() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .eq("status", 1_i64)
@@ -253,7 +262,8 @@ fn test_schema_validate_filter_rejects_incompatible_value_predicate() {
 fn test_schema_validate_filter_rejects_unknown_value_predicate_field() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .eq("missing", "active")
@@ -273,8 +283,9 @@ fn test_schema_validate_filter_rejects_unknown_value_predicate_field() {
 fn test_schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .unknown_field_policy(UnknownFieldPolicy::Allow)
-        .build();
+        .unknown_filter_field_policy(UnknownFilterFieldPolicy::AllowUnchecked)
+        .build()
+        .expect("schema should build");
 
     MetadataFilter::builder()
         .eq("dynamic", "value")
@@ -289,8 +300,9 @@ fn test_schema_validate_filter_still_validates_declared_fields_when_unknowns_are
  {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .unknown_field_policy(UnknownFieldPolicy::Allow)
-        .build();
+        .unknown_filter_field_policy(UnknownFilterFieldPolicy::AllowUnchecked)
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .eq("status", 1_i64)
@@ -319,7 +331,8 @@ fn test_schema_validate_filter_still_validates_declared_fields_when_unknowns_are
 fn test_schema_validate_filter_rejects_incompatible_not_in_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .not_in_set("status", [1_i64])
@@ -347,7 +360,8 @@ fn test_schema_validate_filter_rejects_incompatible_not_in_value() {
 fn test_schema_validate_filter_rejects_unknown_exists_field() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .exists("missing")
@@ -367,7 +381,8 @@ fn test_schema_validate_filter_rejects_unknown_exists_field() {
 fn test_schema_validate_filter_rejects_incompatible_range_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .gt("status", 1_i64)
@@ -395,7 +410,8 @@ fn test_schema_validate_filter_rejects_incompatible_range_value() {
 fn test_schema_validate_filter_reports_unknown_field() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .ge("unknown", 10_i64)
@@ -417,7 +433,8 @@ fn test_schema_validate_filter_collects_all_condition_issues() {
         .required("status", DataType::String)
         .required("score", DataType::Int64)
         .required("active", DataType::Bool)
-        .build();
+        .build()
+        .expect("schema should build");
 
     let error = MetadataFilter::builder()
         .eq("status", 1_i64)
@@ -448,7 +465,8 @@ fn test_schema_validate_filter_collects_all_condition_issues() {
 fn test_schema_validate_filter_collects_all_set_value_issues() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
 
     let error = MetadataFilter::builder()
         .in_set("status", [1_i64, 2_i64])
@@ -474,7 +492,8 @@ fn test_schema_validate_filter_collects_all_set_value_issues() {
 fn test_schema_validate_filter_reports_unknown_set_field_once() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
 
     let error = MetadataFilter::builder()
         .in_set("missing", [1_i64, 2_i64])
@@ -494,7 +513,8 @@ fn test_schema_validate_filter_reports_unknown_set_field_once() {
 fn test_schema_validate_filter_rejects_range_on_bool() {
     let schema = MetadataSchema::builder()
         .required("active", DataType::Bool)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = single_issue(
         MetadataFilter::builder()
             .gt("active", true)
@@ -522,7 +542,8 @@ fn test_schema_validate_filter_rejects_range_on_bool() {
 fn test_schema_validate_filter_accepts_exact_big_decimal_float_comparison() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
-        .build();
+        .build()
+        .expect("schema should build");
 
     MetadataFilter::builder()
         .ge("amount", 1.5_f64)
@@ -550,7 +571,8 @@ fn test_schema_validate_filter_accepts_all_non_nan_numeric_pairs() {
         .required("signed", DataType::Int64)
         .required("unsigned", DataType::UInt64)
         .required("float", DataType::Float64)
-        .build();
+        .build()
+        .expect("schema should build");
 
     MetadataFilter::builder()
         .ge("signed", 10.0_f64)

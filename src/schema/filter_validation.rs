@@ -12,7 +12,7 @@ use qubit_value::Value;
 
 use super::metadata_field::MetadataField;
 use super::metadata_schema::MetadataSchema;
-use super::unknown_field_policy::UnknownFieldPolicy;
+use super::unknown_filter_field_policy::UnknownFilterFieldPolicy;
 use crate::{
     Condition,
     MetadataError,
@@ -38,7 +38,8 @@ impl MetadataSchema {
     /// Returns an aggregate error containing every unknown field, invalid range
     /// operator, and incompatible filter value discovered during this
     /// validation pass. Unknown filter fields are accepted when the
-    /// schema's [`UnknownFieldPolicy`] is [`UnknownFieldPolicy::Allow`].
+    /// schema's [`UnknownFilterFieldPolicy`] is
+    /// [`UnknownFilterFieldPolicy::AllowUnchecked`].
     pub fn validate_filter(
         &self,
         filter: &MetadataFilter,
@@ -265,8 +266,8 @@ impl MetadataSchema {
         match self.field(key) {
             Some(field) => Ok(Some(field)),
             None if matches!(
-                self.unknown_field_policy(),
-                UnknownFieldPolicy::Allow
+                self.unknown_filter_field_policy(),
+                UnknownFilterFieldPolicy::AllowUnchecked
             ) =>
             {
                 Ok(None)

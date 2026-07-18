@@ -160,7 +160,8 @@ fn test_get_or_returns_default_for_missing_key_or_type_mismatch() {
 fn test_insert_checked_returns_previous_value() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let mut meta = Metadata::new();
     meta.insert_checked(&schema, "key", "first").unwrap();
     let old = meta.insert_checked(&schema, "key", "second").unwrap();
@@ -172,7 +173,8 @@ fn test_set_checked_supports_mutable_chaining() {
     let schema = MetadataSchema::builder()
         .required("first", DataType::Int64)
         .required("second", DataType::Int64)
-        .build();
+        .build()
+        .expect("schema should build");
     let mut meta = Metadata::new();
     meta.set_checked(&schema, "first", 1_i64)
         .unwrap()
@@ -187,7 +189,8 @@ fn test_set_checked_supports_mutable_chaining() {
 fn test_set_checked_rejects_type_mismatch() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let mut meta = Metadata::new();
     let error = meta.set_checked(&schema, "key", 1_i64).unwrap_err();
 
@@ -210,7 +213,8 @@ fn test_set_checked_rejects_type_mismatch() {
 fn test_with_checked_rejects_unknown_field() {
     let schema = MetadataSchema::builder()
         .required("known", DataType::String)
-        .build();
+        .build()
+        .expect("schema should build");
     let error = Metadata::new()
         .with_checked(&schema, "unknown", "value")
         .unwrap_err();

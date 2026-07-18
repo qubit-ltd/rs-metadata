@@ -8,7 +8,10 @@
 //! Tests for [`qubit_metadata::MetadataError`].
 
 use qubit_datatype::DataType;
-use qubit_metadata::MetadataError;
+use qubit_metadata::{
+    FilterMatchOptions,
+    MetadataError,
+};
 
 #[test]
 fn test_display_formats_all_variants() {
@@ -79,6 +82,33 @@ fn test_display_formats_all_variants() {
     assert_eq!(
         invalid_expression.to_string(),
         "Metadata filter expression is invalid: empty 'and' filter group is not allowed"
+    );
+
+    assert_eq!(
+        MetadataError::FilterLimitExceeded {
+            limit: "depth",
+            maximum: 64,
+        }
+        .to_string(),
+        "Metadata filter depth exceeds the maximum of 64"
+    );
+
+    let incompatible_options = MetadataError::IncompatibleFilterOptions {
+        left: FilterMatchOptions::default(),
+        right: FilterMatchOptions::default(),
+    };
+    assert!(
+        incompatible_options
+            .to_string()
+            .contains("Metadata filters use incompatible match options")
+    );
+
+    assert_eq!(
+        MetadataError::DuplicateSchemaField {
+            key: "id".to_string(),
+        }
+        .to_string(),
+        "Metadata schema declares field 'id' more than once"
     );
 }
 

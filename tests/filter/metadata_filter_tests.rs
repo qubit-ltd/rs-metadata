@@ -10,6 +10,7 @@
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
+    FilterLimits,
     FilterMatchOptions,
     Metadata,
     MetadataError,
@@ -154,6 +155,81 @@ fn test_filter_constructors_and_option_setters_work() {
         .with_numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .with_options(options);
     assert_eq!(approximate.options(), options);
+}
+
+#[test]
+fn test_try_and_and_try_or_combine_filters_with_matching_options() {
+    let active = MetadataFilter::builder()
+        .eq("status", "active")
+        .build()
+        .expect("active filter should build");
+    let score = MetadataFilter::builder()
+        .ge("score", 40_i64)
+        .build()
+        .expect("score filter should build");
+
+    assert!(
+        active
+            .clone()
+            .try_and(score.clone())
+            .unwrap()
+            .matches(&sample())
+    );
+    assert!(active.try_or(score).unwrap().matches(&sample()));
+}
+
+#[test]
+fn test_try_and_rejects_filters_with_different_options() {
+    let exact = MetadataFilter::builder()
+        .eq("score", 42_i64)
+        .build()
+        .expect("exact filter should build");
+    let approximate = MetadataFilter::builder()
+        .eq("score", 42_i64)
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
+        .build()
+        .expect("approximate filter should build");
+
+    assert!(matches!(
+        exact.try_and(approximate),
+        Err(MetadataError::IncompatibleFilterOptions { .. })
+    ));
+}
+
+#[test]
+fn test_validate_limits_rejects_excessive_key_length_and_node_count() {
+    let key_limit = FilterLimits::new(8, 8, 8, 3);
+    let key_error = MetadataFilter::builder()
+        .exists("long")
+        .build()
+        .expect("filter should build")
+        .validate_limits(key_limit)
+        .expect_err("key exceeding a custom limit must be rejected");
+    assert!(matches!(
+        key_error,
+        MetadataError::FilterLimitExceeded {
+            limit: "key length",
+            maximum: 3,
+        }
+    ));
+
+    let node_limit = FilterLimits::new(8, 2, 8, 8);
+    let node_error = MetadataFilter::builder()
+        .exists("first")
+        .and_exists("second")
+        .build()
+        .expect("filter should build")
+        .validate_limits(node_limit)
+        .expect_err(
+            "expression exceeding a custom node limit must be rejected",
+        );
+    assert!(matches!(
+        node_error,
+        MetadataError::FilterLimitExceeded {
+            limit: "node count",
+            maximum: 2,
+        }
+    ));
 }
 
 #[test]

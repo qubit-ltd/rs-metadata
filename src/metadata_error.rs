@@ -9,6 +9,7 @@
 
 use std::fmt;
 
+use crate::FilterMatchOptions;
 use qubit_datatype::DataType;
 use qubit_value::{
     Value,
@@ -74,6 +75,25 @@ pub enum MetadataError {
     InvalidFilterExpression {
         /// Human-readable validation message.
         message: String,
+    },
+    /// A filter exceeds an enforced resource bound.
+    FilterLimitExceeded {
+        /// Human-readable bounded resource name.
+        limit: &'static str,
+        /// Largest allowed value for the resource.
+        maximum: usize,
+    },
+    /// Two filters cannot be composed because their match options differ.
+    IncompatibleFilterOptions {
+        /// Options configured on the left filter.
+        left: FilterMatchOptions,
+        /// Options configured on the right filter.
+        right: FilterMatchOptions,
+    },
+    /// A schema builder declares the same field more than once.
+    DuplicateSchemaField {
+        /// Duplicated schema key.
+        key: String,
     },
 }
 
@@ -175,6 +195,20 @@ impl fmt::Display for MetadataError {
             ),
             Self::InvalidFilterExpression { message } => {
                 write!(f, "Metadata filter expression is invalid: {message}")
+            }
+            Self::FilterLimitExceeded { limit, maximum } => write!(
+                f,
+                "Metadata filter {limit} exceeds the maximum of {maximum}"
+            ),
+            Self::IncompatibleFilterOptions { left, right } => write!(
+                f,
+                "Metadata filters use incompatible match options: left {left:?}, right {right:?}"
+            ),
+            Self::DuplicateSchemaField { key } => {
+                write!(
+                    f,
+                    "Metadata schema declares field '{key}' more than once"
+                )
             }
         }
     }

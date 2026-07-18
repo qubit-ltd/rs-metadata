@@ -5,24 +5,22 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! [`UnknownFieldPolicy`] — handling for schema-unknown metadata and filter
-//! keys.
+//! [`UnknownMetadataFieldPolicy`] — handling for undeclared metadata keys.
 
 use serde::{
     Deserialize,
     Serialize,
 };
 
-/// Policy for fields that appear in metadata or filters but are not declared by
-/// a schema.
+/// Policy for metadata fields that are not declared by a schema.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
 )]
 #[serde(rename_all = "snake_case")]
-pub enum UnknownFieldPolicy {
-    /// Reject fields that are not declared in the schema.
+pub enum UnknownMetadataFieldPolicy {
+    /// Reject metadata keys that are not declared in the schema.
     #[default]
     Reject,
-    /// Allow fields that are not declared in the schema.
+    /// Allow metadata keys that are not declared in the schema.
     Allow,
 }

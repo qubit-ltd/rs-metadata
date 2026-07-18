@@ -16,6 +16,8 @@ use super::condition_wire::ConditionWire;
 use crate::{
     FilterExpression,
     FilterExpressionView,
+    MetadataError,
+    MetadataResult,
 };
 
 /// Versioned wire node for one filter expression.
@@ -58,33 +60,35 @@ impl FilterExpressionWire {
     /// # Errors
     ///
     /// Returns an error when an AND or OR group is empty.
-    pub(crate) fn into_expression(self) -> Result<FilterExpression, String> {
+    pub(crate) fn into_expression(self) -> MetadataResult<FilterExpression> {
         match self {
             Self::Condition { condition } => {
                 Ok(FilterExpression::condition(condition.into_condition()))
             }
             Self::And { children } => {
                 if children.is_empty() {
-                    return Err(
-                        "empty 'and' filter group is not allowed".to_string()
-                    );
+                    return Err(MetadataError::InvalidFilterExpression {
+                        message: "empty 'and' filter group is not allowed"
+                            .to_string(),
+                    });
                 }
                 children
                     .into_iter()
                     .map(Self::into_expression)
-                    .collect::<Result<Vec<_>, _>>()
+                    .collect::<MetadataResult<Vec<_>>>()
                     .map(FilterExpression::and_children)
             }
             Self::Or { children } => {
                 if children.is_empty() {
-                    return Err(
-                        "empty 'or' filter group is not allowed".to_string()
-                    );
+                    return Err(MetadataError::InvalidFilterExpression {
+                        message: "empty 'or' filter group is not allowed"
+                            .to_string(),
+                    });
                 }
                 children
                     .into_iter()
                     .map(Self::into_expression)
-                    .collect::<Result<Vec<_>, _>>()
+                    .collect::<MetadataResult<Vec<_>>>()
                     .map(FilterExpression::or_children)
             }
             Self::Not { expression } => expression

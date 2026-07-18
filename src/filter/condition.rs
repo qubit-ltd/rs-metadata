@@ -20,7 +20,12 @@ use serde::{
 
 use super::internal::MatchOutcome;
 use super::wire::ConditionWire;
-use crate::Metadata;
+use crate::{
+    FilterLimits,
+    Metadata,
+    MetadataError,
+    MetadataResult,
+};
 
 /// A single comparison operator applied to one metadata key.
 ///
@@ -126,6 +131,44 @@ impl<'de> Deserialize<'de> for Condition {
 }
 
 impl Condition {
+    /// Validates this condition against resource limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Bounds to enforce.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the key and membership values fit within `limits`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when a key or membership
+    /// condition exceeds its configured bound.
+    pub(crate) fn validate_limits(
+        &self,
+        limits: FilterLimits,
+    ) -> MetadataResult<()> {
+        let key = self.key();
+        if key.len() > limits.max_key_length() {
+            return Err(MetadataError::FilterLimitExceeded {
+                limit: "key length",
+                maximum: limits.max_key_length(),
+            });
+        }
+        let values = match self {
+            Self::In { values, .. } | Self::NotIn { values, .. } => values,
+            _ => return Ok(()),
+        };
+        if values.len() > limits.max_set_values() {
+            return Err(MetadataError::FilterLimitExceeded {
+                limit: "set values",
+                maximum: limits.max_set_values(),
+            });
+        }
+        Ok(())
+    }
+
     /// Evaluates this condition against the supplied metadata.
     ///
     /// # Parameters
@@ -210,6 +253,23 @@ impl Condition {
             Condition::NotExists { key } => {
                 MatchOutcome::from_bool(concrete_value(meta, key).is_none())
             }
+        }
+    }
+
+    /// Returns the metadata key referenced by this condition.
+    #[inline(always)]
+    fn key(&self) -> &str {
+        match self {
+            Self::Equal { key, .. }
+            | Self::NotEqual { key, .. }
+            | Self::Less { key, .. }
+            | Self::LessEqual { key, .. }
+            | Self::Greater { key, .. }
+            | Self::GreaterEqual { key, .. }
+            | Self::In { key, .. }
+            | Self::NotIn { key, .. }
+            | Self::Exists { key }
+            | Self::NotExists { key } => key,
         }
     }
 }

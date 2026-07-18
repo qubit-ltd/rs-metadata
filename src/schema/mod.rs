@@ -8,15 +8,18 @@
 //! Metadata schema module.
 //!
 //! Encapsulates schema concepts (schema definition, field definition, builder,
-//! and unknown-field policy) that are closely related and often used together.
+//! and separate unknown-field policies) that are closely related and often
+//! used together.
 
 mod filter_validation;
 mod metadata_field;
 mod metadata_schema;
 mod metadata_schema_builder;
-mod unknown_field_policy;
+mod unknown_filter_field_policy;
+mod unknown_metadata_field_policy;
 
 pub use metadata_field::MetadataField;
 pub use metadata_schema::MetadataSchema;
 pub use metadata_schema_builder::MetadataSchemaBuilder;
-pub use unknown_field_policy::UnknownFieldPolicy;
+pub use unknown_filter_field_policy::UnknownFilterFieldPolicy;
+pub use unknown_metadata_field_policy::UnknownMetadataFieldPolicy;

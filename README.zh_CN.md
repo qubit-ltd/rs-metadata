@@ -83,8 +83,10 @@ assert!(previous.is_some());
 
 `MetadataSchema` 使用 `qubit_datatype::DataType`。当存储后端要求预先声明 metadata 字段时，
 schema 可以直接作为字段定义来源；在构造 filter 时，也可以提前校验字段、操作符和
-过滤值类型是否匹配。`UnknownFieldPolicy` 同时作用于 metadata 校验和 filter 校验：
-已声明字段仍然严格校验，未知 filter 字段只有在策略为 `Allow` 时才会被接受。
+过滤值类型是否匹配。`UnknownMetadataFieldPolicy` 和
+`UnknownFilterFieldPolicy` 相互独立：允许未声明 metadata 字段并不会同时允许未经校验的
+filter 字段。两者默认都拒绝未知字段；只有
+`UnknownFilterFieldPolicy::AllowUnchecked` 才会接受未知 filter 字段。
 
 ```rust
 use qubit_datatype::DataType;
@@ -94,7 +96,8 @@ let schema = MetadataSchema::builder()
     .required("tenant_id", DataType::String)
     .required("score", DataType::Int64)
     .optional("source", DataType::String)
-    .build();
+    .build()
+    .expect("schema should build");
 
 let meta = Metadata::new()
     .with("tenant_id", "acme")
@@ -118,7 +121,8 @@ use qubit_metadata::{Metadata, MetadataFilter, MetadataSchema};
 let schema = MetadataSchema::builder()
     .required("status", DataType::String)
     .required("score", DataType::Int64)
-    .build();
+    .build()
+    .expect("schema should build");
 
 let filter = MetadataFilter::builder()
     .eq("status", "active")
@@ -244,7 +248,7 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.7"
+qubit-metadata = "0.8"
 # 使用 schema 数据类型或数值比较策略时需要直接依赖。
 qubit-datatype = "0.7"
 # 使用 Metadata 的原始 Value API 时需要直接依赖。
@@ -257,7 +261,7 @@ qubit-value = "0.10"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.7", features = ["chrono", "json"] }
+qubit-metadata = { version = "0.8", features = ["chrono", "json"] }
 ```
 
 可用 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、

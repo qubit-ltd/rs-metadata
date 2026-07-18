@@ -19,7 +19,8 @@ use serde::{
 use crate::schema::{
     MetadataField,
     MetadataSchemaBuilder,
-    UnknownFieldPolicy,
+    UnknownFilterFieldPolicy,
+    UnknownMetadataFieldPolicy,
 };
 use crate::{
     Metadata,
@@ -35,11 +36,14 @@ use crate::{
 /// are required. It can validate actual [`Metadata`] values and validate that a
 /// [`crate::MetadataFilter`] references known fields with compatible operators.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MetadataSchema {
     /// Field definitions keyed by metadata key.
     fields: BTreeMap<String, MetadataField>,
     /// How validation handles unknown metadata keys.
-    unknown_field_policy: UnknownFieldPolicy,
+    unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
+    /// How validation handles unknown filter keys.
+    unknown_filter_field_policy: UnknownFilterFieldPolicy,
 }
 
 impl MetadataSchema {
@@ -54,12 +58,13 @@ impl MetadataSchema {
         MetadataSchemaBuilder::default()
     }
 
-    /// Creates a schema from field definitions and unknown-field policy.
+    /// Creates a schema from field definitions and unknown-field policies.
     ///
     /// # Parameters
     ///
     /// * `fields` - Field definitions keyed by metadata key.
-    /// * `unknown_field_policy` - Policy for undeclared keys.
+    /// * `unknown_metadata_field_policy` - Policy for undeclared metadata keys.
+    /// * `unknown_filter_field_policy` - Policy for undeclared filter keys.
     ///
     /// # Returns
     ///
@@ -67,11 +72,13 @@ impl MetadataSchema {
     #[inline]
     pub(crate) fn new(
         fields: BTreeMap<String, MetadataField>,
-        unknown_field_policy: UnknownFieldPolicy,
+        unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
+        unknown_filter_field_policy: UnknownFilterFieldPolicy,
     ) -> Self {
         Self {
             fields,
-            unknown_field_policy,
+            unknown_metadata_field_policy,
+            unknown_filter_field_policy,
         }
     }
 
@@ -103,15 +110,26 @@ impl MetadataSchema {
         self.field(key).map(MetadataField::data_type)
     }
 
-    /// Returns the unknown-field policy.
+    /// Returns the policy for undeclared metadata fields.
     ///
     /// # Returns
     ///
-    /// The policy applied to undeclared metadata and filter keys.
+    /// The policy applied to undeclared metadata keys.
     #[inline(always)]
     #[must_use]
-    pub fn unknown_field_policy(&self) -> UnknownFieldPolicy {
-        self.unknown_field_policy
+    pub fn unknown_metadata_field_policy(&self) -> UnknownMetadataFieldPolicy {
+        self.unknown_metadata_field_policy
+    }
+
+    /// Returns the policy for undeclared filter fields.
+    ///
+    /// # Returns
+    ///
+    /// The policy applied to filter keys not declared in this schema.
+    #[inline(always)]
+    #[must_use]
+    pub fn unknown_filter_field_policy(&self) -> UnknownFilterFieldPolicy {
+        self.unknown_filter_field_policy
     }
 
     /// Returns an iterator over schema fields in key-sorted order.
@@ -194,8 +212,8 @@ impl MetadataSchema {
             }
             Some(_) => Ok(()),
             None if matches!(
-                self.unknown_field_policy,
-                UnknownFieldPolicy::Reject
+                self.unknown_metadata_field_policy,
+                UnknownMetadataFieldPolicy::Reject
             ) =>
             {
                 Err(MetadataError::UnknownField {
@@ -212,7 +230,8 @@ impl Default for MetadataSchema {
     fn default() -> Self {
         Self {
             fields: BTreeMap::new(),
-            unknown_field_policy: UnknownFieldPolicy::Reject,
+            unknown_metadata_field_policy: UnknownMetadataFieldPolicy::Reject,
+            unknown_filter_field_policy: UnknownFilterFieldPolicy::Reject,
         }
     }
 }
