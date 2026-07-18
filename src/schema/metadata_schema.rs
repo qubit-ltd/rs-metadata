@@ -99,7 +99,9 @@ impl MetadataSchema {
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
-            if field.is_required() && !meta.contains_key(key) {
+            if field.is_required()
+                && meta.get_raw(key).is_none_or(Value::is_unset)
+            {
                 issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),

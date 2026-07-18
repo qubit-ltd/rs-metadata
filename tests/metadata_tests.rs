@@ -23,7 +23,6 @@ use qubit_metadata::{
     MetadataSchema,
 };
 use qubit_value::Value;
-use serde_json::json;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Port(u16);
@@ -123,6 +122,20 @@ fn try_get_missing_key_reports_error() {
 }
 
 #[test]
+fn test_try_get_unset_value_reports_missing_value() {
+    let metadata =
+        Metadata::new().with_raw("count", Value::Unset(DataType::Int64));
+
+    assert_eq!(
+        metadata.try_get::<i64>("count"),
+        Err(MetadataError::MissingValue {
+            key: "count".to_string(),
+            data_type: DataType::Int64,
+        })
+    );
+}
+
+#[test]
 fn try_get_type_mismatch_reports_expected_and_actual_type() {
     let mut meta = Metadata::new();
     meta.set("key", "not-a-number");
@@ -207,26 +220,23 @@ fn with_checked_rejects_unknown_field() {
 #[test]
 fn get_raw_and_set_raw_use_qubit_value() {
     let mut meta = Metadata::new();
-    meta.set_raw("raw", Value::Json(json!({"nested": true})));
+    meta.set_raw("raw", Value::String("stored".to_string()));
 
     assert_eq!(
         meta.get_raw("raw"),
-        Some(&Value::Json(json!({"nested": true})))
+        Some(&Value::String("stored".to_string()))
     );
-    assert_eq!(
-        meta.get::<serde_json::Value>("raw"),
-        Some(json!({"nested": true}))
-    );
+    assert_eq!(meta.get::<String>("raw").as_deref(), Some("stored"));
 }
 
 #[test]
 fn with_raw_builds_metadata_fluently() {
     let meta =
-        Metadata::new().with_raw("raw", Value::Json(json!({"nested": true})));
+        Metadata::new().with_raw("raw", Value::String("stored".to_string()));
 
     assert_eq!(
         meta.get_raw("raw"),
-        Some(&Value::Json(json!({"nested": true})))
+        Some(&Value::String("stored".to_string()))
     );
 }
 
@@ -236,12 +246,10 @@ fn data_type_reports_value_data_type() {
     meta.set("flag", true);
     meta.set("count", 7_i64);
     meta.set("name", "alice");
-    meta.set_raw("payload", Value::Json(json!({"nested": true})));
 
     assert_eq!(meta.data_type("flag"), Some(DataType::Bool));
     assert_eq!(meta.data_type("count"), Some(DataType::Int64));
     assert_eq!(meta.data_type("name"), Some(DataType::String));
-    assert_eq!(meta.data_type("payload"), Some(DataType::Json));
     assert_eq!(meta.data_type("missing"), None);
 }
 

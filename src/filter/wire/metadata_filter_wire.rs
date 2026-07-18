@@ -17,15 +17,9 @@ use crate::FilterMatchOptions;
 
 pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 2;
 
-#[inline]
-const fn metadata_filter_wire_version() -> u8 {
-    METADATA_FILTER_WIRE_VERSION
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct MetadataFilterWire {
-    #[serde(default = "metadata_filter_wire_version")]
     version: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) expr: Option<FilterExprWire>,

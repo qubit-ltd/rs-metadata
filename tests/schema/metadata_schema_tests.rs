@@ -15,6 +15,7 @@ use qubit_metadata::{
     MetadataValidationError,
     UnknownFieldPolicy,
 };
+use qubit_value::Value;
 
 fn single_issue(error: MetadataValidationError) -> MetadataError {
     let mut issues = error.into_issues();
@@ -64,6 +65,36 @@ fn schema_validate_reports_missing_required_field() {
             expected: DataType::String,
         }
     );
+}
+
+#[test]
+fn test_schema_validate_treats_unset_required_field_as_missing() {
+    let schema = MetadataSchema::builder()
+        .required("id", DataType::String)
+        .build();
+    let metadata =
+        Metadata::new().with_raw("id", Value::Unset(DataType::String));
+
+    assert_eq!(
+        schema.validate(&metadata),
+        Err(MetadataValidationError::from_issue(
+            MetadataError::MissingRequiredField {
+                key: "id".to_string(),
+                expected: DataType::String,
+            },
+        ))
+    );
+}
+
+#[test]
+fn test_schema_validate_accepts_unset_optional_field() {
+    let schema = MetadataSchema::builder()
+        .optional("score", DataType::Int64)
+        .build();
+    let metadata =
+        Metadata::new().with_raw("score", Value::Unset(DataType::Int64));
+
+    assert_eq!(schema.validate(&metadata), Ok(()));
 }
 
 #[test]

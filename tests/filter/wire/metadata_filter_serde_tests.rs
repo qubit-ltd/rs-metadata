@@ -7,10 +7,10 @@
 // =============================================================================
 //! Serde and wire format tests for [`qubit_metadata::MetadataFilter`].
 use crate::support::test_support::sample;
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
     MetadataFilter,
     MissingKeyPolicy,
-    NumericComparisonPolicy,
 };
 use serde_json::json;
 
@@ -155,6 +155,22 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
 }
 
 #[test]
+fn test_filter_options_deserialize_rejects_unknown_fields() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 2,
+        "options": {
+            "missing_key_policy": "match",
+            "numeric_comparison_policy": "exact",
+            "unexpected_policy": true
+        }
+    }))
+    .expect_err("unknown filter option should be rejected")
+    .to_string();
+
+    assert!(error.contains("unknown field `unexpected_policy`"));
+}
+
+#[test]
 fn filter_serde_encodes_match_all_and_match_none() {
     assert_eq!(
         serde_json::to_value(MetadataFilter::all()).unwrap(),
@@ -182,8 +198,8 @@ fn filter_serde_encodes_match_all_and_match_none() {
 }
 
 #[test]
-fn filter_deserialize_accepts_missing_wire_version_as_current() {
-    let f: MetadataFilter = serde_json::from_value(json!({
+fn test_filter_deserialize_rejects_missing_wire_version() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
         "expr": {
             "type": "condition",
             "condition": {
@@ -192,9 +208,10 @@ fn filter_deserialize_accepts_missing_wire_version_as_current() {
             }
         }
     }))
-    .unwrap();
+    .expect_err("missing wire version should be rejected")
+    .to_string();
 
-    assert!(f.matches(&sample()));
+    assert!(error.contains("missing field `version`"));
 }
 
 #[test]

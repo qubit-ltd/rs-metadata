@@ -17,9 +17,17 @@ use qubit_value::{
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MetadataError {
     /// The requested key does not exist.
     MissingKey(String),
+    /// A requested key exists but stores no concrete value.
+    MissingValue {
+        /// Metadata key being read.
+        key: String,
+        /// Data type declared by the unset value.
+        data_type: DataType,
+    },
     /// A stored value cannot be converted to the requested type.
     TypeMismatch {
         /// Metadata key being read or validated.
@@ -104,6 +112,10 @@ impl fmt::Display for MetadataError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::MissingKey(key) => write!(f, "Metadata key not found: {key}"),
+            Self::MissingValue { key, data_type } => write!(
+                f,
+                "Metadata key '{key}' has no concrete value (declared {data_type})"
+            ),
             Self::TypeMismatch {
                 key,
                 expected,
