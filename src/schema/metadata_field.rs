@@ -15,6 +15,7 @@ use serde::{
 
 /// Definition of one metadata field in a [`crate::MetadataSchema`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MetadataField {
     /// Runtime data type of this field.
     data_type: DataType,

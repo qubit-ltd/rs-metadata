@@ -14,8 +14,10 @@ use crate::filter::internal::{
 use crate::{
     Condition,
     FilterExpressionView,
+    FilterLimits,
     FilterMatchOptions,
     Metadata,
+    MetadataError,
     MetadataResult,
 };
 
@@ -95,12 +97,7 @@ impl FilterExpression {
         if right.is_true() {
             return left;
         }
-        let mut children = Vec::new();
-        Self::append_and_child(&mut children, left);
-        Self::append_and_child(&mut children, right);
-        Self {
-            node: FilterExpressionNode::And(children),
-        }
+        Self::combine_and(left, right)
     }
 
     /// Combines two expressions with logical OR.
@@ -123,12 +120,7 @@ impl FilterExpression {
         if right.is_false() {
             return left;
         }
-        let mut children = Vec::new();
-        Self::append_or_child(&mut children, left);
-        Self::append_or_child(&mut children, right);
-        Self {
-            node: FilterExpressionNode::Or(children),
-        }
+        Self::combine_or(left, right)
     }
 
     /// Creates an AND expression from a non-empty child list.
@@ -308,35 +300,99 @@ impl FilterExpression {
         }
     }
 
-    /// Appends a child while flattening nested AND expressions.
+    /// Validates this expression against resource limits.
     ///
     /// # Parameters
     ///
-    /// * `children` - Destination child list.
-    /// * `expression` - Expression to append.
-    #[inline]
-    fn append_and_child(children: &mut Vec<Self>, expression: Self) {
-        match expression.node {
-            FilterExpressionNode::And(mut nested) => {
-                children.append(&mut nested);
+    /// * `limits` - Bounds to enforce.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when every node and condition fits within `limits`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when depth, node count,
+    /// key length, or membership values exceed a configured bound.
+    pub(crate) fn validate_limits(
+        &self,
+        limits: FilterLimits,
+    ) -> MetadataResult<()> {
+        let mut node_count = 0;
+        self.validate_limits_at(limits, 1, &mut node_count)
+    }
+
+    /// Recursively validates one expression node at `depth`.
+    fn validate_limits_at(
+        &self,
+        limits: FilterLimits,
+        depth: usize,
+        node_count: &mut usize,
+    ) -> MetadataResult<()> {
+        if depth > limits.max_depth() {
+            return Err(MetadataError::FilterLimitExceeded {
+                limit: "depth",
+                maximum: limits.max_depth(),
+            });
+        }
+        *node_count += 1;
+        if *node_count > limits.max_nodes() {
+            return Err(MetadataError::FilterLimitExceeded {
+                limit: "node count",
+                maximum: limits.max_nodes(),
+            });
+        }
+        match &self.node {
+            FilterExpressionNode::Condition(condition) => {
+                condition.validate_limits(limits)
             }
-            node => children.push(Self { node }),
+            FilterExpressionNode::And(children)
+            | FilterExpressionNode::Or(children) => {
+                for child in children {
+                    child.validate_limits_at(limits, depth + 1, node_count)?;
+                }
+                Ok(())
+            }
+            FilterExpressionNode::Not(inner) => {
+                inner.validate_limits_at(limits, depth + 1, node_count)
+            }
+            FilterExpressionNode::True | FilterExpressionNode::False => Ok(()),
         }
     }
 
-    /// Appends a child while flattening nested OR expressions.
-    ///
-    /// # Parameters
-    ///
-    /// * `children` - Destination child list.
-    /// * `expression` - Expression to append.
-    #[inline]
-    fn append_or_child(children: &mut Vec<Self>, expression: Self) {
-        match expression.node {
-            FilterExpressionNode::Or(mut nested) => {
-                children.append(&mut nested);
+    /// Combines two non-constant expressions with logical AND while reusing a
+    /// left AND group.
+    fn combine_and(left: Self, right: Self) -> Self {
+        let mut children = match left.node {
+            FilterExpressionNode::And(children) => children,
+            node => vec![Self { node }],
+        };
+        match right.node {
+            FilterExpressionNode::And(mut nested) => {
+                children.append(&mut nested)
             }
             node => children.push(Self { node }),
+        }
+        Self {
+            node: FilterExpressionNode::And(children),
+        }
+    }
+
+    /// Combines two non-constant expressions with logical OR while reusing a
+    /// left OR group.
+    fn combine_or(left: Self, right: Self) -> Self {
+        let mut children = match left.node {
+            FilterExpressionNode::Or(children) => children,
+            node => vec![Self { node }],
+        };
+        match right.node {
+            FilterExpressionNode::Or(mut nested) => {
+                children.append(&mut nested)
+            }
+            node => children.push(Self { node }),
+        }
+        Self {
+            node: FilterExpressionNode::Or(children),
         }
     }
 }

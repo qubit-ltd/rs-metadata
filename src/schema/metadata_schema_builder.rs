@@ -14,7 +14,12 @@ use qubit_datatype::DataType;
 use crate::schema::{
     MetadataField,
     MetadataSchema,
-    UnknownFieldPolicy,
+    UnknownFilterFieldPolicy,
+    UnknownMetadataFieldPolicy,
+};
+use crate::{
+    MetadataError,
+    MetadataResult,
 };
 
 /// Builder for [`MetadataSchema`].
@@ -22,8 +27,12 @@ use crate::schema::{
 pub struct MetadataSchemaBuilder {
     /// Field definitions being built.
     fields: BTreeMap<String, MetadataField>,
-    /// Unknown-field policy copied into the built schema.
-    unknown_field_policy: UnknownFieldPolicy,
+    /// Policy for metadata keys not declared in the schema.
+    unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
+    /// Policy for filter keys not declared in the schema.
+    unknown_filter_field_policy: UnknownFilterFieldPolicy,
+    /// First duplicate declaration detected while building the schema.
+    error: Option<MetadataError>,
 }
 
 impl MetadataSchemaBuilder {
@@ -39,11 +48,8 @@ impl MetadataSchemaBuilder {
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn required(mut self, key: &str, data_type: DataType) -> Self {
-        let _ = self
-            .fields
-            .insert(key.to_string(), MetadataField::new(data_type, true));
-        self
+    pub fn required(self, key: &str, data_type: DataType) -> Self {
+        self.declare_field(key, MetadataField::new(data_type, true))
     }
 
     /// Adds an optional field definition.
@@ -58,10 +64,25 @@ impl MetadataSchemaBuilder {
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn optional(mut self, key: &str, data_type: DataType) -> Self {
-        let _ = self
-            .fields
-            .insert(key.to_string(), MetadataField::new(data_type, false));
+    pub fn optional(self, key: &str, data_type: DataType) -> Self {
+        self.declare_field(key, MetadataField::new(data_type, false))
+    }
+
+    /// Explicitly replaces a field definition.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to replace.
+    /// * `field` - Replacement definition.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder. This is the only declaration method that may
+    /// overwrite an existing field.
+    #[inline(always)]
+    #[must_use]
+    pub fn replace_field(mut self, key: &str, field: MetadataField) -> Self {
+        let _ = self.fields.insert(key.to_string(), field);
         self
     }
 
@@ -69,15 +90,37 @@ impl MetadataSchemaBuilder {
     ///
     /// # Parameters
     ///
-    /// * `policy` - Unknown-field policy to store.
+    /// * `policy` - Unknown metadata-field policy to store.
     ///
     /// # Returns
     ///
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn unknown_field_policy(mut self, policy: UnknownFieldPolicy) -> Self {
-        self.unknown_field_policy = policy;
+    pub fn unknown_metadata_field_policy(
+        mut self,
+        policy: UnknownMetadataFieldPolicy,
+    ) -> Self {
+        self.unknown_metadata_field_policy = policy;
+        self
+    }
+
+    /// Sets the policy for filter keys not declared by the schema.
+    ///
+    /// # Parameters
+    ///
+    /// * `policy` - Unknown filter-field policy to store.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
+    #[inline(always)]
+    #[must_use]
+    pub fn unknown_filter_field_policy(
+        mut self,
+        policy: UnknownFilterFieldPolicy,
+    ) -> Self {
+        self.unknown_filter_field_policy = policy;
         self
     }
 
@@ -86,9 +129,34 @@ impl MetadataSchemaBuilder {
     /// # Returns
     ///
     /// The immutable schema described by this builder.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::DuplicateSchemaField`] when `required` or
+    /// `optional` declare the same key more than once.
     #[inline(always)]
-    #[must_use]
-    pub fn build(self) -> MetadataSchema {
-        MetadataSchema::new(self.fields, self.unknown_field_policy)
+    pub fn build(self) -> MetadataResult<MetadataSchema> {
+        if let Some(error) = self.error {
+            return Err(error);
+        }
+        Ok(MetadataSchema::new(
+            self.fields,
+            self.unknown_metadata_field_policy,
+            self.unknown_filter_field_policy,
+        ))
+    }
+
+    /// Declares a field unless the key has already been declared.
+    fn declare_field(mut self, key: &str, field: MetadataField) -> Self {
+        if self.fields.contains_key(key) {
+            if self.error.is_none() {
+                self.error = Some(MetadataError::DuplicateSchemaField {
+                    key: key.to_string(),
+                });
+            }
+            return self;
+        }
+        let _ = self.fields.insert(key.to_string(), field);
+        self
     }
 }

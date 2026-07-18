@@ -88,9 +88,10 @@ assert!(previous.is_some());
 `MetadataSchema` uses `qubit_datatype::DataType`. This is useful when a storage
 backend requires metadata fields to be declared in advance, and it also lets the
 filter builder validate field/operator compatibility early. Its
-`UnknownFieldPolicy` applies to both metadata validation and filter validation:
-declared fields are still checked strictly, while unknown filter fields are
-accepted only when the policy is `Allow`.
+`UnknownMetadataFieldPolicy` and `UnknownFilterFieldPolicy` are independent:
+metadata can allow undeclared storage keys without also allowing unchecked
+filter keys. Both policies reject unknown keys by default; filter keys are
+accepted only with `UnknownFilterFieldPolicy::AllowUnchecked`.
 
 ```rust
 use qubit_datatype::DataType;
@@ -100,7 +101,8 @@ let schema = MetadataSchema::builder()
     .required("tenant_id", DataType::String)
     .required("score", DataType::Int64)
     .optional("source", DataType::String)
-    .build();
+    .build()
+    .expect("schema should build");
 
 let meta = Metadata::new()
     .with("tenant_id", "acme")
@@ -125,7 +127,8 @@ use qubit_metadata::{Metadata, MetadataFilter, MetadataSchema};
 let schema = MetadataSchema::builder()
     .required("status", DataType::String)
     .required("score", DataType::Int64)
-    .build();
+    .build()
+    .expect("schema should build");
 
 let filter = MetadataFilter::builder()
     .eq("status", "active")
@@ -263,7 +266,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-metadata = "0.7"
+qubit-metadata = "0.8"
 # Required when naming schema data types or numeric comparison policies.
 qubit-datatype = "0.7"
 # Required when using Metadata's raw Value APIs.
@@ -277,7 +280,7 @@ only the rich value families you need:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.7", features = ["chrono", "json"] }
+qubit-metadata = { version = "0.8", features = ["chrono", "json"] }
 ```
 
 Available features are `chrono`, `big-integer`, `big-decimal`, `big-number`,

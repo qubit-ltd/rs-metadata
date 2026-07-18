@@ -22,7 +22,9 @@ use super::wire::MetadataFilterWire;
 use crate::metadata::Metadata;
 use crate::{
     Condition,
+    FilterLimits,
     FilterMatchOptions,
+    MetadataError,
     MetadataResult,
 };
 
@@ -170,6 +172,44 @@ impl MetadataFilter {
         self
     }
 
+    /// Combines this filter with `other` using logical AND.
+    ///
+    /// # Parameters
+    ///
+    /// * `other` - Filter to combine with this filter.
+    ///
+    /// # Returns
+    ///
+    /// A filter that requires both operands to match.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::IncompatibleFilterOptions`] when the filters
+    /// use different match options, or [`MetadataError::FilterLimitExceeded`]
+    /// when their combined expression exceeds the default resource bounds.
+    pub fn try_and(self, other: Self) -> MetadataResult<Self> {
+        self.try_combine(other, FilterExpression::and)
+    }
+
+    /// Combines this filter with `other` using logical OR.
+    ///
+    /// # Parameters
+    ///
+    /// * `other` - Filter to combine with this filter.
+    ///
+    /// # Returns
+    ///
+    /// A filter that matches when either operand matches.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::IncompatibleFilterOptions`] when the filters
+    /// use different match options, or [`MetadataError::FilterLimitExceeded`]
+    /// when their combined expression exceeds the default resource bounds.
+    pub fn try_or(self, other: Self) -> MetadataResult<Self> {
+        self.try_combine(other, FilterExpression::or)
+    }
+
     /// Returns `true` if `meta` satisfies this filter.
     ///
     /// # Parameters
@@ -227,6 +267,42 @@ impl MetadataFilter {
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
         self.expression.visit_conditions(&mut visitor)
+    }
+
+    /// Validates this filter against resource limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Bounds to enforce.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the expression fits within `limits`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when the expression
+    /// exceeds a configured resource bound.
+    pub fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
+        self.expression.validate_limits(limits)
+    }
+
+    /// Combines two filters that must share identical match options.
+    fn try_combine(
+        self,
+        other: Self,
+        combine: fn(FilterExpression, FilterExpression) -> FilterExpression,
+    ) -> MetadataResult<Self> {
+        if self.options != other.options {
+            return Err(MetadataError::IncompatibleFilterOptions {
+                left: self.options,
+                right: other.options,
+            });
+        }
+        let filter =
+            Self::new(combine(self.expression, other.expression), self.options);
+        filter.validate_limits(FilterLimits::default())?;
+        Ok(filter)
     }
 }
 

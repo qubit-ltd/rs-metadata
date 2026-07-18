@@ -8,7 +8,10 @@
 //! Serde and wire format tests for [`qubit_metadata::MetadataFilter`].
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_metadata::MetadataFilter;
+use qubit_metadata::{
+    FilterLimits,
+    MetadataFilter,
+};
 use serde_json::json;
 
 #[test]
@@ -256,6 +259,26 @@ fn test_filter_deserialize_rejects_legacy_private_expr_format() {
     .to_string();
 
     assert!(error.contains("missing field"));
+}
+
+#[test]
+fn test_filter_deserialize_rejects_expression_exceeding_depth_limit() {
+    let mut expression = json!({ "type": "true" });
+    for _ in 0..=FilterLimits::default().max_depth() {
+        expression = json!({
+            "type": "not",
+            "expression": expression,
+        });
+    }
+
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 3,
+        "expression": expression,
+    }))
+    .expect_err("overly deep filter wire payload must be rejected")
+    .to_string();
+
+    assert!(error.contains("filter depth"));
 }
 
 #[test]
