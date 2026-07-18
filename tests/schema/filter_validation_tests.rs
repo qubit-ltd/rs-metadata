@@ -115,7 +115,7 @@ fn test_schema_validate_filter_accepts_numeric_literal_compatibility() {
 
 #[test]
 fn test_schema_validate_filter_classifies_every_data_type_for_ranges() {
-    for data_type in DataType::ALL {
+    for &data_type in DataType::ALL {
         let schema = MetadataSchema::builder()
             .required("field", data_type)
             .build();
