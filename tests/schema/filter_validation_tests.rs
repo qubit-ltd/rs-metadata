@@ -29,8 +29,8 @@ fn single_issue(error: MetadataValidationError) -> MetadataError {
 
 fn equality_filter_with_value(value: &Value) -> MetadataFilter {
     serde_json::from_value(json!({
-        "version": 2,
-        "expr": {
+        "version": 3,
+        "expression": {
             "type": "condition",
             "condition": {
                 "op": "eq",
@@ -43,7 +43,7 @@ fn equality_filter_with_value(value: &Value) -> MetadataFilter {
 }
 
 #[test]
-fn schema_validate_filter_uses_state_aware_numeric_classification() {
+fn test_schema_validate_filter_uses_state_aware_numeric_classification() {
     macro_rules! assert_numeric_compatible {
         ($value:expr) => {{
             let value = $value;
@@ -100,7 +100,7 @@ fn schema_validate_filter_uses_state_aware_numeric_classification() {
 }
 
 #[test]
-fn schema_validate_filter_accepts_numeric_literal_compatibility() {
+fn test_schema_validate_filter_accepts_numeric_literal_compatibility() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
         .build();
@@ -114,7 +114,7 @@ fn schema_validate_filter_accepts_numeric_literal_compatibility() {
 }
 
 #[test]
-fn schema_validate_filter_classifies_every_data_type_for_ranges() {
+fn test_schema_validate_filter_classifies_every_data_type_for_ranges() {
     for data_type in DataType::ALL {
         let schema = MetadataSchema::builder()
             .required("field", data_type)
@@ -139,7 +139,7 @@ fn schema_validate_filter_classifies_every_data_type_for_ranges() {
 
 #[test]
 #[cfg(feature = "big-number")]
-fn schema_validate_filter_accepts_big_number_fields() {
+fn test_schema_validate_filter_accepts_big_number_fields() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
         .required("count", DataType::BigInteger)
@@ -158,7 +158,7 @@ fn schema_validate_filter_accepts_big_number_fields() {
 }
 
 #[test]
-fn schema_validate_filter_visits_all_condition_kinds() {
+fn test_schema_validate_filter_visits_all_condition_kinds() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
         .required("status", DataType::String)
@@ -182,7 +182,7 @@ fn schema_validate_filter_visits_all_condition_kinds() {
 }
 
 #[test]
-fn schema_validate_filter_accepts_not_equal_condition() {
+fn test_schema_validate_filter_accepts_not_equal_condition() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -194,7 +194,7 @@ fn schema_validate_filter_accepts_not_equal_condition() {
 }
 
 #[test]
-fn schema_validate_filter_reports_ne_operator_for_incompatible_value() {
+fn test_schema_validate_filter_reports_ne_operator_for_incompatible_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -222,7 +222,7 @@ fn schema_validate_filter_reports_ne_operator_for_incompatible_value() {
 }
 
 #[test]
-fn schema_validate_filter_rejects_incompatible_value_predicate() {
+fn test_schema_validate_filter_rejects_incompatible_value_predicate() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -250,7 +250,7 @@ fn schema_validate_filter_rejects_incompatible_value_predicate() {
 }
 
 #[test]
-fn schema_validate_filter_rejects_unknown_value_predicate_field() {
+fn test_schema_validate_filter_rejects_unknown_value_predicate_field() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -270,7 +270,7 @@ fn schema_validate_filter_rejects_unknown_value_predicate_field() {
 }
 
 #[test]
-fn schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
+fn test_schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .unknown_field_policy(UnknownFieldPolicy::Allow)
@@ -285,7 +285,7 @@ fn schema_validate_filter_allows_unknown_fields_when_policy_allows_them() {
 }
 
 #[test]
-fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed()
+fn test_schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allowed()
  {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
@@ -316,7 +316,7 @@ fn schema_validate_filter_still_validates_declared_fields_when_unknowns_are_allo
 }
 
 #[test]
-fn schema_validate_filter_rejects_incompatible_not_in_value() {
+fn test_schema_validate_filter_rejects_incompatible_not_in_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -344,7 +344,7 @@ fn schema_validate_filter_rejects_incompatible_not_in_value() {
 }
 
 #[test]
-fn schema_validate_filter_rejects_unknown_exists_field() {
+fn test_schema_validate_filter_rejects_unknown_exists_field() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -364,7 +364,7 @@ fn schema_validate_filter_rejects_unknown_exists_field() {
 }
 
 #[test]
-fn schema_validate_filter_rejects_incompatible_range_value() {
+fn test_schema_validate_filter_rejects_incompatible_range_value() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -392,7 +392,7 @@ fn schema_validate_filter_rejects_incompatible_range_value() {
 }
 
 #[test]
-fn schema_validate_filter_reports_unknown_field() {
+fn test_schema_validate_filter_reports_unknown_field() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
         .build();
@@ -412,7 +412,7 @@ fn schema_validate_filter_reports_unknown_field() {
 }
 
 #[test]
-fn schema_validate_filter_collects_all_condition_issues() {
+fn test_schema_validate_filter_collects_all_condition_issues() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .required("score", DataType::Int64)
@@ -445,7 +445,7 @@ fn schema_validate_filter_collects_all_condition_issues() {
 }
 
 #[test]
-fn schema_validate_filter_collects_all_set_value_issues() {
+fn test_schema_validate_filter_collects_all_set_value_issues() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -471,7 +471,7 @@ fn schema_validate_filter_collects_all_set_value_issues() {
 }
 
 #[test]
-fn schema_validate_filter_reports_unknown_set_field_once() {
+fn test_schema_validate_filter_reports_unknown_set_field_once() {
     let schema = MetadataSchema::builder()
         .required("status", DataType::String)
         .build();
@@ -491,7 +491,7 @@ fn schema_validate_filter_reports_unknown_set_field_once() {
 }
 
 #[test]
-fn schema_validate_filter_rejects_range_on_bool() {
+fn test_schema_validate_filter_rejects_range_on_bool() {
     let schema = MetadataSchema::builder()
         .required("active", DataType::Bool)
         .build();
@@ -519,7 +519,7 @@ fn schema_validate_filter_rejects_range_on_bool() {
 
 #[test]
 #[cfg(feature = "big-decimal")]
-fn schema_validate_filter_accepts_exact_big_decimal_float_comparison() {
+fn test_schema_validate_filter_accepts_exact_big_decimal_float_comparison() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
         .build();
@@ -545,7 +545,7 @@ fn schema_validate_filter_accepts_exact_big_decimal_float_comparison() {
 }
 
 #[test]
-fn schema_validate_filter_accepts_all_non_nan_numeric_pairs() {
+fn test_schema_validate_filter_accepts_all_non_nan_numeric_pairs() {
     let schema = MetadataSchema::builder()
         .required("signed", DataType::Int64)
         .required("unsigned", DataType::UInt64)

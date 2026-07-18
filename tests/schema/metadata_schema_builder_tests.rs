@@ -5,6 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Tests for [`qubit_metadata::MetadataSchemaBuilder`].
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
@@ -13,7 +14,7 @@ use qubit_metadata::{
 };
 
 #[test]
-fn schema_builder_default_builds_empty_schema() {
+fn test_schema_builder_default_builds_empty_schema() {
     let schema = MetadataSchemaBuilder::default()
         .unknown_field_policy(UnknownFieldPolicy::Allow)
         .optional("id", DataType::String)

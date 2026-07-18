@@ -5,13 +5,13 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Tests for filter expression composition through the public filter API.
+//! Tests for filter-expression composition.
 
 use crate::support::test_support::sample;
 use qubit_metadata::MetadataFilter;
 
 #[test]
-fn filter_expr_and_requires_all_children_to_match() {
+fn test_filter_expression_and_requires_all_children_to_match() {
     let matching = MetadataFilter::builder()
         .eq("status", "active")
         .and_ge("score", 40_i64)
@@ -28,7 +28,7 @@ fn filter_expr_and_requires_all_children_to_match() {
 }
 
 #[test]
-fn filter_expr_or_matches_when_any_child_matches() {
+fn test_filter_expression_or_matches_when_any_child_matches() {
     let filter = MetadataFilter::builder()
         .eq("status", "inactive")
         .or_ge("score", 40_i64)
@@ -39,7 +39,7 @@ fn filter_expr_or_matches_when_any_child_matches() {
 }
 
 #[test]
-fn filter_expr_not_negates_nested_expression() {
+fn test_filter_expression_not_negates_nested_expression() {
     let filter = MetadataFilter::builder()
         .eq("status", "inactive")
         .not()

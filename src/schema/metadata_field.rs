@@ -24,6 +24,15 @@ pub struct MetadataField {
 
 impl MetadataField {
     /// Creates a field definition.
+    ///
+    /// # Parameters
+    ///
+    /// * `data_type` - Concrete data type accepted by the field.
+    /// * `required` - Whether metadata must provide a concrete value.
+    ///
+    /// # Returns
+    ///
+    /// A new field definition.
     #[inline]
     #[must_use]
     pub fn new(data_type: DataType, required: bool) -> Self {
@@ -34,13 +43,21 @@ impl MetadataField {
     }
 
     /// Returns the runtime data type of this field.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// The declared field data type.
+    #[inline(always)]
     pub fn data_type(&self) -> DataType {
         self.data_type
     }
 
     /// Returns `true` when this field is required.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// `true` when validation requires a concrete value for this field.
+    #[inline(always)]
     #[must_use]
     pub fn is_required(&self) -> bool {
         self.required

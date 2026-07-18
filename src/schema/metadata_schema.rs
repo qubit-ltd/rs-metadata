@@ -44,13 +44,26 @@ pub struct MetadataSchema {
 
 impl MetadataSchema {
     /// Creates a schema builder.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// An empty schema builder using the default unknown-field policy.
+    #[inline(always)]
     #[must_use]
     pub fn builder() -> MetadataSchemaBuilder {
         MetadataSchemaBuilder::default()
     }
 
     /// Creates a schema from field definitions and unknown-field policy.
+    ///
+    /// # Parameters
+    ///
+    /// * `fields` - Field definitions keyed by metadata key.
+    /// * `unknown_field_policy` - Policy for undeclared keys.
+    ///
+    /// # Returns
+    ///
+    /// A new immutable schema.
     #[inline]
     pub(crate) fn new(
         fields: BTreeMap<String, MetadataField>,
@@ -63,33 +76,63 @@ impl MetadataSchema {
     }
 
     /// Returns the field definition for `key`.
-    #[inline]
-    #[must_use]
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to look up.
+    ///
+    /// # Returns
+    ///
+    /// `Some` field definition for a declared key; otherwise, `None`.
+    #[inline(always)]
     pub fn field(&self, key: &str) -> Option<&MetadataField> {
         self.fields.get(key)
     }
 
     /// Returns the declared data type for `key`.
-    #[inline]
-    #[must_use]
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to look up.
+    ///
+    /// # Returns
+    ///
+    /// `Some` declared data type for a known key; otherwise, `None`.
+    #[inline(always)]
     pub fn field_type(&self, key: &str) -> Option<DataType> {
         self.field(key).map(MetadataField::data_type)
     }
 
     /// Returns the unknown-field policy.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// The policy applied to undeclared metadata and filter keys.
+    #[inline(always)]
     #[must_use]
     pub fn unknown_field_policy(&self) -> UnknownFieldPolicy {
         self.unknown_field_policy
     }
 
     /// Returns an iterator over schema fields in key-sorted order.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// An iterator yielding key and field-definition pairs.
+    #[inline(always)]
     pub fn fields(&self) -> impl Iterator<Item = (&str, &MetadataField)> {
         self.fields.iter().map(|(key, field)| (key.as_str(), field))
     }
 
     /// Validates a metadata object against this schema.
+    ///
+    /// # Parameters
+    ///
+    /// * `meta` - Metadata object to validate.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when every entry satisfies the schema.
     ///
     /// # Errors
     ///
@@ -122,6 +165,20 @@ impl MetadataSchema {
     }
 
     /// Validates one metadata entry against this schema.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to validate.
+    /// * `value` - Stored value to validate.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the entry is accepted.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
+    /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
     pub(crate) fn validate_entry(
         &self,
         key: &str,

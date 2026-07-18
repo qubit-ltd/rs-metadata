@@ -6,6 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! [`ConditionWire`].
+
 use qubit_value::Value;
 use serde::{
     Deserialize,
@@ -14,19 +15,76 @@ use serde::{
 
 use super::super::condition::Condition;
 
+/// Serializable representation of one [`Condition`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum ConditionWire {
-    Eq { key: String, value: Value },
-    Ne { key: String, value: Value },
-    Lt { key: String, value: Value },
-    Le { key: String, value: Value },
-    Gt { key: String, value: Value },
-    Ge { key: String, value: Value },
-    In { key: String, values: Vec<Value> },
-    NotIn { key: String, values: Vec<Value> },
-    Exists { key: String },
-    NotExists { key: String },
+    /// Equality condition.
+    Eq {
+        /// Metadata key.
+        key: String,
+        /// Expected value.
+        value: Value,
+    },
+    /// Inequality condition.
+    Ne {
+        /// Metadata key.
+        key: String,
+        /// Rejected value.
+        value: Value,
+    },
+    /// Exclusive upper-bound condition.
+    Lt {
+        /// Metadata key.
+        key: String,
+        /// Exclusive upper bound.
+        value: Value,
+    },
+    /// Inclusive upper-bound condition.
+    Le {
+        /// Metadata key.
+        key: String,
+        /// Inclusive upper bound.
+        value: Value,
+    },
+    /// Exclusive lower-bound condition.
+    Gt {
+        /// Metadata key.
+        key: String,
+        /// Exclusive lower bound.
+        value: Value,
+    },
+    /// Inclusive lower-bound condition.
+    Ge {
+        /// Metadata key.
+        key: String,
+        /// Inclusive lower bound.
+        value: Value,
+    },
+    /// Set-membership condition.
+    In {
+        /// Metadata key.
+        key: String,
+        /// Accepted values.
+        values: Vec<Value>,
+    },
+    /// Set-exclusion condition.
+    NotIn {
+        /// Metadata key.
+        key: String,
+        /// Rejected values.
+        values: Vec<Value>,
+    },
+    /// Concrete-value existence condition.
+    Exists {
+        /// Metadata key.
+        key: String,
+    },
+    /// Concrete-value non-existence condition.
+    NotExists {
+        /// Metadata key.
+        key: String,
+    },
 }
 
 impl From<&Condition> for ConditionWire {
@@ -73,6 +131,11 @@ impl From<&Condition> for ConditionWire {
 }
 
 impl ConditionWire {
+    /// Converts this wire value into its public condition representation.
+    ///
+    /// # Returns
+    ///
+    /// The decoded condition.
     pub(crate) fn into_condition(self) -> Condition {
         match self {
             Self::Eq { key, value } => Condition::Equal { key, value },

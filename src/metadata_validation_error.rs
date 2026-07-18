@@ -24,6 +24,14 @@ pub struct MetadataValidationError {
 
 impl MetadataValidationError {
     /// Creates an aggregate validation error from one issue.
+    ///
+    /// # Parameters
+    ///
+    /// * `issue` - Validation issue to store.
+    ///
+    /// # Returns
+    ///
+    /// An aggregate error containing exactly one issue.
     #[inline]
     #[must_use]
     pub fn from_issue(issue: MetadataError) -> Self {
@@ -36,35 +44,58 @@ impl MetadataValidationError {
     ///
     /// Returns `None` when `issues` is empty because an empty validation error
     /// has no actionable meaning.
+    ///
+    /// # Parameters
+    ///
+    /// * `issues` - Validation issues to aggregate.
+    ///
+    /// # Returns
+    ///
+    /// `Some` aggregate error for a non-empty list; otherwise, `None`.
     #[inline]
-    #[must_use]
     pub fn from_issues(issues: Vec<MetadataError>) -> Option<Self> {
         (!issues.is_empty()).then_some(Self { issues })
     }
 
     /// Returns the collected validation issues.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// The issues in discovery order.
+    #[inline(always)]
     #[must_use]
     pub fn issues(&self) -> &[MetadataError] {
         &self.issues
     }
 
     /// Returns the number of collected validation issues.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// The issue count.
+    #[inline(always)]
     #[must_use]
     pub fn len(&self) -> usize {
         self.issues.len()
     }
 
     /// Returns `true` when no issues are stored.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// `true` when the aggregate contains no issues.
+    #[inline(always)]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.issues.is_empty()
     }
 
     /// Converts this aggregate error into its collected issues.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// The owned issues in discovery order.
+    #[inline(always)]
     #[must_use]
     pub fn into_issues(self) -> Vec<MetadataError> {
         self.issues

@@ -12,7 +12,7 @@ use qubit_metadata::MetadataFilter;
 use serde_json::json;
 
 #[test]
-fn filter_expr_wire_serializes_nested_expression_tree() {
+fn test_filter_expression_wire_serializes_nested_expression_tree() {
     let filter = MetadataFilter::builder()
         .eq("status", "active")
         .and_ge("score", 10_i64)
@@ -23,7 +23,7 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
     let encoded =
         serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(
-        encoded["expr"],
+        encoded["expression"],
         json!({
             "type": "or",
             "children": [
@@ -56,7 +56,7 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
                 },
                 {
                     "type": "not",
-                    "expr": {
+                    "expression": {
                         "type": "and",
                         "children": [
                             {
@@ -91,10 +91,10 @@ fn filter_expr_wire_serializes_nested_expression_tree() {
 }
 
 #[test]
-fn filter_expr_wire_rejects_empty_groups() {
+fn test_filter_expression_wire_rejects_empty_groups() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 2,
-        "expr": {
+        "version": 3,
+        "expression": {
             "type": "or",
             "children": []
         }

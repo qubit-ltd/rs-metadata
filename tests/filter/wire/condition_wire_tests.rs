@@ -15,7 +15,7 @@ use qubit_value::{
 use serde_json::json;
 
 #[test]
-fn condition_wire_serializes_all_operator_tags() {
+fn test_condition_wire_serializes_all_operator_tags() {
     let conditions = [
         (
             Condition::Equal {
@@ -98,7 +98,7 @@ fn condition_wire_serializes_all_operator_tags() {
 }
 
 #[test]
-fn condition_wire_round_trips_finite_float_value() {
+fn test_condition_wire_round_trips_finite_float_value() {
     let condition = Condition::Equal {
         key: "score".to_string(),
         value: Value::Float64(1.5),
@@ -120,7 +120,7 @@ fn condition_wire_round_trips_finite_float_value() {
 }
 
 #[test]
-fn condition_wire_round_trips_wide_integer_values() {
+fn test_condition_wire_round_trips_wide_integer_values() {
     for (condition, expected) in [
         (
             Condition::Equal {
@@ -161,7 +161,7 @@ fn condition_wire_round_trips_wide_integer_values() {
 }
 
 #[test]
-fn metadata_wire_rejects_non_finite_float_values() {
+fn test_metadata_wire_rejects_non_finite_float_values() {
     for value in [
         Value::Float32(f32::NAN),
         Value::Float64(f64::INFINITY),

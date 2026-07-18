@@ -19,21 +19,21 @@ use qubit_value::Value;
 use url::Url;
 
 #[test]
-fn into_metadata_value_preserves_owned_string_type() {
+fn test_into_metadata_value_preserves_owned_string_type() {
     let value = String::from("active").into_metadata_value();
 
     assert_eq!(value, Value::String("active".to_string()));
 }
 
 #[test]
-fn into_metadata_value_preserves_borrowed_string_type() {
+fn test_into_metadata_value_preserves_borrowed_string_type() {
     let value = "active".into_metadata_value();
 
     assert_eq!(value, Value::String("active".to_string()));
 }
 
 #[test]
-fn into_metadata_value_preserves_integer_type() {
+fn test_into_metadata_value_preserves_integer_type() {
     let value = 42_i64.into_metadata_value();
 
     assert_eq!(value, Value::Int64(42));

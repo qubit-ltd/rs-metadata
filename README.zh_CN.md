@@ -29,7 +29,8 @@
 ## 设计目标
 
 - **类型明确**：用 `qubit_value::Value` 保留具体运行时类型。
-- **构造方便**：同时支持可变的 `set()` 和链式的 `with()`。
+- **构造方便**：支持可变链式 `set()`、返回旧值的 `insert()` 和取得所有权的
+  链式 `with()`。
 - **可选 schema**：用 `MetadataSchema` 校验字段名、必填字段和具体 `DataType`。
 - **过滤器 builder**：通过 builder 构造不可变的 `MetadataFilter`。
 - **序列化友好**：metadata、schema、filter 都支持 `serde`，便于配置、存储和跨服务传输。
@@ -38,9 +39,10 @@
 
 ### 1) 类型化 metadata 容器
 
-`Metadata` 是有序的 `String -> Value` 映射，支持 `get`、`set`、`try_get`、
-带 schema 校验的 `set_checked` / `with_checked`、链式 `with`、迭代、合并、
-保留和 `BTreeMap<String, Value>` 转换。
+`Metadata` 是有序的 `String -> Value` 映射，支持 `get`、链式 `set`、返回旧值的
+`insert`、`try_get`、带 schema 校验的 `set_checked` / `insert_checked` /
+`with_checked`、链式 `with`、迭代、合并、保留和
+`BTreeMap<String, Value>` 转换。
 
 ```rust
 use qubit_metadata::Metadata;
@@ -53,6 +55,29 @@ let meta = Metadata::new()
 assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
 assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
 ```
+
+可变写入可以链式调用且不会移动 metadata；需要旧值时使用 `insert()`：
+
+```rust
+use qubit_metadata::Metadata;
+
+let mut meta = Metadata::new();
+meta.set("author", "alice").set("priority", 3_i64);
+let previous = meta.insert("priority", 4_i64);
+assert!(previous.is_some());
+```
+
+`Value::Unset` 记录声明类型，但不提供具体值：
+
+| 操作 | 键缺失 | 存储 `Unset` | 具体值 |
+|---|---|---|---|
+| `contains_key` | `false` | `true` | `true` |
+| `get_raw` | `None` | `Some(Unset)` | `Some(value)` |
+| `data_type` | `None` | 声明类型 | 具体类型 |
+| `try_get` | `MissingKey` | `MissingValue` | 值或转换错误 |
+| required schema 字段 | 拒绝 | 拒绝 | 正常校验 |
+| filter `exists` | `false` | `false` | `true` |
+| 比较类 filter | 不匹配 | 不匹配 | 正常比较 |
 
 ### 2) 用 schema 做校验和存储规划
 
@@ -114,7 +139,7 @@ assert!(filter.matches(&meta));
 |------|------|
 | `eq` / `ne` | 相等 / 不相等 |
 | `gt` / `ge` / `lt` / `le` | 数值范围或字符串字典序比较 |
-| `exists` / `not_exists` | 键存在 / 不存在 |
+| `exists` / `not_exists` | 具体值存在 / 不存在 |
 | `in_set` / `not_in_set` | 集合包含 / 排除 |
 | `and_*` / `or_*` | 用明确连接词追加一个谓词 |
 | `and` / `or` / `and_not` / `or_not` | 追加分组子表达式 |
@@ -156,32 +181,39 @@ let filter = MetadataFilter::builder()
     .unwrap();
 ```
 
-负向谓词遇到缺失键时的行为由 `MissingKeyPolicy` 控制。数值相等、集合成员判断和范围
-谓词中的混合数值比较策略由 `NumericComparisonPolicy` 控制。
+缺失键和 `Value::Unset` 使用 fail-closed 三值逻辑。没有具体存储值的比较结果为
+unknown；`not` 不会把 unknown 变成 true，AND/OR 会继续传播 unknown，最终只有确定的
+true 才会让 `matches()` 返回 `true`。因此 `ne(key, value)` 与
+`not(eq(key, value))` 等价，并且都不会匹配缺失值或 unset 值。数值相等、集合成员判断
+和范围谓词中的混合数值比较策略由 `NumericComparisonPolicy` 控制。
 
 分组表达式必须至少包含一个谓词。例如 `and(|g| g)` 和 `or_not(|g| g)` 会被
 `build()` 拒绝，因为空分组通常代表调用方构造条件时漏传了约束。
 
 空集合是允许的。`in_set("key", [])` 不匹配任何 metadata 对象。
-`not_in_set("key", [])` 在 `key` 存在时匹配；如果 `key` 缺失，则和其他负向谓词一样，
-遵循当前配置的 `MissingKeyPolicy`。
+`not_in_set("key", [])` 只在 `key` 存储具体值时匹配；键缺失或值为 unset 时仍为
+unknown，因此不匹配。
 
-schema 校验 filter 时，混合数值兼容性遵循 filter 配置的 `NumericComparisonPolicy`，
-和实际匹配时使用同一套策略。任意非 NaN 数值表示都与任意数值字段兼容。
-`Exact` 不经舍入地比较表示出来的数学值。`Approximate` 会单独排序原生无穷值；有限
-原生浮点数参与时，它尝试把两个操作数投影为有限 `f64`，任一操作数无法完成这种投影
-时回退到精确比较。投影比较取决于当前操作数对且不满足传递性，因此不得用于排序、
-分组、实现 `Ord` 或有序键。实际调用 `MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：
-metadata 中存储的值必须和 schema 声明的具体字段类型一致。
+schema 校验 filter 时，任意非 NaN 数值表示都与任意数值字段兼容；这项兼容性检查与
+运行时比较策略无关。实际匹配时，`Exact` 不经舍入地比较表示出来的数学值。
+`Approximate` 会单独排序原生无穷值；有限原生浮点数参与时，它尝试把两个操作数投影为
+有限 `f64`，任一操作数无法完成这种投影时回退到精确比较。投影比较取决于当前操作数对
+且不满足传递性，因此不得用于排序、分组、实现 `Ord` 或有序键。实际调用
+`MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：metadata 中存储的值
+必须和 schema 声明的具体字段类型一致。
+
+通过 `MetadataFilter::expression()` 和 `FilterExpression::view()` 可以读取完整布尔
+结构。只读 view 会暴露 condition、AND、OR、NOT、true、false 节点，但不会暴露私有
+构造表示，因此存储 provider 可以安全地把 filter 翻译为自己的查询语言。
 
 ### 5) 版本化 filter 序列化格式
 
-`MetadataFilter` 序列化后使用明确的 wire format，包含 `version`、`expr` 和
+`MetadataFilter` 序列化后使用明确的 wire format，包含 `version`、`expression` 和
 `options` 字段。表达式节点使用 `type`，条件节点使用稳定的 `op` 操作符名，例如
 `eq`、`ge`、`in` 和 `not_exists`。单独序列化 `Condition` 时也使用同一套条件
 wire 表示。内部表达式树不属于序列化契约。`options` 中的策略枚举序列化为
-lowercase underscore 值，例如 `match`、`no_match`、`exact` 和 `approximate`。
-新的 `MetadataFilter` 序列化输出使用 wire version `2`；更早的 filter wire version
+lowercase underscore 值，例如 `exact` 和 `approximate`。新的 `MetadataFilter`
+序列化输出使用 wire version `3`；更早的 filter wire version
 会被拒绝。
 
 ## 错误处理
@@ -212,7 +244,7 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.6"
+qubit-metadata = "0.7"
 # 使用 schema 数据类型或数值比较策略时需要直接依赖。
 qubit-datatype = "0.7"
 # 使用 Metadata 的原始 Value API 时需要直接依赖。
@@ -225,7 +257,7 @@ qubit-value = "0.10"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", features = ["chrono", "json"] }
+qubit-metadata = { version = "0.7", features = ["chrono", "json"] }
 ```
 
 可用 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、
