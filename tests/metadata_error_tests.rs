@@ -11,7 +11,7 @@ use qubit_datatype::DataType;
 use qubit_metadata::MetadataError;
 
 #[test]
-fn display_formats_all_variants() {
+fn test_display_formats_all_variants() {
     assert_eq!(
         MetadataError::MissingKey("k".to_string()).to_string(),
         "Metadata key not found: k"
@@ -83,13 +83,13 @@ fn display_formats_all_variants() {
 }
 
 #[test]
-fn error_source_is_none() {
+fn test_error_source_is_none() {
     let error = MetadataError::MissingKey("x".to_string());
     assert!(std::error::Error::source(&error).is_none());
 }
 
 #[test]
-fn partial_eq_distinct_missing_keys() {
+fn test_partial_eq_distinct_missing_keys() {
     assert_eq!(
         MetadataError::MissingKey("a".to_string()),
         MetadataError::MissingKey("a".to_string())

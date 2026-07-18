@@ -8,19 +8,15 @@
 //! Serde and wire format tests for [`qubit_metadata::MetadataFilter`].
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_metadata::{
-    MetadataFilter,
-    MissingKeyPolicy,
-};
+use qubit_metadata::MetadataFilter;
 use serde_json::json;
 
 #[test]
-fn filter_serde_round_trip() {
+fn test_filter_serde_round_trip() {
     let f = MetadataFilter::builder()
         .eq("status", "active")
         .and_ge("score", 10_i64)
         .or_not(|g| g.exists("tag").and_eq("tag", "java"))
-        .missing_key_policy(MissingKeyPolicy::NoMatch)
         .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build()
         .unwrap();
@@ -32,7 +28,7 @@ fn filter_serde_round_trip() {
 }
 
 #[test]
-fn filter_serde_uses_versioned_wire_format() {
+fn test_filter_serde_uses_versioned_wire_format() {
     let f = MetadataFilter::builder()
         .eq("status", "active")
         .and_ge("score", 10_i64)
@@ -43,8 +39,8 @@ fn filter_serde_uses_versioned_wire_format() {
     assert_eq!(
         json,
         json!({
-            "version": 2,
-            "expr": {
+            "version": 3,
+            "expression": {
                 "type": "and",
                 "children": [
                     {
@@ -72,7 +68,6 @@ fn filter_serde_uses_versioned_wire_format() {
                 ]
             },
             "options": {
-                "missing_key_policy": "match",
                 "numeric_comparison_policy": "exact"
             }
         })
@@ -80,7 +75,7 @@ fn filter_serde_uses_versioned_wire_format() {
 }
 
 #[test]
-fn filter_serde_round_trips_all_condition_ops() {
+fn test_filter_serde_round_trips_all_condition_ops() {
     let f = MetadataFilter::builder()
         .eq("status", "active")
         .and_ne("status", "inactive")
@@ -117,10 +112,9 @@ fn filter_serde_round_trips_all_condition_ops() {
 }
 
 #[test]
-fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
+fn test_filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
     let filter = MetadataFilter::builder()
         .eq("status", "active")
-        .missing_key_policy(MissingKeyPolicy::NoMatch)
         .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build()
         .unwrap();
@@ -129,14 +123,13 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
     assert_eq!(
         json["options"],
         json!({
-            "missing_key_policy": "no_match",
             "numeric_comparison_policy": "approximate"
         })
     );
 
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 2,
-        "expr": {
+        "version": 3,
+        "expression": {
             "type": "condition",
             "condition": {
                 "op": "exists",
@@ -144,7 +137,6 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
             }
         },
         "options": {
-            "missing_key_policy": "NoMatch",
             "numeric_comparison_policy": "Approximate"
         }
     }))
@@ -157,9 +149,9 @@ fn filter_options_serde_uses_snake_case_and_rejects_pascal_case() {
 #[test]
 fn test_filter_options_deserialize_rejects_unknown_fields() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 2,
+        "version": 3,
+        "expression": { "type": "true" },
         "options": {
-            "missing_key_policy": "match",
             "numeric_comparison_policy": "exact",
             "unexpected_policy": true
         }
@@ -171,13 +163,15 @@ fn test_filter_options_deserialize_rejects_unknown_fields() {
 }
 
 #[test]
-fn filter_serde_encodes_match_all_and_match_none() {
+fn test_filter_serde_encodes_match_all_and_match_none() {
     assert_eq!(
         serde_json::to_value(MetadataFilter::all()).unwrap(),
         json!({
-            "version": 2,
+            "version": 3,
+            "expression": {
+                "type": "true"
+            },
             "options": {
-                "missing_key_policy": "match",
                 "numeric_comparison_policy": "exact"
             }
         })
@@ -185,12 +179,11 @@ fn filter_serde_encodes_match_all_and_match_none() {
     assert_eq!(
         serde_json::to_value(MetadataFilter::none()).unwrap(),
         json!({
-            "version": 2,
-            "expr": {
+            "version": 3,
+            "expression": {
                 "type": "false"
             },
             "options": {
-                "missing_key_policy": "match",
                 "numeric_comparison_policy": "exact"
             }
         })
@@ -200,7 +193,7 @@ fn filter_serde_encodes_match_all_and_match_none() {
 #[test]
 fn test_filter_deserialize_rejects_missing_wire_version() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "expr": {
+        "expression": {
             "type": "condition",
             "condition": {
                 "op": "exists",
@@ -215,9 +208,10 @@ fn test_filter_deserialize_rejects_missing_wire_version() {
 }
 
 #[test]
-fn filter_deserialize_rejects_legacy_private_expr_format() {
+fn test_filter_deserialize_rejects_legacy_private_expr_format() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "expr": {
+        "version": 3,
+        "expression": {
             "Or": [
                 {
                     "And": [
@@ -256,10 +250,6 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
                 },
                 "False"
             ]
-        },
-        "options": {
-            "missing_key_policy": "no_match",
-            "numeric_comparison_policy": "exact"
         }
     }))
     .unwrap_err()
@@ -269,20 +259,22 @@ fn filter_deserialize_rejects_legacy_private_expr_format() {
 }
 
 #[test]
-fn filter_deserialize_rejects_unsupported_wire_version() {
+fn test_filter_deserialize_rejects_unsupported_wire_version() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 3
+        "version": 4,
+        "expression": { "type": "true" }
     }))
     .unwrap_err()
     .to_string();
 
-    assert!(error.contains("unsupported MetadataFilter wire format version 3"));
+    assert!(error.contains("unsupported MetadataFilter wire format version 4"));
 }
 
 #[test]
-fn filter_deserialize_rejects_v1_wire_version() {
+fn test_filter_deserialize_rejects_v1_wire_version() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
-        "version": 1
+        "version": 1,
+        "expression": { "type": "true" }
     }))
     .unwrap_err()
     .to_string();
@@ -291,10 +283,33 @@ fn filter_deserialize_rejects_v1_wire_version() {
 }
 
 #[test]
-fn filter_deserialize_rejects_empty_wire_group() {
+fn test_filter_deserialize_rejects_v2_wire_version() {
     let error = serde_json::from_value::<MetadataFilter>(json!({
         "version": 2,
-        "expr": {
+        "expression": { "type": "true" }
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("unsupported MetadataFilter wire format version 2"));
+}
+
+#[test]
+fn test_filter_deserialize_rejects_missing_expression() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 3
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("missing field `expression`"));
+}
+
+#[test]
+fn test_filter_deserialize_rejects_empty_wire_group() {
+    let error = serde_json::from_value::<MetadataFilter>(json!({
+        "version": 3,
+        "expression": {
             "type": "and",
             "children": []
         }

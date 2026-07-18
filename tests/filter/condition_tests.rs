@@ -8,78 +8,112 @@
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
 use crate::support::test_support::sample;
-use qubit_datatype::NumericComparisonPolicy;
+use qubit_datatype::{
+    DataType,
+    NumericComparisonPolicy,
+};
 use qubit_metadata::{
     Condition,
-    FilterMatchOptions,
     Metadata,
     MetadataFilter,
-    MissingKeyPolicy,
 };
 use qubit_value::Value;
 
 #[test]
-fn eq_matches_equal_string() {
+fn test_eq_matches_equal_string() {
     let f = MetadataFilter::builder().eq("status", "active");
     assert!(f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn eq_does_not_match_different_string() {
+fn test_eq_does_not_match_different_string() {
     let f = MetadataFilter::builder().eq("status", "inactive");
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn eq_missing_key_does_not_match() {
+fn test_eq_missing_key_does_not_match() {
     let f = MetadataFilter::builder().eq("missing", "x");
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn ne_matches_different_value() {
+fn test_ne_matches_different_value() {
     let f = MetadataFilter::builder().ne("status", "inactive");
     assert!(f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn ne_does_not_match_equal_value() {
+fn test_ne_does_not_match_equal_value() {
     let f = MetadataFilter::builder().ne("status", "active");
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn ne_missing_key_matches_by_default() {
+fn test_ne_missing_key_is_fail_closed() {
     let f = MetadataFilter::builder().ne("missing", "anything");
-    assert!(f.build().unwrap().matches(&sample()));
+    assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn ne_missing_key_respects_policy() {
-    let f = MetadataFilter::builder().ne("missing", "anything");
-    let match_options = FilterMatchOptions {
-        missing_key_policy: MissingKeyPolicy::Match,
-        numeric_comparison_policy: NumericComparisonPolicy::Exact,
-    };
-    let no_match_options = FilterMatchOptions {
-        missing_key_policy: MissingKeyPolicy::NoMatch,
-        numeric_comparison_policy: NumericComparisonPolicy::Exact,
-    };
-    assert!(
-        f.clone()
-            .build()
-            .unwrap()
-            .matches_with_options(&sample(), match_options)
-    );
-    assert!(
-        !f.build()
-            .unwrap()
-            .matches_with_options(&sample(), no_match_options)
-    );
+fn test_missing_key_negative_predicates_and_negations_are_equivalent() {
+    let metadata = Metadata::new();
+    let not_equal = MetadataFilter::builder()
+        .ne("missing", "value")
+        .build()
+        .unwrap();
+    let not_equal_expression = MetadataFilter::builder()
+        .eq("missing", "value")
+        .not()
+        .build()
+        .unwrap();
+    let not_in = MetadataFilter::builder()
+        .not_in_set("missing", ["value"])
+        .build()
+        .unwrap();
+    let not_in_expression = MetadataFilter::builder()
+        .in_set("missing", ["value"])
+        .not()
+        .build()
+        .unwrap();
+
+    assert!(!not_equal.matches(&metadata));
+    assert!(!not_equal_expression.matches(&metadata));
+    assert!(!not_in.matches(&metadata));
+    assert!(!not_in_expression.matches(&metadata));
 }
 
 #[test]
-fn gt_integer() {
+fn test_unset_negative_predicates_and_negations_are_equivalent() {
+    let metadata =
+        Metadata::new().with_raw("missing", Value::Unset(DataType::String));
+    let not_equal = MetadataFilter::builder()
+        .ne("missing", "value")
+        .build()
+        .unwrap();
+    let not_equal_expression = MetadataFilter::builder()
+        .eq("missing", "value")
+        .not()
+        .build()
+        .unwrap();
+    let not_in = MetadataFilter::builder()
+        .not_in_set("missing", ["value"])
+        .build()
+        .unwrap();
+    let not_in_expression = MetadataFilter::builder()
+        .in_set("missing", ["value"])
+        .not()
+        .build()
+        .unwrap();
+
+    assert!(!not_equal.matches(&metadata));
+    assert!(!not_equal_expression.matches(&metadata));
+    assert!(!not_in.matches(&metadata));
+    assert!(!not_in_expression.matches(&metadata));
+}
+
+#[test]
+fn test_gt_integer() {
     assert!(
         MetadataFilter::builder()
             .gt("score", 10_i64)
@@ -104,7 +138,7 @@ fn gt_integer() {
 }
 
 #[test]
-fn ge_integer() {
+fn test_ge_integer() {
     assert!(
         MetadataFilter::builder()
             .ge("score", 42_i64)
@@ -129,7 +163,7 @@ fn ge_integer() {
 }
 
 #[test]
-fn lt_integer() {
+fn test_lt_integer() {
     assert!(
         MetadataFilter::builder()
             .lt("score", 100_i64)
@@ -154,7 +188,7 @@ fn lt_integer() {
 }
 
 #[test]
-fn le_integer() {
+fn test_le_integer() {
     assert!(
         MetadataFilter::builder()
             .le("score", 42_i64)
@@ -179,7 +213,7 @@ fn le_integer() {
 }
 
 #[test]
-fn gt_string_lexicographic() {
+fn test_gt_string_lexicographic() {
     assert!(
         MetadataFilter::builder()
             .gt("status", "aaa")
@@ -197,7 +231,7 @@ fn gt_string_lexicographic() {
 }
 
 #[test]
-fn range_filter_missing_key_does_not_match() {
+fn test_range_filter_missing_key_does_not_match() {
     assert!(
         !MetadataFilter::builder()
             .gt("missing", 0_i64)
@@ -229,7 +263,7 @@ fn range_filter_missing_key_does_not_match() {
 }
 
 #[test]
-fn range_filter_float_values() {
+fn test_range_filter_float_values() {
     assert!(
         MetadataFilter::builder()
             .gt("ratio", 0.5_f64)
@@ -261,7 +295,7 @@ fn range_filter_float_values() {
 }
 
 #[test]
-fn range_filter_u64_values() {
+fn test_range_filter_u64_values() {
     let mut m = Metadata::new();
     m.set("count", 10_u64);
 
@@ -296,7 +330,7 @@ fn range_filter_u64_values() {
 }
 
 #[test]
-fn range_filter_mixed_signed_unsigned_values() {
+fn test_range_filter_mixed_signed_unsigned_values() {
     let mut a = Metadata::new();
     a.set("score", -1_i64);
     assert!(
@@ -319,7 +353,7 @@ fn range_filter_mixed_signed_unsigned_values() {
 }
 
 #[test]
-fn range_filter_mixed_signed_unsigned_with_huge_unsigned_values() {
+fn test_range_filter_mixed_signed_unsigned_with_huge_unsigned_values() {
     let huge = (i64::MAX as u64) + 10;
 
     let mut negative = Metadata::new();
@@ -368,7 +402,7 @@ fn range_filter_mixed_signed_unsigned_with_huge_unsigned_values() {
 }
 
 #[test]
-fn range_filter_mixed_u64_and_f64() {
+fn test_range_filter_mixed_u64_and_f64() {
     let mut m = Metadata::new();
     m.set("count", 5_u64);
 
@@ -389,7 +423,7 @@ fn range_filter_mixed_u64_and_f64() {
 }
 
 #[test]
-fn range_filter_large_integer_vs_float_precision_regression() {
+fn test_range_filter_large_integer_vs_float_precision_regression() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_i64);
 
@@ -410,7 +444,7 @@ fn range_filter_large_integer_vs_float_precision_regression() {
 }
 
 #[test]
-fn range_filter_large_unsigned_vs_float_precision_regression() {
+fn test_range_filter_large_unsigned_vs_float_precision_regression() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_u64);
 
@@ -431,7 +465,7 @@ fn range_filter_large_unsigned_vs_float_precision_regression() {
 }
 
 #[test]
-fn range_filter_float_vs_integer_and_huge_unsigned() {
+fn test_range_filter_float_vs_integer_and_huge_unsigned() {
     let huge_u = (i64::MAX as u64) + 1;
 
     let mut m = Metadata::new();
@@ -456,7 +490,7 @@ fn range_filter_float_vs_integer_and_huge_unsigned() {
 }
 
 #[test]
-fn range_filter_large_integer_float_non_integral_fallback() {
+fn test_range_filter_large_integer_float_non_integral_fallback() {
     let mut signed = Metadata::new();
     signed.set("n", 9_007_199_254_740_993_i64);
     assert!(
@@ -486,7 +520,7 @@ fn range_filter_large_integer_float_non_integral_fallback() {
 }
 
 #[test]
-fn approximate_number_policy_projects_float_pairs_for_large_i64() {
+fn test_approximate_number_policy_projects_float_pairs_for_large_i64() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_i64);
 
@@ -500,7 +534,7 @@ fn approximate_number_policy_projects_float_pairs_for_large_i64() {
 }
 
 #[test]
-fn approximate_number_policy_projects_float_pairs_for_large_u64() {
+fn test_approximate_number_policy_projects_float_pairs_for_large_u64() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_u64);
 
@@ -514,7 +548,7 @@ fn approximate_number_policy_projects_float_pairs_for_large_u64() {
 }
 
 #[test]
-fn range_filter_covers_numeric_value_variants() {
+fn test_range_filter_covers_numeric_value_variants() {
     macro_rules! assert_gt {
         ($stored:expr, $bound:expr) => {
             let meta = Metadata::new().with("n", $stored);
@@ -540,7 +574,7 @@ fn range_filter_covers_numeric_value_variants() {
 }
 
 #[test]
-fn range_filter_i128_and_u128_float_edges_respect_policy() {
+fn test_range_filter_i128_and_u128_float_edges_respect_policy() {
     let signed = Metadata::new().with("n", i128::MAX);
     let signed_exact = MetadataFilter::builder().gt("n", 0.5_f64);
     assert!(signed_exact.clone().build().unwrap().matches(&signed));
@@ -565,7 +599,7 @@ fn range_filter_i128_and_u128_float_edges_respect_policy() {
 }
 
 #[test]
-fn range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
+fn test_range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
     let negative = Metadata::new().with("n", -1_i128);
     assert!(
         MetadataFilter::builder()
@@ -587,7 +621,7 @@ fn range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
 
 #[test]
 #[cfg(feature = "big-integer")]
-fn big_integer_equality_matches_in_exact_policy() {
+fn test_big_integer_equality_matches_in_exact_policy() {
     let mut m = Metadata::new();
     m.set("n", num_bigint::BigInt::from(i128::MAX) + 1_i32);
 
@@ -610,7 +644,7 @@ fn big_integer_equality_matches_in_exact_policy() {
 
 #[test]
 #[cfg(feature = "big-integer")]
-fn big_integer_range_matches_integral_values_exactly() {
+fn test_big_integer_range_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", num_bigint::BigInt::from(u128::MAX) + 1_u32);
 
@@ -632,7 +666,7 @@ fn big_integer_range_matches_integral_values_exactly() {
 
 #[test]
 #[cfg(feature = "big-decimal")]
-fn big_decimal_equality_matches_integral_values_exactly() {
+fn test_big_decimal_equality_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", bigdecimal::BigDecimal::from(10_i64));
 
@@ -654,7 +688,7 @@ fn big_decimal_equality_matches_integral_values_exactly() {
 
 #[test]
 #[cfg(feature = "big-number")]
-fn big_decimal_range_matches_big_integer_exactly() {
+fn test_big_decimal_range_matches_big_integer_exactly() {
     let mut m = Metadata::new();
     m.set(
         "n",
@@ -679,7 +713,7 @@ fn big_decimal_range_matches_big_integer_exactly() {
 
 #[test]
 #[cfg(feature = "big-decimal")]
-fn big_decimal_float_comparison_distinguishes_exact_and_approximate() {
+fn test_big_decimal_float_comparison_distinguishes_exact_and_approximate() {
     let mut m = Metadata::new();
     m.set("n", "0.1".parse::<bigdecimal::BigDecimal>().unwrap());
 
@@ -693,7 +727,7 @@ fn big_decimal_float_comparison_distinguishes_exact_and_approximate() {
 
 #[test]
 #[cfg(feature = "big-integer")]
-fn big_integer_comparison_accepts_integral_variants() {
+fn test_big_integer_comparison_accepts_integral_variants() {
     macro_rules! assert_eq_big_integer {
         ($stored:expr) => {
             let meta = Metadata::new().with("n", $stored);
@@ -720,7 +754,7 @@ fn big_integer_comparison_accepts_integral_variants() {
 }
 
 #[test]
-fn range_filter_incomparable_types_do_not_match() {
+fn test_range_filter_incomparable_types_do_not_match() {
     assert!(
         !MetadataFilter::builder()
             .gt("status", 1_i64)
@@ -738,7 +772,7 @@ fn range_filter_incomparable_types_do_not_match() {
 }
 
 #[test]
-fn exists_present_key() {
+fn test_exists_present_key() {
     assert!(
         MetadataFilter::builder()
             .exists("status")
@@ -749,7 +783,7 @@ fn exists_present_key() {
 }
 
 #[test]
-fn exists_missing_key() {
+fn test_exists_missing_key() {
     assert!(
         !MetadataFilter::builder()
             .exists("nope")
@@ -760,7 +794,7 @@ fn exists_missing_key() {
 }
 
 #[test]
-fn not_exists_missing_key() {
+fn test_not_exists_missing_key() {
     assert!(
         MetadataFilter::builder()
             .not_exists("nope")
@@ -771,7 +805,7 @@ fn not_exists_missing_key() {
 }
 
 #[test]
-fn not_exists_present_key() {
+fn test_not_exists_present_key() {
     assert!(
         !MetadataFilter::builder()
             .not_exists("status")
@@ -803,124 +837,92 @@ fn test_presence_predicates_treat_unset_value_as_missing() {
 }
 
 #[test]
-fn test_negative_predicates_apply_missing_key_policy_to_unset_value() {
+fn test_negative_predicates_treat_unset_value_as_unknown() {
     let metadata = Metadata::new()
         .with_raw("status", Value::Unset(qubit_datatype::DataType::String));
     let not_equal = MetadataFilter::builder().ne("status", "active");
     let not_in = MetadataFilter::builder().not_in_set("status", ["active"]);
 
     assert!(
-        not_equal
-            .clone()
+        !not_equal
             .build()
             .expect("not-equal filter should build")
             .matches(&metadata)
     );
     assert!(
-        !not_equal
-            .missing_key_policy(MissingKeyPolicy::NoMatch)
-            .build()
-            .expect("strict not-equal filter should build")
-            .matches(&metadata)
-    );
-    assert!(
-        not_in
-            .clone()
+        !not_in
             .build()
             .expect("not-in filter should build")
-            .matches(&metadata)
-    );
-    assert!(
-        !not_in
-            .missing_key_policy(MissingKeyPolicy::NoMatch)
-            .build()
-            .expect("strict not-in filter should build")
             .matches(&metadata)
     );
 }
 
 #[test]
-fn in_values_matches() {
+fn test_in_values_matches() {
     let f = MetadataFilter::builder().in_set("status", ["active", "pending"]);
     assert!(f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn in_values_no_match() {
+fn test_in_values_no_match() {
     let f = MetadataFilter::builder().in_set("status", ["inactive", "pending"]);
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn in_values_missing_key() {
+fn test_in_values_missing_key() {
     let f = MetadataFilter::builder().in_set("missing", ["x"]);
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn in_values_empty_set_matches_nothing() {
+fn test_in_values_empty_set_matches_nothing() {
     let f = MetadataFilter::builder().in_set("status", [] as [&str; 0]);
     assert!(!f.clone().build().unwrap().matches(&sample()));
     assert!(!f.build().unwrap().matches(&Metadata::new()));
 }
 
 #[test]
-fn not_in_values_matches() {
+fn test_not_in_values_matches() {
     let f =
         MetadataFilter::builder().not_in_set("status", ["inactive", "pending"]);
     assert!(f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn not_in_values_no_match() {
+fn test_not_in_values_no_match() {
     let f =
         MetadataFilter::builder().not_in_set("status", ["active", "pending"]);
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn not_in_values_missing_key_matches() {
+fn test_not_in_values_missing_key_does_not_match() {
     let f = MetadataFilter::builder().not_in_set("missing", ["x"]);
-    assert!(f.build().unwrap().matches(&sample()));
+    assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn not_in_values_missing_key_respects_policy() {
-    let f = MetadataFilter::builder().not_in_set("missing", ["x"]);
-    let strict = f.clone().missing_key_policy(MissingKeyPolicy::NoMatch);
-    assert!(f.build().unwrap().matches(&sample()));
-    assert!(!strict.build().unwrap().matches(&sample()));
-}
-
-#[test]
-fn not_in_values_empty_set_matches_present_keys_and_respects_missing_key_policy()
- {
+fn test_not_in_values_empty_set_requires_a_concrete_value() {
     let f = MetadataFilter::builder().not_in_set("status", [] as [&str; 0]);
     assert!(f.build().unwrap().matches(&sample()));
 
     let missing =
         MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
-    let strict = missing
-        .clone()
-        .missing_key_policy(MissingKeyPolicy::NoMatch);
-    assert!(missing.build().unwrap().matches(&sample()));
-    assert!(!strict.build().unwrap().matches(&sample()));
+    assert!(!missing.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn missing_key_policy_applies_recursively_in_filter_tree() {
+fn test_missing_values_remain_unknown_in_nested_filter_tree() {
     let f = MetadataFilter::builder()
         .ne("missing", "x")
         .and_not_in_set("missing-2", ["y"])
         .or_eq("status", "inactive");
-    assert!(f.clone().build().unwrap().matches(&sample()));
-
-    let strict = f.missing_key_policy(MissingKeyPolicy::NoMatch);
-    assert!(!strict.build().unwrap().matches(&sample()));
+    assert!(!f.build().unwrap().matches(&sample()));
 }
 
 #[test]
-fn condition_serde_round_trip() {
+fn test_condition_serde_round_trip() {
     let c = Condition::Equal {
         key: "status".into(),
         value: Value::String("active".to_string()),

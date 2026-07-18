@@ -20,7 +20,10 @@ use qubit_value::{
 #[non_exhaustive]
 pub enum MetadataError {
     /// The requested key does not exist.
-    MissingKey(String),
+    MissingKey(
+        /// Missing metadata key.
+        String,
+    ),
     /// A requested key exists but stores no concrete value.
     MissingValue {
         /// Metadata key being read.
@@ -77,6 +80,17 @@ pub enum MetadataError {
 impl MetadataError {
     /// Builds a conversion error for `key` using the requested type and stored
     /// value.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key being converted.
+    /// * `expected` - Requested target data type.
+    /// * `value` - Stored value that failed conversion.
+    /// * `error` - Lower-level conversion error.
+    ///
+    /// # Returns
+    ///
+    /// A structured [`MetadataError::TypeMismatch`] error.
     #[inline]
     pub(crate) fn conversion_error(
         key: &str,
@@ -93,6 +107,16 @@ impl MetadataError {
     }
 
     /// Builds a schema type-mismatch error for `key`.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key being validated.
+    /// * `expected` - Schema-declared data type.
+    /// * `actual` - Actual value data type.
+    ///
+    /// # Returns
+    ///
+    /// A structured [`MetadataError::TypeMismatch`] error.
     #[inline]
     pub(crate) fn type_mismatch(
         key: &str,

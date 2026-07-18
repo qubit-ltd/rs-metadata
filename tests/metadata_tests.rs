@@ -9,14 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use qubit_datatype::{
-    DataConversionError,
-    DataConversionOptions,
-    DataConversionTarget,
-    DataConverter,
-    DataType,
-    DataTypeOf,
-};
+use qubit_datatype::DataType;
 use qubit_metadata::{
     Metadata,
     MetadataError,
@@ -24,44 +17,32 @@ use qubit_metadata::{
 };
 use qubit_value::Value;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Port(u16);
+mod support;
 
-impl DataTypeOf for Port {
-    const DATA_TYPE: DataType = DataType::UInt16;
-}
-
-impl DataConversionTarget for Port {
-    fn convert_from(
-        source: &DataConverter<'_>,
-        options: &DataConversionOptions,
-    ) -> Result<Self, DataConversionError> {
-        u16::convert_from(source, options).map(Self)
-    }
-}
+use support::port::Port;
 
 #[test]
-fn typed_reads_accept_downstream_conversion_targets() {
+fn test_typed_reads_accept_downstream_conversion_targets() {
     let metadata =
         Metadata::new().with_raw("port", Value::String("8080".to_owned()));
     assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
 }
 
 #[test]
-fn new_is_empty() {
+fn test_new_is_empty() {
     let meta = Metadata::new();
     assert!(meta.is_empty());
     assert_eq!(meta.len(), 0);
 }
 
 #[test]
-fn default_is_empty() {
+fn test_default_is_empty() {
     let meta = Metadata::default();
     assert!(meta.is_empty());
 }
 
 #[test]
-fn with_builds_metadata_fluently() {
+fn test_with_builds_metadata_fluently() {
     let meta = Metadata::new()
         .with("author", "alice")
         .with("priority", 42_i64)
@@ -73,7 +54,7 @@ fn with_builds_metadata_fluently() {
 }
 
 #[test]
-fn set_and_get_scalar_values() {
+fn test_set_and_get_scalar_values() {
     let mut meta = Metadata::new();
     meta.set("author", "alice");
     meta.set("priority", 42_i64);
@@ -90,24 +71,33 @@ fn set_and_get_scalar_values() {
 }
 
 #[test]
-fn set_overwrites_previous_value() {
+fn test_insert_returns_previous_value() {
     let mut meta = Metadata::new();
-    meta.set("key", "first");
-    let old = meta.set("key", "second");
+    assert_eq!(meta.insert("key", "first"), None);
+    let old = meta.insert("key", "second");
 
     assert_eq!(old, Some(Value::String("first".to_string())));
     assert_eq!(meta.get::<String>("key").as_deref(), Some("second"));
 }
 
 #[test]
-fn get_missing_key_returns_none() {
+fn test_set_supports_mutable_chaining() {
+    let mut meta = Metadata::new();
+    meta.set("first", 1_i64).set("second", 2_i64);
+
+    assert_eq!(meta.get::<i64>("first"), Some(1));
+    assert_eq!(meta.get::<i64>("second"), Some(2));
+}
+
+#[test]
+fn test_get_missing_key_returns_none() {
     let meta = Metadata::new();
     let value: Option<String> = meta.get("missing");
     assert!(value.is_none());
 }
 
 #[test]
-fn get_wrong_type_returns_none() {
+fn test_get_wrong_type_returns_none() {
     let mut meta = Metadata::new();
     meta.set("key", "not-a-number");
     let value: Option<i64> = meta.get("key");
@@ -115,7 +105,7 @@ fn get_wrong_type_returns_none() {
 }
 
 #[test]
-fn try_get_missing_key_reports_error() {
+fn test_try_get_missing_key_reports_error() {
     let meta = Metadata::new();
     let error = meta.try_get::<String>("missing").unwrap_err();
     assert_eq!(error, MetadataError::MissingKey("missing".to_string()));
@@ -136,7 +126,7 @@ fn test_try_get_unset_value_reports_missing_value() {
 }
 
 #[test]
-fn try_get_type_mismatch_reports_expected_and_actual_type() {
+fn test_try_get_type_mismatch_reports_expected_and_actual_type() {
     let mut meta = Metadata::new();
     meta.set("key", "not-a-number");
 
@@ -158,7 +148,7 @@ fn try_get_type_mismatch_reports_expected_and_actual_type() {
 }
 
 #[test]
-fn get_or_returns_default_for_missing_key_or_type_mismatch() {
+fn test_get_or_returns_default_for_missing_key_or_type_mismatch() {
     let mut meta = Metadata::new();
     meta.set("key", "text");
 
@@ -167,18 +157,34 @@ fn get_or_returns_default_for_missing_key_or_type_mismatch() {
 }
 
 #[test]
-fn set_checked_returns_previous_value() {
+fn test_insert_checked_returns_previous_value() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
         .build();
     let mut meta = Metadata::new();
-    meta.set_checked(&schema, "key", "first").unwrap();
-    let old = meta.set_checked(&schema, "key", "second").unwrap();
+    meta.insert_checked(&schema, "key", "first").unwrap();
+    let old = meta.insert_checked(&schema, "key", "second").unwrap();
     assert_eq!(old, Some(Value::String("first".to_string())));
 }
 
 #[test]
-fn set_checked_rejects_type_mismatch() {
+fn test_set_checked_supports_mutable_chaining() {
+    let schema = MetadataSchema::builder()
+        .required("first", DataType::Int64)
+        .required("second", DataType::Int64)
+        .build();
+    let mut meta = Metadata::new();
+    meta.set_checked(&schema, "first", 1_i64)
+        .unwrap()
+        .set_checked(&schema, "second", 2_i64)
+        .unwrap();
+
+    assert_eq!(meta.get::<i64>("first"), Some(1));
+    assert_eq!(meta.get::<i64>("second"), Some(2));
+}
+
+#[test]
+fn test_set_checked_rejects_type_mismatch() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
         .build();
@@ -201,7 +207,7 @@ fn set_checked_rejects_type_mismatch() {
 }
 
 #[test]
-fn with_checked_rejects_unknown_field() {
+fn test_with_checked_rejects_unknown_field() {
     let schema = MetadataSchema::builder()
         .required("known", DataType::String)
         .build();
@@ -218,19 +224,34 @@ fn with_checked_rejects_unknown_field() {
 }
 
 #[test]
-fn get_raw_and_set_raw_use_qubit_value() {
+fn test_get_raw_and_set_raw_support_mutable_chaining() {
     let mut meta = Metadata::new();
-    meta.set_raw("raw", Value::String("stored".to_string()));
+    meta.set_raw("raw", Value::String("stored".to_string()))
+        .set_raw("count", Value::Int64(7));
 
     assert_eq!(
         meta.get_raw("raw"),
         Some(&Value::String("stored".to_string()))
     );
     assert_eq!(meta.get::<String>("raw").as_deref(), Some("stored"));
+    assert_eq!(meta.get::<i64>("count"), Some(7));
 }
 
 #[test]
-fn with_raw_builds_metadata_fluently() {
+fn test_insert_raw_returns_previous_value() {
+    let mut meta = Metadata::new();
+    assert_eq!(
+        meta.insert_raw("raw", Value::String("first".to_string())),
+        None
+    );
+    assert_eq!(
+        meta.insert_raw("raw", Value::String("second".to_string())),
+        Some(Value::String("first".to_string()))
+    );
+}
+
+#[test]
+fn test_with_raw_builds_metadata_fluently() {
     let meta =
         Metadata::new().with_raw("raw", Value::String("stored".to_string()));
 
@@ -241,7 +262,7 @@ fn with_raw_builds_metadata_fluently() {
 }
 
 #[test]
-fn data_type_reports_value_data_type() {
+fn test_data_type_reports_value_data_type() {
     let mut meta = Metadata::new();
     meta.set("flag", true);
     meta.set("count", 7_i64);
@@ -254,7 +275,7 @@ fn data_type_reports_value_data_type() {
 }
 
 #[test]
-fn metadata_error_display_messages_are_human_readable() {
+fn test_metadata_error_display_messages_are_human_readable() {
     let missing = MetadataError::MissingKey("missing".to_string());
     assert_eq!(missing.to_string(), "Metadata key not found: missing");
 
@@ -273,7 +294,7 @@ fn metadata_error_display_messages_are_human_readable() {
 }
 
 #[test]
-fn contains_key_and_len_track_entries() {
+fn test_contains_key_and_len_track_entries() {
     let mut meta = Metadata::new();
     assert!(!meta.contains_key("k"));
     assert_eq!(meta.len(), 0);
@@ -287,7 +308,7 @@ fn contains_key_and_len_track_entries() {
 }
 
 #[test]
-fn remove_and_clear_work() {
+fn test_remove_and_clear_work() {
     let mut meta = Metadata::new();
     meta.set("a", 1_i64);
     meta.set("b", 2_i64);
@@ -300,7 +321,7 @@ fn remove_and_clear_work() {
 }
 
 #[test]
-fn iterators_return_sorted_entries() {
+fn test_iterators_return_sorted_entries() {
     let mut meta = Metadata::new();
     meta.set("z", "last");
     meta.set("a", 1_i64);
@@ -324,7 +345,7 @@ fn iterators_return_sorted_entries() {
 }
 
 #[test]
-fn into_iter_consumes_metadata() {
+fn test_into_iter_consumes_metadata() {
     let mut meta = Metadata::new();
     meta.set("x", 10_i64);
 
@@ -333,14 +354,14 @@ fn into_iter_consumes_metadata() {
 }
 
 #[test]
-fn ref_into_iter_counts_entries() {
+fn test_ref_into_iter_counts_entries() {
     let mut meta = Metadata::new();
     meta.set("k", "v");
     assert_eq!((&meta).into_iter().count(), 1);
 }
 
 #[test]
-fn merge_and_merged_work() {
+fn test_merge_and_merged_work() {
     let mut a = Metadata::new();
     a.set("x", 1_i64);
 
@@ -357,7 +378,7 @@ fn merge_and_merged_work() {
 }
 
 #[test]
-fn merge_overwrites_on_conflict() {
+fn test_merge_overwrites_on_conflict() {
     let mut a = Metadata::new();
     a.set("k", "original");
 
@@ -369,7 +390,7 @@ fn merge_overwrites_on_conflict() {
 }
 
 #[test]
-fn retain_keeps_matching_entries() {
+fn test_retain_keeps_matching_entries() {
     let mut meta = Metadata::new();
     meta.set("a", 1_i64);
     meta.set("b", 2_i64);
@@ -381,7 +402,7 @@ fn retain_keeps_matching_entries() {
 }
 
 #[test]
-fn btreemap_conversions_work() {
+fn test_btreemap_conversions_work() {
     let mut map = BTreeMap::new();
     map.insert("k".to_string(), Value::String("v".to_string()));
 
@@ -393,7 +414,7 @@ fn btreemap_conversions_work() {
 }
 
 #[test]
-fn into_inner_returns_underlying_map() {
+fn test_into_inner_returns_underlying_map() {
     let mut meta = Metadata::new();
     meta.set("k", 1_i64);
 
@@ -402,7 +423,7 @@ fn into_inner_returns_underlying_map() {
 }
 
 #[test]
-fn from_iterator_and_extend_work() {
+fn test_from_iterator_and_extend_work() {
     let pairs = vec![
         ("a".to_string(), Value::Int64(1)),
         ("b".to_string(), Value::Int64(2)),
@@ -414,7 +435,7 @@ fn from_iterator_and_extend_work() {
 }
 
 #[test]
-fn serde_round_trip_uses_value_encoding() {
+fn test_serde_round_trip_uses_value_encoding() {
     let meta = Metadata::new()
         .with("name", "bob")
         .with("age", 30_i64)
@@ -426,7 +447,7 @@ fn serde_round_trip_uses_value_encoding() {
 }
 
 #[test]
-fn clone_is_independent() {
+fn test_clone_is_independent() {
     let mut original = Metadata::new();
     original.set("k", "v");
 
@@ -437,7 +458,7 @@ fn clone_is_independent() {
 }
 
 #[test]
-fn partial_eq_compares_values() {
+fn test_partial_eq_compares_values() {
     let mut a = Metadata::new();
     a.set("x", 1_i64);
 

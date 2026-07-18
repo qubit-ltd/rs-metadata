@@ -6,6 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! [`MetadataFilter`].
+
 use qubit_datatype::NumericComparisonPolicy;
 use serde::{
     Deserialize,
@@ -15,7 +16,7 @@ use serde::{
     de,
 };
 
-use super::filter_expr::FilterExpr;
+use super::filter_expression::FilterExpression;
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
 use crate::metadata::Metadata;
@@ -23,123 +24,201 @@ use crate::{
     Condition,
     FilterMatchOptions,
     MetadataResult,
-    MissingKeyPolicy,
 };
 
 /// An immutable, composable filter expression over [`Metadata`].
 ///
 /// Construct filters with [`MetadataFilter::builder`]. An empty builder builds
 /// a match-all filter, while structurally invalid expressions such as empty
-/// groups are rejected by [`MetadataFilterBuilder::build`].
+/// groups are rejected by [`MetadataFilterBuilder::build`]. Comparison
+/// predicates over missing or unset values remain unknown through negation and
+/// fail closed at the public matching boundary. Use
+/// [`MetadataFilter::expression`] to inspect the immutable Boolean structure.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct MetadataFilter {
-    /// Root expression tree. `None` means match all.
-    pub(crate) expr: Option<FilterExpr>,
+    /// Root expression tree.
+    expression: FilterExpression,
     /// Match policies used by [`MetadataFilter::matches`].
-    pub(crate) options: FilterMatchOptions,
+    options: FilterMatchOptions,
 }
 
 impl MetadataFilter {
-    /// Creates a filter from expression and options.
-    #[inline]
-    pub(crate) fn new(
-        expr: Option<FilterExpr>,
-        options: FilterMatchOptions,
-    ) -> Self {
-        Self { expr, options }
-    }
-
     /// Creates a builder for a metadata filter.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// An empty builder whose default result matches all metadata.
+    #[inline(always)]
     #[must_use]
     pub fn builder() -> MetadataFilterBuilder {
         MetadataFilterBuilder::default()
     }
 
     /// Creates a filter that matches every metadata object.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// A constant match-all filter.
+    #[inline(always)]
     #[must_use]
     pub fn all() -> Self {
         Self::default()
     }
 
     /// Creates a filter that matches no metadata object.
+    ///
+    /// # Returns
+    ///
+    /// A constant match-none filter.
     #[inline]
     #[must_use]
     pub fn none() -> Self {
         Self {
-            expr: Some(FilterExpr::False),
+            expression: FilterExpression::false_expression(),
             options: FilterMatchOptions::default(),
         }
     }
 
-    /// Returns the current match options.
+    /// Creates a filter from an expression and match options.
+    ///
+    /// # Parameters
+    ///
+    /// * `expression` - Root filter expression.
+    /// * `options` - Match options stored with the filter.
+    ///
+    /// # Returns
+    ///
+    /// A new immutable filter.
     #[inline]
+    pub(crate) const fn new(
+        expression: FilterExpression,
+        options: FilterMatchOptions,
+    ) -> Self {
+        Self {
+            expression,
+            options,
+        }
+    }
+
+    /// Returns the root filter expression.
+    ///
+    /// # Returns
+    ///
+    /// A borrowed, immutable expression tree.
+    #[inline(always)]
+    pub fn expression(&self) -> &FilterExpression {
+        &self.expression
+    }
+
+    /// Returns the current match options.
+    ///
+    /// # Returns
+    ///
+    /// A copy of the configured match options.
+    #[inline(always)]
     #[must_use]
     pub fn options(&self) -> FilterMatchOptions {
         self.options
     }
 
     /// Replaces the current match options and returns a new filter.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `options` - Replacement match options.
+    ///
+    /// # Returns
+    ///
+    /// This filter with the replacement options.
+    #[inline(always)]
     #[must_use]
     pub fn with_options(mut self, options: FilterMatchOptions) -> Self {
         self.options = options;
         self
     }
 
-    /// Returns a new filter with the supplied missing-key policy.
-    #[inline]
-    #[must_use]
-    pub fn with_missing_key_policy(
-        mut self,
-        missing_key_policy: MissingKeyPolicy,
-    ) -> Self {
-        self.options.missing_key_policy = missing_key_policy;
-        self
-    }
-
     /// Returns a new filter with the supplied number-comparison policy.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `numeric_comparison_policy` - Policy for mixed numeric comparisons.
+    ///
+    /// # Returns
+    ///
+    /// This filter with the replacement policy.
+    #[inline(always)]
     #[must_use]
     pub fn with_numeric_comparison_policy(
         mut self,
         numeric_comparison_policy: NumericComparisonPolicy,
     ) -> Self {
-        self.options.numeric_comparison_policy = numeric_comparison_policy;
+        self.options
+            .set_numeric_comparison_policy(numeric_comparison_policy);
         self
     }
 
     /// Returns a new filter that negates this filter.
+    ///
+    /// # Returns
+    ///
+    /// This filter with its root expression logically negated.
     #[allow(clippy::should_implement_trait)]
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn not(mut self) -> Self {
-        self.expr = MetadataFilterBuilder::negate_expr(self.expr);
+        self.expression = self.expression.negated();
         self
     }
 
     /// Returns `true` if `meta` satisfies this filter.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `meta` - Metadata object to evaluate.
+    ///
+    /// # Returns
+    ///
+    /// `true` only when evaluation produces a definite true outcome.
+    #[inline(always)]
     #[must_use]
     pub fn matches(&self, meta: &Metadata) -> bool {
         self.matches_with_options(meta, self.options)
     }
 
     /// Returns `true` if `meta` satisfies this filter with explicit options.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `meta` - Metadata object to evaluate.
+    /// * `options` - Match options for this evaluation.
+    ///
+    /// # Returns
+    ///
+    /// `true` only when evaluation produces a definite true outcome.
+    #[inline(always)]
     #[must_use]
     pub fn matches_with_options(
         &self,
         meta: &Metadata,
         options: FilterMatchOptions,
     ) -> bool {
-        self.expr
-            .as_ref()
-            .is_none_or(|expr| expr.matches(meta, options))
+        self.expression.evaluate(meta, options).is_match()
     }
 
     /// Visits all leaf conditions in this filter.
+    ///
+    /// # Parameters
+    ///
+    /// * `visitor` - Callback invoked for each leaf condition.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` after every condition has been visited.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first error produced by `visitor`.
+    #[inline(always)]
     pub(crate) fn visit_conditions<F>(
         &self,
         mut visitor: F,
@@ -147,14 +226,12 @@ impl MetadataFilter {
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
-        if let Some(expr) = &self.expr {
-            expr.visit_conditions(&mut visitor)?;
-        }
-        Ok(())
+        self.expression.visit_conditions(&mut visitor)
     }
 }
 
 impl Serialize for MetadataFilter {
+    #[inline(always)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -164,6 +241,7 @@ impl Serialize for MetadataFilter {
 }
 
 impl<'de> Deserialize<'de> for MetadataFilter {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -177,7 +255,7 @@ impl<'de> Deserialize<'de> for MetadataFilter {
 impl std::ops::Not for MetadataFilter {
     type Output = MetadataFilter;
 
-    #[inline]
+    #[inline(always)]
     fn not(self) -> Self::Output {
         MetadataFilter::not(self)
     }

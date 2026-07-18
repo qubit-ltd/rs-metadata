@@ -24,7 +24,7 @@ fn single_issue(error: MetadataValidationError) -> MetadataError {
 }
 
 #[test]
-fn schema_builder_defines_required_and_optional_fields() {
+fn test_schema_builder_defines_required_and_optional_fields() {
     let schema = MetadataSchema::builder()
         .required("id", DataType::String)
         .optional("score", DataType::Int64)
@@ -40,7 +40,7 @@ fn schema_builder_defines_required_and_optional_fields() {
 }
 
 #[test]
-fn schema_validate_accepts_matching_metadata() {
+fn test_schema_validate_accepts_matching_metadata() {
     let schema = MetadataSchema::builder()
         .required("id", DataType::String)
         .optional("score", DataType::Int64)
@@ -51,7 +51,7 @@ fn schema_validate_accepts_matching_metadata() {
 }
 
 #[test]
-fn schema_validate_reports_missing_required_field() {
+fn test_schema_validate_reports_missing_required_field() {
     let schema = MetadataSchema::builder()
         .required("id", DataType::String)
         .build();
@@ -98,7 +98,7 @@ fn test_schema_validate_accepts_unset_optional_field() {
 }
 
 #[test]
-fn schema_validate_reports_type_mismatch() {
+fn test_schema_validate_reports_type_mismatch() {
     let schema = MetadataSchema::builder()
         .required("score", DataType::Int64)
         .build();
@@ -120,7 +120,7 @@ fn schema_validate_reports_type_mismatch() {
 }
 
 #[test]
-fn schema_validate_reports_unknown_field_by_default() {
+fn test_schema_validate_reports_unknown_field_by_default() {
     let schema = MetadataSchema::builder()
         .required("id", DataType::String)
         .build();
@@ -137,7 +137,7 @@ fn schema_validate_reports_unknown_field_by_default() {
 }
 
 #[test]
-fn schema_validate_collects_all_metadata_issues() {
+fn test_schema_validate_collects_all_metadata_issues() {
     let schema = MetadataSchema::builder()
         .required("id", DataType::String)
         .required("score", DataType::Int64)
@@ -163,7 +163,7 @@ fn schema_validate_collects_all_metadata_issues() {
 }
 
 #[test]
-fn schema_validate_can_allow_unknown_fields() {
+fn test_schema_validate_can_allow_unknown_fields() {
     let schema = MetadataSchema::builder()
         .required("id", DataType::String)
         .unknown_field_policy(UnknownFieldPolicy::Allow)
@@ -174,7 +174,7 @@ fn schema_validate_can_allow_unknown_fields() {
 }
 
 #[test]
-fn schema_default_rejects_unknown_fields() {
+fn test_schema_default_rejects_unknown_fields() {
     let schema = MetadataSchema::default();
     let meta = Metadata::new().with("extra", true);
 
@@ -189,7 +189,7 @@ fn schema_default_rejects_unknown_fields() {
 }
 
 #[test]
-fn schema_fields_iterates_in_key_order() {
+fn test_schema_fields_iterates_in_key_order() {
     let schema = MetadataSchema::builder()
         .optional("z", DataType::Bool)
         .optional("a", DataType::String)

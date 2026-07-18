@@ -17,7 +17,8 @@
 //!
 //! ## Design Goals
 //!
-//! - **Type Safety**: Typed get/set API backed by [`qubit_value::Value`]
+//! - **Type Safety**: Typed get, chainable set, and replacement-aware insert
+//!   APIs backed by [`qubit_value::Value`]
 //! - **Generality**: No domain-specific assumptions — usable in any Rust
 //!   project
 //! - **Schema Support**: Optional [`MetadataSchema`] validation for metadata
@@ -32,6 +33,8 @@
 //!   [`qubit_datatype::DataType`]
 //! - Filter type: [`MetadataFilter`] — composable filter expressions for
 //!   metadata queries
+//! - Expression types: [`FilterExpression`] and [`FilterExpressionView`] — a
+//!   zero-copy, read-only Boolean AST for query translation
 //! - Condition type: [`Condition`] — individual comparison predicates
 //! - Error type: [`MetadataError`] — explicit failure reporting for `try_*`
 //!   APIs
@@ -62,6 +65,10 @@
 //!     .unwrap();
 //! assert!(filter.matches(&meta));
 //! ```
+//!
+//! Comparison predicates use fail-closed three-valued logic: a missing or
+//! unset value stays unknown through negation and does not match at the public
+//! API boundary.
 
 #![deny(missing_docs)]
 
@@ -74,10 +81,11 @@ mod metadata_validation_error;
 mod schema;
 
 pub use filter::Condition;
+pub use filter::FilterExpression;
+pub use filter::FilterExpressionView;
 pub use filter::FilterMatchOptions;
 pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
-pub use filter::MissingKeyPolicy;
 pub use into_metadata_value::IntoMetadataValue;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;

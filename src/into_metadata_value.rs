@@ -44,7 +44,7 @@ macro_rules! impl_into_metadata_value {
     ($($type:ty),+ $(,)?) => {
         $(
             impl IntoMetadataValue for $type {
-                #[inline]
+                #[inline(always)]
                 fn into_metadata_value(self) -> Value {
                     Value::new(self)
                 }

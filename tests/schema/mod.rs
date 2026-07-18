@@ -5,6 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Schema test modules.
 
 mod filter_validation_tests;
 mod metadata_field_tests;

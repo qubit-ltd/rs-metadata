@@ -7,10 +7,7 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::MetadataValidationError`].
 
-use std::fmt::{
-    self,
-    Write,
-};
+use std::fmt::Write;
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
@@ -18,45 +15,12 @@ use qubit_metadata::{
     MetadataValidationError,
 };
 
-/// Writer that counts formatting calls and can fail at a selected call.
-struct CountingWriter {
-    /// Number of completed or attempted writes.
-    write_count: usize,
-    /// Optional one-based write index that returns [`fmt::Error`].
-    fail_on_write: Option<usize>,
-}
+mod support;
 
-impl CountingWriter {
-    /// Creates a writer that optionally fails on `fail_on_write`.
-    ///
-    /// # Parameters
-    ///
-    /// * `fail_on_write` - Optional one-based write index to fail.
-    ///
-    /// # Returns
-    ///
-    /// A new counting writer.
-    #[inline(always)]
-    fn new(fail_on_write: Option<usize>) -> Self {
-        Self {
-            write_count: 0,
-            fail_on_write,
-        }
-    }
-}
-
-impl Write for CountingWriter {
-    fn write_str(&mut self, _: &str) -> fmt::Result {
-        self.write_count += 1;
-        if self.fail_on_write == Some(self.write_count) {
-            return Err(fmt::Error);
-        }
-        Ok(())
-    }
-}
+use support::counting_writer::CountingWriter;
 
 #[test]
-fn validation_error_exposes_collected_issues() {
+fn test_validation_error_exposes_collected_issues() {
     let issues = vec![
         MetadataError::MissingRequiredField {
             key: "id".to_string(),
@@ -82,7 +46,7 @@ fn validation_error_exposes_collected_issues() {
 }
 
 #[test]
-fn validation_error_can_wrap_single_issue() {
+fn test_validation_error_can_wrap_single_issue() {
     let issue = MetadataError::UnknownFilterField {
         key: "missing".to_string(),
     };
@@ -97,7 +61,7 @@ fn validation_error_can_wrap_single_issue() {
 }
 
 #[test]
-fn validation_error_display_streams_formatter_writes() {
+fn test_validation_error_display_streams_formatter_writes() {
     let error =
         MetadataValidationError::from_issue(MetadataError::UnknownField {
             key: "extra".to_string(),
@@ -106,11 +70,11 @@ fn validation_error_display_streams_formatter_writes() {
 
     write!(&mut writer, "{error}").unwrap();
 
-    assert!(writer.write_count > 1);
+    assert!(writer.write_count() > 1);
 }
 
 #[test]
-fn validation_error_display_propagates_formatter_errors() {
+fn test_validation_error_display_propagates_formatter_errors() {
     let error =
         MetadataValidationError::from_issue(MetadataError::UnknownField {
             key: "extra".to_string(),

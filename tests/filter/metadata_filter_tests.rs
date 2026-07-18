@@ -14,11 +14,10 @@ use qubit_metadata::{
     Metadata,
     MetadataError,
     MetadataFilter,
-    MissingKeyPolicy,
 };
 
 #[test]
-fn and_predicates_all_match() {
+fn test_and_predicates_all_match() {
     let f = MetadataFilter::builder()
         .eq("status", "active")
         .and_ge("score", 10_i64)
@@ -27,7 +26,7 @@ fn and_predicates_all_match() {
 }
 
 #[test]
-fn and_predicates_one_fails() {
+fn test_and_predicates_one_fails() {
     let f = MetadataFilter::builder()
         .eq("status", "active")
         .and_gt("score", 100_i64);
@@ -35,7 +34,7 @@ fn and_predicates_one_fails() {
 }
 
 #[test]
-fn or_predicates_one_matches() {
+fn test_or_predicates_one_matches() {
     let f = MetadataFilter::builder()
         .eq("status", "inactive")
         .or_eq("status", "active");
@@ -43,7 +42,7 @@ fn or_predicates_one_matches() {
 }
 
 #[test]
-fn or_predicates_all_fail() {
+fn test_or_predicates_all_fail() {
     let f = MetadataFilter::builder()
         .eq("status", "inactive")
         .or_eq("status", "pending");
@@ -51,7 +50,7 @@ fn or_predicates_all_fail() {
 }
 
 #[test]
-fn not_inverts_expression_result() {
+fn test_not_inverts_expression_result() {
     let yes = MetadataFilter::builder().eq("status", "active").not();
     let no = MetadataFilter::builder().eq("status", "inactive").not();
     assert!(!yes.build().unwrap().matches(&sample()));
@@ -59,21 +58,21 @@ fn not_inverts_expression_result() {
 }
 
 #[test]
-fn empty_filter_matches_anything() {
+fn test_empty_filter_matches_anything() {
     let f = MetadataFilter::builder().build().unwrap();
     assert!(f.matches(&sample()));
     assert!(f.matches(&Metadata::new()));
 }
 
 #[test]
-fn negated_empty_filter_matches_nothing() {
+fn test_negated_empty_filter_matches_nothing() {
     let f = MetadataFilter::builder().not();
     assert!(!f.clone().build().unwrap().matches(&sample()));
     assert!(!f.build().unwrap().matches(&Metadata::new()));
 }
 
 #[test]
-fn group_composition_works() {
+fn test_group_composition_works() {
     // status == active AND (score >= 80 OR tag == rust)
     let f = MetadataFilter::builder()
         .eq("status", "active")
@@ -82,7 +81,7 @@ fn group_composition_works() {
 }
 
 #[test]
-fn negated_group_composition_works() {
+fn test_negated_group_composition_works() {
     // status == active AND NOT (score >= 80 OR tag == java)
     let f = MetadataFilter::builder()
         .eq("status", "active")
@@ -91,15 +90,24 @@ fn negated_group_composition_works() {
 }
 
 #[test]
-fn missing_key_policy_can_be_configured_on_filter() {
-    let f = MetadataFilter::builder()
-        .ne("missing", "x")
-        .missing_key_policy(MissingKeyPolicy::NoMatch);
-    assert!(!f.build().unwrap().matches(&sample()));
+fn test_missing_values_remain_unknown_through_group_negation() {
+    let metadata = Metadata::new();
+    let and_not = MetadataFilter::builder()
+        .and_not(|group| group.eq("missing", "value"))
+        .build()
+        .unwrap();
+    let or_not = MetadataFilter::builder()
+        .eq("also_missing", "value")
+        .or_not(|group| group.in_set("missing", ["value"]))
+        .build()
+        .unwrap();
+
+    assert!(!and_not.matches(&metadata));
+    assert!(!or_not.matches(&metadata));
 }
 
 #[test]
-fn numeric_comparison_policy_can_be_configured_on_filter() {
+fn test_numeric_comparison_policy_can_be_configured_on_filter() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_i64);
 
@@ -113,11 +121,9 @@ fn numeric_comparison_policy_can_be_configured_on_filter() {
 }
 
 #[test]
-fn options_round_trip_works() {
-    let options = FilterMatchOptions {
-        missing_key_policy: MissingKeyPolicy::NoMatch,
-        numeric_comparison_policy: NumericComparisonPolicy::Approximate,
-    };
+fn test_options_round_trip_works() {
+    let options = FilterMatchOptions::new()
+        .with_numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     let f = MetadataFilter::builder()
         .eq("status", "active")
         .with_options(options)
@@ -127,22 +133,19 @@ fn options_round_trip_works() {
 }
 
 #[test]
-fn filter_constructors_and_option_setters_work() {
-    let options = FilterMatchOptions {
-        missing_key_policy: MissingKeyPolicy::NoMatch,
-        numeric_comparison_policy: NumericComparisonPolicy::Approximate,
-    };
+fn test_filter_constructors_and_option_setters_work() {
+    let options = FilterMatchOptions::new()
+        .with_numeric_comparison_policy(NumericComparisonPolicy::Approximate);
 
     assert!(MetadataFilter::all().matches(&sample()));
     assert!(!MetadataFilter::none().matches(&sample()));
     assert!((!MetadataFilter::none()).matches(&sample()));
 
-    let strict = MetadataFilter::builder()
+    let missing = MetadataFilter::builder()
         .ne("missing", "x")
         .build()
-        .unwrap()
-        .with_missing_key_policy(MissingKeyPolicy::NoMatch);
-    assert!(!strict.matches(&sample()));
+        .unwrap();
+    assert!(!missing.matches(&sample()));
 
     let approximate = MetadataFilter::builder()
         .gt("score", 0.5_f64)
@@ -154,7 +157,7 @@ fn filter_constructors_and_option_setters_work() {
 }
 
 #[test]
-fn or_operator_methods_cover_each_predicate() {
+fn test_or_operator_methods_cover_each_predicate() {
     let meta = sample();
 
     assert!(
@@ -232,7 +235,7 @@ fn or_operator_methods_cover_each_predicate() {
 }
 
 #[test]
-fn builder_aliases_preserve_expected_identities() {
+fn test_builder_aliases_preserve_expected_identities() {
     let meta = sample();
 
     assert!(
@@ -260,7 +263,7 @@ fn builder_aliases_preserve_expected_identities() {
 }
 
 #[test]
-fn empty_group_build_returns_error() {
+fn test_empty_group_build_returns_error() {
     for (operator, error) in [
         (
             "and",
@@ -299,7 +302,7 @@ fn empty_group_build_returns_error() {
 }
 
 #[test]
-fn chained_or_expressions_are_flattened() {
+fn test_chained_or_expressions_are_flattened() {
     let filter = MetadataFilter::builder()
         .eq("status", "inactive")
         .or_eq("tag", "java")

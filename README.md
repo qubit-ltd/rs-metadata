@@ -32,7 +32,8 @@ it, and filters treat it like an absent key.
 ## Design Goals
 
 - **Typed values**: preserve concrete runtime types with `qubit_value::Value`.
-- **Convenient construction**: support both mutable `set()` and fluent `with()`.
+- **Convenient construction**: support mutable chaining with `set()`, explicit
+  replacement through `insert()`, and owned chaining with `with()`.
 - **Optional schema**: validate field names, required fields, concrete `DataType`s, and filter compatibility.
 - **Filter builder**: build immutable `MetadataFilter` values with a chainable builder.
 - **Serde support**: serialize metadata, schemas, and filters for config, storage, and service boundaries.
@@ -41,9 +42,10 @@ it, and filters treat it like an absent key.
 
 ### 1) Typed metadata storage
 
-`Metadata` is an ordered `String -> Value` map. It supports typed `get`, `set`,
-`try_get`, schema-checked `set_checked` / `with_checked`, fluent `with`,
-iteration, merge, retain, and conversion to/from `BTreeMap<String, Value>`.
+`Metadata` is an ordered `String -> Value` map. It supports typed `get`,
+chainable `set`, replacement-aware `insert`, `try_get`, schema-checked
+`set_checked` / `insert_checked` / `with_checked`, fluent `with`, iteration,
+merge, retain, and conversion to/from `BTreeMap<String, Value>`.
 
 ```rust
 use qubit_metadata::Metadata;
@@ -56,6 +58,30 @@ let meta = Metadata::new()
 assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
 assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
 ```
+
+Mutable writes can be chained without moving the metadata object. Use
+`insert()` instead when the previous value is needed:
+
+```rust
+use qubit_metadata::Metadata;
+
+let mut meta = Metadata::new();
+meta.set("author", "alice").set("priority", 3_i64);
+let previous = meta.insert("priority", 4_i64);
+assert!(previous.is_some());
+```
+
+`Value::Unset` records a declared type without supplying a concrete value:
+
+| Operation | Absent key | Stored `Unset` | Concrete value |
+|---|---|---|---|
+| `contains_key` | `false` | `true` | `true` |
+| `get_raw` | `None` | `Some(Unset)` | `Some(value)` |
+| `data_type` | `None` | Declared type | Concrete type |
+| `try_get` | `MissingKey` | `MissingValue` | Value or conversion error |
+| Required schema field | Rejected | Rejected | Validated |
+| Filter `exists` | `false` | `false` | `true` |
+| Comparison filter | No match | No match | Compared normally |
 
 ### 2) Schema for validation and storage planning
 
@@ -120,7 +146,7 @@ assert!(filter.matches(&meta));
 |--------|-----------|
 | `eq`, `ne` | Equality / inequality |
 | `gt`, `ge`, `lt`, `le` | Numeric or string range comparison |
-| `exists`, `not_exists` | Key presence / absence |
+| `exists`, `not_exists` | Concrete-value presence / absence |
 | `in_set`, `not_in_set` | Membership / exclusion |
 | `and_*`, `or_*` | Append one predicate with explicit connector |
 | `and`, `or`, `and_not`, `or_not` | Append grouped subexpressions |
@@ -162,40 +188,51 @@ let filter = MetadataFilter::builder()
     .unwrap();
 ```
 
-Missing-key behavior for negative predicates is controlled by
-`MissingKeyPolicy`. Mixed numeric comparison behavior for equality, membership,
-and range predicates is controlled by `NumericComparisonPolicy`.
+Missing keys and `Value::Unset` use fail-closed three-valued logic. A comparison
+that has no concrete stored value is unknown; `not` preserves unknown, AND/OR
+propagate it, and the final `matches()` result is `true` only for a definite
+true expression. Consequently, `ne(key, value)` and `not(eq(key, value))` are
+equivalent and neither matches a missing or unset value. Mixed numeric
+comparison behavior for equality, membership, and range predicates is
+controlled by `NumericComparisonPolicy`.
 
 Grouped expressions must contain at least one predicate. For example,
 `and(|g| g)` and `or_not(|g| g)` are rejected by `build()` because an empty group
 is usually a caller bug.
 
 Empty value sets are allowed. `in_set("key", [])` matches no metadata object.
-`not_in_set("key", [])` matches when `key` exists; when `key` is missing, it
-follows the configured `MissingKeyPolicy`, just like other negative predicates.
+`not_in_set("key", [])` matches only when `key` stores a concrete value; an
+absent or unset value remains unknown and therefore does not match.
 
-When a schema validates filters, mixed numeric compatibility follows the
-filter's configured `NumericComparisonPolicy`, the same policy used at match
-time. Every non-NaN numeric representation is schema-compatible with every
-numeric field. `Exact` compares the represented mathematical values without
-rounding. `Approximate` orders primitive infinities separately; when a finite
-primitive float participates, it attempts to project both operands to finite
-`f64` values, and falls back to exact comparison if either operand cannot be
-projected that way. Projected comparison is pair-dependent and non-transitive,
-so it must not be used for sorting, grouping, `Ord`, or ordered keys. Actual
+Schema validation accepts every non-NaN numeric representation as compatible
+with every numeric field; this compatibility check is independent of the
+runtime comparison policy. During matching, `Exact` compares represented
+mathematical values without rounding. `Approximate` orders primitive infinities
+separately; when a finite primitive float participates, it attempts to project
+both operands to finite `f64` values and falls back to exact comparison if
+either operand cannot be projected that way. Projected comparison is
+pair-dependent and non-transitive, so it must not be used for sorting,
+grouping, `Ord`, or ordered keys. Actual
 `MetadataSchema::validate(&metadata)` remains strict: stored metadata values
 must use the concrete field type declared by the schema.
+
+The complete Boolean structure is available through
+`MetadataFilter::expression()` and `FilterExpression::view()`. The read-only
+view exposes condition, AND, OR, NOT, true, and false nodes without exposing the
+private construction representation, so storage providers can translate a
+filter into their native query language.
 
 ### 5) Versioned filter serde format
 
 Serialized `MetadataFilter` values use an explicit wire format with `version`,
-`expr`, and `options` fields. Expression nodes use `type`, and condition nodes
-use stable operator names in `op` such as `eq`, `ge`, `in`, and `not_exists`.
+`expression`, and `options` fields. Expression nodes use `type`, and condition
+nodes use stable operator names in `op` such as `eq`, `ge`, `in`, and
+`not_exists`.
 Serialized `Condition` values use the same condition wire representation. The
 internal expression tree is not part of the serialization contract. Policy enum
 values in `options` are serialized as lowercase underscore values such as
-`match`, `no_match`, `exact`, and `approximate`. New serialization emits
-MetadataFilter wire version `2`; earlier filter wire versions are rejected.
+`exact` and `approximate`. New serialization emits MetadataFilter wire version
+`3`; earlier filter wire versions are rejected.
 
 ## Error Handling
 
@@ -226,7 +263,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-metadata = "0.6"
+qubit-metadata = "0.7"
 # Required when naming schema data types or numeric comparison policies.
 qubit-datatype = "0.7"
 # Required when using Metadata's raw Value APIs.
@@ -240,7 +277,7 @@ only the rich value families you need:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", features = ["chrono", "json"] }
+qubit-metadata = { version = "0.7", features = ["chrono", "json"] }
 ```
 
 Available features are `chrono`, `big-integer`, `big-decimal`, `big-number`,

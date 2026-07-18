@@ -5,6 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Tests for the crate's public exports.
 
 use qubit_metadata::{
     Metadata,
@@ -12,7 +13,7 @@ use qubit_metadata::{
 };
 
 #[test]
-fn public_exports_are_usable() {
+fn test_public_exports_are_usable() {
     let meta = Metadata::new().with("k", "v");
     let filter = MetadataFilter::builder().eq("k", "v").build().unwrap();
     assert!(filter.matches(&meta));

@@ -28,25 +28,53 @@ pub struct MetadataSchemaBuilder {
 
 impl MetadataSchemaBuilder {
     /// Adds a required field definition.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to declare.
+    /// * `data_type` - Concrete data type accepted by the field.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
+    #[inline(always)]
     #[must_use]
     pub fn required(mut self, key: &str, data_type: DataType) -> Self {
-        self.fields
+        let _ = self
+            .fields
             .insert(key.to_string(), MetadataField::new(data_type, true));
         self
     }
 
     /// Adds an optional field definition.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to declare.
+    /// * `data_type` - Concrete data type accepted by the field.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
+    #[inline(always)]
     #[must_use]
     pub fn optional(mut self, key: &str, data_type: DataType) -> Self {
-        self.fields
+        let _ = self
+            .fields
             .insert(key.to_string(), MetadataField::new(data_type, false));
         self
     }
 
     /// Sets the policy for metadata keys not declared by the schema.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// * `policy` - Unknown-field policy to store.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
+    #[inline(always)]
     #[must_use]
     pub fn unknown_field_policy(mut self, policy: UnknownFieldPolicy) -> Self {
         self.unknown_field_policy = policy;
@@ -54,7 +82,11 @@ impl MetadataSchemaBuilder {
     }
 
     /// Builds the schema.
-    #[inline]
+    ///
+    /// # Returns
+    ///
+    /// The immutable schema described by this builder.
+    #[inline(always)]
     #[must_use]
     pub fn build(self) -> MetadataSchema {
         MetadataSchema::new(self.fields, self.unknown_field_policy)

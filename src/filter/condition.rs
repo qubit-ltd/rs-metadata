@@ -9,6 +9,7 @@
 
 use std::cmp::Ordering;
 
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_value::Value;
 use serde::{
     Deserialize,
@@ -17,13 +18,18 @@ use serde::{
     Serializer,
 };
 
-use super::missing_key_policy::MissingKeyPolicy;
+use super::internal::MatchOutcome;
 use super::wire::ConditionWire;
 use crate::Metadata;
-use qubit_datatype::NumericComparisonPolicy;
 
 /// A single comparison operator applied to one metadata key.
+///
+/// Equality, range, and membership conditions require a concrete stored value.
+/// An absent key or [`Value::Unset`] produces an unknown outcome that remains
+/// unknown under logical negation and therefore fails closed when matching.
+/// Existence conditions define presence in terms of a concrete value.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Condition {
     /// Key equals value.
     Equal {
@@ -81,12 +87,18 @@ pub enum Condition {
         /// The set of excluded values.
         values: Vec<Value>,
     },
-    /// Key exists in the metadata regardless of its value.
+    /// The key stores a concrete value.
+    ///
+    /// An absent key or a key storing [`Value::Unset`] does not exist for
+    /// filter matching.
     Exists {
         /// The metadata key.
         key: String,
     },
-    /// Key does not exist in the metadata.
+    /// The key does not store a concrete value.
+    ///
+    /// An absent key or a key storing [`Value::Unset`] satisfies this
+    /// condition.
     NotExists {
         /// The metadata key.
         key: String,
@@ -94,6 +106,7 @@ pub enum Condition {
 }
 
 impl Serialize for Condition {
+    #[inline(always)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -103,6 +116,7 @@ impl Serialize for Condition {
 }
 
 impl<'de> Deserialize<'de> for Condition {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -112,34 +126,42 @@ impl<'de> Deserialize<'de> for Condition {
 }
 
 impl Condition {
-    /// Evaluates this condition against `meta` using the supplied policies.
-    #[inline]
-    pub(crate) fn matches(
+    /// Evaluates this condition against the supplied metadata.
+    ///
+    /// # Parameters
+    ///
+    /// * `meta` - Metadata object being matched.
+    /// * `numeric_comparison_policy` - Policy for mixed numeric comparisons.
+    ///
+    /// # Returns
+    ///
+    /// A definite outcome for concrete comparisons and existence predicates,
+    /// or [`MatchOutcome::Unknown`] when a comparison depends on an absent or
+    /// unset value.
+    pub(crate) fn evaluate(
         &self,
         meta: &Metadata,
-        missing_key_policy: MissingKeyPolicy,
         numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> bool {
+    ) -> MatchOutcome {
         match self {
-            Condition::Equal { key, value } => concrete_value(meta, key)
-                .is_some_and(|stored| {
+            Condition::Equal { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
                     values_equal(stored, value, numeric_comparison_policy)
-                }),
-            Condition::NotEqual { key, value } => {
-                match concrete_value(meta, key) {
-                    Some(stored) => {
-                        !values_equal(stored, value, numeric_comparison_policy)
-                    }
-                    None => missing_key_policy.matches_negative_predicates(),
-                }
+                })
             }
-            Condition::Less { key, value } => concrete_value(meta, key)
-                .is_some_and(|stored| {
+            Condition::NotEqual { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    !values_equal(stored, value, numeric_comparison_policy)
+                })
+            }
+            Condition::Less { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
                     compare_values(stored, value, numeric_comparison_policy)
                         == Some(Ordering::Less)
-                }),
-            Condition::LessEqual { key, value } => concrete_value(meta, key)
-                .is_some_and(|stored| {
+                })
+            }
+            Condition::LessEqual { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
                     matches!(
                         compare_values(
                             stored,
@@ -148,14 +170,16 @@ impl Condition {
                         ),
                         Some(Ordering::Less) | Some(Ordering::Equal)
                     )
-                }),
-            Condition::Greater { key, value } => concrete_value(meta, key)
-                .is_some_and(|stored| {
+                })
+            }
+            Condition::Greater { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
                     compare_values(stored, value, numeric_comparison_policy)
                         == Some(Ordering::Greater)
-                }),
-            Condition::GreaterEqual { key, value } => concrete_value(meta, key)
-                .is_some_and(|stored| {
+                })
+            }
+            Condition::GreaterEqual { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
                     matches!(
                         compare_values(
                             stored,
@@ -164,24 +188,56 @@ impl Condition {
                         ),
                         Some(Ordering::Greater) | Some(Ordering::Equal)
                     )
-                }),
-            Condition::In { key, values } => concrete_value(meta, key)
-                .is_some_and(|stored| {
+                })
+            }
+            Condition::In { key, values } => {
+                evaluate_concrete(meta, key, |stored| {
                     values.iter().any(|value| {
                         values_equal(stored, value, numeric_comparison_policy)
                     })
-                }),
-            Condition::NotIn { key, values } => match concrete_value(meta, key)
-            {
-                Some(stored) => values.iter().all(|value| {
-                    !values_equal(stored, value, numeric_comparison_policy)
-                }),
-                None => missing_key_policy.matches_negative_predicates(),
-            },
-            Condition::Exists { key } => concrete_value(meta, key).is_some(),
-            Condition::NotExists { key } => concrete_value(meta, key).is_none(),
+                })
+            }
+            Condition::NotIn { key, values } => {
+                evaluate_concrete(meta, key, |stored| {
+                    values.iter().all(|value| {
+                        !values_equal(stored, value, numeric_comparison_policy)
+                    })
+                })
+            }
+            Condition::Exists { key } => {
+                MatchOutcome::from_bool(concrete_value(meta, key).is_some())
+            }
+            Condition::NotExists { key } => {
+                MatchOutcome::from_bool(concrete_value(meta, key).is_none())
+            }
         }
     }
+}
+
+/// Evaluates a predicate that requires a concrete stored value.
+///
+/// # Parameters
+///
+/// * `meta` - Metadata object being matched.
+/// * `key` - Metadata key to inspect.
+/// * `predicate` - Comparison to apply to a concrete value.
+///
+/// # Returns
+///
+/// The predicate result, or [`MatchOutcome::Unknown`] when the key is absent
+/// or stores [`Value::Unset`].
+#[inline]
+fn evaluate_concrete<F>(
+    meta: &Metadata,
+    key: &str,
+    predicate: F,
+) -> MatchOutcome
+where
+    F: FnOnce(&Value) -> bool,
+{
+    concrete_value(meta, key).map_or(MatchOutcome::Unknown, |value| {
+        MatchOutcome::from_bool(predicate(value))
+    })
 }
 
 /// Returns the concrete metadata value stored under `key`.
@@ -202,6 +258,16 @@ fn concrete_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a Value> {
 
 /// Compares two values for equality, treating numeric variants by numeric
 /// value.
+///
+/// # Parameters
+///
+/// * `left` - Left comparison operand.
+/// * `right` - Right comparison operand.
+/// * `numeric_comparison_policy` - Policy for mixed numeric variants.
+///
+/// # Returns
+///
+/// `true` when both values compare equal under the supplied policy.
 #[inline]
 fn values_equal(
     left: &Value,
@@ -217,6 +283,16 @@ fn values_equal(
 }
 
 /// Compares two numeric values or two strings.
+///
+/// # Parameters
+///
+/// * `left` - Left comparison operand.
+/// * `right` - Right comparison operand.
+/// * `numeric_comparison_policy` - Policy for mixed numeric variants.
+///
+/// # Returns
+///
+/// The relative ordering, or `None` when the values cannot be compared.
 #[inline]
 fn compare_values(
     left: &Value,

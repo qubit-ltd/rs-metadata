@@ -5,10 +5,10 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Internal filter implementation types.
 
-use qubit_metadata::MissingKeyPolicy;
+mod filter_expression_node;
+mod match_outcome;
 
-#[test]
-fn missing_key_policy_default_is_match() {
-    assert_eq!(MissingKeyPolicy::default(), MissingKeyPolicy::Match);
-}
+pub(crate) use filter_expression_node::FilterExpressionNode;
+pub(crate) use match_outcome::MatchOutcome;
