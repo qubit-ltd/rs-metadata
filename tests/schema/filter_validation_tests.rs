@@ -8,13 +8,14 @@
 //! Tests for metadata schema data types.
 
 use qubit_datatype::DataType;
+#[cfg(feature = "big-decimal")]
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
     Metadata,
     MetadataError,
     MetadataFilter,
     MetadataSchema,
     MetadataValidationError,
-    NumericComparisonPolicy,
     UnknownFieldPolicy,
 };
 use qubit_value::Value;
@@ -73,7 +74,9 @@ fn schema_validate_filter_uses_state_aware_numeric_classification() {
     assert_numeric_compatible!(1_u128);
     assert_numeric_compatible!(1.0_f32);
     assert_numeric_compatible!(1.0_f64);
+    #[cfg(feature = "big-integer")]
     assert_numeric_compatible!(num_bigint::BigInt::from(1));
+    #[cfg(feature = "big-decimal")]
     assert_numeric_compatible!(bigdecimal::BigDecimal::from(1));
 
     let schema = MetadataSchema::builder()
@@ -135,6 +138,7 @@ fn schema_validate_filter_classifies_every_data_type_for_ranges() {
 }
 
 #[test]
+#[cfg(feature = "big-number")]
 fn schema_validate_filter_accepts_big_number_fields() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)
@@ -514,6 +518,7 @@ fn schema_validate_filter_rejects_range_on_bool() {
 }
 
 #[test]
+#[cfg(feature = "big-decimal")]
 fn schema_validate_filter_accepts_exact_big_decimal_float_comparison() {
     let schema = MetadataSchema::builder()
         .required("amount", DataType::BigDecimal)

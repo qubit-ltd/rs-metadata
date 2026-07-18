@@ -84,7 +84,6 @@ pub use metadata_error::MetadataError;
 pub use metadata_result::MetadataResult;
 pub use metadata_result::MetadataValidationResult;
 pub use metadata_validation_error::MetadataValidationError;
-pub use qubit_datatype::NumericComparisonPolicy;
 pub use schema::MetadataField;
 pub use schema::MetadataSchema;
 pub use schema::MetadataSchemaBuilder;

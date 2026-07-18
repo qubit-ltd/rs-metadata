@@ -6,10 +6,10 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
     FilterMatchOptions,
     MissingKeyPolicy,
-    NumericComparisonPolicy,
 };
 
 #[test]

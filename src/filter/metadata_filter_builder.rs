@@ -6,6 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! [`MetadataFilterBuilder`] — fluent builder for composable filters.
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_value::Value;
 
 use super::condition::Condition;
@@ -20,7 +21,6 @@ use crate::{
     MetadataValidationError,
     MetadataValidationResult,
     MissingKeyPolicy,
-    NumericComparisonPolicy,
 };
 
 /// Builder for [`MetadataFilter`].

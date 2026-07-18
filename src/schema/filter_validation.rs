@@ -7,7 +7,10 @@
 // =============================================================================
 //! Filter validation support for [`MetadataSchema`].
 
-use qubit_datatype::DataType;
+use qubit_datatype::{
+    DataType,
+    NumericComparisonPolicy,
+};
 use qubit_value::Value;
 
 use super::metadata_field::MetadataField;
@@ -20,7 +23,6 @@ use crate::{
     MetadataResult,
     MetadataValidationError,
     MetadataValidationResult,
-    NumericComparisonPolicy,
 };
 
 impl MetadataSchema {

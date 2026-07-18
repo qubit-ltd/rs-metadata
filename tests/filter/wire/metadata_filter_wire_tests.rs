@@ -8,10 +8,10 @@
 //! Tests for the top-level metadata filter wire envelope.
 
 use crate::support::test_support::sample;
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
     MetadataFilter,
     MissingKeyPolicy,
-    NumericComparisonPolicy,
 };
 use serde_json::json;
 

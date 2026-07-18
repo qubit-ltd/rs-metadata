@@ -121,25 +121,25 @@ impl Condition {
         numeric_comparison_policy: NumericComparisonPolicy,
     ) -> bool {
         match self {
-            Condition::Equal { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
+            Condition::Equal { key, value } => concrete_value(meta, key)
+                .is_some_and(|stored| {
                     values_equal(stored, value, numeric_comparison_policy)
-                })
-            }
-            Condition::NotEqual { key, value } => match meta.get_raw(key) {
-                Some(stored) => {
-                    !values_equal(stored, value, numeric_comparison_policy)
+                }),
+            Condition::NotEqual { key, value } => {
+                match concrete_value(meta, key) {
+                    Some(stored) => {
+                        !values_equal(stored, value, numeric_comparison_policy)
+                    }
+                    None => missing_key_policy.matches_negative_predicates(),
                 }
-                None => missing_key_policy.matches_negative_predicates(),
-            },
-            Condition::Less { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
+            }
+            Condition::Less { key, value } => concrete_value(meta, key)
+                .is_some_and(|stored| {
                     compare_values(stored, value, numeric_comparison_policy)
                         == Some(Ordering::Less)
-                })
-            }
-            Condition::LessEqual { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
+                }),
+            Condition::LessEqual { key, value } => concrete_value(meta, key)
+                .is_some_and(|stored| {
                     matches!(
                         compare_values(
                             stored,
@@ -148,16 +148,14 @@ impl Condition {
                         ),
                         Some(Ordering::Less) | Some(Ordering::Equal)
                     )
-                })
-            }
-            Condition::Greater { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
+                }),
+            Condition::Greater { key, value } => concrete_value(meta, key)
+                .is_some_and(|stored| {
                     compare_values(stored, value, numeric_comparison_policy)
                         == Some(Ordering::Greater)
-                })
-            }
-            Condition::GreaterEqual { key, value } => {
-                meta.get_raw(key).is_some_and(|stored| {
+                }),
+            Condition::GreaterEqual { key, value } => concrete_value(meta, key)
+                .is_some_and(|stored| {
                     matches!(
                         compare_values(
                             stored,
@@ -166,25 +164,40 @@ impl Condition {
                         ),
                         Some(Ordering::Greater) | Some(Ordering::Equal)
                     )
-                })
-            }
-            Condition::In { key, values } => {
-                meta.get_raw(key).is_some_and(|stored| {
+                }),
+            Condition::In { key, values } => concrete_value(meta, key)
+                .is_some_and(|stored| {
                     values.iter().any(|value| {
                         values_equal(stored, value, numeric_comparison_policy)
                     })
-                })
-            }
-            Condition::NotIn { key, values } => match meta.get_raw(key) {
+                }),
+            Condition::NotIn { key, values } => match concrete_value(meta, key)
+            {
                 Some(stored) => values.iter().all(|value| {
                     !values_equal(stored, value, numeric_comparison_policy)
                 }),
                 None => missing_key_policy.matches_negative_predicates(),
             },
-            Condition::Exists { key } => meta.contains_key(key),
-            Condition::NotExists { key } => !meta.contains_key(key),
+            Condition::Exists { key } => concrete_value(meta, key).is_some(),
+            Condition::NotExists { key } => concrete_value(meta, key).is_none(),
         }
     }
+}
+
+/// Returns the concrete metadata value stored under `key`.
+///
+/// # Parameters
+///
+/// * `meta` - Metadata object being matched.
+/// * `key` - Metadata key to inspect.
+///
+/// # Returns
+///
+/// The stored value when it is concrete, or `None` when the key is absent or
+/// stores [`Value::Unset`].
+#[inline(always)]
+fn concrete_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a Value> {
+    meta.get_raw(key).filter(|value| !value.is_unset())
 }
 
 /// Compares two values for equality, treating numeric variants by numeric

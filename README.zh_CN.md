@@ -23,6 +23,8 @@
 `u32` 不会混成一个模糊的 number，`f64` 和 `String` 也不会混淆。如果确实需要嵌套
 结构，可以显式存 `Value::Json`；但常见的文档元信息、向量库 metadata、链路上下文，
 通常都是扁平字段集合。
+`Value::Unset` 会保留声明类型，但不表示具体 metadata 值：类型化读取返回
+`MetadataError::MissingValue`，required schema 字段拒绝它，filter 则将其视为缺失 key。
 
 ## 设计目标
 
@@ -211,8 +213,54 @@ match meta.try_get::<i64>("answer") {
 ```toml
 [dependencies]
 qubit-metadata = "0.6"
+# 使用 schema 数据类型或数值比较策略时需要直接依赖。
+qubit-datatype = "0.7"
+# 使用 Metadata 的原始 Value API 时需要直接依赖。
+qubit-value = "0.10"
+```
+
+### Feature flags
+
+默认 feature 集只包含核心标量 metadata 支持。请仅启用实际使用的富类型族：
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.6", features = ["chrono", "json"] }
+```
+
+可用 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、
+`url`、`json` 和 `all`。
+
+## 测试
+
+```bash
+# 使用默认 feature 集运行测试
+cargo test
+
+# 使用项目声明的全部 feature 运行测试
+cargo test --all-features
+
+# 运行项目 CI 检查
+./ci-check.sh
+
+# 检查代码覆盖率
+./coverage.sh
 ```
 
 ## 许可证
 
-本项目采用 [Apache License 2.0](LICENSE) 授权。
+Copyright (c) 2025 - 2026. Haixing Hu. All rights reserved.
+
+本项目基于 Apache License 2.0 授权。完整许可证文本请参阅
+[LICENSE](LICENSE)。
+
+## 贡献
+
+欢迎贡献。请遵循 Rust API 指南，及时更新公共 API 文档与测试，并在提交
+Pull Request 前运行 `./align-ci.sh`格式化代码，运行`./ci-check.sh`对齐CI要求。
+
+## 作者
+
+**Haixing Hu** - *Qubit Co. Ltd.*
+
+仓库地址：[https://github.com/qubit-ltd/rs-metadata](https://github.com/qubit-ltd/rs-metadata)

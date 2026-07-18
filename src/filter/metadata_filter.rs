@@ -6,6 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! [`MetadataFilter`].
+use qubit_datatype::NumericComparisonPolicy;
 use serde::{
     Deserialize,
     Deserializer,
@@ -23,7 +24,6 @@ use crate::{
     FilterMatchOptions,
     MetadataResult,
     MissingKeyPolicy,
-    NumericComparisonPolicy,
 };
 
 /// An immutable, composable filter expression over [`Metadata`].

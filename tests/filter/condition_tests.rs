@@ -8,13 +8,13 @@
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
 use crate::support::test_support::sample;
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
     Condition,
     FilterMatchOptions,
     Metadata,
     MetadataFilter,
     MissingKeyPolicy,
-    NumericComparisonPolicy,
 };
 use qubit_value::Value;
 
@@ -586,6 +586,7 @@ fn range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
 }
 
 #[test]
+#[cfg(feature = "big-integer")]
 fn big_integer_equality_matches_in_exact_policy() {
     let mut m = Metadata::new();
     m.set("n", num_bigint::BigInt::from(i128::MAX) + 1_i32);
@@ -608,6 +609,7 @@ fn big_integer_equality_matches_in_exact_policy() {
 }
 
 #[test]
+#[cfg(feature = "big-integer")]
 fn big_integer_range_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", num_bigint::BigInt::from(u128::MAX) + 1_u32);
@@ -629,6 +631,7 @@ fn big_integer_range_matches_integral_values_exactly() {
 }
 
 #[test]
+#[cfg(feature = "big-decimal")]
 fn big_decimal_equality_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", bigdecimal::BigDecimal::from(10_i64));
@@ -650,6 +653,7 @@ fn big_decimal_equality_matches_integral_values_exactly() {
 }
 
 #[test]
+#[cfg(feature = "big-number")]
 fn big_decimal_range_matches_big_integer_exactly() {
     let mut m = Metadata::new();
     m.set(
@@ -674,6 +678,7 @@ fn big_decimal_range_matches_big_integer_exactly() {
 }
 
 #[test]
+#[cfg(feature = "big-decimal")]
 fn big_decimal_float_comparison_distinguishes_exact_and_approximate() {
     let mut m = Metadata::new();
     m.set("n", "0.1".parse::<bigdecimal::BigDecimal>().unwrap());
@@ -687,6 +692,7 @@ fn big_decimal_float_comparison_distinguishes_exact_and_approximate() {
 }
 
 #[test]
+#[cfg(feature = "big-integer")]
 fn big_integer_comparison_accepts_integral_variants() {
     macro_rules! assert_eq_big_integer {
         ($stored:expr) => {
@@ -776,6 +782,64 @@ fn not_exists_present_key() {
 }
 
 #[test]
+fn test_presence_predicates_treat_unset_value_as_missing() {
+    let metadata = Metadata::new()
+        .with_raw("status", Value::Unset(qubit_datatype::DataType::String));
+
+    assert!(
+        !MetadataFilter::builder()
+            .exists("status")
+            .build()
+            .expect("exists filter should build")
+            .matches(&metadata)
+    );
+    assert!(
+        MetadataFilter::builder()
+            .not_exists("status")
+            .build()
+            .expect("not-exists filter should build")
+            .matches(&metadata)
+    );
+}
+
+#[test]
+fn test_negative_predicates_apply_missing_key_policy_to_unset_value() {
+    let metadata = Metadata::new()
+        .with_raw("status", Value::Unset(qubit_datatype::DataType::String));
+    let not_equal = MetadataFilter::builder().ne("status", "active");
+    let not_in = MetadataFilter::builder().not_in_set("status", ["active"]);
+
+    assert!(
+        not_equal
+            .clone()
+            .build()
+            .expect("not-equal filter should build")
+            .matches(&metadata)
+    );
+    assert!(
+        !not_equal
+            .missing_key_policy(MissingKeyPolicy::NoMatch)
+            .build()
+            .expect("strict not-equal filter should build")
+            .matches(&metadata)
+    );
+    assert!(
+        not_in
+            .clone()
+            .build()
+            .expect("not-in filter should build")
+            .matches(&metadata)
+    );
+    assert!(
+        !not_in
+            .missing_key_policy(MissingKeyPolicy::NoMatch)
+            .build()
+            .expect("strict not-in filter should build")
+            .matches(&metadata)
+    );
+}
+
+#[test]
 fn in_values_matches() {
     let f = MetadataFilter::builder().in_set("status", ["active", "pending"]);
     assert!(f.build().unwrap().matches(&sample()));
@@ -859,7 +923,7 @@ fn missing_key_policy_applies_recursively_in_filter_tree() {
 fn condition_serde_round_trip() {
     let c = Condition::Equal {
         key: "status".into(),
-        value: Value::from_json_value(serde_json::json!("active")),
+        value: Value::String("active".to_string()),
     };
     let json = serde_json::to_string(&c).unwrap();
     let encoded = serde_json::to_value(&c).unwrap();

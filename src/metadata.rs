@@ -33,6 +33,9 @@ use crate::{
 /// scalar types such as `i64`, `u32`, `f64`, `String`, and `bool`.  This avoids
 /// the ambiguity of a single JSON number type while still allowing callers to
 /// store explicit [`Value::Json`] values when they really need JSON payloads.
+/// [`Value::Unset`] retains a declared type but represents no concrete metadata
+/// value: typed reads report [`MetadataError::MissingValue`], required schema
+/// fields reject it, and filters treat it like an absent key.
 ///
 /// Use [`Metadata::with`] for fluent construction and [`Metadata::set`] when
 /// mutating an existing object.
@@ -61,7 +64,8 @@ impl Metadata {
         self.0.len()
     }
 
-    /// Returns `true` if the given key exists.
+    /// Returns `true` if the given key exists, including when it stores
+    /// [`Value::Unset`].
     #[inline]
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
@@ -84,7 +88,8 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns [`MetadataError::MissingKey`] when the key is absent, or
+    /// Returns [`MetadataError::MissingKey`] when the key is absent,
+    /// [`MetadataError::MissingValue`] when it stores [`Value::Unset`], or
     /// [`MetadataError::TypeMismatch`] when the stored value cannot be
     /// converted to the requested type.
     pub fn try_get<T>(&self, key: &str) -> MetadataResult<T>
@@ -95,6 +100,12 @@ impl Metadata {
             .0
             .get(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
+        if value.is_unset() {
+            return Err(MetadataError::MissingValue {
+                key: key.to_string(),
+                data_type: value.data_type(),
+            });
+        }
         value.to::<T>().map_err(|error| {
             MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
         })

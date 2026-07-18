@@ -25,6 +25,9 @@ the core model. Typical uses include:
 really needs nested data, it can store `Value::Json` explicitly. Common document
 metadata, vector-database metadata, and request context are usually flat typed
 field sets, which keeps schema validation and filter construction predictable.
+`Value::Unset` retains its declared type but has no concrete metadata value:
+typed reads report `MetadataError::MissingValue`, required schema fields reject
+it, and filters treat it like an absent key.
 
 ## Design Goals
 
@@ -224,8 +227,56 @@ Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 qubit-metadata = "0.6"
+# Required when naming schema data types or numeric comparison policies.
+qubit-datatype = "0.7"
+# Required when using Metadata's raw Value APIs.
+qubit-value = "0.10"
+```
+
+### Feature flags
+
+The default feature set contains only core scalar metadata support. Enable
+only the rich value families you need:
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.6", features = ["chrono", "json"] }
+```
+
+Available features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
+`url`, `json`, and `all`.
+
+## Testing
+
+```bash
+# Run tests with the default feature set
+cargo test
+
+# Run tests with all declared features
+cargo test --all-features
+
+# Project CI checks
+./ci-check.sh
+
+# Check code coverage
+./coverage.sh
 ```
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+Copyright (c) 2025 - 2026. Haixing Hu. All rights reserved.
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the
+full license text.
+
+## Contributing
+
+Contributions are welcome. Please follow the Rust API guidelines, keep public
+API documentation and tests current, and run `./align-ci.sh` to format code and
+`./ci-check.sh` to satisfy CI requirements before submitting a pull request.
+
+## Author
+
+**Haixing Hu** - *Qubit Co. Ltd.*
+
+Repository: [https://github.com/qubit-ltd/rs-metadata](https://github.com/qubit-ltd/rs-metadata)

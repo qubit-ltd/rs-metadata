@@ -10,7 +10,9 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+#[cfg(feature = "big-decimal")]
 use bigdecimal::BigDecimal;
+#[cfg(feature = "chrono")]
 use chrono::{
     DateTime,
     NaiveDate,
@@ -19,6 +21,7 @@ use chrono::{
     Utc,
 };
 use qubit_value::Value;
+#[cfg(feature = "url")]
 use url::Url;
 
 /// Converts supported Rust values into the metadata backing [`Value`] type.
@@ -67,14 +70,21 @@ impl_into_metadata_value!(
     f64,
     String,
     &str,
-    NaiveDate,
-    NaiveTime,
-    NaiveDateTime,
-    DateTime<Utc>,
-    num_bigint::BigInt,
-    BigDecimal,
     Duration,
-    Url,
     HashMap<String, String>,
-    serde_json::Value,
 );
+
+#[cfg(feature = "chrono")]
+impl_into_metadata_value!(NaiveDate, NaiveTime, NaiveDateTime, DateTime<Utc>,);
+
+#[cfg(feature = "big-integer")]
+impl_into_metadata_value!(num_bigint::BigInt);
+
+#[cfg(feature = "big-decimal")]
+impl_into_metadata_value!(BigDecimal);
+
+#[cfg(feature = "url")]
+impl_into_metadata_value!(Url);
+
+#[cfg(feature = "json")]
+impl_into_metadata_value!(serde_json::Value);
