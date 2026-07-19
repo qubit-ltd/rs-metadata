@@ -268,7 +268,7 @@ Add to your `Cargo.toml`:
 [dependencies]
 qubit-metadata = "0.8"
 # Required when naming schema data types or numeric comparison policies.
-qubit-datatype = "0.7"
+qubit-datatype = "0.8"
 # Required when using Metadata's raw Value APIs.
 qubit-value = "0.10"
 ```
