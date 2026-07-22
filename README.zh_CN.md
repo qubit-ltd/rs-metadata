@@ -226,13 +226,13 @@ schema 校验 filter 时，任意非 NaN 数值表示都与任意数值字段兼
 
 ### 5) 版本化 filter 序列化格式
 
-`MetadataFilter` 序列化后使用明确的 wire format，包含 `version`、`expression` 和
-`options` 字段。表达式节点使用 `type`，条件节点使用稳定的 `op` 操作符名，例如
-`eq`、`ge`、`in` 和 `not_exists`。单独序列化 `Condition` 时也使用同一套条件
-wire 表示。内部表达式树不属于序列化契约。`options` 中的策略枚举序列化为
-lowercase underscore 值，例如 `exact` 和 `approximate`。新的 `MetadataFilter`
-序列化输出使用 wire version `3`；更早的 filter wire version
-会被拒绝。
+`MetadataFilter` 使用严格的 v4 wire format，包含 `version`、`expression`、
+`options` 和 `limits` 字段。每个表达式节点使用 `kind` tag；`eq`、`ge`、`in`、
+`not_exists` 等条件数据直接内联在节点中，布尔节点使用 `and`、`or`、`not`、
+`all` 和 `none`。`options` 中的策略枚举使用 lowercase underscore 值，例如
+`exact` 和 `approximate`。未知字段、畸形节点和非 v4 版本都会被拒绝。
+`Metadata` 与 `MetadataSchema` 分别使用严格的 v1 envelope，同样拒绝未知字段和
+不支持的版本。
 
 ## 错误处理
 
@@ -262,10 +262,10 @@ match meta.try_get::<i64>("answer") {
 
 ```toml
 [dependencies]
-qubit-metadata = "0.8"
+qubit-metadata = "0.10"
 # 使用 schema 数据类型或数值比较策略时需要直接依赖。
 qubit-datatype = "0.8"
-# 使用 Metadata 的原始 Value API 时需要直接依赖。
+# 直接构造 Value 操作数时需要依赖。
 qubit-value = "0.10"
 ```
 
@@ -275,7 +275,7 @@ qubit-value = "0.10"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.8", features = ["chrono", "json"] }
+qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
 ```
 
 可用 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、
