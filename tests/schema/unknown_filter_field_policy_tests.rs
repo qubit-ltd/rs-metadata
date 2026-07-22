@@ -24,9 +24,7 @@ fn test_unknown_filter_field_policy_serde_uses_snake_case() {
         serde_json::json!("allow_unchecked")
     );
     assert!(
-        serde_json::from_value::<UnknownFilterFieldPolicy>(serde_json::json!(
-            "AllowUnchecked"
-        ))
-        .is_err()
+        serde_json::from_value::<UnknownFilterFieldPolicy>(serde_json::json!("AllowUnchecked"))
+            .is_err()
     );
 }

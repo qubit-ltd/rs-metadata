@@ -43,36 +43,8 @@ impl FilterLimits {
     ///
     /// A builder whose omitted properties use library hard maximums.
     #[inline]
-    #[must_use]
     pub const fn builder() -> FilterLimitsBuilder {
         FilterLimitsBuilder::new()
-    }
-
-    /// Creates filter limits from explicit bounds.
-    ///
-    /// # Parameters
-    ///
-    /// * `max_depth` - Maximum nesting depth.
-    /// * `max_nodes` - Maximum expression-node count.
-    /// * `max_set_values` - Maximum values in one membership condition.
-    /// * `max_key_length` - Maximum UTF-8 byte length of one key.
-    ///
-    /// # Returns
-    ///
-    /// The configured resource bounds.
-    #[inline]
-    pub const fn new(
-        max_depth: usize,
-        max_nodes: usize,
-        max_set_values: usize,
-        max_key_length: usize,
-    ) -> Self {
-        Self {
-            max_depth,
-            max_nodes,
-            max_set_values,
-            max_key_length,
-        }
     }
 
     /// Returns the maximum nesting depth.
@@ -91,12 +63,6 @@ impl FilterLimits {
     #[inline(always)]
     pub const fn max_set_values(&self) -> usize {
         self.max_set_values
-    }
-
-    /// Returns the maximum UTF-8 byte length of one metadata key.
-    #[inline(always)]
-    pub const fn max_key_length(&self) -> usize {
-        self.max_key_length
     }
 
     /// Returns the maximum UTF-8 byte length of one metadata key.

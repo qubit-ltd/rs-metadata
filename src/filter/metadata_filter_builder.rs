@@ -32,7 +32,7 @@ impl MetadataFilterBuilder {
     pub(crate) const fn new() -> Self {
         Self {
             expression: None,
-            options: FilterMatchOptions::new(),
+            options: FilterMatchOptions::builder().build(),
             limits: FilterLimits::MAX,
         }
     }

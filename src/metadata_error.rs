@@ -220,10 +220,7 @@ impl fmt::Display for MetadataError {
                 "Metadata filters use incompatible match options: left {left:?}, right {right:?}"
             ),
             Self::DuplicateSchemaField { key } => {
-                write!(
-                    f,
-                    "Metadata schema declares field '{key}' more than once"
-                )
+                write!(f, "Metadata schema declares field '{key}' more than once")
             }
         }
     }

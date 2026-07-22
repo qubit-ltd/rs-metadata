@@ -7,11 +7,7 @@
 // =============================================================================
 //! Tests for the crate's public exports.
 
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
 
 #[test]
 fn test_public_exports_are_usable() {
