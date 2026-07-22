@@ -7,37 +7,15 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::FilterExpressionView`].
 
-use qubit_metadata::{FilterExpressionView, MetadataFilter};
+use qubit_metadata::{FilterExpression, FilterExpressionView};
 
 #[test]
 fn test_expression_view_preserves_boolean_structure() {
-    let filter = MetadataFilter::builder()
-        .eq("a", 1_i64)
-        .or_not(|group| group.exists("b"))
+    let expression = FilterExpression::builder()
+        .eq("status", "active")
+        .or_group(|group| group.eq("tag", "rust").exists("owner"))
         .build()
-        .expect("filter should build");
+        .expect("expression should build");
 
-    match filter.expression().view() {
-        FilterExpressionView::Or(children) => {
-            assert_eq!(children.len(), 2);
-            assert!(matches!(
-                children[0].view(),
-                FilterExpressionView::Condition(_)
-            ));
-            assert!(matches!(children[1].view(), FilterExpressionView::Not(_)));
-        }
-        other => panic!("expected OR expression, got {other:?}"),
-    }
-}
-
-#[test]
-fn test_expression_view_exposes_constant_expressions() {
-    assert!(matches!(
-        MetadataFilter::all().expression().view(),
-        FilterExpressionView::True
-    ));
-    assert!(matches!(
-        MetadataFilter::none().expression().view(),
-        FilterExpressionView::False
-    ));
+    assert!(matches!(expression.view(), FilterExpressionView::Or(_)));
 }

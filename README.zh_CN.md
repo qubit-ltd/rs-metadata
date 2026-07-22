@@ -108,15 +108,15 @@ schema.validate(&meta).unwrap();
 
 ### 3) builder 构造不可变 filter
 
-`MetadataFilter::builder()` 返回 builder，调用 `build()` 后得到
-`Result<MetadataFilter, MetadataError>`。这样空分组这类结构非法的表达式会明确报错，
-不会静默变成 no-op。如果已有 schema，可以用 `build_checked(&schema)` 在构建时校验字段
-是否存在、操作符是否适用于字段类型、过滤值类型是否兼容。schema 级校验会返回聚合错误，
-调用方可以一次拿到所有相互独立的问题。
+`FilterExpression::builder()` 负责构造必需的布尔表达式，
+`MetadataFilter::builder()` 则把表达式与匹配选项和资源限制绑定。调用 `build()` 后得到
+`Result<MetadataFilter, MetadataError>`。如果已有 schema，可以用 `build_checked(&schema)`
+在构建时校验字段是否存在、操作符是否适用于字段类型、过滤值类型是否兼容。schema 级校验会
+返回聚合错误，调用方可以一次拿到所有相互独立的问题。
 
 ```rust
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataFilter, MetadataSchema};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter, MetadataSchema};
 
 let schema = MetadataSchema::builder()
     .required("status", DataType::String)
@@ -124,9 +124,13 @@ let schema = MetadataSchema::builder()
     .build()
     .expect("schema should build");
 
-let filter = MetadataFilter::builder()
+let expression = FilterExpression::builder()
     .eq("status", "active")
-    .and_ge("score", 10)
+    .ge("score", 10)
+    .build()
+    .unwrap();
+let filter = MetadataFilter::builder()
+    .expression(expression)
     .build_checked(&schema)
     .unwrap();
 
@@ -145,19 +149,24 @@ assert!(filter.matches(&meta));
 | `gt` / `ge` / `lt` / `le` | 数值范围或字符串字典序比较 |
 | `exists` / `not_exists` | 具体值存在 / 不存在 |
 | `in_set` / `not_in_set` | 集合包含 / 排除 |
-| `and_*` / `or_*` | 用明确连接词追加一个谓词 |
-| `and` / `or` / `and_not` / `or_not` | 追加分组子表达式 |
+| `and_group` / `or_group` | 追加分组子表达式 |
 | `not` | 对当前表达式取反 |
 
-分组子表达式使用闭包构造。闭包会收到一个新的 builder，闭包返回的表达式会作为一个
-整体追加到外层表达式中：
+未指定连接词的谓词按 AND 连接。分组子表达式使用闭包构造。闭包会收到一个新的 builder，
+闭包返回的表达式会作为一个整体追加到外层表达式中：
 
 ```rust
-use qubit_metadata::{Metadata, MetadataFilter};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
 
-let filter = MetadataFilter::builder()
+let expression = FilterExpression::builder()
     .eq("status", "active")
-    .and(|g| g.ge("score", 80).or_eq("tag", "rust"))
+    .and_group(|group| {
+        group.ge("score", 80).or_group(|alternative| alternative.eq("tag", "rust"))
+    })
+    .build()
+    .unwrap();
+let filter = MetadataFilter::builder()
+    .expression(expression)
     .build()
     .unwrap();
 
@@ -175,12 +184,17 @@ assert!(filter.matches(&meta));
 status == "active" AND (score >= 80 OR tag == "rust")
 ```
 
-如果整个分组需要取反，可以使用 `and_not` 或 `or_not`：
+如果需要对已构造的表达式取反，可以使用 `FilterExpression::try_not()`：
 
 ```rust
-let filter = MetadataFilter::builder()
+let expression = FilterExpression::builder()
     .eq("status", "active")
-    .and_not(|g| g.ge("score", 80).or_eq("tag", "java"))
+    .build()
+    .unwrap()
+    .try_not()
+    .unwrap();
+let filter = MetadataFilter::builder()
+    .expression(expression)
     .build()
     .unwrap();
 ```
@@ -191,8 +205,8 @@ true 才会让 `matches()` 返回 `true`。因此 `ne(key, value)` 与
 `not(eq(key, value))` 等价，并且都不会匹配缺失值或 unset 值。数值相等、集合成员判断
 和范围谓词中的混合数值比较策略由 `NumericComparisonPolicy` 控制。
 
-分组表达式必须至少包含一个谓词。例如 `and(|g| g)` 和 `or_not(|g| g)` 会被
-`build()` 拒绝，因为空分组通常代表调用方构造条件时漏传了约束。
+分组表达式必须至少包含一个谓词。例如 `and_group(|group| group)` 会被 `build()` 拒绝，
+因为空分组通常代表调用方构造条件时漏传了约束。
 
 空集合是允许的。`in_set("key", [])` 不匹配任何 metadata 对象。
 `not_in_set("key", [])` 只在 `key` 存储具体值时匹配；键缺失或值为 unset 时仍为

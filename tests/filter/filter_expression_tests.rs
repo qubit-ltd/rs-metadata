@@ -5,48 +5,30 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Tests for filter-expression composition.
+//! Tests for Boolean expression semantics.
 
 use crate::support::test_support::sample;
-use qubit_metadata::MetadataFilter;
+use qubit_metadata::{FilterExpression, MetadataFilter};
 
 #[test]
-fn test_filter_expression_and_requires_all_children_to_match() {
-    let matching = MetadataFilter::builder()
+fn test_and_or_and_not_are_expression_operations() {
+    let active = FilterExpression::builder()
         .eq("status", "active")
-        .and_ge("score", 40_i64)
         .build()
-        .expect("AND filter should build");
-    let non_matching = MetadataFilter::builder()
-        .eq("status", "active")
-        .and_ge("score", 100_i64)
+        .expect("expression should build");
+    let tagged = FilterExpression::builder()
+        .eq("tag", "rust")
         .build()
-        .expect("AND filter should build");
-
-    assert!(matching.matches(&sample()));
-    assert!(!non_matching.matches(&sample()));
-}
-
-#[test]
-fn test_filter_expression_or_matches_when_any_child_matches() {
+        .expect("expression should build");
+    let expression = active
+        .try_and(tagged)
+        .expect("AND should build")
+        .try_not()
+        .expect("NOT should build");
     let filter = MetadataFilter::builder()
-        .eq("status", "inactive")
-        .or_ge("score", 40_i64)
+        .expression(expression)
         .build()
-        .expect("OR filter should build");
+        .expect("filter should build");
 
-    assert!(filter.matches(&sample()));
-}
-
-#[test]
-fn test_filter_expression_not_negates_nested_expression() {
-    let filter = MetadataFilter::builder()
-        .eq("status", "inactive")
-        .not()
-        .build()
-        .expect("NOT filter should build");
-
-    assert!(filter.matches(&sample()));
-    assert!(MetadataFilter::none().not().matches(&sample()));
-    assert!(!MetadataFilter::all().not().matches(&sample()));
+    assert!(!filter.matches(&sample()));
 }

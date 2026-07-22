@@ -113,16 +113,16 @@ schema.validate(&meta).unwrap();
 
 ### 3) Immutable filters built by builder
 
-`MetadataFilter::builder()` creates a builder. Calling `build()` returns a
-`Result<MetadataFilter, MetadataError>` so structurally invalid expressions such
-as empty grouped expressions are reported instead of silently becoming no-ops.
-`build_checked(&schema)` also validates referenced fields, operator
-compatibility, and filter value types. Schema-level validation returns an
-aggregate error so callers can report all independent issues in one pass.
+`FilterExpression::builder()` constructs the required Boolean expression, while
+`MetadataFilter::builder()` binds that expression to matching options and
+resource limits. Calling `build()` returns a `Result<MetadataFilter,
+MetadataError>`. `build_checked(&schema)` also validates referenced fields,
+operator compatibility, and filter value types. Schema-level validation returns
+an aggregate error so callers can report all independent issues in one pass.
 
 ```rust
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataFilter, MetadataSchema};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter, MetadataSchema};
 
 let schema = MetadataSchema::builder()
     .required("status", DataType::String)
@@ -130,9 +130,13 @@ let schema = MetadataSchema::builder()
     .build()
     .expect("schema should build");
 
-let filter = MetadataFilter::builder()
+let expression = FilterExpression::builder()
     .eq("status", "active")
-    .and_ge("score", 10)
+    .ge("score", 10)
+    .build()
+    .unwrap();
+let filter = MetadataFilter::builder()
+    .expression(expression)
     .build_checked(&schema)
     .unwrap();
 
@@ -151,19 +155,25 @@ assert!(filter.matches(&meta));
 | `gt`, `ge`, `lt`, `le` | Numeric or string range comparison |
 | `exists`, `not_exists` | Concrete-value presence / absence |
 | `in_set`, `not_in_set` | Membership / exclusion |
-| `and_*`, `or_*` | Append one predicate with explicit connector |
-| `and`, `or`, `and_not`, `or_not` | Append grouped subexpressions |
+| `and_group`, `or_group` | Append grouped subexpressions |
 | `not` | Negate the current expression |
 
-Grouped subexpressions are built with closures. The closure receives a fresh
-builder, and the resulting expression is appended as one grouped child:
+Predicates added without a connector are joined by AND. Grouped
+subexpressions are built with closures. The closure receives a fresh builder,
+and the resulting expression is appended as one grouped child:
 
 ```rust
-use qubit_metadata::{Metadata, MetadataFilter};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
 
-let filter = MetadataFilter::builder()
+let expression = FilterExpression::builder()
     .eq("status", "active")
-    .and(|g| g.ge("score", 80).or_eq("tag", "rust"))
+    .and_group(|group| {
+        group.ge("score", 80).or_group(|alternative| alternative.eq("tag", "rust"))
+    })
+    .build()
+    .unwrap();
+let filter = MetadataFilter::builder()
+    .expression(expression)
     .build()
     .unwrap();
 
@@ -181,12 +191,18 @@ The expression above means:
 status == "active" AND (score >= 80 OR tag == "rust")
 ```
 
-Use `and_not` or `or_not` when the whole group should be negated:
+Use `FilterExpression::try_not()` when an already-built expression should be
+negated:
 
 ```rust
-let filter = MetadataFilter::builder()
+let expression = FilterExpression::builder()
     .eq("status", "active")
-    .and_not(|g| g.ge("score", 80).or_eq("tag", "java"))
+    .build()
+    .unwrap()
+    .try_not()
+    .unwrap();
+let filter = MetadataFilter::builder()
+    .expression(expression)
     .build()
     .unwrap();
 ```
@@ -200,8 +216,8 @@ comparison behavior for equality, membership, and range predicates is
 controlled by `NumericComparisonPolicy`.
 
 Grouped expressions must contain at least one predicate. For example,
-`and(|g| g)` and `or_not(|g| g)` are rejected by `build()` because an empty group
-is usually a caller bug.
+`and_group(|group| group)` is rejected by `build()` because an empty group is
+usually a caller bug.
 
 Empty value sets are allowed. `in_set("key", [])` matches no metadata object.
 `not_in_set("key", [])` matches only when `key` stores a concrete value; an

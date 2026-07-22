@@ -7,234 +7,78 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
-use qubit_datatype::NumericComparisonPolicy;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
-use super::filter_expression::FilterExpression;
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
-use crate::metadata::Metadata;
-use crate::{Condition, FilterLimits, FilterMatchOptions, MetadataError, MetadataResult};
+use crate::{
+    Condition, FilterExpression, FilterLimits, FilterMatchOptions, Metadata, MetadataResult,
+};
 
-/// An immutable, composable filter expression over [`Metadata`].
+/// An expression, its matching policy, and its resource limits.
 ///
-/// Construct filters with [`MetadataFilter::builder`]. An empty builder builds
-/// a match-all filter, while structurally invalid expressions such as empty
-/// groups are rejected by [`MetadataFilterBuilder::build`]. Comparison
-/// predicates over missing or unset values remain unknown through negation and
-/// fail closed at the public matching boundary. Use
-/// [`MetadataFilter::expression`] to inspect the immutable Boolean structure.
-#[derive(Debug, Clone, PartialEq, Default)]
+/// Boolean composition belongs to [`FilterExpression`]. This type only binds
+/// an already-built expression to the options and limits used to evaluate it.
+#[derive(Debug, Clone, PartialEq)]
 pub struct MetadataFilter {
-    /// Root expression tree.
+    /// Root Boolean expression.
     expression: FilterExpression,
-    /// Match policies used by [`MetadataFilter::matches`].
+    /// Evaluation options.
     options: FilterMatchOptions,
+    /// Bounds that the expression satisfies.
+    limits: FilterLimits,
 }
 
 impl MetadataFilter {
     /// Creates a builder for a metadata filter.
-    ///
-    /// # Returns
-    ///
-    /// An empty builder whose default result matches all metadata.
     #[inline(always)]
     #[must_use]
-    pub fn builder() -> MetadataFilterBuilder {
-        MetadataFilterBuilder::default()
+    pub const fn builder() -> MetadataFilterBuilder {
+        MetadataFilterBuilder::new()
     }
 
-    /// Creates a filter that matches every metadata object.
-    ///
-    /// # Returns
-    ///
-    /// A constant match-all filter.
+    /// Creates a filter from already validated parts.
     #[inline(always)]
-    #[must_use]
-    pub fn all() -> Self {
-        Self::default()
-    }
-
-    /// Creates a filter that matches no metadata object.
-    ///
-    /// # Returns
-    ///
-    /// A constant match-none filter.
-    #[inline]
-    #[must_use]
-    pub fn none() -> Self {
-        Self {
-            expression: FilterExpression::false_expression(),
-            options: FilterMatchOptions::default(),
-        }
-    }
-
-    /// Creates a filter from an expression and match options.
-    ///
-    /// # Parameters
-    ///
-    /// * `expression` - Root filter expression.
-    /// * `options` - Match options stored with the filter.
-    ///
-    /// # Returns
-    ///
-    /// A new immutable filter.
-    #[inline]
-    pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions) -> Self {
+    pub(crate) const fn new(
+        expression: FilterExpression,
+        options: FilterMatchOptions,
+        limits: FilterLimits,
+    ) -> Self {
         Self {
             expression,
             options,
+            limits,
         }
     }
 
-    /// Returns the root filter expression.
-    ///
-    /// # Returns
-    ///
-    /// A borrowed, immutable expression tree.
+    /// Returns the root expression.
     #[inline(always)]
-    pub fn expression(&self) -> &FilterExpression {
+    pub const fn expression(&self) -> &FilterExpression {
         &self.expression
     }
 
-    /// Returns the current match options.
-    ///
-    /// # Returns
-    ///
-    /// A copy of the configured match options.
+    /// Returns the evaluation options.
     #[inline(always)]
     #[must_use]
-    pub fn options(&self) -> FilterMatchOptions {
+    pub const fn options(&self) -> FilterMatchOptions {
         self.options
     }
 
-    /// Replaces the current match options and returns a new filter.
-    ///
-    /// # Parameters
-    ///
-    /// * `options` - Replacement match options.
-    ///
-    /// # Returns
-    ///
-    /// This filter with the replacement options.
+    /// Returns the resource limits.
     #[inline(always)]
     #[must_use]
-    pub fn with_options(mut self, options: FilterMatchOptions) -> Self {
-        self.options = options;
-        self
+    pub const fn limits(&self) -> FilterLimits {
+        self.limits
     }
 
-    /// Returns a new filter with the supplied number-comparison policy.
-    ///
-    /// # Parameters
-    ///
-    /// * `numeric_comparison_policy` - Policy for mixed numeric comparisons.
-    ///
-    /// # Returns
-    ///
-    /// This filter with the replacement policy.
+    /// Returns whether `metadata` satisfies this filter.
     #[inline(always)]
     #[must_use]
-    pub fn with_numeric_comparison_policy(
-        mut self,
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> Self {
-        self.options
-            .set_numeric_comparison_policy(numeric_comparison_policy);
-        self
+    pub fn matches(&self, metadata: &Metadata) -> bool {
+        self.expression.evaluate(metadata, self.options).is_match()
     }
 
-    /// Returns a new filter that negates this filter.
-    ///
-    /// # Returns
-    ///
-    /// This filter with its root expression logically negated.
-    #[allow(clippy::should_implement_trait)]
-    #[inline(always)]
-    #[must_use]
-    pub fn not(mut self) -> Self {
-        self.expression = self.expression.negated();
-        self
-    }
-
-    /// Combines this filter with `other` using logical AND.
-    ///
-    /// # Parameters
-    ///
-    /// * `other` - Filter to combine with this filter.
-    ///
-    /// # Returns
-    ///
-    /// A filter that requires both operands to match.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`MetadataError::IncompatibleFilterOptions`] when the filters
-    /// use different match options, or [`MetadataError::FilterLimitExceeded`]
-    /// when their combined expression exceeds the default resource bounds.
-    pub fn try_and(self, other: Self) -> MetadataResult<Self> {
-        self.try_combine(other, FilterExpression::and)
-    }
-
-    /// Combines this filter with `other` using logical OR.
-    ///
-    /// # Parameters
-    ///
-    /// * `other` - Filter to combine with this filter.
-    ///
-    /// # Returns
-    ///
-    /// A filter that matches when either operand matches.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`MetadataError::IncompatibleFilterOptions`] when the filters
-    /// use different match options, or [`MetadataError::FilterLimitExceeded`]
-    /// when their combined expression exceeds the default resource bounds.
-    pub fn try_or(self, other: Self) -> MetadataResult<Self> {
-        self.try_combine(other, FilterExpression::or)
-    }
-
-    /// Returns `true` if `meta` satisfies this filter.
-    ///
-    /// # Parameters
-    ///
-    /// * `meta` - Metadata object to evaluate.
-    ///
-    /// # Returns
-    ///
-    /// `true` only when evaluation produces a definite true outcome.
-    #[inline(always)]
-    #[must_use]
-    pub fn matches(&self, meta: &Metadata) -> bool {
-        self.matches_with_options(meta, self.options)
-    }
-
-    /// Returns `true` if `meta` satisfies this filter with explicit options.
-    ///
-    /// # Parameters
-    ///
-    /// * `meta` - Metadata object to evaluate.
-    /// * `options` - Match options for this evaluation.
-    ///
-    /// # Returns
-    ///
-    /// `true` only when evaluation produces a definite true outcome.
-    #[inline(always)]
-    #[must_use]
-    pub fn matches_with_options(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
-        self.expression.evaluate(meta, options).is_match()
-    }
-
-    /// Visits all leaf conditions in this filter.
-    ///
-    /// # Parameters
-    ///
-    /// * `visitor` - Callback invoked for each leaf condition.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` after every condition has been visited.
+    /// Visits every leaf condition in the expression.
     ///
     /// # Errors
     ///
@@ -246,44 +90,10 @@ impl MetadataFilter {
     {
         self.expression.visit_conditions(&mut visitor)
     }
-
-    /// Validates this filter against resource limits.
-    ///
-    /// # Parameters
-    ///
-    /// * `limits` - Bounds to enforce.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` when the expression fits within `limits`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`MetadataError::FilterLimitExceeded`] when the expression
-    /// exceeds a configured resource bound.
-    pub fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
-        self.expression.validate_limits(limits)
-    }
-
-    /// Combines two filters that must share identical match options.
-    fn try_combine(
-        self,
-        other: Self,
-        combine: fn(FilterExpression, FilterExpression) -> FilterExpression,
-    ) -> MetadataResult<Self> {
-        if self.options != other.options {
-            return Err(MetadataError::IncompatibleFilterOptions {
-                left: self.options,
-                right: other.options,
-            });
-        }
-        let filter = Self::new(combine(self.expression, other.expression), self.options);
-        filter.validate_limits(FilterLimits::default())?;
-        Ok(filter)
-    }
 }
 
 impl Serialize for MetadataFilter {
+    /// Serializes this filter through its versioned wire representation.
     #[inline(always)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -294,6 +104,7 @@ impl Serialize for MetadataFilter {
 }
 
 impl<'de> Deserialize<'de> for MetadataFilter {
+    /// Deserializes a filter using library hard limits as receiver limits.
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -302,14 +113,5 @@ impl<'de> Deserialize<'de> for MetadataFilter {
         MetadataFilterWire::deserialize(deserializer)?
             .into_filter()
             .map_err(de::Error::custom)
-    }
-}
-
-impl std::ops::Not for MetadataFilter {
-    type Output = MetadataFilter;
-
-    #[inline(always)]
-    fn not(self) -> Self::Output {
-        MetadataFilter::not(self)
     }
 }

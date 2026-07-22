@@ -5,21 +5,18 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Behavioral tests for private filter-expression nodes.
+//! Tests for expression-node normalization through public views.
 
-use qubit_metadata::{FilterExpressionView, MetadataFilter};
+use qubit_metadata::{FilterExpression, FilterExpressionView};
 
 #[test]
 fn test_filter_expression_node_flattens_chained_and_children() {
-    let filter = MetadataFilter::builder()
-        .exists("first")
-        .and_exists("second")
-        .and_exists("third")
-        .build()
-        .expect("filter should build");
+    let first = FilterExpression::builder().exists("a").build().unwrap();
+    let second = FilterExpression::builder().exists("b").build().unwrap();
+    let third = FilterExpression::builder().exists("c").build().unwrap();
+    let expression = first.try_and(second).unwrap().try_and(third).unwrap();
 
-    assert!(matches!(
-        filter.expression().view(),
-        FilterExpressionView::And(children) if children.len() == 3
-    ));
+    assert!(
+        matches!(expression.view(), FilterExpressionView::And(children) if children.len() == 3)
+    );
 }

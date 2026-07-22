@@ -44,7 +44,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use qubit_metadata::{Metadata, MetadataFilter};
+//! use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
 //!
 //! let meta = Metadata::new()
 //!     .with("author", "alice")
@@ -58,9 +58,13 @@
 //! let priority = meta.try_get::<i64>("priority").unwrap();
 //! assert_eq!(priority, 3);
 //!
-//! let filter = MetadataFilter::builder()
+//! let expression = FilterExpression::builder()
 //!     .eq("author", "alice")
-//!     .and_ge("priority", 1_i64)
+//!     .ge("priority", 1_i64)
+//!     .build()
+//!     .unwrap();
+//! let filter = MetadataFilter::builder()
+//!     .expression(expression)
 //!     .build()
 //!     .unwrap();
 //! assert!(filter.matches(&meta));
