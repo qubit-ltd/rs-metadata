@@ -49,9 +49,12 @@ impl MetadataFilterWire {
             });
         }
         let expression = self.expression.into_expression()?;
-        let filter = MetadataFilter::new(expression, self.options);
-        filter.validate_limits(FilterLimits::default())?;
-        Ok(filter)
+        expression.validate_limits(FilterLimits::MAX)?;
+        Ok(MetadataFilter::new(
+            expression,
+            self.options,
+            FilterLimits::MAX,
+        ))
     }
 }
 

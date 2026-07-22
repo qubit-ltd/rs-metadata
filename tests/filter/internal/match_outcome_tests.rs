@@ -5,17 +5,21 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Behavioral tests for private three-valued match outcomes.
+//! Tests for fail-closed unknown outcomes.
 
-use qubit_metadata::{Metadata, MetadataFilter};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
 
 #[test]
 fn test_match_outcome_unknown_remains_non_matching_after_negation() {
-    let filter = MetadataFilter::builder()
+    let expression = FilterExpression::builder()
         .eq("missing", "value")
         .not()
         .build()
-        .expect("filter should build");
+        .unwrap();
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .unwrap();
 
     assert!(!filter.matches(&Metadata::new()));
 }

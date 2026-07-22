@@ -73,6 +73,8 @@ pub enum MetadataError {
         /// Human-readable validation message.
         message: String,
     },
+    /// A metadata-filter builder was finalized without an expression.
+    MissingFilterExpression,
     /// A configured filter resource bound is outside the allowed range.
     InvalidFilterLimit {
         /// Resource category being configured.
@@ -197,6 +199,9 @@ impl fmt::Display for MetadataError {
             ),
             Self::InvalidFilterExpression { message } => {
                 write!(f, "Metadata filter expression is invalid: {message}")
+            }
+            Self::MissingFilterExpression => {
+                write!(f, "Metadata filter requires an expression")
             }
             Self::InvalidFilterLimit {
                 kind,
