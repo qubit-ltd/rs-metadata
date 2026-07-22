@@ -7,10 +7,7 @@
 // =============================================================================
 //! Behavioral tests for private filter-expression nodes.
 
-use qubit_metadata::{
-    FilterExpressionView,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterExpressionView, MetadataFilter};
 
 #[test]
 fn test_filter_expression_node_flattens_chained_and_children() {

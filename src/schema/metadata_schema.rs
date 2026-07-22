@@ -11,23 +11,13 @@ use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
 use qubit_value::Value;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use crate::schema::{
-    MetadataField,
-    MetadataSchemaBuilder,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
+    MetadataField, MetadataSchemaBuilder, UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
 };
 use crate::{
-    Metadata,
-    MetadataError,
-    MetadataResult,
-    MetadataValidationError,
-    MetadataValidationResult,
+    Metadata, MetadataError, MetadataResult, MetadataValidationError, MetadataValidationResult,
 };
 
 /// Schema for metadata fields.
@@ -160,9 +150,7 @@ impl MetadataSchema {
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
-            if field.is_required()
-                && meta.get_raw(key).is_none_or(Value::is_unset)
-            {
+            if field.is_required() && meta.get_raw(key).is_none_or(Value::is_unset) {
                 issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),
@@ -197,19 +185,11 @@ impl MetadataSchema {
     ///
     /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
     /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
-    pub(crate) fn validate_entry(
-        &self,
-        key: &str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
-            Some(field) if field.data_type() != value.data_type() => {
-                Err(MetadataError::type_mismatch(
-                    key,
-                    field.data_type(),
-                    value.data_type(),
-                ))
-            }
+            Some(field) if field.data_type() != value.data_type() => Err(
+                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
+            ),
             Some(_) => Ok(()),
             None if matches!(
                 self.unknown_metadata_field_policy,

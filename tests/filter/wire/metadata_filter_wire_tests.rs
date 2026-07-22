@@ -20,8 +20,7 @@ fn test_metadata_filter_wire_round_trips_options_and_expression() {
         .build()
         .expect("filter should build");
 
-    let encoded =
-        serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(encoded["version"], json!(3));
     assert_eq!(
         encoded["options"],
@@ -39,8 +38,7 @@ fn test_metadata_filter_wire_round_trips_options_and_expression() {
 
 #[test]
 fn test_metadata_filter_wire_encodes_explicit_true_for_match_all() {
-    let encoded = serde_json::to_value(MetadataFilter::all())
-        .expect("filter should serialize");
+    let encoded = serde_json::to_value(MetadataFilter::all()).expect("filter should serialize");
 
     assert_eq!(
         encoded,

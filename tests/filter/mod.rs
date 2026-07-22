@@ -8,6 +8,7 @@
 //! Filter test modules.
 
 mod condition_tests;
+mod filter_expression_builder_tests;
 mod filter_expression_tests;
 mod filter_expression_view_tests;
 mod filter_limits_tests;

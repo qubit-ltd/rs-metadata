@@ -8,10 +8,7 @@
 //! Serde and wire format tests for [`qubit_metadata::MetadataFilter`].
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_metadata::{
-    FilterLimits,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterLimits, MetadataFilter};
 use serde_json::json;
 
 #[test]

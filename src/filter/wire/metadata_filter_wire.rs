@@ -7,19 +7,11 @@
 // =============================================================================
 //! [`MetadataFilterWire`] and wire version.
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use super::super::metadata_filter::MetadataFilter;
 use super::filter_expression_wire::FilterExpressionWire;
-use crate::{
-    FilterLimits,
-    FilterMatchOptions,
-    MetadataError,
-    MetadataResult,
-};
+use crate::{FilterLimits, FilterMatchOptions, MetadataError, MetadataResult};
 
 /// Current serialized metadata-filter format version.
 pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 3;

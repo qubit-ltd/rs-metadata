@@ -20,16 +20,11 @@ fn test_default_options_use_exact_numeric_comparison() {
 }
 
 #[test]
-fn test_numeric_comparison_policy_supports_mutable_and_owned_chaining() {
-    let mut options = FilterMatchOptions::new();
-    options.set_numeric_comparison_policy(NumericComparisonPolicy::Approximate);
-    assert_eq!(
-        options.numeric_comparison_policy(),
-        NumericComparisonPolicy::Approximate
-    );
+fn test_numeric_comparison_policy_builder_supports_owned_chaining() {
+    let options = FilterMatchOptions::builder()
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
+        .build();
 
-    let options = FilterMatchOptions::new()
-        .with_numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     assert_eq!(
         options.numeric_comparison_policy(),
         NumericComparisonPolicy::Approximate

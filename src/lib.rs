@@ -82,9 +82,13 @@ mod schema;
 
 pub use filter::Condition;
 pub use filter::FilterExpression;
+pub use filter::FilterExpressionBuilder;
 pub use filter::FilterExpressionView;
+pub use filter::FilterLimitKind;
 pub use filter::FilterLimits;
+pub use filter::FilterLimitsBuilder;
 pub use filter::FilterMatchOptions;
+pub use filter::FilterMatchOptionsBuilder;
 pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
 pub use into_metadata_value::IntoMetadataValue;

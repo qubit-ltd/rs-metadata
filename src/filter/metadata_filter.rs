@@ -8,25 +8,13 @@
 //! [`MetadataFilter`].
 
 use qubit_datatype::NumericComparisonPolicy;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de,
-};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use super::filter_expression::FilterExpression;
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
 use crate::metadata::Metadata;
-use crate::{
-    Condition,
-    FilterLimits,
-    FilterMatchOptions,
-    MetadataError,
-    MetadataResult,
-};
+use crate::{Condition, FilterLimits, FilterMatchOptions, MetadataError, MetadataResult};
 
 /// An immutable, composable filter expression over [`Metadata`].
 ///
@@ -92,10 +80,7 @@ impl MetadataFilter {
     ///
     /// A new immutable filter.
     #[inline]
-    pub(crate) const fn new(
-        expression: FilterExpression,
-        options: FilterMatchOptions,
-    ) -> Self {
+    pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions) -> Self {
         Self {
             expression,
             options,
@@ -237,11 +222,7 @@ impl MetadataFilter {
     /// `true` only when evaluation produces a definite true outcome.
     #[inline(always)]
     #[must_use]
-    pub fn matches_with_options(
-        &self,
-        meta: &Metadata,
-        options: FilterMatchOptions,
-    ) -> bool {
+    pub fn matches_with_options(&self, meta: &Metadata, options: FilterMatchOptions) -> bool {
         self.expression.evaluate(meta, options).is_match()
     }
 
@@ -259,10 +240,7 @@ impl MetadataFilter {
     ///
     /// Returns the first error produced by `visitor`.
     #[inline(always)]
-    pub(crate) fn visit_conditions<F>(
-        &self,
-        mut visitor: F,
-    ) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
@@ -299,8 +277,7 @@ impl MetadataFilter {
                 right: other.options,
             });
         }
-        let filter =
-            Self::new(combine(self.expression, other.expression), self.options);
+        let filter = Self::new(combine(self.expression, other.expression), self.options);
         filter.validate_limits(FilterLimits::default())?;
         Ok(filter)
     }

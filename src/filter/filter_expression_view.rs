@@ -7,10 +7,7 @@
 // =============================================================================
 //! Read-only views over filter expression nodes.
 
-use crate::{
-    Condition,
-    FilterExpression,
-};
+use crate::{Condition, FilterExpression};
 
 /// A borrowed, read-only view of one [`FilterExpression`] node.
 ///

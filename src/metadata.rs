@@ -10,22 +10,11 @@
 
 use std::collections::BTreeMap;
 
-use qubit_datatype::{
-    DataConversionTarget,
-    DataType,
-};
+use qubit_datatype::{DataConversionTarget, DataType};
 use qubit_value::Value;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    IntoMetadataValue,
-    MetadataError,
-    MetadataResult,
-    MetadataSchema,
-};
+use crate::{IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -145,9 +134,9 @@ impl Metadata {
                 data_type: value.data_type(),
             });
         }
-        value.to::<T>().map_err(|error| {
-            MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
-        })
+        value
+            .to::<T>()
+            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if

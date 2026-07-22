@@ -20,8 +20,7 @@ fn test_filter_expression_wire_serializes_nested_expression_tree() {
         .build()
         .expect("nested filter should build");
 
-    let encoded =
-        serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(
         encoded["expression"],
         json!({

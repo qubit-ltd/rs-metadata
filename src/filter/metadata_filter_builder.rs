@@ -13,14 +13,8 @@ use super::condition::Condition;
 use super::filter_expression::FilterExpression;
 use super::metadata_filter::MetadataFilter;
 use crate::{
-    FilterLimits,
-    FilterMatchOptions,
-    IntoMetadataValue,
-    MetadataError,
-    MetadataResult,
-    MetadataSchema,
-    MetadataValidationError,
-    MetadataValidationResult,
+    FilterLimits, FilterMatchOptions, IntoMetadataValue, MetadataError, MetadataResult,
+    MetadataSchema, MetadataValidationError, MetadataValidationResult,
 };
 
 /// Builder for [`MetadataFilter`].
@@ -41,6 +35,15 @@ pub struct MetadataFilterBuilder {
 }
 
 impl MetadataFilterBuilder {
+    /// Replaces the root expression that will be stored in the filter.
+    #[inline(always)]
+    #[must_use]
+    pub fn expression(mut self, expression: FilterExpression) -> Self {
+        self.expression = Some(expression);
+        self.has_condition = true;
+        self
+    }
+
     /// Builds an immutable [`MetadataFilter`].
     ///
     /// # Returns
@@ -57,10 +60,7 @@ impl MetadataFilterBuilder {
         if let Some(error) = self.error {
             return Err(error);
         }
-        let filter = MetadataFilter::new(
-            self.expression.unwrap_or_default(),
-            self.options,
-        );
+        let filter = MetadataFilter::new(self.expression.unwrap_or_default(), self.options);
         filter.validate_limits(FilterLimits::default())?;
         Ok(filter)
     }
@@ -86,8 +86,7 @@ impl MetadataFilterBuilder {
         self,
         schema: &MetadataSchema,
     ) -> MetadataValidationResult<MetadataFilter> {
-        let filter =
-            self.build().map_err(MetadataValidationError::from_issue)?;
+        let filter = self.build().map_err(MetadataValidationError::from_issue)?;
         schema.validate_filter(&filter)?;
         Ok(filter)
     }
@@ -861,9 +860,7 @@ impl MetadataFilterBuilder {
         self.expression = match (self.expression, expression) {
             (None, rhs) => rhs,
             (lhs, None) => lhs,
-            (Some(left), Some(right)) => {
-                Some(FilterExpression::and(left, right))
-            }
+            (Some(left), Some(right)) => Some(FilterExpression::and(left, right)),
         };
         self
     }
@@ -881,9 +878,7 @@ impl MetadataFilterBuilder {
         self.expression = match (self.expression, expression) {
             (None, rhs) => rhs,
             (lhs, None) => lhs,
-            (Some(left), Some(right)) => {
-                Some(FilterExpression::or(left, right))
-            }
+            (Some(left), Some(right)) => Some(FilterExpression::or(left, right)),
         };
         self
     }
@@ -899,8 +894,7 @@ impl MetadataFilterBuilder {
     /// This builder with the condition appended.
     #[inline]
     fn and_condition(self, condition: Condition) -> Self {
-        let mut builder =
-            self.and_expression(Some(FilterExpression::condition(condition)));
+        let mut builder = self.and_expression(Some(FilterExpression::condition(condition)));
         builder.has_condition = true;
         builder
     }
@@ -916,8 +910,7 @@ impl MetadataFilterBuilder {
     /// This builder with the condition appended.
     #[inline]
     fn or_condition(self, condition: Condition) -> Self {
-        let mut builder =
-            self.or_expression(Some(FilterExpression::condition(condition)));
+        let mut builder = self.or_expression(Some(FilterExpression::condition(condition)));
         builder.has_condition = true;
         builder
     }
@@ -1037,9 +1030,7 @@ impl MetadataFilterBuilder {
     ///
     /// The simplified negated expression.
     #[inline(always)]
-    fn negate_expression(
-        expression: Option<FilterExpression>,
-    ) -> Option<FilterExpression> {
+    fn negate_expression(expression: Option<FilterExpression>) -> Option<FilterExpression> {
         Some(expression.unwrap_or_default().negated())
     }
 }

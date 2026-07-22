@@ -8,10 +8,7 @@
 //! Tests for the serialized condition wire representation.
 
 use qubit_metadata::Condition;
-use qubit_value::{
-    MultiValues,
-    Value,
-};
+use qubit_value::{MultiValues, Value};
 use serde_json::json;
 
 #[test]
@@ -88,11 +85,10 @@ fn test_condition_wire_serializes_all_operator_tags() {
     ];
 
     for (condition, op) in conditions {
-        let encoded = serde_json::to_value(&condition)
-            .expect("condition should serialize");
+        let encoded = serde_json::to_value(&condition).expect("condition should serialize");
         assert_eq!(encoded.get("op"), Some(&json!(op)));
-        let decoded: Condition = serde_json::from_value(encoded)
-            .expect("condition should deserialize");
+        let decoded: Condition =
+            serde_json::from_value(encoded).expect("condition should deserialize");
         assert_eq!(decoded, condition);
     }
 }
@@ -174,8 +170,5 @@ fn test_metadata_wire_rejects_non_finite_float_values() {
         assert!(serde_json::to_value(condition).is_err());
     }
 
-    assert!(
-        serde_json::to_value(MultiValues::Float64(vec![1.0, f64::INFINITY,]))
-            .is_err()
-    );
+    assert!(serde_json::to_value(MultiValues::Float64(vec![1.0, f64::INFINITY,])).is_err());
 }
