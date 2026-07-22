@@ -8,15 +8,8 @@
 //! Unit tests for [`qubit_metadata::MetadataFilter`] leaf predicate semantics.
 
 use crate::support::test_support::sample;
-use qubit_datatype::{
-    DataType,
-    NumericComparisonPolicy,
-};
-use qubit_metadata::{
-    Condition,
-    Metadata,
-    MetadataFilter,
-};
+use qubit_datatype::{DataType, NumericComparisonPolicy};
+use qubit_metadata::{Condition, Metadata, MetadataFilter};
 use qubit_value::Value;
 
 #[test]
@@ -85,8 +78,7 @@ fn test_missing_key_negative_predicates_and_negations_are_equivalent() {
 
 #[test]
 fn test_unset_negative_predicates_and_negations_are_equivalent() {
-    let metadata =
-        Metadata::new().with_raw("missing", Value::Unset(DataType::String));
+    let metadata = Metadata::new().with_raw("missing", Value::Unset(DataType::String));
     let not_equal = MetadataFilter::builder()
         .ne("missing", "value")
         .build()
@@ -114,184 +106,140 @@ fn test_unset_negative_predicates_and_negations_are_equivalent() {
 
 #[test]
 fn test_gt_integer() {
-    assert!(
-        MetadataFilter::builder()
-            .gt("score", 10_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .gt("score", 42_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .gt("score", 100_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .gt("score", 10_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .gt("score", 42_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .gt("score", 100_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_ge_integer() {
-    assert!(
-        MetadataFilter::builder()
-            .ge("score", 42_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        MetadataFilter::builder()
-            .ge("score", 10_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .ge("score", 43_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .ge("score", 42_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(MetadataFilter::builder()
+        .ge("score", 10_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .ge("score", 43_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_lt_integer() {
-    assert!(
-        MetadataFilter::builder()
-            .lt("score", 100_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .lt("score", 42_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .lt("score", 10_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .lt("score", 100_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .lt("score", 42_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .lt("score", 10_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_le_integer() {
-    assert!(
-        MetadataFilter::builder()
-            .le("score", 42_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        MetadataFilter::builder()
-            .le("score", 100_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .le("score", 41_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .le("score", 42_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(MetadataFilter::builder()
+        .le("score", 100_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .le("score", 41_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_gt_string_lexicographic() {
-    assert!(
-        MetadataFilter::builder()
-            .gt("status", "aaa")
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .gt("status", "zzz")
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .gt("status", "aaa")
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .gt("status", "zzz")
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_range_filter_missing_key_does_not_match() {
-    assert!(
-        !MetadataFilter::builder()
-            .gt("missing", 0_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .ge("missing", 0_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .lt("missing", 100_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .le("missing", 100_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(!MetadataFilter::builder()
+        .gt("missing", 0_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .ge("missing", 0_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .lt("missing", 100_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .le("missing", 100_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_range_filter_float_values() {
-    assert!(
-        MetadataFilter::builder()
-            .gt("ratio", 0.5_f64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        MetadataFilter::builder()
-            .ge("ratio", 0.75_f64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        MetadataFilter::builder()
-            .lt("ratio", 1.0_f64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        MetadataFilter::builder()
-            .le("ratio", 0.75_f64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .gt("ratio", 0.5_f64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(MetadataFilter::builder()
+        .ge("ratio", 0.75_f64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(MetadataFilter::builder()
+        .lt("ratio", 1.0_f64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(MetadataFilter::builder()
+        .le("ratio", 0.75_f64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
@@ -299,57 +247,45 @@ fn test_range_filter_u64_values() {
     let mut m = Metadata::new();
     m.set("count", 10_u64);
 
-    assert!(
-        MetadataFilter::builder()
-            .gt("count", 9_u64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .ge("count", 10_u64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .lt("count", 11_u64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .le("count", 10_u64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("count", 9_u64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .ge("count", 10_u64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .lt("count", 11_u64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .le("count", 10_u64)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
 fn test_range_filter_mixed_signed_unsigned_values() {
     let mut a = Metadata::new();
     a.set("score", -1_i64);
-    assert!(
-        MetadataFilter::builder()
-            .lt("score", 0_u64)
-            .build()
-            .unwrap()
-            .matches(&a)
-    );
+    assert!(MetadataFilter::builder()
+        .lt("score", 0_u64)
+        .build()
+        .unwrap()
+        .matches(&a));
 
     let mut b = Metadata::new();
     b.set("score", 5_u64);
-    assert!(
-        MetadataFilter::builder()
-            .gt("score", 4_i64)
-            .build()
-            .unwrap()
-            .matches(&b)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("score", 4_i64)
+        .build()
+        .unwrap()
+        .matches(&b));
 }
 
 #[test]
@@ -358,47 +294,37 @@ fn test_range_filter_mixed_signed_unsigned_with_huge_unsigned_values() {
 
     let mut negative = Metadata::new();
     negative.set("score", -1_i64);
-    assert!(
-        MetadataFilter::builder()
-            .lt("score", huge)
-            .build()
-            .unwrap()
-            .matches(&negative)
-    );
+    assert!(MetadataFilter::builder()
+        .lt("score", huge)
+        .build()
+        .unwrap()
+        .matches(&negative));
 
     let mut positive = Metadata::new();
     positive.set("score", 5_i64);
-    assert!(
-        MetadataFilter::builder()
-            .lt("score", huge)
-            .build()
-            .unwrap()
-            .matches(&positive)
-    );
+    assert!(MetadataFilter::builder()
+        .lt("score", huge)
+        .build()
+        .unwrap()
+        .matches(&positive));
 
     let mut huge_unsigned = Metadata::new();
     huge_unsigned.set("score", huge);
-    assert!(
-        MetadataFilter::builder()
-            .gt("score", i64::MAX)
-            .build()
-            .unwrap()
-            .matches(&huge_unsigned)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .gt("score", -1_i64)
-            .build()
-            .unwrap()
-            .matches(&huge_unsigned)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .gt("score", huge - 1)
-            .build()
-            .unwrap()
-            .matches(&huge_unsigned)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("score", i64::MAX)
+        .build()
+        .unwrap()
+        .matches(&huge_unsigned));
+    assert!(MetadataFilter::builder()
+        .gt("score", -1_i64)
+        .build()
+        .unwrap()
+        .matches(&huge_unsigned));
+    assert!(MetadataFilter::builder()
+        .gt("score", huge - 1)
+        .build()
+        .unwrap()
+        .matches(&huge_unsigned));
 }
 
 #[test]
@@ -406,20 +332,16 @@ fn test_range_filter_mixed_u64_and_f64() {
     let mut m = Metadata::new();
     m.set("count", 5_u64);
 
-    assert!(
-        MetadataFilter::builder()
-            .gt("count", 4.5_f64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .lt("count", 4.5_f64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("count", 4.5_f64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(!MetadataFilter::builder()
+        .lt("count", 4.5_f64)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -427,20 +349,16 @@ fn test_range_filter_large_integer_vs_float_precision_regression() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_i64);
 
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", 9_007_199_254_740_992_f64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .ge("n", 9_007_199_254_740_992_f64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("n", 9_007_199_254_740_992_f64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .ge("n", 9_007_199_254_740_992_f64)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -448,20 +366,16 @@ fn test_range_filter_large_unsigned_vs_float_precision_regression() {
     let mut m = Metadata::new();
     m.set("n", 9_007_199_254_740_993_u64);
 
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", 9_007_199_254_740_992_f64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .ge("n", 9_007_199_254_740_992_f64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("n", 9_007_199_254_740_992_f64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .ge("n", 9_007_199_254_740_992_f64)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -470,53 +384,43 @@ fn test_range_filter_float_vs_integer_and_huge_unsigned() {
 
     let mut m = Metadata::new();
     m.set("ratio", 3.5_f64);
-    assert!(
-        MetadataFilter::builder()
-            .gt("ratio", 3_i64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("ratio", 3_i64)
+        .build()
+        .unwrap()
+        .matches(&m));
 
     let mut n = Metadata::new();
     n.set("value", 9_223_372_036_854_777_856_f64);
-    assert!(
-        MetadataFilter::builder()
-            .gt("value", huge_u)
-            .build()
-            .unwrap()
-            .matches(&n)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("value", huge_u)
+        .build()
+        .unwrap()
+        .matches(&n));
 }
 
 #[test]
 fn test_range_filter_large_integer_float_non_integral_fallback() {
     let mut signed = Metadata::new();
     signed.set("n", 9_007_199_254_740_993_i64);
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", 0.5_f64)
-            .build()
-            .unwrap()
-            .matches(&signed)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("n", 0.5_f64)
+        .build()
+        .unwrap()
+        .matches(&signed));
 
     let mut unsigned = Metadata::new();
     unsigned.set("n", (i64::MAX as u64) + 123);
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", 0.5_f64)
-            .build()
-            .unwrap()
-            .matches(&unsigned)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", -1.0_f64)
-            .build()
-            .unwrap()
-            .matches(&unsigned)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("n", 0.5_f64)
+        .build()
+        .unwrap()
+        .matches(&unsigned));
+    assert!(MetadataFilter::builder()
+        .gt("n", -1.0_f64)
+        .build()
+        .unwrap()
+        .matches(&unsigned));
 }
 
 #[test]
@@ -552,13 +456,11 @@ fn test_range_filter_covers_numeric_value_variants() {
     macro_rules! assert_gt {
         ($stored:expr, $bound:expr) => {
             let meta = Metadata::new().with("n", $stored);
-            assert!(
-                MetadataFilter::builder()
-                    .gt("n", $bound)
-                    .build()
-                    .unwrap()
-                    .matches(&meta)
-            );
+            assert!(MetadataFilter::builder()
+                .gt("n", $bound)
+                .build()
+                .unwrap()
+                .matches(&meta));
         };
     }
 
@@ -578,45 +480,37 @@ fn test_range_filter_i128_and_u128_float_edges_respect_policy() {
     let signed = Metadata::new().with("n", i128::MAX);
     let signed_exact = MetadataFilter::builder().gt("n", 0.5_f64);
     assert!(signed_exact.clone().build().unwrap().matches(&signed));
-    assert!(
-        signed_exact
-            .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
-            .build()
-            .unwrap()
-            .matches(&signed)
-    );
+    assert!(signed_exact
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
+        .build()
+        .unwrap()
+        .matches(&signed));
 
     let unsigned = Metadata::new().with("n", u128::MAX);
     let unsigned_exact = MetadataFilter::builder().gt("n", 0.5_f64);
     assert!(unsigned_exact.clone().build().unwrap().matches(&unsigned));
-    assert!(
-        unsigned_exact
-            .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
-            .build()
-            .unwrap()
-            .matches(&unsigned)
-    );
+    assert!(unsigned_exact
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
+        .build()
+        .unwrap()
+        .matches(&unsigned));
 }
 
 #[test]
 fn test_range_filter_i128_and_u128_mixed_integral_edges_compare_exactly() {
     let negative = Metadata::new().with("n", -1_i128);
-    assert!(
-        MetadataFilter::builder()
-            .lt("n", 0_u128)
-            .build()
-            .unwrap()
-            .matches(&negative)
-    );
+    assert!(MetadataFilter::builder()
+        .lt("n", 0_u128)
+        .build()
+        .unwrap()
+        .matches(&negative));
 
     let huge = Metadata::new().with("n", u128::MAX);
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", i128::MAX)
-            .build()
-            .unwrap()
-            .matches(&huge)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("n", i128::MAX)
+        .build()
+        .unwrap()
+        .matches(&huge));
 }
 
 #[test]
@@ -626,20 +520,16 @@ fn test_big_integer_equality_matches_in_exact_policy() {
     m.set("n", num_bigint::BigInt::from(i128::MAX) + 1_i32);
 
     let exact = num_bigint::BigInt::from(i128::MAX) + 1_i32;
-    assert!(
-        MetadataFilter::builder()
-            .eq("n", exact)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .eq("n", num_bigint::BigInt::from(i128::MAX))
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .eq("n", exact)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(!MetadataFilter::builder()
+        .eq("n", num_bigint::BigInt::from(i128::MAX))
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -648,20 +538,16 @@ fn test_big_integer_range_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", num_bigint::BigInt::from(u128::MAX) + 1_u32);
 
-    assert!(
-        MetadataFilter::builder()
-            .gt("n", u128::MAX)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .ge("n", num_bigint::BigInt::from(u128::MAX) + 1_u32)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .gt("n", u128::MAX)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .ge("n", num_bigint::BigInt::from(u128::MAX) + 1_u32)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -670,20 +556,16 @@ fn test_big_decimal_equality_matches_integral_values_exactly() {
     let mut m = Metadata::new();
     m.set("n", bigdecimal::BigDecimal::from(10_i64));
 
-    assert!(
-        MetadataFilter::builder()
-            .eq("n", 10_i64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .eq("n", 11_i64)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .eq("n", 10_i64)
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(!MetadataFilter::builder()
+        .eq("n", 11_i64)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -695,20 +577,16 @@ fn test_big_decimal_range_matches_big_integer_exactly() {
         bigdecimal::BigDecimal::from(num_bigint::BigInt::from(u128::MAX)),
     );
 
-    assert!(
-        MetadataFilter::builder()
-            .ge("n", num_bigint::BigInt::from(u128::MAX))
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .lt("n", num_bigint::BigInt::from(u128::MAX) + 1_u32)
-            .build()
-            .unwrap()
-            .matches(&m)
-    );
+    assert!(MetadataFilter::builder()
+        .ge("n", num_bigint::BigInt::from(u128::MAX))
+        .build()
+        .unwrap()
+        .matches(&m));
+    assert!(MetadataFilter::builder()
+        .lt("n", num_bigint::BigInt::from(u128::MAX) + 1_u32)
+        .build()
+        .unwrap()
+        .matches(&m));
 }
 
 #[test]
@@ -720,8 +598,7 @@ fn test_big_decimal_float_comparison_distinguishes_exact_and_approximate() {
     let exact = MetadataFilter::builder().eq("n", 0.1_f64);
     assert!(!exact.clone().build().unwrap().matches(&m));
 
-    let approximate =
-        exact.numeric_comparison_policy(NumericComparisonPolicy::Approximate);
+    let approximate = exact.numeric_comparison_policy(NumericComparisonPolicy::Approximate);
     assert!(approximate.build().unwrap().matches(&m));
 }
 
@@ -731,13 +608,11 @@ fn test_big_integer_comparison_accepts_integral_variants() {
     macro_rules! assert_eq_big_integer {
         ($stored:expr) => {
             let meta = Metadata::new().with("n", $stored);
-            assert!(
-                MetadataFilter::builder()
-                    .eq("n", num_bigint::BigInt::from(5_i32))
-                    .build()
-                    .unwrap()
-                    .matches(&meta)
-            );
+            assert!(MetadataFilter::builder()
+                .eq("n", num_bigint::BigInt::from(5_i32))
+                .build()
+                .unwrap()
+                .matches(&meta));
         };
     }
 
@@ -755,106 +630,86 @@ fn test_big_integer_comparison_accepts_integral_variants() {
 
 #[test]
 fn test_range_filter_incomparable_types_do_not_match() {
-    assert!(
-        !MetadataFilter::builder()
-            .gt("status", 1_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
-    assert!(
-        !MetadataFilter::builder()
-            .lt("verified", 1_i64)
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(!MetadataFilter::builder()
+        .gt("status", 1_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
+    assert!(!MetadataFilter::builder()
+        .lt("verified", 1_i64)
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_exists_present_key() {
-    assert!(
-        MetadataFilter::builder()
-            .exists("status")
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .exists("status")
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_exists_missing_key() {
-    assert!(
-        !MetadataFilter::builder()
-            .exists("nope")
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(!MetadataFilter::builder()
+        .exists("nope")
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_not_exists_missing_key() {
-    assert!(
-        MetadataFilter::builder()
-            .not_exists("nope")
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(MetadataFilter::builder()
+        .not_exists("nope")
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_not_exists_present_key() {
-    assert!(
-        !MetadataFilter::builder()
-            .not_exists("status")
-            .build()
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(!MetadataFilter::builder()
+        .not_exists("status")
+        .build()
+        .unwrap()
+        .matches(&sample()));
 }
 
 #[test]
 fn test_presence_predicates_treat_unset_value_as_missing() {
-    let metadata = Metadata::new()
-        .with_raw("status", Value::Unset(qubit_datatype::DataType::String));
+    let metadata =
+        Metadata::new().with_raw("status", Value::Unset(qubit_datatype::DataType::String));
 
-    assert!(
-        !MetadataFilter::builder()
-            .exists("status")
-            .build()
-            .expect("exists filter should build")
-            .matches(&metadata)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .not_exists("status")
-            .build()
-            .expect("not-exists filter should build")
-            .matches(&metadata)
-    );
+    assert!(!MetadataFilter::builder()
+        .exists("status")
+        .build()
+        .expect("exists filter should build")
+        .matches(&metadata));
+    assert!(MetadataFilter::builder()
+        .not_exists("status")
+        .build()
+        .expect("not-exists filter should build")
+        .matches(&metadata));
 }
 
 #[test]
 fn test_negative_predicates_treat_unset_value_as_unknown() {
-    let metadata = Metadata::new()
-        .with_raw("status", Value::Unset(qubit_datatype::DataType::String));
+    let metadata =
+        Metadata::new().with_raw("status", Value::Unset(qubit_datatype::DataType::String));
     let not_equal = MetadataFilter::builder().ne("status", "active");
     let not_in = MetadataFilter::builder().not_in_set("status", ["active"]);
 
-    assert!(
-        !not_equal
-            .build()
-            .expect("not-equal filter should build")
-            .matches(&metadata)
-    );
-    assert!(
-        !not_in
-            .build()
-            .expect("not-in filter should build")
-            .matches(&metadata)
-    );
+    assert!(!not_equal
+        .build()
+        .expect("not-equal filter should build")
+        .matches(&metadata));
+    assert!(!not_in
+        .build()
+        .expect("not-in filter should build")
+        .matches(&metadata));
 }
 
 #[test]
@@ -884,15 +739,13 @@ fn test_in_values_empty_set_matches_nothing() {
 
 #[test]
 fn test_not_in_values_matches() {
-    let f =
-        MetadataFilter::builder().not_in_set("status", ["inactive", "pending"]);
+    let f = MetadataFilter::builder().not_in_set("status", ["inactive", "pending"]);
     assert!(f.build().unwrap().matches(&sample()));
 }
 
 #[test]
 fn test_not_in_values_no_match() {
-    let f =
-        MetadataFilter::builder().not_in_set("status", ["active", "pending"]);
+    let f = MetadataFilter::builder().not_in_set("status", ["active", "pending"]);
     assert!(!f.build().unwrap().matches(&sample()));
 }
 
@@ -907,8 +760,7 @@ fn test_not_in_values_empty_set_requires_a_concrete_value() {
     let f = MetadataFilter::builder().not_in_set("status", [] as [&str; 0]);
     assert!(f.build().unwrap().matches(&sample()));
 
-    let missing =
-        MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
+    let missing = MetadataFilter::builder().not_in_set("missing", [] as [&str; 0]);
     assert!(!missing.build().unwrap().matches(&sample()));
 }
 

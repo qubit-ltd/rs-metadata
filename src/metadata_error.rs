@@ -9,12 +9,9 @@
 
 use std::fmt;
 
-use crate::FilterMatchOptions;
+use crate::{FilterLimitKind, FilterMatchOptions};
 use qubit_datatype::DataType;
-use qubit_value::{
-    Value,
-    ValueError,
-};
+use qubit_value::{Value, ValueError};
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,6 +72,15 @@ pub enum MetadataError {
     InvalidFilterExpression {
         /// Human-readable validation message.
         message: String,
+    },
+    /// A configured filter resource bound is outside the allowed range.
+    InvalidFilterLimit {
+        /// Resource category being configured.
+        kind: FilterLimitKind,
+        /// Requested resource bound.
+        value: usize,
+        /// Library hard maximum for the resource.
+        maximum: usize,
     },
     /// A filter exceeds an enforced resource bound.
     FilterLimitExceeded {
@@ -138,11 +144,7 @@ impl MetadataError {
     ///
     /// A structured [`MetadataError::TypeMismatch`] error.
     #[inline]
-    pub(crate) fn type_mismatch(
-        key: &str,
-        expected: DataType,
-        actual: DataType,
-    ) -> Self {
+    pub(crate) fn type_mismatch(key: &str, expected: DataType, actual: DataType) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,
@@ -196,6 +198,14 @@ impl fmt::Display for MetadataError {
             Self::InvalidFilterExpression { message } => {
                 write!(f, "Metadata filter expression is invalid: {message}")
             }
+            Self::InvalidFilterLimit {
+                kind,
+                value,
+                maximum,
+            } => write!(
+                f,
+                "Metadata filter {kind:?} limit {value} is outside 1..={maximum}"
+            ),
             Self::FilterLimitExceeded { limit, maximum } => write!(
                 f,
                 "Metadata filter {limit} exceeds the maximum of {maximum}"

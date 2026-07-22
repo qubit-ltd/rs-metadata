@@ -9,13 +9,7 @@
 //! builder DSL).
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_metadata::{
-    FilterLimits,
-    FilterMatchOptions,
-    Metadata,
-    MetadataError,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterLimits, FilterMatchOptions, Metadata, MetadataError, MetadataFilter};
 
 #[test]
 fn test_and_predicates_all_match() {
@@ -168,13 +162,11 @@ fn test_try_and_and_try_or_combine_filters_with_matching_options() {
         .build()
         .expect("score filter should build");
 
-    assert!(
-        active
-            .clone()
-            .try_and(score.clone())
-            .unwrap()
-            .matches(&sample())
-    );
+    assert!(active
+        .clone()
+        .try_and(score.clone())
+        .unwrap()
+        .matches(&sample()));
     assert!(active.try_or(score).unwrap().matches(&sample()));
 }
 
@@ -220,9 +212,7 @@ fn test_validate_limits_rejects_excessive_key_length_and_node_count() {
         .build()
         .expect("filter should build")
         .validate_limits(node_limit)
-        .expect_err(
-            "expression exceeding a custom node limit must be rejected",
-        );
+        .expect_err("expression exceeding a custom node limit must be rejected");
     assert!(matches!(
         node_error,
         MetadataError::FilterLimitExceeded {
@@ -236,106 +226,82 @@ fn test_validate_limits_rejects_excessive_key_length_and_node_count() {
 fn test_or_operator_methods_cover_each_predicate() {
     let meta = sample();
 
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_ne("status", "inactive")
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_lt("score", 50_i64)
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_le("score", 42_i64)
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_gt("score", 40_i64)
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_ge("score", 42_i64)
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_in_set("status", ["active", "pending"])
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_not_in_set("status", ["pending"])
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_exists("verified")
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .eq("status", "inactive")
-            .or_not_exists("missing")
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_ne("status", "inactive")
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_lt("score", 50_i64)
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_le("score", 42_i64)
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_gt("score", 40_i64)
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_ge("score", 42_i64)
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_in_set("status", ["active", "pending"])
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_not_in_set("status", ["pending"])
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_exists("verified")
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .eq("status", "inactive")
+        .or_not_exists("missing")
+        .build()
+        .unwrap()
+        .matches(&meta));
 }
 
 #[test]
 fn test_builder_aliases_preserve_expected_identities() {
     let meta = sample();
 
-    assert!(
-        MetadataFilter::builder()
-            .not_in_set("status", ["inactive"])
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .or(|g| g.eq("status", "active"))
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
-    assert!(
-        MetadataFilter::builder()
-            .not()
-            .or_eq("status", "active")
-            .build()
-            .unwrap()
-            .matches(&meta)
-    );
+    assert!(MetadataFilter::builder()
+        .not_in_set("status", ["inactive"])
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .or(|g| g.eq("status", "active"))
+        .build()
+        .unwrap()
+        .matches(&meta));
+    assert!(MetadataFilter::builder()
+        .not()
+        .or_eq("status", "active")
+        .build()
+        .unwrap()
+        .matches(&meta));
 }
 
 #[test]

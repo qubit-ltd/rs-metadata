@@ -36,7 +36,11 @@ impl MatchOutcome {
     /// [`MatchOutcome::False`].
     #[inline]
     pub(crate) const fn from_bool(value: bool) -> Self {
-        if value { Self::True } else { Self::False }
+        if value {
+            Self::True
+        } else {
+            Self::False
+        }
     }
 
     /// Returns the three-valued logical negation of this outcome.

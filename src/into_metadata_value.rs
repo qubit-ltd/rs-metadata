@@ -13,13 +13,7 @@ use std::time::Duration;
 #[cfg(feature = "big-decimal")]
 use bigdecimal::BigDecimal;
 #[cfg(feature = "chrono")]
-use chrono::{
-    DateTime,
-    NaiveDate,
-    NaiveDateTime,
-    NaiveTime,
-    Utc,
-};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use qubit_value::Value;
 #[cfg(feature = "url")]
 use url::Url;

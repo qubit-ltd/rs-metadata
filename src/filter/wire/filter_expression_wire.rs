@@ -7,18 +7,10 @@
 // =============================================================================
 //! Serializable representation of [`crate::FilterExpression`].
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use super::condition_wire::ConditionWire;
-use crate::{
-    FilterExpression,
-    FilterExpressionView,
-    MetadataError,
-    MetadataResult,
-};
+use crate::{FilterExpression, FilterExpressionView, MetadataError, MetadataResult};
 
 /// Versioned wire node for one filter expression.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -68,8 +60,7 @@ impl FilterExpressionWire {
             Self::And { children } => {
                 if children.is_empty() {
                     return Err(MetadataError::InvalidFilterExpression {
-                        message: "empty 'and' filter group is not allowed"
-                            .to_string(),
+                        message: "empty 'and' filter group is not allowed".to_string(),
                     });
                 }
                 children
@@ -81,8 +72,7 @@ impl FilterExpressionWire {
             Self::Or { children } => {
                 if children.is_empty() {
                     return Err(MetadataError::InvalidFilterExpression {
-                        message: "empty 'or' filter group is not allowed"
-                            .to_string(),
+                        message: "empty 'or' filter group is not allowed".to_string(),
                     });
                 }
                 children

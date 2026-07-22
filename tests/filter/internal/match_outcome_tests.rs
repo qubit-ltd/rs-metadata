@@ -7,10 +7,7 @@
 // =============================================================================
 //! Behavioral tests for private three-valued match outcomes.
 
-use qubit_metadata::{
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::{Metadata, MetadataFilter};
 
 #[test]
 fn test_match_outcome_unknown_remains_non_matching_after_negation() {

@@ -6,10 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! Unit tests for [`qubit_metadata::MetadataFilterBuilder`] default behavior.
-use qubit_metadata::{
-    MetadataError,
-    MetadataFilterBuilder,
-};
+use qubit_metadata::{MetadataError, MetadataFilterBuilder};
 
 #[test]
 fn test_builder_default_builds_match_all_filter() {
@@ -24,9 +21,7 @@ fn test_build_rejects_membership_condition_exceeding_filter_limit() {
     let error = MetadataFilterBuilder::default()
         .in_set("tag", values)
         .build()
-        .expect_err(
-            "membership condition exceeding the limit must be rejected",
-        );
+        .expect_err("membership condition exceeding the limit must be rejected");
 
     assert!(matches!(
         error,

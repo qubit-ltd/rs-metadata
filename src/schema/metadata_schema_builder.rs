@@ -12,15 +12,9 @@ use std::collections::BTreeMap;
 use qubit_datatype::DataType;
 
 use crate::schema::{
-    MetadataField,
-    MetadataSchema,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
+    MetadataField, MetadataSchema, UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
 };
-use crate::{
-    MetadataError,
-    MetadataResult,
-};
+use crate::{MetadataError, MetadataResult};
 
 /// Builder for [`MetadataSchema`].
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -97,10 +91,7 @@ impl MetadataSchemaBuilder {
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn unknown_metadata_field_policy(
-        mut self,
-        policy: UnknownMetadataFieldPolicy,
-    ) -> Self {
+    pub fn unknown_metadata_field_policy(mut self, policy: UnknownMetadataFieldPolicy) -> Self {
         self.unknown_metadata_field_policy = policy;
         self
     }
@@ -116,10 +107,7 @@ impl MetadataSchemaBuilder {
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn unknown_filter_field_policy(
-        mut self,
-        policy: UnknownFilterFieldPolicy,
-    ) -> Self {
+    pub fn unknown_filter_field_policy(mut self, policy: UnknownFilterFieldPolicy) -> Self {
         self.unknown_filter_field_policy = policy;
         self
     }

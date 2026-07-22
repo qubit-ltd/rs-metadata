@@ -11,21 +11,11 @@ use std::cmp::Ordering;
 
 use qubit_datatype::NumericComparisonPolicy;
 use qubit_value::Value;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::internal::MatchOutcome;
 use super::wire::ConditionWire;
-use crate::{
-    FilterLimits,
-    Metadata,
-    MetadataError,
-    MetadataResult,
-};
+use crate::{FilterLimits, Metadata, MetadataError, MetadataResult};
 
 /// A single comparison operator applied to one metadata key.
 ///
@@ -145,10 +135,7 @@ impl Condition {
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when a key or membership
     /// condition exceeds its configured bound.
-    pub(crate) fn validate_limits(
-        &self,
-        limits: FilterLimits,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
         let key = self.key();
         if key.len() > limits.max_key_length() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -187,66 +174,40 @@ impl Condition {
         numeric_comparison_policy: NumericComparisonPolicy,
     ) -> MatchOutcome {
         match self {
-            Condition::Equal { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    values_equal(stored, value, numeric_comparison_policy)
-                })
-            }
-            Condition::NotEqual { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    !values_equal(stored, value, numeric_comparison_policy)
-                })
-            }
-            Condition::Less { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    compare_values(stored, value, numeric_comparison_policy)
-                        == Some(Ordering::Less)
-                })
-            }
-            Condition::LessEqual { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    matches!(
-                        compare_values(
-                            stored,
-                            value,
-                            numeric_comparison_policy
-                        ),
-                        Some(Ordering::Less) | Some(Ordering::Equal)
-                    )
-                })
-            }
-            Condition::Greater { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    compare_values(stored, value, numeric_comparison_policy)
-                        == Some(Ordering::Greater)
-                })
-            }
-            Condition::GreaterEqual { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    matches!(
-                        compare_values(
-                            stored,
-                            value,
-                            numeric_comparison_policy
-                        ),
-                        Some(Ordering::Greater) | Some(Ordering::Equal)
-                    )
-                })
-            }
-            Condition::In { key, values } => {
-                evaluate_concrete(meta, key, |stored| {
-                    values.iter().any(|value| {
-                        values_equal(stored, value, numeric_comparison_policy)
-                    })
-                })
-            }
-            Condition::NotIn { key, values } => {
-                evaluate_concrete(meta, key, |stored| {
-                    values.iter().all(|value| {
-                        !values_equal(stored, value, numeric_comparison_policy)
-                    })
-                })
-            }
+            Condition::Equal { key, value } => evaluate_concrete(meta, key, |stored| {
+                values_equal(stored, value, numeric_comparison_policy)
+            }),
+            Condition::NotEqual { key, value } => evaluate_concrete(meta, key, |stored| {
+                !values_equal(stored, value, numeric_comparison_policy)
+            }),
+            Condition::Less { key, value } => evaluate_concrete(meta, key, |stored| {
+                compare_values(stored, value, numeric_comparison_policy) == Some(Ordering::Less)
+            }),
+            Condition::LessEqual { key, value } => evaluate_concrete(meta, key, |stored| {
+                matches!(
+                    compare_values(stored, value, numeric_comparison_policy),
+                    Some(Ordering::Less) | Some(Ordering::Equal)
+                )
+            }),
+            Condition::Greater { key, value } => evaluate_concrete(meta, key, |stored| {
+                compare_values(stored, value, numeric_comparison_policy) == Some(Ordering::Greater)
+            }),
+            Condition::GreaterEqual { key, value } => evaluate_concrete(meta, key, |stored| {
+                matches!(
+                    compare_values(stored, value, numeric_comparison_policy),
+                    Some(Ordering::Greater) | Some(Ordering::Equal)
+                )
+            }),
+            Condition::In { key, values } => evaluate_concrete(meta, key, |stored| {
+                values
+                    .iter()
+                    .any(|value| values_equal(stored, value, numeric_comparison_policy))
+            }),
+            Condition::NotIn { key, values } => evaluate_concrete(meta, key, |stored| {
+                values
+                    .iter()
+                    .all(|value| !values_equal(stored, value, numeric_comparison_policy))
+            }),
             Condition::Exists { key } => {
                 MatchOutcome::from_bool(concrete_value(meta, key).is_some())
             }
@@ -287,11 +248,7 @@ impl Condition {
 /// The predicate result, or [`MatchOutcome::Unknown`] when the key is absent
 /// or stores [`Value::Unset`].
 #[inline]
-fn evaluate_concrete<F>(
-    meta: &Metadata,
-    key: &str,
-    predicate: F,
-) -> MatchOutcome
+fn evaluate_concrete<F>(meta: &Metadata, key: &str, predicate: F) -> MatchOutcome
 where
     F: FnOnce(&Value) -> bool,
 {
