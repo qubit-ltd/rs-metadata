@@ -33,8 +33,10 @@ fn test_filter_limits_default_equals_hard_maximum() {
 #[test]
 fn test_filter_limits_builder_rejects_zero_and_values_above_hard_maximum() {
     assert!(FilterLimits::builder().max_depth(0).build().is_err());
-    assert!(FilterLimits::builder()
-        .max_nodes(FilterLimits::MAX.max_nodes() + 1)
-        .build()
-        .is_err());
+    assert!(
+        FilterLimits::builder()
+            .max_nodes(FilterLimits::MAX.max_nodes() + 1)
+            .build()
+            .is_err()
+    );
 }

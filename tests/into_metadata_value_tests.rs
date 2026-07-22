@@ -43,8 +43,7 @@ fn test_into_metadata_value_preserves_integer_type() {
 #[cfg(feature = "chrono")]
 #[test]
 fn test_chrono_feature_enables_date_metadata_values() {
-    let date = NaiveDate::from_ymd_opt(2026, 7, 18)
-        .expect("test date should be valid");
+    let date = NaiveDate::from_ymd_opt(2026, 7, 18).expect("test date should be valid");
 
     assert_eq!(date.into_metadata_value(), Value::Date(date));
 }
@@ -77,8 +76,7 @@ fn test_big_decimal_feature_enables_metadata_values() {
 #[cfg(feature = "url")]
 #[test]
 fn test_url_feature_enables_metadata_values() {
-    let url = Url::parse("https://example.com/path")
-        .expect("test URL should be valid");
+    let url = Url::parse("https://example.com/path").expect("test URL should be valid");
 
     assert_eq!(url.clone().into_metadata_value(), Value::Url(url));
 }

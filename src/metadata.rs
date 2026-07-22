@@ -8,11 +8,12 @@
 //! Provides the [`Metadata`] type — a structured, ordered, typed key-value
 //! store.
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt};
 
 use qubit_datatype::{DataConversionTarget, DataType};
+use qubit_redact::{Redact, RedactionPolicy};
 use qubit_value::Value;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::{IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema};
 
@@ -28,7 +29,7 @@ use crate::{IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema};
 ///
 /// Use [`Metadata::with`] for fluent construction and [`Metadata::set`] when
 /// mutating an existing object.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Default)]
 pub struct Metadata(
     /// Stored values indexed by metadata key.
     BTreeMap<String, Value>,
@@ -494,6 +495,81 @@ impl Metadata {
     #[must_use]
     pub fn into_inner(self) -> BTreeMap<String, Value> {
         self.0
+    }
+}
+
+impl Redact for Metadata {
+    /// Writes a policy-redacted metadata representation.
+    fn fmt_redacted(
+        &self,
+        policy: &RedactionPolicy,
+        formatter: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        let mut output = formatter.debug_map();
+        for (key, value) in &self.0 {
+            if let Some(sensitivity) = policy.sensitivity_for(key) {
+                match value {
+                    Value::String(text) => {
+                        output.entry(&key, &policy.masking().mask(sensitivity, text));
+                    }
+                    _ => {
+                        output.entry(&key, &"<redacted>");
+                    }
+                };
+            } else {
+                output.entry(&key, value);
+            }
+        }
+        output.finish()
+    }
+}
+
+impl fmt::Debug for Metadata {
+    /// Writes the default-policy redacted representation.
+    #[inline(always)]
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_redacted(&RedactionPolicy::default(), formatter)
+    }
+}
+
+impl Serialize for Metadata {
+    /// Serializes metadata as the strict v1 envelope.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire<'a> {
+            version: u8,
+            values: &'a BTreeMap<String, Value>,
+        }
+        Wire {
+            version: 1,
+            values: &self.0,
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Metadata {
+    /// Deserializes only the strict v1 envelope.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            version: u8,
+            values: BTreeMap<String, Value>,
+        }
+        let wire = Wire::deserialize(deserializer)?;
+        if wire.version != 1 {
+            return Err(de::Error::custom(
+                "unsupported Metadata wire format version",
+            ));
+        }
+        Ok(Self(wire.values))
     }
 }
 

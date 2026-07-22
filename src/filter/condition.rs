@@ -7,15 +7,13 @@
 // =============================================================================
 //! A single comparison predicate against one metadata key.
 
-use std::cmp::Ordering;
-
-use qubit_datatype::NumericComparisonPolicy;
-use qubit_value::Value;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::{cmp::Ordering, fmt};
 
 use super::internal::MatchOutcome;
-use super::wire::ConditionWire;
 use crate::{FilterLimits, Metadata, MetadataError, MetadataResult};
+use qubit_datatype::NumericComparisonPolicy;
+use qubit_redact::{Redact, RedactionPolicy};
+use qubit_value::Value;
 
 /// A single comparison operator applied to one metadata key.
 ///
@@ -23,7 +21,7 @@ use crate::{FilterLimits, Metadata, MetadataError, MetadataResult};
 /// An absent key or [`Value::Unset`] produces an unknown outcome that remains
 /// unknown under logical negation and therefore fails closed when matching.
 /// Existence conditions define presence in terms of a concrete value.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Condition {
     /// Key equals value.
@@ -100,26 +98,6 @@ pub enum Condition {
     },
 }
 
-impl Serialize for Condition {
-    #[inline(always)]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        ConditionWire::from(self).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for Condition {
-    #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(ConditionWire::deserialize(deserializer)?.into_condition())
-    }
-}
-
 impl Condition {
     /// Validates this condition against resource limits.
     ///
@@ -137,10 +115,10 @@ impl Condition {
     /// condition exceeds its configured bound.
     pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
         let key = self.key();
-        if key.len() > limits.max_key_length() {
+        if key.len() > limits.max_key_bytes() {
             return Err(MetadataError::FilterLimitExceeded {
                 limit: "key length",
-                maximum: limits.max_key_length(),
+                maximum: limits.max_key_bytes(),
             });
         }
         let values = match self {
@@ -232,6 +210,29 @@ impl Condition {
             | Self::Exists { key }
             | Self::NotExists { key } => key,
         }
+    }
+}
+
+impl Redact for Condition {
+    /// Writes a diagnostic condition representation without exposing operands.
+    fn fmt_redacted(
+        &self,
+        _policy: &RedactionPolicy,
+        formatter: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(
+            formatter,
+            "Condition {{ key: {:?}, value: <redacted> }}",
+            self.key()
+        )
+    }
+}
+
+impl fmt::Debug for Condition {
+    /// Writes the default-policy diagnostic representation.
+    #[inline(always)]
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_redacted(&RedactionPolicy::default(), formatter)
     }
 }
 

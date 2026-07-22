@@ -28,19 +28,8 @@ impl FilterMatchOptions {
     ///
     /// A builder configured with exact numeric comparison by default.
     #[inline]
-    #[must_use]
     pub const fn builder() -> FilterMatchOptionsBuilder {
         FilterMatchOptionsBuilder::new()
-    }
-
-    /// Creates default filter match options.
-    ///
-    /// # Returns
-    ///
-    /// Options using [`NumericComparisonPolicy::Exact`].
-    #[inline]
-    pub const fn new() -> Self {
-        Self::from_numeric_comparison_policy(NumericComparisonPolicy::Exact)
     }
 
     /// Creates options from a numeric comparison policy.
@@ -69,41 +58,5 @@ impl FilterMatchOptions {
     #[inline(always)]
     pub const fn numeric_comparison_policy(&self) -> NumericComparisonPolicy {
         self.numeric_comparison_policy
-    }
-
-    /// Replaces the mixed numeric comparison policy.
-    ///
-    /// # Parameters
-    ///
-    /// * `numeric_comparison_policy` - New comparison policy.
-    ///
-    /// # Returns
-    ///
-    /// This options object for mutable chaining.
-    #[inline(always)]
-    pub fn set_numeric_comparison_policy(
-        &mut self,
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> &mut Self {
-        self.numeric_comparison_policy = numeric_comparison_policy;
-        self
-    }
-
-    /// Returns options using the supplied mixed numeric comparison policy.
-    ///
-    /// # Parameters
-    ///
-    /// * `numeric_comparison_policy` - New comparison policy.
-    ///
-    /// # Returns
-    ///
-    /// Updated options.
-    #[inline(always)]
-    pub const fn with_numeric_comparison_policy(
-        mut self,
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> Self {
-        self.numeric_comparison_policy = numeric_comparison_policy;
-        self
     }
 }

@@ -7,7 +7,8 @@
 // =============================================================================
 //! Metadata-filter wire tests.
 
-use qubit_metadata::{FilterExpression, MetadataFilter};
+use qubit_metadata::{FilterExpression, FilterLimits, MetadataFilter};
+use serde_json::json;
 
 #[test]
 fn test_metadata_filter_wire_contains_expression() {
@@ -21,5 +22,10 @@ fn test_metadata_filter_wire_contains_expression() {
         .unwrap();
     let encoded = serde_json::to_value(filter).unwrap();
 
-    assert!(encoded.get("expression").is_some());
+    assert_eq!(encoded["version"], json!(4));
+    assert_eq!(encoded["expression"]["kind"], json!("exists"));
+    assert_eq!(
+        encoded["limits"]["max_depth"],
+        json!(FilterLimits::MAX.max_depth())
+    );
 }

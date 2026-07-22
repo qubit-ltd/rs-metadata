@@ -38,14 +38,12 @@ impl FilterExpression {
 
     /// Creates an expression that matches every metadata object.
     #[inline(always)]
-    #[must_use]
     pub const fn match_all() -> Self {
         Self::true_expression()
     }
 
     /// Creates an expression that matches no metadata object.
     #[inline(always)]
-    #[must_use]
     pub const fn match_none() -> Self {
         Self::false_expression()
     }
@@ -173,38 +171,6 @@ impl FilterExpression {
             return left;
         }
         Self::combine_or(left, right)
-    }
-
-    /// Creates an AND expression from a non-empty child list.
-    ///
-    /// # Parameters
-    ///
-    /// * `children` - Child expressions to combine.
-    ///
-    /// # Returns
-    ///
-    /// An AND expression containing the supplied children.
-    #[inline]
-    pub(crate) fn and_children(children: Vec<Self>) -> Self {
-        Self {
-            node: FilterExpressionNode::And(children),
-        }
-    }
-
-    /// Creates an OR expression from a non-empty child list.
-    ///
-    /// # Parameters
-    ///
-    /// * `children` - Child expressions to combine.
-    ///
-    /// # Returns
-    ///
-    /// An OR expression containing the supplied children.
-    #[inline]
-    pub(crate) fn or_children(children: Vec<Self>) -> Self {
-        Self {
-            node: FilterExpressionNode::Or(children),
-        }
     }
 
     /// Creates a NOT expression without simplifying its child.
@@ -425,12 +391,5 @@ impl FilterExpression {
         Self {
             node: FilterExpressionNode::Or(children),
         }
-    }
-}
-
-impl Default for FilterExpression {
-    #[inline(always)]
-    fn default() -> Self {
-        Self::true_expression()
     }
 }

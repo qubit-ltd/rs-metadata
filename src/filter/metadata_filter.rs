@@ -7,7 +7,7 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
@@ -66,7 +66,6 @@ impl MetadataFilter {
 
     /// Returns the resource limits.
     #[inline(always)]
-    #[must_use]
     pub const fn limits(&self) -> FilterLimits {
         self.limits
     }
@@ -110,8 +109,29 @@ impl<'de> Deserialize<'de> for MetadataFilter {
     where
         D: Deserializer<'de>,
     {
+        Self::deserialize_with_limits(deserializer, FilterLimits::MAX)
+    }
+}
+
+impl MetadataFilter {
+    /// Deserializes a filter while enforcing a receiver-controlled AST bound.
+    ///
+    /// This method limits only the decoded AST. Callers must separately bound
+    /// the raw input byte length before deserializing untrusted data.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error for malformed v4 data, an unsupported
+    /// version, or an expression and declared limits exceeding `receiver_limits`.
+    pub fn deserialize_with_limits<'de, D>(
+        deserializer: D,
+        receiver_limits: FilterLimits,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         MetadataFilterWire::deserialize(deserializer)?
-            .into_filter()
+            .into_filter(receiver_limits)
             .map_err(de::Error::custom)
     }
 }

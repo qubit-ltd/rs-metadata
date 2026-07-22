@@ -10,11 +10,7 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    Metadata,
-    MetadataError,
-    MetadataSchema,
-};
+use qubit_metadata::{Metadata, MetadataError, MetadataSchema};
 use qubit_value::Value;
 
 mod support;
@@ -23,8 +19,7 @@ use support::port::Port;
 
 #[test]
 fn test_typed_reads_accept_downstream_conversion_targets() {
-    let metadata =
-        Metadata::new().with_raw("port", Value::String("8080".to_owned()));
+    let metadata = Metadata::new().with_raw("port", Value::String("8080".to_owned()));
     assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
 }
 
@@ -64,10 +59,7 @@ fn test_set_and_get_scalar_values() {
     assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
     assert_eq!(meta.get::<i64>("priority"), Some(42));
     assert_eq!(meta.get::<bool>("reviewed"), Some(true));
-    assert!(
-        (meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs()
-            < 1e-10
-    );
+    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
 }
 
 #[test]
@@ -113,8 +105,7 @@ fn test_try_get_missing_key_reports_error() {
 
 #[test]
 fn test_try_get_unset_value_reports_missing_value() {
-    let metadata =
-        Metadata::new().with_raw("count", Value::Unset(DataType::Int64));
+    let metadata = Metadata::new().with_raw("count", Value::Unset(DataType::Int64));
 
     assert_eq!(
         metadata.try_get::<i64>("count"),
@@ -256,8 +247,7 @@ fn test_insert_raw_returns_previous_value() {
 
 #[test]
 fn test_with_raw_builds_metadata_fluently() {
-    let meta =
-        Metadata::new().with_raw("raw", Value::String("stored".to_string()));
+    let meta = Metadata::new().with_raw("raw", Value::String("stored".to_string()));
 
     assert_eq!(
         meta.get_raw("raw"),

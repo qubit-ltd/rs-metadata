@@ -5,41 +5,41 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! [`MetadataFilterWire`] and wire version.
+//! V4 [`MetadataFilter`] envelope.
 
 use serde::{Deserialize, Serialize};
 
-use super::super::metadata_filter::MetadataFilter;
-use super::filter_expression_wire::FilterExpressionWire;
-use crate::{FilterLimits, FilterMatchOptions, MetadataError, MetadataResult};
+use super::{FilterExpressionWire, FilterLimitsWire};
+use crate::{FilterLimits, FilterMatchOptions, MetadataError, MetadataFilter, MetadataResult};
 
 /// Current serialized metadata-filter format version.
-pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 3;
+pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 4;
 
-/// Versioned serialized envelope for a metadata filter.
+/// Strict v4 serialized envelope for a metadata filter.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct MetadataFilterWire {
-    /// Wire format version.
+    /// Wire-format version.
     version: u8,
-    /// Required root expression.
+    /// Root Boolean expression.
     expression: FilterExpressionWire,
-    /// Match options stored with the filter.
-    #[serde(default)]
+    /// Evaluation options.
     options: FilterMatchOptions,
+    /// Expression limits declared by the sender.
+    limits: FilterLimitsWire,
 }
 
 impl MetadataFilterWire {
-    /// Converts the validated wire envelope into a metadata filter.
-    ///
-    /// # Returns
-    ///
-    /// The decoded metadata filter.
+    /// Converts this envelope while enforcing `receiver_limits`.
     ///
     /// # Errors
     ///
-    /// Returns an error for unsupported versions or invalid expression trees.
-    pub(crate) fn into_filter(self) -> MetadataResult<MetadataFilter> {
+    /// Returns an invalid-expression error for unsupported versions or limits
+    /// wider than the receiver, and expression-limit errors for oversized ASTs.
+    pub(crate) fn into_filter(
+        self,
+        receiver_limits: FilterLimits,
+    ) -> MetadataResult<MetadataFilter> {
         if self.version != METADATA_FILTER_WIRE_VERSION {
             return Err(MetadataError::InvalidFilterExpression {
                 message: format!(
@@ -48,23 +48,32 @@ impl MetadataFilterWire {
                 ),
             });
         }
+        let limits = self.limits.into_limits()?;
+        if limits.max_depth() > receiver_limits.max_depth()
+            || limits.max_nodes() > receiver_limits.max_nodes()
+            || limits.max_set_values() > receiver_limits.max_set_values()
+            || limits.max_key_bytes() > receiver_limits.max_key_bytes()
+        {
+            return Err(MetadataError::InvalidFilterExpression {
+                message: "wire filter limits exceed receiver limits".to_string(),
+            });
+        }
         let expression = self.expression.into_expression()?;
-        expression.validate_limits(FilterLimits::MAX)?;
-        Ok(MetadataFilter::new(
-            expression,
-            self.options,
-            FilterLimits::MAX,
-        ))
+        expression.validate_limits(receiver_limits)?;
+        expression.validate_limits(limits)?;
+        Ok(MetadataFilter::new(expression, self.options, limits))
     }
 }
 
 impl From<&MetadataFilter> for MetadataFilterWire {
+    /// Converts a filter into its strict v4 envelope.
     #[inline]
     fn from(filter: &MetadataFilter) -> Self {
         Self {
             version: METADATA_FILTER_WIRE_VERSION,
             expression: FilterExpressionWire::from(filter.expression()),
             options: filter.options(),
+            limits: FilterLimitsWire::from(filter.limits()),
         }
     }
 }

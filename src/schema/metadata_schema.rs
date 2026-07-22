@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
 use qubit_value::Value;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::schema::{
     MetadataField, MetadataSchemaBuilder, UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
@@ -25,8 +25,7 @@ use crate::{
 /// A schema declares valid keys, their concrete [`DataType`], and whether they
 /// are required. It can validate actual [`Metadata`] values and validate that a
 /// [`crate::MetadataFilter`] references known fields with compatible operators.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetadataSchema {
     /// Field definitions keyed by metadata key.
     fields: BTreeMap<String, MetadataField>,
@@ -202,6 +201,57 @@ impl MetadataSchema {
             }
             None => Ok(()),
         }
+    }
+}
+
+impl Serialize for MetadataSchema {
+    /// Serializes this schema as its strict v1 envelope.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire<'a> {
+            version: u8,
+            fields: &'a BTreeMap<String, MetadataField>,
+            unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
+            unknown_filter_field_policy: UnknownFilterFieldPolicy,
+        }
+        Wire {
+            version: 1,
+            fields: &self.fields,
+            unknown_metadata_field_policy: self.unknown_metadata_field_policy,
+            unknown_filter_field_policy: self.unknown_filter_field_policy,
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for MetadataSchema {
+    /// Deserializes only the strict v1 schema envelope.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            version: u8,
+            fields: BTreeMap<String, MetadataField>,
+            unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
+            unknown_filter_field_policy: UnknownFilterFieldPolicy,
+        }
+        let wire = Wire::deserialize(deserializer)?;
+        if wire.version != 1 {
+            return Err(de::Error::custom(
+                "unsupported MetadataSchema wire format version",
+            ));
+        }
+        Ok(Self::new(
+            wire.fields,
+            wire.unknown_metadata_field_policy,
+            wire.unknown_filter_field_policy,
+        ))
     }
 }
 
