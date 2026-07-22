@@ -243,15 +243,14 @@ filter into their native query language.
 
 ### 5) Versioned filter serde format
 
-Serialized `MetadataFilter` values use an explicit wire format with `version`,
-`expression`, and `options` fields. Expression nodes use `type`, and condition
-nodes use stable operator names in `op` such as `eq`, `ge`, `in`, and
-`not_exists`.
-Serialized `Condition` values use the same condition wire representation. The
-internal expression tree is not part of the serialization contract. Policy enum
-values in `options` are serialized as lowercase underscore values such as
-`exact` and `approximate`. New serialization emits MetadataFilter wire version
-`3`; earlier filter wire versions are rejected.
+Serialized `MetadataFilter` values use the strict v4 wire format with
+`version`, `expression`, `options`, and `limits` fields. Every expression node
+uses a `kind` tag. Condition data is inline in nodes such as `eq`, `ge`, `in`,
+and `not_exists`; Boolean nodes use `and`, `or`, `not`, `all`, and `none`.
+Policy enum values use lowercase underscore names such as `exact` and
+`approximate`. Unknown fields, malformed nodes, and versions other than v4 are
+rejected. `Metadata` and `MetadataSchema` separately use strict v1 envelopes;
+their unknown fields and unsupported versions are also rejected.
 
 ## Error Handling
 
@@ -282,10 +281,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-metadata = "0.8"
+qubit-metadata = "0.10"
 # Required when naming schema data types or numeric comparison policies.
 qubit-datatype = "0.8"
-# Required when using Metadata's raw Value APIs.
+# Required when directly constructing Value operands.
 qubit-value = "0.10"
 ```
 
@@ -296,7 +295,7 @@ only the rich value families you need:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.8", features = ["chrono", "json"] }
+qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
 ```
 
 Available features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
