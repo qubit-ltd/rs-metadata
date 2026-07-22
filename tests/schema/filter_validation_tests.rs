@@ -9,7 +9,11 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    FilterExpression, MetadataError, MetadataFilter, MetadataSchema, UnknownFilterFieldPolicy,
+    FilterExpression,
+    MetadataError,
+    MetadataFilter,
+    MetadataSchema,
+    UnknownFilterFieldPolicy,
 };
 
 /// Builds a root filter suitable for schema validation.

@@ -7,10 +7,22 @@
 // =============================================================================
 //! V4 [`MetadataFilter`] envelope.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
-use super::{FilterExpressionWire, FilterLimitsWire};
-use crate::{FilterLimits, FilterMatchOptions, MetadataError, MetadataFilter, MetadataResult};
+use super::{
+    FilterExpressionWire,
+    FilterLimitsWire,
+};
+use crate::{
+    FilterLimits,
+    FilterMatchOptions,
+    MetadataError,
+    MetadataFilter,
+    MetadataResult,
+};
 
 /// Current serialized metadata-filter format version.
 pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 4;
@@ -34,8 +46,9 @@ impl MetadataFilterWire {
     ///
     /// # Errors
     ///
-    /// Returns an invalid-expression error for unsupported versions or limits
-    /// wider than the receiver, and expression-limit errors for oversized ASTs.
+    /// Returns an invalid-expression error for unsupported versions, a limit
+    /// configuration error for invalid sender limits, or an expression-limit
+    /// error when the expression exceeds either sender or receiver limits.
     pub(crate) fn into_filter(
         self,
         receiver_limits: FilterLimits,
@@ -48,19 +61,11 @@ impl MetadataFilterWire {
                 ),
             });
         }
-        let limits = self.limits.into_limits()?;
-        if limits.max_depth() > receiver_limits.max_depth()
-            || limits.max_nodes() > receiver_limits.max_nodes()
-            || limits.max_set_values() > receiver_limits.max_set_values()
-            || limits.max_key_bytes() > receiver_limits.max_key_bytes()
-        {
-            return Err(MetadataError::InvalidFilterExpression {
-                message: "wire filter limits exceed receiver limits".to_string(),
-            });
-        }
+        let sender_limits = self.limits.into_limits()?;
         let expression = self.expression.into_expression()?;
+        expression.validate_limits(sender_limits)?;
         expression.validate_limits(receiver_limits)?;
-        expression.validate_limits(limits)?;
+        let limits = sender_limits.constrained_by(receiver_limits);
         Ok(MetadataFilter::new(expression, self.options, limits))
     }
 }

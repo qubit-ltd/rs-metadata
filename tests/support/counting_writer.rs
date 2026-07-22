@@ -7,7 +7,10 @@
 // =============================================================================
 //! A formatter used to test incremental display writes.
 
-use std::fmt::{self, Write};
+use std::fmt::{
+    self,
+    Write,
+};
 
 /// Writer that counts formatting calls and can fail at a selected call.
 pub(crate) struct CountingWriter {

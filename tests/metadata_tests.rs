@@ -10,16 +10,31 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError, MetadataSchema};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+    MetadataSchema,
+};
 use qubit_value::Value;
 
 mod support;
 
 use support::port::Port;
 
+#[derive(Debug, Clone, Copy)]
+struct TenantId(u64);
+
+impl From<TenantId> for Value {
+    /// Converts a tenant identifier into its metadata representation.
+    fn from(value: TenantId) -> Self {
+        Self::UInt64(value.0)
+    }
+}
+
 #[test]
 fn test_typed_reads_accept_downstream_conversion_targets() {
-    let metadata = Metadata::new().with_raw("port", Value::String("8080".to_owned()));
+    let metadata =
+        Metadata::new().with("port", Value::String("8080".to_owned()));
     assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
 }
 
@@ -49,6 +64,19 @@ fn test_with_builds_metadata_fluently() {
 }
 
 #[test]
+fn test_with_accepts_value_and_domain_newtype() {
+    let metadata = Metadata::new()
+        .with("raw", Value::String("stored".to_owned()))
+        .with("tenant_id", TenantId(42));
+
+    assert_eq!(
+        metadata.get_raw("raw"),
+        Some(&Value::String("stored".to_owned()))
+    );
+    assert_eq!(metadata.get::<u64>("tenant_id"), Some(42));
+}
+
+#[test]
 fn test_set_and_get_scalar_values() {
     let mut meta = Metadata::new();
     meta.set("author", "alice");
@@ -59,7 +87,10 @@ fn test_set_and_get_scalar_values() {
     assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
     assert_eq!(meta.get::<i64>("priority"), Some(42));
     assert_eq!(meta.get::<bool>("reviewed"), Some(true));
-    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
+    assert!(
+        (meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs()
+            < 1e-10
+    );
 }
 
 #[test]
@@ -105,7 +136,7 @@ fn test_try_get_missing_key_reports_error() {
 
 #[test]
 fn test_try_get_unset_value_reports_missing_value() {
-    let metadata = Metadata::new().with_raw("count", Value::Unset(DataType::Int64));
+    let metadata = Metadata::new().with("count", Value::Unset(DataType::Int64));
 
     assert_eq!(
         metadata.try_get::<i64>("count"),
@@ -219,10 +250,10 @@ fn test_with_checked_rejects_unknown_field() {
 }
 
 #[test]
-fn test_get_raw_and_set_raw_support_mutable_chaining() {
+fn test_get_raw_and_set_value_support_mutable_chaining() {
     let mut meta = Metadata::new();
-    meta.set_raw("raw", Value::String("stored".to_string()))
-        .set_raw("count", Value::Int64(7));
+    meta.set("raw", Value::String("stored".to_string()))
+        .set("count", Value::Int64(7));
 
     assert_eq!(
         meta.get_raw("raw"),
@@ -233,21 +264,18 @@ fn test_get_raw_and_set_raw_support_mutable_chaining() {
 }
 
 #[test]
-fn test_insert_raw_returns_previous_value() {
+fn test_insert_value_returns_previous_value() {
     let mut meta = Metadata::new();
+    assert_eq!(meta.insert("raw", Value::String("first".to_string())), None);
     assert_eq!(
-        meta.insert_raw("raw", Value::String("first".to_string())),
-        None
-    );
-    assert_eq!(
-        meta.insert_raw("raw", Value::String("second".to_string())),
+        meta.insert("raw", Value::String("second".to_string())),
         Some(Value::String("first".to_string()))
     );
 }
 
 #[test]
-fn test_with_raw_builds_metadata_fluently() {
-    let meta = Metadata::new().with_raw("raw", Value::String("stored".to_string()));
+fn test_with_value_builds_metadata_fluently() {
+    let meta = Metadata::new().with("raw", Value::String("stored".to_string()));
 
     assert_eq!(
         meta.get_raw("raw"),

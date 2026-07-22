@@ -8,14 +8,37 @@
 //! Provides the [`Metadata`] type — a structured, ordered, typed key-value
 //! store.
 
-use std::{collections::BTreeMap, fmt};
+use std::{
+    collections::BTreeMap,
+    fmt,
+};
 
-use qubit_datatype::{DataConversionTarget, DataType};
-use qubit_redact::{Redact, RedactionPolicy};
+use qubit_datatype::{
+    DataConversionTarget,
+    DataType,
+};
+use qubit_redact::{
+    Redact,
+    RedactionPolicy,
+};
 use qubit_value::Value;
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de,
+};
 
-use crate::{IntoMetadataValue, MetadataError, MetadataResult, MetadataSchema};
+use crate::wire::{
+    METADATA_WIRE_VERSION,
+    MetadataWire,
+};
+use crate::{
+    MetadataError,
+    MetadataResult,
+    MetadataSchema,
+};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -135,9 +158,9 @@ impl Metadata {
                 data_type: value.data_type(),
             });
         }
-        value
-            .to::<T>()
-            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
+        value.to::<T>().map_err(|error| {
+            MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
+        })
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
@@ -202,9 +225,9 @@ impl Metadata {
     #[inline(always)]
     pub fn insert<T>(&mut self, key: &str, value: T) -> Option<Value>
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
-        self.0.insert(key.to_string(), value.into_metadata_value())
+        self.0.insert(key.to_string(), value.into())
     }
 
     /// Sets a typed value and returns this metadata object for chaining.
@@ -220,7 +243,7 @@ impl Metadata {
     #[inline(always)]
     pub fn set<T>(&mut self, key: &str, value: T) -> &mut Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         let _ = self.insert(key, value);
         self
@@ -240,7 +263,7 @@ impl Metadata {
     #[must_use]
     pub fn with<T>(mut self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.set(key, value);
         self
@@ -272,11 +295,11 @@ impl Metadata {
         value: T,
     ) -> MetadataResult<Option<Value>>
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
-        let value = value.into_metadata_value();
+        let value = value.into();
         schema.validate_entry(key, &value)?;
-        Ok(self.insert_raw(key, value))
+        Ok(self.insert(key, value))
     }
 
     /// Sets a typed value after schema validation and returns this metadata
@@ -305,7 +328,7 @@ impl Metadata {
         value: T,
     ) -> MetadataResult<&mut Self>
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         let _ = self.insert_checked(schema, key, value)?;
         Ok(self)
@@ -336,58 +359,10 @@ impl Metadata {
         value: T,
     ) -> MetadataResult<Self>
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.set_checked(schema, key, value)?;
         Ok(self)
-    }
-
-    /// Inserts a raw [`Value`] and returns the previous value.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to replace.
-    /// * `value` - Raw value to store.
-    ///
-    /// # Returns
-    ///
-    /// The previous value when the key was already present, or `None`.
-    #[inline(always)]
-    pub fn insert_raw(&mut self, key: &str, value: Value) -> Option<Value> {
-        self.0.insert(key.to_string(), value)
-    }
-
-    /// Sets a raw [`Value`] and returns this metadata object for chaining.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to replace.
-    /// * `value` - Raw value to store.
-    ///
-    /// # Returns
-    ///
-    /// A mutable reference to this metadata object.
-    #[inline(always)]
-    pub fn set_raw(&mut self, key: &str, value: Value) -> &mut Self {
-        let _ = self.insert_raw(key, value);
-        self
-    }
-
-    /// Returns a new metadata object with a raw [`Value`] inserted.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to replace.
-    /// * `value` - Raw value to store.
-    ///
-    /// # Returns
-    ///
-    /// This metadata object after inserting the value.
-    #[inline(always)]
-    #[must_use]
-    pub fn with_raw(mut self, key: &str, value: Value) -> Self {
-        self.set_raw(key, value);
-        self
     }
 
     /// Removes the entry for `key` and returns the stored [`Value`] if it
@@ -510,7 +485,10 @@ impl Redact for Metadata {
             if let Some(sensitivity) = policy.sensitivity_for(key) {
                 match value {
                     Value::String(text) => {
-                        output.entry(&key, &policy.masking().mask(sensitivity, text));
+                        output.entry(
+                            &key,
+                            &policy.masking().mask(sensitivity, text),
+                        );
                     }
                     _ => {
                         output.entry(&key, &"<redacted>");
@@ -538,13 +516,8 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        #[derive(Serialize)]
-        struct Wire<'a> {
-            version: u8,
-            values: &'a BTreeMap<String, Value>,
-        }
-        Wire {
-            version: 1,
+        MetadataWire {
+            version: METADATA_WIRE_VERSION,
             values: &self.0,
         }
         .serialize(serializer)
@@ -557,14 +530,9 @@ impl<'de> Deserialize<'de> for Metadata {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        #[serde(deny_unknown_fields)]
-        struct Wire {
-            version: u8,
-            values: BTreeMap<String, Value>,
-        }
-        let wire = Wire::deserialize(deserializer)?;
-        if wire.version != 1 {
+        let wire: MetadataWire<BTreeMap<String, Value>> =
+            MetadataWire::deserialize(deserializer)?;
+        if wire.version != METADATA_WIRE_VERSION {
             return Err(de::Error::custom(
                 "unsupported Metadata wire format version",
             ));
