@@ -9,8 +9,13 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    FilterExpression, Metadata, MetadataError, MetadataSchema, MetadataValidationError,
-    UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
+    FilterExpression,
+    Metadata,
+    MetadataError,
+    MetadataSchema,
+    MetadataValidationError,
+    UnknownFilterFieldPolicy,
+    UnknownMetadataFieldPolicy,
 };
 use qubit_value::Value;
 use serde_json::json;
@@ -82,7 +87,7 @@ fn test_schema_validate_treats_unset_required_field_as_missing() {
         .required("id", DataType::String)
         .build()
         .expect("schema should build");
-    let metadata = Metadata::new().with_raw("id", Value::Unset(DataType::String));
+    let metadata = Metadata::new().with("id", Value::Unset(DataType::String));
 
     assert_eq!(
         schema.validate(&metadata),
@@ -101,7 +106,7 @@ fn test_schema_validate_accepts_unset_optional_field() {
         .optional("score", DataType::Int64)
         .build()
         .expect("schema should build");
-    let metadata = Metadata::new().with_raw("score", Value::Unset(DataType::Int64));
+    let metadata = Metadata::new().with("score", Value::Unset(DataType::Int64));
 
     assert_eq!(schema.validate(&metadata), Ok(()));
 }

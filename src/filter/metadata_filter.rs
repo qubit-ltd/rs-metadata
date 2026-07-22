@@ -7,12 +7,23 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de,
+};
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
 use crate::{
-    Condition, FilterExpression, FilterLimits, FilterMatchOptions, Metadata, MetadataResult,
+    Condition,
+    FilterExpression,
+    FilterLimits,
+    FilterMatchOptions,
+    Metadata,
+    MetadataResult,
 };
 
 /// An expression, its matching policy, and its resource limits.
@@ -30,11 +41,70 @@ pub struct MetadataFilter {
 }
 
 impl MetadataFilter {
+    /// Creates a filter that matches every metadata object.
+    ///
+    /// # Returns
+    ///
+    /// A constant-true filter using default match options and library hard
+    /// limits.
+    #[inline]
+    #[must_use = "the constructed all-matching filter should be used"]
+    pub fn all() -> Self {
+        Self::new(
+            FilterExpression::match_all(),
+            FilterMatchOptions::default(),
+            FilterLimits::MAX,
+        )
+    }
+
+    /// Creates a filter that matches no metadata object.
+    ///
+    /// # Returns
+    ///
+    /// A constant-false filter using default match options and library hard
+    /// limits.
+    #[inline]
+    #[must_use = "the constructed no-match filter should be used"]
+    pub fn none() -> Self {
+        Self::new(
+            FilterExpression::match_none(),
+            FilterMatchOptions::default(),
+            FilterLimits::MAX,
+        )
+    }
+
     /// Creates a builder for a metadata filter.
     #[inline(always)]
     #[must_use]
     pub const fn builder() -> MetadataFilterBuilder {
         MetadataFilterBuilder::new()
+    }
+
+    /// Deserializes a filter while enforcing a receiver-controlled AST bound.
+    ///
+    /// This method limits only the decoded AST. Callers must separately bound
+    /// the raw input byte length before deserializing untrusted data.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the versioned filter representation.
+    /// * `receiver_limits` - Local upper bounds applied to the decoded AST.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error for malformed v4 data, an unsupported
+    /// version, or an expression exceeding either the sender-declared limits
+    /// or `receiver_limits`.
+    pub fn deserialize_with_limits<'de, D>(
+        deserializer: D,
+        receiver_limits: FilterLimits,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        MetadataFilterWire::deserialize(deserializer)?
+            .into_filter(receiver_limits)
+            .map_err(de::Error::custom)
     }
 
     /// Creates a filter from already validated parts.
@@ -53,6 +123,7 @@ impl MetadataFilter {
 
     /// Returns the root expression.
     #[inline(always)]
+    #[must_use = "the filter expression should be inspected"]
     pub const fn expression(&self) -> &FilterExpression {
         &self.expression
     }
@@ -66,6 +137,7 @@ impl MetadataFilter {
 
     /// Returns the resource limits.
     #[inline(always)]
+    #[must_use = "the filter limits should be inspected"]
     pub const fn limits(&self) -> FilterLimits {
         self.limits
     }
@@ -83,7 +155,10 @@ impl MetadataFilter {
     ///
     /// Returns the first error produced by `visitor`.
     #[inline(always)]
-    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(
+        &self,
+        mut visitor: F,
+    ) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
@@ -110,28 +185,5 @@ impl<'de> Deserialize<'de> for MetadataFilter {
         D: Deserializer<'de>,
     {
         Self::deserialize_with_limits(deserializer, FilterLimits::MAX)
-    }
-}
-
-impl MetadataFilter {
-    /// Deserializes a filter while enforcing a receiver-controlled AST bound.
-    ///
-    /// This method limits only the decoded AST. Callers must separately bound
-    /// the raw input byte length before deserializing untrusted data.
-    ///
-    /// # Errors
-    ///
-    /// Returns a deserialization error for malformed v4 data, an unsupported
-    /// version, or an expression and declared limits exceeding `receiver_limits`.
-    pub fn deserialize_with_limits<'de, D>(
-        deserializer: D,
-        receiver_limits: FilterLimits,
-    ) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        MetadataFilterWire::deserialize(deserializer)?
-            .into_filter(receiver_limits)
-            .map_err(de::Error::custom)
     }
 }

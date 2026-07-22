@@ -9,7 +9,28 @@
 
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_metadata::{FilterExpression, FilterMatchOptions, Metadata, MetadataFilter};
+use qubit_metadata::{
+    FilterExpression,
+    FilterLimits,
+    FilterMatchOptions,
+    Metadata,
+    MetadataFilter,
+};
+
+#[test]
+fn test_all_and_none_match_as_constants() {
+    let all = MetadataFilter::all();
+    let none = MetadataFilter::none();
+
+    assert!(all.matches(&Metadata::new()));
+    assert!(all.matches(&sample()));
+    assert!(!none.matches(&Metadata::new()));
+    assert!(!none.matches(&sample()));
+    assert_eq!(all.options(), FilterMatchOptions::default());
+    assert_eq!(all.limits(), FilterLimits::MAX);
+    assert_eq!(none.options(), FilterMatchOptions::default());
+    assert_eq!(none.limits(), FilterLimits::MAX);
+}
 
 #[test]
 fn test_filter_matches_its_expression() {

@@ -9,9 +9,15 @@
 
 use std::fmt;
 
-use crate::{FilterLimitKind, FilterMatchOptions};
+use crate::{
+    FilterLimitKind,
+    FilterMatchOptions,
+};
 use qubit_datatype::DataType;
-use qubit_value::{Value, ValueError};
+use qubit_value::{
+    Value,
+    ValueError,
+};
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -146,7 +152,11 @@ impl MetadataError {
     ///
     /// A structured [`MetadataError::TypeMismatch`] error.
     #[inline]
-    pub(crate) fn type_mismatch(key: &str, expected: DataType, actual: DataType) -> Self {
+    pub(crate) fn type_mismatch(
+        key: &str,
+        expected: DataType,
+        actual: DataType,
+    ) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,
@@ -157,11 +167,14 @@ impl MetadataError {
 }
 
 impl fmt::Display for MetadataError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    /// Formats this metadata operation error for display.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MissingKey(key) => write!(f, "Metadata key not found: {key}"),
+            Self::MissingKey(key) => {
+                write!(formatter, "Metadata key not found: {key}")
+            }
             Self::MissingValue { key, data_type } => write!(
-                f,
+                formatter,
                 "Metadata key '{key}' has no concrete value (declared {data_type})"
             ),
             Self::TypeMismatch {
@@ -170,21 +183,24 @@ impl fmt::Display for MetadataError {
                 actual,
                 message,
             } => write!(
-                f,
+                formatter,
                 "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
             ),
             Self::MissingRequiredField { key, expected } => {
                 write!(
-                    f,
+                    formatter,
                     "Required metadata key '{key}' is missing (expected {expected})"
                 )
             }
             Self::UnknownField { key } => {
-                write!(f, "Metadata key '{key}' is not defined in schema")
+                write!(
+                    formatter,
+                    "Metadata key '{key}' is not defined in schema"
+                )
             }
             Self::UnknownFilterField { key } => {
                 write!(
-                    f,
+                    formatter,
                     "Metadata filter references key '{key}' not defined in schema"
                 )
             }
@@ -194,33 +210,39 @@ impl fmt::Display for MetadataError {
                 data_type,
                 message,
             } => write!(
-                f,
+                formatter,
                 "Metadata filter operator '{operator}' is invalid for key '{key}' with type {data_type}: {message}"
             ),
             Self::InvalidFilterExpression { message } => {
-                write!(f, "Metadata filter expression is invalid: {message}")
+                write!(
+                    formatter,
+                    "Metadata filter expression is invalid: {message}"
+                )
             }
             Self::MissingFilterExpression => {
-                write!(f, "Metadata filter requires an expression")
+                write!(formatter, "Metadata filter requires an expression")
             }
             Self::InvalidFilterLimit {
                 kind,
                 value,
                 maximum,
             } => write!(
-                f,
+                formatter,
                 "Metadata filter {kind:?} limit {value} is outside 1..={maximum}"
             ),
             Self::FilterLimitExceeded { limit, maximum } => write!(
-                f,
+                formatter,
                 "Metadata filter {limit} exceeds the maximum of {maximum}"
             ),
             Self::IncompatibleFilterOptions { left, right } => write!(
-                f,
+                formatter,
                 "Metadata filters use incompatible match options: left {left:?}, right {right:?}"
             ),
             Self::DuplicateSchemaField { key } => {
-                write!(f, "Metadata schema declares field '{key}' more than once")
+                write!(
+                    formatter,
+                    "Metadata schema declares field '{key}' more than once"
+                )
             }
         }
     }

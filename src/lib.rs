@@ -77,12 +77,13 @@
 #![deny(missing_docs)]
 
 mod filter;
-mod into_metadata_value;
 mod metadata;
 mod metadata_error;
 mod metadata_result;
 mod metadata_validation_error;
+mod metadata_validation_result;
 mod schema;
+mod wire;
 
 pub use filter::Condition;
 pub use filter::FilterExpression;
@@ -95,12 +96,11 @@ pub use filter::FilterMatchOptions;
 pub use filter::FilterMatchOptionsBuilder;
 pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
-pub use into_metadata_value::IntoMetadataValue;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
 pub use metadata_result::MetadataResult;
-pub use metadata_result::MetadataValidationResult;
 pub use metadata_validation_error::MetadataValidationError;
+pub use metadata_validation_result::MetadataValidationResult;
 pub use schema::MetadataField;
 pub use schema::MetadataSchema;
 pub use schema::MetadataSchemaBuilder;

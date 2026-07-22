@@ -8,7 +8,10 @@
 //! Tests for [`qubit_metadata::MetadataError`].
 
 use qubit_datatype::DataType;
-use qubit_metadata::{FilterMatchOptions, MetadataError};
+use qubit_metadata::{
+    FilterMatchOptions,
+    MetadataError,
+};
 
 #[test]
 fn test_display_formats_all_variants() {
@@ -65,7 +68,8 @@ fn test_display_formats_all_variants() {
         key: "active".to_string(),
         operator: "gt",
         data_type: DataType::Bool,
-        message: "range operators require a numeric or string field".to_string(),
+        message: "range operators require a numeric or string field"
+            .to_string(),
     };
     assert_eq!(
         invalid_operator.to_string(),

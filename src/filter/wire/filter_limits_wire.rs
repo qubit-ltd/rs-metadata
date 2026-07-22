@@ -7,9 +7,15 @@
 // =============================================================================
 //! Versioned-wire representation of [`crate::FilterLimits`].
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
-use crate::{FilterLimits, MetadataResult};
+use crate::{
+    FilterLimits,
+    MetadataResult,
+};
 
 /// Serializable filter resource limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -7,12 +7,23 @@
 // =============================================================================
 //! A single comparison predicate against one metadata key.
 
-use std::{cmp::Ordering, fmt};
+use std::{
+    cmp::Ordering,
+    fmt,
+};
 
 use super::internal::MatchOutcome;
-use crate::{FilterLimits, Metadata, MetadataError, MetadataResult};
+use crate::{
+    FilterLimits,
+    Metadata,
+    MetadataError,
+    MetadataResult,
+};
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_redact::{Redact, RedactionPolicy};
+use qubit_redact::{
+    Redact,
+    RedactionPolicy,
+};
 use qubit_value::Value;
 
 /// A single comparison operator applied to one metadata key.
@@ -113,7 +124,10 @@ impl Condition {
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when a key or membership
     /// condition exceeds its configured bound.
-    pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
+    pub(crate) fn validate_limits(
+        &self,
+        limits: FilterLimits,
+    ) -> MetadataResult<()> {
         let key = self.key();
         if key.len() > limits.max_key_bytes() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -152,40 +166,66 @@ impl Condition {
         numeric_comparison_policy: NumericComparisonPolicy,
     ) -> MatchOutcome {
         match self {
-            Condition::Equal { key, value } => evaluate_concrete(meta, key, |stored| {
-                values_equal(stored, value, numeric_comparison_policy)
-            }),
-            Condition::NotEqual { key, value } => evaluate_concrete(meta, key, |stored| {
-                !values_equal(stored, value, numeric_comparison_policy)
-            }),
-            Condition::Less { key, value } => evaluate_concrete(meta, key, |stored| {
-                compare_values(stored, value, numeric_comparison_policy) == Some(Ordering::Less)
-            }),
-            Condition::LessEqual { key, value } => evaluate_concrete(meta, key, |stored| {
-                matches!(
-                    compare_values(stored, value, numeric_comparison_policy),
-                    Some(Ordering::Less) | Some(Ordering::Equal)
-                )
-            }),
-            Condition::Greater { key, value } => evaluate_concrete(meta, key, |stored| {
-                compare_values(stored, value, numeric_comparison_policy) == Some(Ordering::Greater)
-            }),
-            Condition::GreaterEqual { key, value } => evaluate_concrete(meta, key, |stored| {
-                matches!(
-                    compare_values(stored, value, numeric_comparison_policy),
-                    Some(Ordering::Greater) | Some(Ordering::Equal)
-                )
-            }),
-            Condition::In { key, values } => evaluate_concrete(meta, key, |stored| {
-                values
-                    .iter()
-                    .any(|value| values_equal(stored, value, numeric_comparison_policy))
-            }),
-            Condition::NotIn { key, values } => evaluate_concrete(meta, key, |stored| {
-                values
-                    .iter()
-                    .all(|value| !values_equal(stored, value, numeric_comparison_policy))
-            }),
+            Condition::Equal { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    values_equal(stored, value, numeric_comparison_policy)
+                })
+            }
+            Condition::NotEqual { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    !values_equal(stored, value, numeric_comparison_policy)
+                })
+            }
+            Condition::Less { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    compare_values(stored, value, numeric_comparison_policy)
+                        == Some(Ordering::Less)
+                })
+            }
+            Condition::LessEqual { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    matches!(
+                        compare_values(
+                            stored,
+                            value,
+                            numeric_comparison_policy
+                        ),
+                        Some(Ordering::Less) | Some(Ordering::Equal)
+                    )
+                })
+            }
+            Condition::Greater { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    compare_values(stored, value, numeric_comparison_policy)
+                        == Some(Ordering::Greater)
+                })
+            }
+            Condition::GreaterEqual { key, value } => {
+                evaluate_concrete(meta, key, |stored| {
+                    matches!(
+                        compare_values(
+                            stored,
+                            value,
+                            numeric_comparison_policy
+                        ),
+                        Some(Ordering::Greater) | Some(Ordering::Equal)
+                    )
+                })
+            }
+            Condition::In { key, values } => {
+                evaluate_concrete(meta, key, |stored| {
+                    values.iter().any(|value| {
+                        values_equal(stored, value, numeric_comparison_policy)
+                    })
+                })
+            }
+            Condition::NotIn { key, values } => {
+                evaluate_concrete(meta, key, |stored| {
+                    values.iter().all(|value| {
+                        !values_equal(stored, value, numeric_comparison_policy)
+                    })
+                })
+            }
             Condition::Exists { key } => {
                 MatchOutcome::from_bool(concrete_value(meta, key).is_some())
             }
@@ -196,7 +236,7 @@ impl Condition {
     }
 
     /// Returns the metadata key referenced by this condition.
-    #[inline(always)]
+    #[inline]
     fn key(&self) -> &str {
         match self {
             Self::Equal { key, .. }
@@ -249,7 +289,11 @@ impl fmt::Debug for Condition {
 /// The predicate result, or [`MatchOutcome::Unknown`] when the key is absent
 /// or stores [`Value::Unset`].
 #[inline]
-fn evaluate_concrete<F>(meta: &Metadata, key: &str, predicate: F) -> MatchOutcome
+fn evaluate_concrete<F>(
+    meta: &Metadata,
+    key: &str,
+    predicate: F,
+) -> MatchOutcome
 where
     F: FnOnce(&Value) -> bool,
 {

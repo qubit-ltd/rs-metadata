@@ -8,7 +8,10 @@
 //! [`MetadataField`] — one field definition in a metadata schema.
 
 use qubit_datatype::DataType;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Definition of one metadata field in a [`crate::MetadataSchema`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,7 +35,7 @@ impl MetadataField {
     ///
     /// A new field definition.
     #[inline]
-    #[must_use]
+    #[must_use = "the constructed metadata field should be used"]
     pub fn new(data_type: DataType, required: bool) -> Self {
         Self {
             data_type,
@@ -46,6 +49,7 @@ impl MetadataField {
     ///
     /// The declared field data type.
     #[inline(always)]
+    #[must_use = "the metadata field type should be inspected"]
     pub fn data_type(&self) -> DataType {
         self.data_type
     }

@@ -11,13 +11,30 @@ use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
 use qubit_value::Value;
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de,
+};
 
 use crate::schema::{
-    MetadataField, MetadataSchemaBuilder, UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
+    MetadataField,
+    MetadataSchemaBuilder,
+    UnknownFilterFieldPolicy,
+    UnknownMetadataFieldPolicy,
+};
+use crate::wire::{
+    METADATA_SCHEMA_WIRE_VERSION,
+    MetadataSchemaWire,
 };
 use crate::{
-    Metadata, MetadataError, MetadataResult, MetadataValidationError, MetadataValidationResult,
+    Metadata,
+    MetadataError,
+    MetadataResult,
+    MetadataValidationError,
+    MetadataValidationResult,
 };
 
 /// Schema for metadata fields.
@@ -149,7 +166,9 @@ impl MetadataSchema {
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
-            if field.is_required() && meta.get_raw(key).is_none_or(Value::is_unset) {
+            if field.is_required()
+                && meta.get_raw(key).is_none_or(Value::is_unset)
+            {
                 issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),
@@ -184,11 +203,19 @@ impl MetadataSchema {
     ///
     /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
     /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
-    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(
+        &self,
+        key: &str,
+        value: &Value,
+    ) -> MetadataResult<()> {
         match self.field(key) {
-            Some(field) if field.data_type() != value.data_type() => Err(
-                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
-            ),
+            Some(field) if field.data_type() != value.data_type() => {
+                Err(MetadataError::type_mismatch(
+                    key,
+                    field.data_type(),
+                    value.data_type(),
+                ))
+            }
             Some(_) => Ok(()),
             None if matches!(
                 self.unknown_metadata_field_policy,
@@ -210,15 +237,8 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        #[derive(Serialize)]
-        struct Wire<'a> {
-            version: u8,
-            fields: &'a BTreeMap<String, MetadataField>,
-            unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
-            unknown_filter_field_policy: UnknownFilterFieldPolicy,
-        }
-        Wire {
-            version: 1,
+        MetadataSchemaWire {
+            version: METADATA_SCHEMA_WIRE_VERSION,
             fields: &self.fields,
             unknown_metadata_field_policy: self.unknown_metadata_field_policy,
             unknown_filter_field_policy: self.unknown_filter_field_policy,
@@ -233,16 +253,9 @@ impl<'de> Deserialize<'de> for MetadataSchema {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        #[serde(deny_unknown_fields)]
-        struct Wire {
-            version: u8,
-            fields: BTreeMap<String, MetadataField>,
-            unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
-            unknown_filter_field_policy: UnknownFilterFieldPolicy,
-        }
-        let wire = Wire::deserialize(deserializer)?;
-        if wire.version != 1 {
+        let wire: MetadataSchemaWire<BTreeMap<String, MetadataField>> =
+            MetadataSchemaWire::deserialize(deserializer)?;
+        if wire.version != METADATA_SCHEMA_WIRE_VERSION {
             return Err(de::Error::custom(
                 "unsupported MetadataSchema wire format version",
             ));

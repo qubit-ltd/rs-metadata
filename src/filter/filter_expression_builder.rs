@@ -10,7 +10,11 @@
 use qubit_value::Value;
 
 use crate::{
-    Condition, FilterExpression, FilterLimits, IntoMetadataValue, MetadataError, MetadataResult,
+    Condition,
+    FilterExpression,
+    FilterLimits,
+    MetadataError,
+    MetadataResult,
 };
 
 /// Fluent builder for a non-empty [`FilterExpression`].
@@ -36,7 +40,8 @@ impl FilterExpressionBuilder {
     ///
     /// # Errors
     ///
-    /// Returns [`MetadataError::InvalidFilterExpression`] for empty or invalid groups.
+    /// Returns [`MetadataError::InvalidFilterExpression`] for empty or invalid
+    /// groups.
     #[inline]
     pub fn build(self) -> MetadataResult<FilterExpression> {
         if let Some(error) = self.error {
@@ -44,16 +49,18 @@ impl FilterExpressionBuilder {
         }
         self.expression
             .ok_or(MetadataError::InvalidFilterExpression {
-                message: "a filter expression must contain at least one condition".to_string(),
+                message:
+                    "a filter expression must contain at least one condition"
+                        .to_string(),
             })
     }
 
     /// Appends `key == value` with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn eq<T>(self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::Equal {
@@ -65,11 +72,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key != value` with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn ne<T>(self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::NotEqual {
@@ -81,11 +88,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key < value` with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn lt<T>(self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::Less {
@@ -97,11 +104,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key <= value` with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn le<T>(self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::LessEqual {
@@ -113,11 +120,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key > value` with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn gt<T>(self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::Greater {
@@ -129,11 +136,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key >= value` with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn ge<T>(self, key: &str, value: T) -> Self
     where
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::GreaterEqual {
@@ -145,12 +152,12 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a membership predicate with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::In {
@@ -162,12 +169,12 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-membership predicate with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn not_in_set<I, T>(self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        T: IntoMetadataValue,
+        T: Into<Value>,
     {
         self.append(
             Condition::NotIn {
@@ -179,7 +186,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends an existence predicate with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn exists(self, key: &str) -> Self {
         self.append(
@@ -191,7 +198,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-existence predicate with logical AND.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn not_exists(self, key: &str) -> Self {
         self.append(
@@ -203,6 +210,18 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a grouped expression with logical AND.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_metadata::FilterExpression;
+    ///
+    /// let expression = FilterExpression::builder()
+    ///     .eq("tenant", "acme")
+    ///     .and_group(|group| group.exists("region").ne("region", "blocked"))
+    ///     .build()?;
+    /// # Ok::<(), qubit_metadata::MetadataError>(())
+    /// ```
     #[inline]
     #[must_use]
     pub fn and_group<F>(self, build: F) -> Self
@@ -213,6 +232,18 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a grouped expression with logical OR.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_metadata::FilterExpression;
+    ///
+    /// let expression = FilterExpression::builder()
+    ///     .eq("tenant", "acme")
+    ///     .or_group(|group| group.eq("priority", 1_i64).eq("priority", 2_i64))
+    ///     .build()?;
+    /// # Ok::<(), qubit_metadata::MetadataError>(())
+    /// ```
     #[inline]
     #[must_use]
     pub fn or_group<F>(self, build: F) -> Self
@@ -223,16 +254,34 @@ impl FilterExpressionBuilder {
     }
 
     /// Negates the expression built so far.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_metadata::FilterExpression;
+    ///
+    /// let expression = FilterExpression::builder()
+    ///     .eq("state", "deleted")
+    ///     .not()
+    ///     .build()?;
+    /// # Ok::<(), qubit_metadata::MetadataError>(())
+    /// ```
     #[allow(clippy::should_implement_trait)]
     #[inline]
     #[must_use]
     pub fn not(mut self) -> Self {
-        if let Some(expression) = self.expression.take() {
-            self.expression = Some(expression.negated());
-        } else if self.error.is_none() {
+        if self.error.is_some() {
+            return self;
+        }
+        let Some(expression) = self.expression.take() else {
             self.error = Some(MetadataError::InvalidFilterExpression {
                 message: "cannot negate an empty filter expression".to_string(),
             });
+            return self;
+        };
+        match expression.try_not() {
+            Ok(expression) => self.expression = Some(expression),
+            Err(error) => self.error = Some(error),
         }
         self
     }
@@ -269,16 +318,14 @@ impl FilterExpressionBuilder {
         if self.error.is_some() {
             return self;
         }
-        let group = match group.build() {
-            Ok(expression) => expression,
-            Err(_) => {
-                self.error = Some(MetadataError::InvalidFilterExpression {
-                    message: if operator == "AND" {
-                        "AND group must contain at least one condition".to_string()
-                    } else {
-                        "OR group must contain at least one condition".to_string()
-                    },
-                });
+        let group = match (group.error, group.expression) {
+            (Some(error), _) => {
+                self.error = Some(error);
+                return self;
+            }
+            (None, Some(expression)) => expression,
+            (None, None) => {
+                self.error = Some(empty_group_error(operator));
                 return self;
             }
         };
@@ -295,21 +342,37 @@ impl FilterExpressionBuilder {
     }
 }
 
+/// Creates the validation error for an empty logical group.
+///
+/// # Parameters
+///
+/// * `operator` - Logical operator naming the empty group.
+///
+/// # Returns
+///
+/// An invalid-expression error whose message identifies `operator`.
+fn empty_group_error(operator: &'static str) -> MetadataError {
+    MetadataError::InvalidFilterExpression {
+        message: format!(
+            "{operator} group must contain at least one condition"
+        ),
+    }
+}
+
 /// Converts a typed value into its stored representation.
 #[inline(always)]
 fn to_value<T>(value: T) -> Value
 where
-    T: IntoMetadataValue,
+    T: Into<Value>,
 {
-    value.into_metadata_value()
+    value.into()
 }
 
 /// Converts typed values into stored representations.
-#[inline]
 fn collect_values<I, T>(values: I) -> Vec<Value>
 where
     I: IntoIterator<Item = T>,
-    T: IntoMetadataValue,
+    T: Into<Value>,
 {
     values.into_iter().map(to_value).collect()
 }

@@ -8,12 +8,17 @@
 //! [`FilterMatchOptions`] — policies for filter evaluation.
 
 use qubit_datatype::NumericComparisonPolicy;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use super::FilterMatchOptionsBuilder;
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct FilterMatchOptions {
@@ -27,7 +32,7 @@ impl FilterMatchOptions {
     /// # Returns
     ///
     /// A builder configured with exact numeric comparison by default.
-    #[inline]
+    #[inline(always)]
     pub const fn builder() -> FilterMatchOptionsBuilder {
         FilterMatchOptionsBuilder::new()
     }
@@ -56,6 +61,7 @@ impl FilterMatchOptions {
     ///
     /// The configured comparison policy.
     #[inline(always)]
+    #[must_use = "the numeric comparison policy should be inspected"]
     pub const fn numeric_comparison_policy(&self) -> NumericComparisonPolicy {
         self.numeric_comparison_policy
     }

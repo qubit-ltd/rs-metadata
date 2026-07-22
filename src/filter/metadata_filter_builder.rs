@@ -8,8 +8,15 @@
 //! Builder for [`crate::MetadataFilter`].
 
 use crate::{
-    FilterExpression, FilterLimits, FilterMatchOptions, MetadataError, MetadataFilter,
-    MetadataResult, MetadataSchema, MetadataValidationError, MetadataValidationResult,
+    FilterExpression,
+    FilterLimits,
+    FilterMatchOptions,
+    MetadataError,
+    MetadataFilter,
+    MetadataResult,
+    MetadataSchema,
+    MetadataValidationError,
+    MetadataValidationResult,
 };
 
 /// Builder for the non-logical configuration of a [`MetadataFilter`].
@@ -87,7 +94,8 @@ impl MetadataFilterBuilder {
         self,
         schema: &MetadataSchema,
     ) -> MetadataValidationResult<MetadataFilter> {
-        let filter = self.build().map_err(MetadataValidationError::from_issue)?;
+        let filter =
+            self.build().map_err(MetadataValidationError::from_issue)?;
         schema.validate_filter(&filter)?;
         Ok(filter)
     }
