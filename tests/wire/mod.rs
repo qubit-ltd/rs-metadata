@@ -6,4 +6,5 @@
 //! Core wire-envelope test modules.
 
 mod metadata_schema_wire_tests;
+mod metadata_wire_limits_tests;
 mod metadata_wire_tests;

@@ -47,6 +47,16 @@ chainable `set`, replacement-aware `insert`, `try_get`, schema-checked
 `set_checked` / `insert_checked` / `with_checked`, fluent `with`, iteration,
 merge, retain, and conversion to/from `BTreeMap<String, Value>`.
 
+When keys conflict, `merge` and `merged` give precedence to the right-hand
+`other` metadata value.
+
+With the `json` feature, `decode_json_slice` and
+`decode_json_slice_with_limits` bound complete untrusted JSON input before
+Serde parsing. The default limit is 1,048,576 bytes. Generic Serde
+deserialization remains appropriate only when an outer protocol already bounds
+input. Metadata `Debug` and `Display` are policy-redacted; ordinary outer keys
+also recursively redact keyed structures stored in `Value`.
+
 ```rust
 use qubit_metadata::Metadata;
 

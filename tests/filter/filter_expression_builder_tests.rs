@@ -112,7 +112,8 @@ fn test_not_propagates_node_limit_error() {
     assert_eq!(
         builder.not().build(),
         Err(MetadataError::FilterLimitExceeded {
-            limit: "node count",
+            kind: qubit_metadata::FilterLimitKind::Nodes,
+            value: FilterLimits::MAX.max_nodes() + 1,
             maximum: FilterLimits::MAX.max_nodes(),
         })
     );

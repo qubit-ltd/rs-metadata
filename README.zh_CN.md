@@ -44,6 +44,14 @@
 `with_checked`、链式 `with`、迭代、合并、保留和
 `BTreeMap<String, Value>` 转换。
 
+发生 key 冲突时，`merge` 和 `merged` 都以右侧 `other` 的值覆盖左侧值。
+
+启用 `json` feature 后，`decode_json_slice` 和
+`decode_json_slice_with_limits` 会在 Serde 解析前限制完整不可信 JSON 输入。默认
+限制为 1,048,576 字节。通用 Serde 反序列化只适合外层协议已经限制输入的场景。
+Metadata 的 `Debug` 和 `Display` 均按策略脱敏；普通外层 key 中存储的 `Value`
+键控结构也会递归脱敏。
+
 ```rust
 use qubit_metadata::Metadata;
 

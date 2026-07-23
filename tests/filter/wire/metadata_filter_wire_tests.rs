@@ -27,12 +27,12 @@ fn filter_for_existing_key(key: &str) -> MetadataFilter {
 }
 
 /// Deserializes a filter under explicit receiver limits.
-fn deserialize_with_limits(
+fn deserialize_with_filter_limits(
     encoded: &str,
     limits: FilterLimits,
 ) -> Result<MetadataFilter, serde_json::Error> {
     let mut deserializer = serde_json::Deserializer::from_str(encoded);
-    MetadataFilter::deserialize_with_limits(&mut deserializer, limits)
+    MetadataFilter::deserialize_with_filter_limits(&mut deserializer, limits)
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
         .build()
         .unwrap();
 
-    let decoded = deserialize_with_limits(&encoded, receiver)
+    let decoded = deserialize_with_filter_limits(&encoded, receiver)
         .expect("actual expression should fit receiver limits");
     assert_eq!(decoded.limits(), receiver);
 }
@@ -58,11 +58,11 @@ fn test_receiver_rejects_expression_exceeding_its_key_limit() {
         serde_json::to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(5).build().unwrap();
 
-    let error = deserialize_with_limits(&encoded, receiver).unwrap_err();
+    let error = deserialize_with_filter_limits(&encoded, receiver).unwrap_err();
     assert!(
         error
             .to_string()
-            .contains("key length exceeds the maximum of 5")
+            .contains("KeyBytes value 6 exceeds the maximum of 5")
     );
 }
 
@@ -76,7 +76,7 @@ fn test_receiver_rejects_expression_exceeding_sender_declaration() {
     assert!(
         error
             .to_string()
-            .contains("key length exceeds the maximum of 5")
+            .contains("KeyBytes value 6 exceeds the maximum of 5")
     );
 }
 
@@ -86,7 +86,7 @@ fn test_receiver_accepts_expression_at_exact_boundary() {
         serde_json::to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(6).build().unwrap();
 
-    assert!(deserialize_with_limits(&encoded, receiver).is_ok());
+    assert!(deserialize_with_filter_limits(&encoded, receiver).is_ok());
 }
 
 #[test]

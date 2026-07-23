@@ -9,10 +9,7 @@
 
 use std::fmt;
 
-use crate::{
-    FilterLimitKind,
-    FilterMatchOptions,
-};
+use crate::FilterLimitKind;
 use qubit_datatype::DataType;
 use qubit_value::{
     Value,
@@ -92,17 +89,12 @@ pub enum MetadataError {
     },
     /// A filter exceeds an enforced resource bound.
     FilterLimitExceeded {
-        /// Human-readable bounded resource name.
-        limit: &'static str,
+        /// Resource category that exceeded its limit.
+        kind: FilterLimitKind,
+        /// Observed resource value.
+        value: usize,
         /// Largest allowed value for the resource.
         maximum: usize,
-    },
-    /// Two filters cannot be composed because their match options differ.
-    IncompatibleFilterOptions {
-        /// Options configured on the left filter.
-        left: FilterMatchOptions,
-        /// Options configured on the right filter.
-        right: FilterMatchOptions,
     },
     /// A schema builder declares the same field more than once.
     DuplicateSchemaField {
@@ -230,13 +222,13 @@ impl fmt::Display for MetadataError {
                 formatter,
                 "Metadata filter {kind:?} limit {value} is outside 1..={maximum}"
             ),
-            Self::FilterLimitExceeded { limit, maximum } => write!(
+            Self::FilterLimitExceeded {
+                kind,
+                value,
+                maximum,
+            } => write!(
                 formatter,
-                "Metadata filter {limit} exceeds the maximum of {maximum}"
-            ),
-            Self::IncompatibleFilterOptions { left, right } => write!(
-                formatter,
-                "Metadata filters use incompatible match options: left {left:?}, right {right:?}"
+                "Metadata filter {kind:?} value {value} exceeds the maximum of {maximum}"
             ),
             Self::DuplicateSchemaField { key } => {
                 write!(
