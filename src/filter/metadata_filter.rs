@@ -95,7 +95,7 @@ impl MetadataFilter {
     /// Returns a deserialization error for malformed v4 data, an unsupported
     /// version, or an expression exceeding either the sender-declared limits
     /// or `receiver_limits`.
-    pub fn deserialize_with_limits<'de, D>(
+    pub fn deserialize_with_filter_limits<'de, D>(
         deserializer: D,
         receiver_limits: FilterLimits,
     ) -> Result<Self, D::Error>
@@ -105,6 +105,69 @@ impl MetadataFilter {
         MetadataFilterWire::deserialize(deserializer)?
             .into_filter(receiver_limits)
             .map_err(de::Error::custom)
+    }
+
+    /// Decodes a strict metadata-filter JSON envelope using the default wire
+    /// byte and receiver AST limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `input` - Complete untrusted JSON input.
+    ///
+    /// # Returns
+    ///
+    /// The decoded filter.
+    ///
+    /// # Errors
+    ///
+    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// malformed strict filter input or AST limits rejected after decoding.
+    #[cfg(feature = "json")]
+    #[inline]
+    pub fn decode_json_slice(
+        input: &[u8],
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(
+            input,
+            crate::MetadataWireLimits::default(),
+            FilterLimits::MAX,
+        )
+    }
+
+    /// Decodes a strict metadata-filter JSON envelope after enforcing both
+    /// wire-byte and receiver-controlled AST limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `input` - Complete untrusted JSON input.
+    /// * `wire_limits` - Byte limit checked before JSON parsing.
+    /// * `receiver_filter_limits` - Local AST limits applied after decoding.
+    ///
+    /// # Returns
+    ///
+    /// The decoded filter constrained by the sender and receiver limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// syntax, strict-envelope, sender-limit, or receiver-limit failures.
+    #[cfg(feature = "json")]
+    pub fn decode_json_slice_with_limits(
+        input: &[u8],
+        wire_limits: crate::MetadataWireLimits,
+        receiver_filter_limits: FilterLimits,
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        wire_limits.check_json_bytes(input.len())?;
+        let mut deserializer = serde_json::Deserializer::from_slice(input);
+        let filter = Self::deserialize_with_filter_limits(
+            &mut deserializer,
+            receiver_filter_limits,
+        )
+        .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        deserializer
+            .end()
+            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        Ok(filter)
     }
 
     /// Creates a filter from already validated parts.
@@ -184,6 +247,6 @@ impl<'de> Deserialize<'de> for MetadataFilter {
     where
         D: Deserializer<'de>,
     {
-        Self::deserialize_with_limits(deserializer, FilterLimits::MAX)
+        Self::deserialize_with_filter_limits(deserializer, FilterLimits::MAX)
     }
 }

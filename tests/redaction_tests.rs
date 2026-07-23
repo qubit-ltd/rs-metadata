@@ -8,7 +8,11 @@
 //! Redaction tests for metadata diagnostics.
 
 use qubit_metadata::Metadata;
-use qubit_redact::Redact as _;
+use qubit_redact::{
+    Redact as _,
+    RedactionPolicy,
+    Sensitivity,
+};
 
 #[test]
 fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
@@ -21,4 +25,30 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
     assert!(!debug.contains("correct-horse-battery-staple"));
     assert!(!explicit.contains("correct-horse-battery-staple"));
     assert!(debug.contains("Ada"));
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
+    let metadata = Metadata::new()
+        .with(
+            "profile",
+            serde_json::json!({"api_key": "nested-secret", "label": "Ada"}),
+        )
+        .with("token", "outer-secret");
+    let policy = RedactionPolicy::empty_builder()
+        .raise("api_key", Sensitivity::Secret)
+        .raise("token", Sensitivity::Secret)
+        .build()
+        .expect("policy should build");
+
+    let debug = format!("{:#?}", metadata.redacted_with(&policy));
+    let display = format!("{}", metadata.redacted_with(&policy));
+
+    assert!(!debug.contains("nested-secret"));
+    assert!(!debug.contains("outer-secret"));
+    assert!(debug.contains("Ada"));
+    assert!(!display.contains("nested-secret"));
+    assert!(!display.contains("outer-secret"));
+    assert!(!display.contains('\n'));
 }

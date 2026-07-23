@@ -14,6 +14,7 @@ use std::{
 
 use super::internal::MatchOutcome;
 use crate::{
+    FilterLimitKind,
     FilterLimits,
     Metadata,
     MetadataError,
@@ -131,7 +132,8 @@ impl Condition {
         let key = self.key();
         if key.len() > limits.max_key_bytes() {
             return Err(MetadataError::FilterLimitExceeded {
-                limit: "key length",
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
                 maximum: limits.max_key_bytes(),
             });
         }
@@ -141,7 +143,8 @@ impl Condition {
         };
         if values.len() > limits.max_set_values() {
             return Err(MetadataError::FilterLimitExceeded {
-                limit: "set values",
+                kind: FilterLimitKind::SetValues,
+                value: values.len(),
                 maximum: limits.max_set_values(),
             });
         }

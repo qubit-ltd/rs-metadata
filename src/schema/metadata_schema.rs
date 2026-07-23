@@ -64,6 +64,58 @@ impl MetadataSchema {
         MetadataSchemaBuilder::default()
     }
 
+    /// Decodes a strict metadata-schema JSON envelope using the default byte
+    /// limit.
+    ///
+    /// # Parameters
+    ///
+    /// * `input` - Complete untrusted JSON input.
+    ///
+    /// # Returns
+    ///
+    /// The decoded metadata schema.
+    ///
+    /// # Errors
+    ///
+    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// malformed strict schema input.
+    #[cfg(feature = "json")]
+    #[inline]
+    pub fn decode_json_slice(
+        input: &[u8],
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(
+            input,
+            crate::MetadataWireLimits::default(),
+        )
+    }
+
+    /// Decodes a strict metadata-schema JSON envelope after applying
+    /// `wire_limits`.
+    ///
+    /// # Parameters
+    ///
+    /// * `input` - Complete untrusted JSON input.
+    /// * `wire_limits` - Byte limit checked before JSON parsing.
+    ///
+    /// # Returns
+    ///
+    /// The decoded metadata schema.
+    ///
+    /// # Errors
+    ///
+    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// syntax or strict schema-envelope failures.
+    #[cfg(feature = "json")]
+    pub fn decode_json_slice_with_limits(
+        input: &[u8],
+        wire_limits: crate::MetadataWireLimits,
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        wire_limits.check_json_bytes(input.len())?;
+        serde_json::from_slice(input)
+            .map_err(crate::MetadataWireDecodeError::InvalidJson)
+    }
+
     /// Creates a schema from field definitions and unknown-field policies.
     ///
     /// # Parameters

@@ -15,6 +15,7 @@ use crate::{
     Condition,
     FilterExpressionBuilder,
     FilterExpressionView,
+    FilterLimitKind,
     FilterLimits,
     FilterMatchOptions,
     Metadata,
@@ -358,14 +359,16 @@ impl FilterExpression {
     ) -> MetadataResult<()> {
         if depth > limits.max_depth() {
             return Err(MetadataError::FilterLimitExceeded {
-                limit: "depth",
+                kind: FilterLimitKind::Depth,
+                value: depth,
                 maximum: limits.max_depth(),
             });
         }
         *node_count += 1;
         if *node_count > limits.max_nodes() {
             return Err(MetadataError::FilterLimitExceeded {
-                limit: "node count",
+                kind: FilterLimitKind::Nodes,
+                value: *node_count,
                 maximum: limits.max_nodes(),
             });
         }

@@ -70,6 +70,57 @@ impl Metadata {
         Self(BTreeMap::new())
     }
 
+    /// Decodes a strict metadata JSON envelope using the default byte limit.
+    ///
+    /// # Parameters
+    ///
+    /// * `input` - Complete untrusted JSON input.
+    ///
+    /// # Returns
+    ///
+    /// The decoded metadata object.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireDecodeError::InputTooLarge`] before parsing
+    /// when `input` exceeds the default limit, or `InvalidJson` when strict
+    /// metadata JSON decoding fails.
+    #[cfg(feature = "json")]
+    #[inline]
+    pub fn decode_json_slice(
+        input: &[u8],
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(
+            input,
+            crate::MetadataWireLimits::default(),
+        )
+    }
+
+    /// Decodes a strict metadata JSON envelope after applying `wire_limits`.
+    ///
+    /// # Parameters
+    ///
+    /// * `input` - Complete untrusted JSON input.
+    /// * `wire_limits` - Byte limit checked before JSON parsing.
+    ///
+    /// # Returns
+    ///
+    /// The decoded metadata object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// syntax, strict-envelope, or metadata wire-value failures.
+    #[cfg(feature = "json")]
+    pub fn decode_json_slice_with_limits(
+        input: &[u8],
+        wire_limits: crate::MetadataWireLimits,
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        wire_limits.check_json_bytes(input.len())?;
+        serde_json::from_slice(input)
+            .map_err(crate::MetadataWireDecodeError::InvalidJson)
+    }
+
     /// Returns `true` if there are no entries.
     ///
     /// # Returns
@@ -421,10 +472,8 @@ impl Metadata {
     /// # Parameters
     ///
     /// * `other` - Metadata entries to consume and merge.
-    pub fn merge(&mut self, other: Metadata) {
-        for (key, value) in other.0 {
-            let _ = self.0.insert(key, value);
-        }
+    pub fn merge(&mut self, mut other: Metadata) {
+        self.0.append(&mut other.0);
     }
 
     /// Returns a new `Metadata` that contains entries from `self` and `other`.
@@ -441,9 +490,8 @@ impl Metadata {
     #[must_use]
     pub fn merged(&self, other: &Metadata) -> Metadata {
         let mut result = self.clone();
-        for (key, value) in &other.0 {
-            let _ = result.0.insert(key.clone(), value.clone());
-        }
+        let mut right = other.0.clone();
+        result.0.append(&mut right);
         result
     }
 
@@ -495,7 +543,7 @@ impl Redact for Metadata {
                     }
                 };
             } else {
-                output.entry(&key, value);
+                output.entry(&key, &value.redacted_with(policy));
             }
         }
         output.finish()
@@ -507,6 +555,15 @@ impl fmt::Debug for Metadata {
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.fmt_redacted(&RedactionPolicy::default(), formatter)
+    }
+}
+
+impl fmt::Display for Metadata {
+    /// Writes the default-policy redacted representation as single-line,
+    /// log-safe text.
+    #[inline(always)]
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.redacted(), formatter)
     }
 }
 

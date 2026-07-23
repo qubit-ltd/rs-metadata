@@ -9,7 +9,7 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    FilterMatchOptions,
+    FilterLimitKind,
     MetadataError,
 };
 
@@ -86,21 +86,12 @@ fn test_display_formats_all_variants() {
 
     assert_eq!(
         MetadataError::FilterLimitExceeded {
-            limit: "depth",
+            kind: FilterLimitKind::Depth,
+            value: 65,
             maximum: 64,
         }
         .to_string(),
-        "Metadata filter depth exceeds the maximum of 64"
-    );
-
-    let incompatible_options = MetadataError::IncompatibleFilterOptions {
-        left: FilterMatchOptions::default(),
-        right: FilterMatchOptions::default(),
-    };
-    assert!(
-        incompatible_options
-            .to_string()
-            .contains("Metadata filters use incompatible match options")
+        "Metadata filter Depth value 65 exceeds the maximum of 64"
     );
 
     assert_eq!(
