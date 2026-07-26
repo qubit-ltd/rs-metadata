@@ -539,7 +539,7 @@ impl Redact for Metadata {
                         );
                     }
                     _ => {
-                        output.entry(&key, &"<redacted>");
+                        output.entry(&key, &policy.masking().mask_opaque(sensitivity));
                     }
                 };
             } else {
