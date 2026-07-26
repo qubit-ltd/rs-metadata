@@ -19,6 +19,7 @@ use qubit_datatype::{
 };
 use qubit_redact::{
     Redact,
+    RedactValue as _,
     RedactionPolicy,
 };
 use qubit_value::Value;
@@ -531,17 +532,9 @@ impl Redact for Metadata {
         let mut output = formatter.debug_map();
         for (key, value) in &self.0 {
             if let Some(sensitivity) = policy.sensitivity_for(key) {
-                match value {
-                    Value::String(text) => {
-                        output.entry(
-                            &key,
-                            &policy.masking().mask(sensitivity, text),
-                        );
-                    }
-                    _ => {
-                        output.entry(&key, &policy.masking().mask_opaque(sensitivity));
-                    }
-                };
+                let redacted =
+                    value.redact_value(sensitivity, policy.masking());
+                output.entry(&key, &redacted);
             } else {
                 output.entry(&key, &value.redacted_with(policy));
             }
