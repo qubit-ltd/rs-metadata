@@ -236,7 +236,9 @@ impl Serialize for MetadataFilter {
     where
         S: Serializer,
     {
-        MetadataFilterWire::from(self).serialize(serializer)
+        MetadataFilterWire::try_from(self)
+            .map_err(<S::Error as serde::ser::Error>::custom)?
+            .serialize(serializer)
     }
 }
 

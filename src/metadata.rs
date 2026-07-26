@@ -22,7 +22,10 @@ use qubit_redact::{
     RedactValue as _,
     RedactionPolicy,
 };
-use qubit_value::Value;
+use qubit_value::{
+    Value,
+    ValueWirePayloadV1,
+};
 use serde::{
     Deserialize,
     Deserializer,
@@ -566,9 +569,18 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
+        let values = self
+            .0
+            .iter()
+            .map(|(key, value)| {
+                ValueWirePayloadV1::try_from(value.clone())
+                    .map(|value| (key, value))
+            })
+            .collect::<Result<std::collections::BTreeMap<_, _>, _>>()
+            .map_err(<S::Error as serde::ser::Error>::custom)?;
         MetadataWire {
             version: METADATA_WIRE_VERSION,
-            values: &self.0,
+            values,
         }
         .serialize(serializer)
     }
@@ -580,14 +592,29 @@ impl<'de> Deserialize<'de> for Metadata {
     where
         D: Deserializer<'de>,
     {
-        let wire: MetadataWire<BTreeMap<String, Value>> =
+        let wire: MetadataWire<BTreeMap<String, ValueWirePayloadV1>> =
             MetadataWire::deserialize(deserializer)?;
         if wire.version != METADATA_WIRE_VERSION {
             return Err(de::Error::custom(
                 "unsupported Metadata wire format version",
             ));
         }
-        Ok(Self(wire.values))
+        let values = wire
+            .values
+            .into_iter()
+            .map(|(key, value)| {
+                value
+                    .into_container()
+                    .into_scalar()
+                    .map(|value| (key, value))
+                    .map_err(|_| {
+                        de::Error::custom(
+                            "metadata values must use scalar V1 payloads",
+                        )
+                    })
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(Self(values))
     }
 }
 

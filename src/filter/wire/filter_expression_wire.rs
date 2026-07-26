@@ -7,7 +7,11 @@
 // =============================================================================
 //! V4 wire representation of [`crate::FilterExpression`].
 
-use qubit_value::Value;
+use qubit_value::{
+    Value,
+    ValueWireEncodeError,
+    ValueWirePayloadV1,
+};
 use serde::{
     Deserialize,
     Serialize,
@@ -34,56 +38,56 @@ pub(crate) enum FilterExpressionWire {
         /// Metadata key.
         key: String,
         /// Expected value.
-        value: Value,
+        value: ValueWirePayloadV1,
     },
     /// Inequality condition.
     Ne {
         /// Metadata key.
         key: String,
         /// Disallowed value.
-        value: Value,
+        value: ValueWirePayloadV1,
     },
     /// Less-than condition.
     Lt {
         /// Metadata key.
         key: String,
         /// Exclusive upper bound.
-        value: Value,
+        value: ValueWirePayloadV1,
     },
     /// Less-or-equal condition.
     Le {
         /// Metadata key.
         key: String,
         /// Inclusive upper bound.
-        value: Value,
+        value: ValueWirePayloadV1,
     },
     /// Greater-than condition.
     Gt {
         /// Metadata key.
         key: String,
         /// Exclusive lower bound.
-        value: Value,
+        value: ValueWirePayloadV1,
     },
     /// Greater-or-equal condition.
     Ge {
         /// Metadata key.
         key: String,
         /// Inclusive lower bound.
-        value: Value,
+        value: ValueWirePayloadV1,
     },
     /// Inclusion condition.
     In {
         /// Metadata key.
         key: String,
         /// Accepted values.
-        values: Vec<Value>,
+        values: Vec<ValueWirePayloadV1>,
     },
     /// Exclusion condition.
     NotIn {
         /// Metadata key.
         key: String,
         /// Disallowed values.
-        values: Vec<Value>,
+        values: Vec<ValueWirePayloadV1>,
     },
     /// Existence condition.
     Exists {
@@ -124,39 +128,47 @@ impl FilterExpressionWire {
             Self::All => Ok(FilterExpression::match_all()),
             Self::None => Ok(FilterExpression::match_none()),
             Self::Eq { key, value } => {
+                let value = Self::into_scalar_value(value)?;
                 Ok(FilterExpression::condition(Condition::Equal { key, value }))
             }
             Self::Ne { key, value } => {
+                let value = Self::into_scalar_value(value)?;
                 Ok(FilterExpression::condition(Condition::NotEqual {
                     key,
                     value,
                 }))
             }
             Self::Lt { key, value } => {
+                let value = Self::into_scalar_value(value)?;
                 Ok(FilterExpression::condition(Condition::Less { key, value }))
             }
             Self::Le { key, value } => {
+                let value = Self::into_scalar_value(value)?;
                 Ok(FilterExpression::condition(Condition::LessEqual {
                     key,
                     value,
                 }))
             }
             Self::Gt { key, value } => {
+                let value = Self::into_scalar_value(value)?;
                 Ok(FilterExpression::condition(Condition::Greater {
                     key,
                     value,
                 }))
             }
             Self::Ge { key, value } => {
+                let value = Self::into_scalar_value(value)?;
                 Ok(FilterExpression::condition(Condition::GreaterEqual {
                     key,
                     value,
                 }))
             }
             Self::In { key, values } => {
+                let values = Self::into_scalar_values(values)?;
                 Ok(FilterExpression::condition(Condition::In { key, values }))
             }
             Self::NotIn { key, values } => {
+                let values = Self::into_scalar_values(values)?;
                 Ok(FilterExpression::condition(Condition::NotIn {
                     key,
                     values,
@@ -176,6 +188,23 @@ impl FilterExpressionWire {
                 Self::combine(children, FilterExpression::try_or, "or")
             }
         }
+    }
+
+    /// Extracts the scalar required by a metadata filter condition.
+    fn into_scalar_value(value: ValueWirePayloadV1) -> MetadataResult<Value> {
+        value.into_container().into_scalar().map_err(|_| {
+            MetadataError::InvalidFilterExpression {
+                message: "metadata filter wire values must be scalar"
+                    .to_owned(),
+            }
+        })
+    }
+
+    /// Extracts condition values while rejecting collection-shaped payloads.
+    fn into_scalar_values(
+        values: Vec<ValueWirePayloadV1>,
+    ) -> MetadataResult<Vec<Value>> {
+        values.into_iter().map(Self::into_scalar_value).collect()
     }
 
     /// Folds a non-trivial Boolean group into an expression.
@@ -211,10 +240,12 @@ impl FilterExpressionWire {
     }
 }
 
-impl From<&FilterExpression> for FilterExpressionWire {
+impl TryFrom<&FilterExpression> for FilterExpressionWire {
+    type Error = ValueWireEncodeError;
+
     /// Converts an expression into its v4 node representation.
-    fn from(expression: &FilterExpression) -> Self {
-        match expression.view() {
+    fn try_from(expression: &FilterExpression) -> Result<Self, Self::Error> {
+        Ok(match expression.view() {
             FilterExpressionView::True => Self::All,
             FilterExpressionView::False => Self::None,
             FilterExpressionView::Condition(Condition::Equal {
@@ -222,19 +253,19 @@ impl From<&FilterExpression> for FilterExpressionWire {
                 value,
             }) => Self::Eq {
                 key: key.clone(),
-                value: value.clone(),
+                value: ValueWirePayloadV1::try_from(value.clone())?,
             },
             FilterExpressionView::Condition(Condition::NotEqual {
                 key,
                 value,
             }) => Self::Ne {
                 key: key.clone(),
-                value: value.clone(),
+                value: ValueWirePayloadV1::try_from(value.clone())?,
             },
             FilterExpressionView::Condition(Condition::Less { key, value }) => {
                 Self::Lt {
                     key: key.clone(),
-                    value: value.clone(),
+                    value: ValueWirePayloadV1::try_from(value.clone())?,
                 }
             }
             FilterExpressionView::Condition(Condition::LessEqual {
@@ -242,26 +273,30 @@ impl From<&FilterExpression> for FilterExpressionWire {
                 value,
             }) => Self::Le {
                 key: key.clone(),
-                value: value.clone(),
+                value: ValueWirePayloadV1::try_from(value.clone())?,
             },
             FilterExpressionView::Condition(Condition::Greater {
                 key,
                 value,
             }) => Self::Gt {
                 key: key.clone(),
-                value: value.clone(),
+                value: ValueWirePayloadV1::try_from(value.clone())?,
             },
             FilterExpressionView::Condition(Condition::GreaterEqual {
                 key,
                 value,
             }) => Self::Ge {
                 key: key.clone(),
-                value: value.clone(),
+                value: ValueWirePayloadV1::try_from(value.clone())?,
             },
             FilterExpressionView::Condition(Condition::In { key, values }) => {
                 Self::In {
                     key: key.clone(),
-                    values: values.clone(),
+                    values: values
+                        .iter()
+                        .cloned()
+                        .map(ValueWirePayloadV1::try_from)
+                        .collect::<Result<_, _>>()?,
                 }
             }
             FilterExpressionView::Condition(Condition::NotIn {
@@ -269,7 +304,11 @@ impl From<&FilterExpression> for FilterExpressionWire {
                 values,
             }) => Self::NotIn {
                 key: key.clone(),
-                values: values.clone(),
+                values: values
+                    .iter()
+                    .cloned()
+                    .map(ValueWirePayloadV1::try_from)
+                    .collect::<Result<_, _>>()?,
             },
             FilterExpressionView::Condition(Condition::Exists { key }) => {
                 Self::Exists { key: key.clone() }
@@ -278,14 +317,20 @@ impl From<&FilterExpression> for FilterExpressionWire {
                 Self::NotExists { key: key.clone() }
             }
             FilterExpressionView::And(children) => Self::And {
-                children: children.iter().map(Self::from).collect(),
+                children: children
+                    .iter()
+                    .map(Self::try_from)
+                    .collect::<Result<_, _>>()?,
             },
             FilterExpressionView::Or(children) => Self::Or {
-                children: children.iter().map(Self::from).collect(),
+                children: children
+                    .iter()
+                    .map(Self::try_from)
+                    .collect::<Result<_, _>>()?,
             },
             FilterExpressionView::Not(expression) => Self::Not {
-                expression: Box::new(Self::from(expression)),
+                expression: Box::new(Self::try_from(expression)?),
             },
-        }
+        })
     }
 }
