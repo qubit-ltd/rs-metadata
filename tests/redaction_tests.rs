@@ -9,6 +9,7 @@
 
 use qubit_metadata::Metadata;
 use qubit_redact::{
+    MaskPolicy,
     Redact as _,
     RedactionPolicy,
     Sensitivity,
@@ -25,6 +26,24 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
     assert!(!debug.contains("correct-horse-battery-staple"));
     assert!(!explicit.contains("correct-horse-battery-staple"));
     assert!(debug.contains("Ada"));
+}
+
+#[test]
+fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
+    let metadata = Metadata::new().with("secret_number", 12345_i32);
+    let policy = RedactionPolicy::empty_builder()
+        .raise("secret_number", Sensitivity::Low)
+        .mask(
+            Sensitivity::Low,
+            MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
+        )
+        .build()
+        .expect("policy should build");
+
+    let output = format!("{:?}", metadata.redacted_with(&policy));
+
+    assert!(!output.contains("12345"), "{output}");
+    assert!(output.contains("OPAQUE"), "{output}");
 }
 
 #[cfg(feature = "json")]
