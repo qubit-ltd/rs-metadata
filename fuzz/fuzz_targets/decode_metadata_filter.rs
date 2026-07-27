@@ -4,12 +4,15 @@
 //    SPDX-License-Identifier: Apache-2.0
 //
 //    Licensed under the Apache License, Version 2.0.
-//
 // =============================================================================
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use qubit_metadata::{FilterLimits, MetadataFilter, MetadataWireLimits};
+use qubit_metadata::{
+    FilterLimits,
+    MetadataFilter,
+    MetadataWireLimits,
+};
 
 fuzz_target!(|data: &[u8]| {
     let receiver_limits = FilterLimits::builder()
@@ -24,7 +27,8 @@ fuzz_target!(|data: &[u8]| {
         MetadataWireLimits::default(),
         receiver_limits,
     ) {
-        let encoded = serde_json::to_vec(&value).expect("filter should serialize");
+        let encoded =
+            serde_json::to_vec(&value).expect("filter should serialize");
         let decoded = MetadataFilter::decode_json_slice_with_limits(
             &encoded,
             MetadataWireLimits::default(),
