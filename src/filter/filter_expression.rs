@@ -97,6 +97,31 @@ impl FilterExpression {
         Ok(expression)
     }
 
+    /// Returns a borrowed view of this expression node.
+    ///
+    /// # Returns
+    ///
+    /// A zero-copy view preserving the node's Boolean structure.
+    #[inline]
+    pub fn view(&self) -> FilterExpressionView<'_> {
+        match &self.node {
+            FilterExpressionNode::Condition(condition) => {
+                FilterExpressionView::Condition(condition)
+            }
+            FilterExpressionNode::And(children) => {
+                FilterExpressionView::And(children)
+            }
+            FilterExpressionNode::Or(children) => {
+                FilterExpressionView::Or(children)
+            }
+            FilterExpressionNode::Not(inner) => {
+                FilterExpressionView::Not(inner)
+            }
+            FilterExpressionNode::True => FilterExpressionView::True,
+            FilterExpressionNode::False => FilterExpressionView::False,
+        }
+    }
+
     /// Creates a condition expression.
     ///
     /// # Parameters
@@ -210,31 +235,6 @@ impl FilterExpression {
             FilterExpressionNode::False => Self::true_expression(),
             FilterExpressionNode::Not(inner) => *inner,
             node => Self::not_expression(Self { node }),
-        }
-    }
-
-    /// Returns a borrowed view of this expression node.
-    ///
-    /// # Returns
-    ///
-    /// A zero-copy view preserving the node's Boolean structure.
-    #[inline]
-    pub fn view(&self) -> FilterExpressionView<'_> {
-        match &self.node {
-            FilterExpressionNode::Condition(condition) => {
-                FilterExpressionView::Condition(condition)
-            }
-            FilterExpressionNode::And(children) => {
-                FilterExpressionView::And(children)
-            }
-            FilterExpressionNode::Or(children) => {
-                FilterExpressionView::Or(children)
-            }
-            FilterExpressionNode::Not(inner) => {
-                FilterExpressionView::Not(inner)
-            }
-            FilterExpressionNode::True => FilterExpressionView::True,
-            FilterExpressionNode::False => FilterExpressionView::False,
         }
     }
 
