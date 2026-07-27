@@ -57,6 +57,57 @@ fn test_schema_rejects_incompatible_filter_value() {
 }
 
 #[test]
+fn test_schema_rejects_nan_numeric_filter_value() {
+    let schema = MetadataSchema::builder()
+        .required("score", DataType::Float64)
+        .build()
+        .unwrap();
+    let expression = FilterExpression::builder()
+        .eq("score", f64::NAN)
+        .build()
+        .unwrap();
+    let error = schema.validate_filter(&filter(expression)).unwrap_err();
+
+    assert!(matches!(
+        error.into_issues().as_slice(),
+        [MetadataError::InvalidFilterOperator { operator: "eq", .. }]
+    ));
+}
+
+#[test]
+fn test_schema_accepts_string_range_filter() {
+    let schema = MetadataSchema::builder()
+        .required("name", DataType::String)
+        .build()
+        .unwrap();
+    let expression = FilterExpression::builder()
+        .ge("name", "alice")
+        .lt("name", "zebra")
+        .build()
+        .unwrap();
+
+    assert!(schema.validate_filter(&filter(expression)).is_ok());
+}
+
+#[test]
+fn test_schema_rejects_range_filter_for_non_range_field() {
+    let schema = MetadataSchema::builder()
+        .required("enabled", DataType::Bool)
+        .build()
+        .unwrap();
+    let expression = FilterExpression::builder()
+        .gt("enabled", false)
+        .build()
+        .unwrap();
+    let error = schema.validate_filter(&filter(expression)).unwrap_err();
+
+    assert!(matches!(
+        error.into_issues().as_slice(),
+        [MetadataError::InvalidFilterOperator { operator: "gt", .. }]
+    ));
+}
+
+#[test]
 fn test_schema_honors_unknown_filter_field_policy() {
     let expression = FilterExpression::builder()
         .exists("dynamic")

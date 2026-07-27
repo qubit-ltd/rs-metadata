@@ -48,21 +48,26 @@ fn test_filter_matches_its_expression() {
 }
 
 #[test]
-fn test_filter_uses_its_configured_options() {
+fn test_filter_distinguishes_exact_and_approximate_numeric_policies() {
     let mut metadata = Metadata::new();
     metadata.set("number", 9_007_199_254_740_993_i64);
     let expression = FilterExpression::builder()
         .eq("number", 9_007_199_254_740_992_f64)
         .build()
         .expect("expression should build");
+    let exact = MetadataFilter::builder()
+        .expression(expression.clone())
+        .build()
+        .expect("filter should build");
     let options = FilterMatchOptions::builder()
         .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build();
-    let filter = MetadataFilter::builder()
+    let approximate = MetadataFilter::builder()
         .expression(expression)
         .options(options)
         .build()
         .expect("filter should build");
 
-    assert!(filter.matches(&metadata));
+    assert!(!exact.matches(&metadata));
+    assert!(approximate.matches(&metadata));
 }
