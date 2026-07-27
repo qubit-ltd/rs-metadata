@@ -12,6 +12,7 @@ use qubit_metadata::{
     FilterExpression,
     FilterExpressionView,
     FilterLimits,
+    Metadata,
     MetadataError,
     MetadataFilter,
 };
@@ -66,6 +67,28 @@ fn test_builder_creates_nested_boolean_expression() {
         filter.expression().view(),
         FilterExpressionView::Or(_)
     ));
+}
+
+#[test]
+fn test_or_group_matches_either_explicit_branch_within_group() {
+    let expression = FilterExpression::builder()
+        .eq("tenant", "acme")
+        .or_group(|group| {
+            group
+                .eq("priority", 1_i64)
+                .or_group(|alternative| alternative.eq("priority", 2_i64))
+        })
+        .build()
+        .expect("expression should build");
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .expect("filter should build");
+    let metadata = Metadata::new()
+        .with("tenant", "other")
+        .with("priority", 2_i64);
+
+    assert!(filter.matches(&metadata));
 }
 
 #[test]

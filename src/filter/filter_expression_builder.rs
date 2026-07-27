@@ -236,12 +236,28 @@ impl FilterExpressionBuilder {
     /// # Examples
     ///
     /// ```
-    /// use qubit_metadata::FilterExpression;
+    /// use qubit_metadata::{
+    ///     FilterExpression,
+    ///     Metadata,
+    ///     MetadataFilter,
+    /// };
     ///
     /// let expression = FilterExpression::builder()
     ///     .eq("tenant", "acme")
-    ///     .or_group(|group| group.eq("priority", 1_i64).eq("priority", 2_i64))
+    ///     .or_group(|group| {
+    ///         group
+    ///             .eq("priority", 1_i64)
+    ///             .or_group(|alternative| alternative.eq("priority", 2_i64))
+    ///     })
     ///     .build()?;
+    /// let filter = MetadataFilter::builder()
+    ///     .expression(expression)
+    ///     .build()?;
+    /// let metadata = Metadata::new()
+    ///     .with("tenant", "other")
+    ///     .with("priority", 2_i64);
+    ///
+    /// assert!(filter.matches(&metadata));
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
     #[inline]
