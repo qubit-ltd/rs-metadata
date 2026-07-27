@@ -5,6 +5,10 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Fuzzes bounded JSON decoding for [`Metadata`].
+//!
+//! Every accepted input must serialize and decode back to the same value.
+
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
