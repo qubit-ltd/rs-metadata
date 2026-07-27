@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "checks": [
+    {
+      "name": "minimal-features",
+      "commands": [
+        "test"
+      ],
+      "defaultFeatures": false
+    }
+  ]
+}
