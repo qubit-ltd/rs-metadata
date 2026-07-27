@@ -1,0 +1,11 @@
+{
+  "version": 4,
+  "expression": { "kind": "all" },
+  "options": { "numeric_comparison_policy": "exact" },
+  "limits": {
+    "max_depth": 64,
+    "max_nodes": 256,
+    "max_set_values": 128,
+    "max_key_bytes": 256
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "fields": {},
+  "unknown_metadata_field_policy": "reject",
+  "unknown_filter_field_policy": "reject"
+}
