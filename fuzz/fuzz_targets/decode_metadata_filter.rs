@@ -5,6 +5,12 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Fuzzes bounded JSON decoding for [`MetadataFilter`].
+//!
+//! Every accepted input must serialize and decode back to the same filter.
+//! Deliberately small expression limits keep malformed-input exploration
+//! bounded while exercising nested nodes, set operands, and key limits.
+
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
