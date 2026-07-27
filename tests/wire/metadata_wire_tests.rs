@@ -4,7 +4,6 @@
 //    SPDX-License-Identifier: Apache-2.0
 //
 //    Licensed under the Apache License, Version 2.0.
-//
 // =============================================================================
 //! Tests for the strict Metadata v1 envelope.
 
@@ -44,20 +43,4 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
         encoded["values"]["port"],
         json!({"scalar": {"int32": 8080}})
     );
-}
-
-#[test]
-fn test_metadata_rejects_duplicate_value_key() {
-    let encoded = r#"
-        {
-            "version": 1,
-            "values": {
-                "name": { "scalar": { "string": "alice" } },
-                "name": { "scalar": { "string": "bob" } }
-            }
-        }
-    "#;
-
-    let error = serde_json::from_str::<Metadata>(encoded).unwrap_err();
-    assert!(error.to_string().contains("duplicate map key 'name'"));
 }

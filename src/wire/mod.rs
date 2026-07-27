@@ -4,12 +4,12 @@
 //    SPDX-License-Identifier: Apache-2.0
 //
 //    Licensed under the Apache License, Version 2.0.
-//
 // =============================================================================
 //! Internal strict wire envelopes for core metadata types.
 
 mod metadata_schema_wire;
 mod metadata_wire;
+mod strict_string_map;
 
 pub(crate) use metadata_schema_wire::{
     METADATA_SCHEMA_WIRE_VERSION,
@@ -18,5 +18,5 @@ pub(crate) use metadata_schema_wire::{
 pub(crate) use metadata_wire::{
     METADATA_WIRE_VERSION,
     MetadataWire,
-    StrictStringMap,
 };
+pub(crate) use strict_string_map::StrictStringMap;

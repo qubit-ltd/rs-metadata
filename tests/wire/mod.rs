@@ -4,10 +4,11 @@
 //    SPDX-License-Identifier: Apache-2.0
 //
 //    Licensed under the Apache License, Version 2.0.
-//
 // =============================================================================
 //! Core wire-envelope test modules.
 
 mod metadata_schema_wire_tests;
+#[cfg(feature = "json")]
 mod metadata_wire_limits_tests;
 mod metadata_wire_tests;
+mod strict_string_map_tests;
