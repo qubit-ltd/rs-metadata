@@ -9,6 +9,7 @@
 
 use qubit_metadata::Metadata;
 use qubit_redact::{
+    DiagnosticBudget,
     MaskPolicy,
     Redact as _,
     RedactionPolicy,
@@ -70,4 +71,14 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
     assert!(!display.contains("nested-secret"));
     assert!(!display.contains("outer-secret"));
     assert!(!display.contains('\n'));
+}
+
+#[test]
+fn test_metadata_display_respects_the_default_diagnostic_output_limit() {
+    let metadata = Metadata::new().with("description", "x".repeat(96 * 1024));
+
+    let output = metadata.to_string();
+
+    assert!(output.len() <= DiagnosticBudget::default().max_output_bytes());
+    assert!(output.ends_with("<truncated>"));
 }

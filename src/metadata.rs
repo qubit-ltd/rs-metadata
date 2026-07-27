@@ -11,7 +11,7 @@
 use std::{collections::BTreeMap, fmt};
 
 use qubit_datatype::{DataConversionTarget, DataType};
-use qubit_redact::{Redact, RedactedKeyedValue, RedactionPolicy};
+use qubit_redact::{Redact, RedactedKeyedMap, RedactionPolicy};
 use qubit_value::{Value, ValueWirePayloadV1};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
@@ -500,14 +500,7 @@ impl Redact for Metadata {
         policy: &RedactionPolicy,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        let mut output = formatter.debug_map();
-        for (key, value) in &self.0 {
-            output.entry(
-                &key,
-                &RedactedKeyedValue::new(key.as_str(), value, policy.clone()),
-            );
-        }
-        output.finish()
+        fmt::Debug::fmt(&RedactedKeyedMap::new(&self.0, policy.clone()), formatter)
     }
 }
 
@@ -524,7 +517,7 @@ impl fmt::Display for Metadata {
     /// log-safe text.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.redacted(), formatter)
+        fmt::Display::fmt(&self.redacted().with_policy_output_limit(), formatter)
     }
 }
 
