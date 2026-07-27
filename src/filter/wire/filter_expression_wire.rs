@@ -21,6 +21,8 @@ use crate::{
     Condition,
     FilterExpression,
     FilterExpressionView,
+    FilterLimitKind,
+    FilterLimits,
     MetadataError,
     MetadataResult,
 };
@@ -117,6 +119,27 @@ pub(crate) enum FilterExpressionWire {
 }
 
 impl FilterExpressionWire {
+    /// Validates the unnormalized wire tree against resource limits.
+    ///
+    /// This check precedes conversion because Boolean normalization can remove
+    /// nodes that still consumed resources while decoding the wire payload.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Bounds to enforce on the raw wire tree.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when the raw tree depth,
+    /// node count, key length, or membership value count exceeds a bound.
+    pub(crate) fn validate_limits(
+        &self,
+        limits: FilterLimits,
+    ) -> MetadataResult<()> {
+        let mut node_count = 0;
+        self.validate_limits_at(limits, 1, &mut node_count)
+    }
+
     /// Converts a v4 node into an expression.
     ///
     /// # Errors
@@ -188,6 +211,73 @@ impl FilterExpressionWire {
                 Self::combine(children, FilterExpression::try_or, "or")
             }
         }
+    }
+
+    /// Recursively validates one raw wire node at `depth`.
+    fn validate_limits_at(
+        &self,
+        limits: FilterLimits,
+        depth: usize,
+        node_count: &mut usize,
+    ) -> MetadataResult<()> {
+        if depth > limits.max_depth() {
+            return Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Depth,
+                value: depth,
+                maximum: limits.max_depth(),
+            });
+        }
+        *node_count += 1;
+        if *node_count > limits.max_nodes() {
+            return Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Nodes,
+                value: *node_count,
+                maximum: limits.max_nodes(),
+            });
+        }
+        match self {
+            Self::Eq { key, .. }
+            | Self::Ne { key, .. }
+            | Self::Lt { key, .. }
+            | Self::Le { key, .. }
+            | Self::Gt { key, .. }
+            | Self::Ge { key, .. }
+            | Self::Exists { key }
+            | Self::NotExists { key } => Self::validate_key(key, limits),
+            Self::In { key, values } | Self::NotIn { key, values } => {
+                Self::validate_key(key, limits)?;
+                if values.len() > limits.max_set_values() {
+                    return Err(MetadataError::FilterLimitExceeded {
+                        kind: FilterLimitKind::SetValues,
+                        value: values.len(),
+                        maximum: limits.max_set_values(),
+                    });
+                }
+                Ok(())
+            }
+            Self::And { children } | Self::Or { children } => {
+                for child in children {
+                    child.validate_limits_at(limits, depth + 1, node_count)?;
+                }
+                Ok(())
+            }
+            Self::Not { expression } => {
+                expression.validate_limits_at(limits, depth + 1, node_count)
+            }
+            Self::All | Self::None => Ok(()),
+        }
+    }
+
+    /// Validates one condition key against `limits`.
+    fn validate_key(key: &str, limits: FilterLimits) -> MetadataResult<()> {
+        if key.len() > limits.max_key_bytes() {
+            return Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
+                maximum: limits.max_key_bytes(),
+            });
+        }
+        Ok(())
     }
 
     /// Extracts the scalar required by a metadata filter condition.
