@@ -8,11 +8,13 @@
 //! Predicate evaluation tests through the public expression API.
 
 use crate::support::test_support::sample;
+use qubit_datatype::DataType;
 use qubit_metadata::{
     FilterExpression,
     Metadata,
     MetadataFilter,
 };
+use qubit_value::Value;
 
 /// Builds a filter using default root configuration.
 fn filter(expression: FilterExpression) -> MetadataFilter {
@@ -51,6 +53,56 @@ fn test_membership_and_existence_predicates_match() {
 }
 
 #[test]
+fn test_empty_membership_sets_have_defined_concrete_value_semantics() {
+    let in_empty = FilterExpression::builder()
+        .in_set("tag", std::iter::empty::<&str>())
+        .build()
+        .expect("expression should build");
+    let not_in_empty = FilterExpression::builder()
+        .not_in_set("tag", std::iter::empty::<&str>())
+        .build()
+        .expect("expression should build");
+    let metadata = Metadata::new().with("tag", "rust");
+
+    assert!(!filter(in_empty).matches(&metadata));
+    assert!(filter(not_in_empty).matches(&metadata));
+}
+
+#[test]
+fn test_string_range_predicates_use_lexicographic_order() {
+    let expression = FilterExpression::builder()
+        .gt("name", "apple")
+        .lt("name", "zebra")
+        .build()
+        .expect("expression should build");
+
+    assert!(filter(expression).matches(&Metadata::new().with("name", "mango")));
+}
+
+#[test]
+fn test_unset_value_is_absent_for_existence_and_unknown_for_comparison() {
+    let exists = FilterExpression::builder()
+        .exists("value")
+        .build()
+        .expect("expression should build");
+    let not_exists = FilterExpression::builder()
+        .not_exists("value")
+        .build()
+        .expect("expression should build");
+    let negated_equal = FilterExpression::builder()
+        .eq("value", "present")
+        .not()
+        .build()
+        .expect("expression should build");
+    let metadata =
+        Metadata::new().with("value", Value::Unset(DataType::String));
+
+    assert!(!filter(exists).matches(&metadata));
+    assert!(filter(not_exists).matches(&metadata));
+    assert!(!filter(negated_equal).matches(&metadata));
+}
+
+#[test]
 fn test_missing_comparison_stays_unknown_through_not() {
     let expression = FilterExpression::builder()
         .eq("missing", "value")
@@ -62,7 +114,7 @@ fn test_missing_comparison_stays_unknown_through_not() {
 }
 
 #[test]
-fn test_not_equal_is_not_equivalent_to_negated_equal_for_missing_value() {
+fn test_not_equal_and_negated_equal_both_fail_closed_for_missing_value() {
     let not_equal = FilterExpression::builder()
         .ne("missing", "value")
         .build()
