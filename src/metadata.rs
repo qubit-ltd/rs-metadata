@@ -24,6 +24,7 @@ use qubit_redact::{
 };
 use qubit_value::{
     Value,
+    ValueWirePayloadRefV1,
     ValueWirePayloadV1,
 };
 use serde::{
@@ -32,8 +33,11 @@ use serde::{
     Serialize,
     Serializer,
     de,
+    ser::SerializeMap,
 };
 
+#[cfg(feature = "schema")]
+use crate::MetadataSchema;
 use crate::wire::{
     METADATA_WIRE_VERSION,
     MetadataWire,
@@ -42,7 +46,6 @@ use crate::wire::{
 use crate::{
     MetadataError,
     MetadataResult,
-    MetadataSchema,
 };
 
 /// A structured, ordered, typed key-value store for metadata fields.
@@ -50,10 +53,11 @@ use crate::{
 /// `Metadata` stores values as [`qubit_value::Value`], preserving concrete Rust
 /// scalar types such as `i64`, `u32`, `f64`, `String`, and `bool`.  This avoids
 /// the ambiguity of a single JSON number type while still allowing callers to
-/// store explicit [`Value::Json`] values when they really need JSON payloads.
+/// store explicit `Value::Json` values when they really need JSON payloads.
 /// [`Value::Unset`] retains a declared type but represents no concrete metadata
-/// value: typed reads report [`MetadataError::MissingValue`], required schema
-/// fields reject it, and filters treat it like an absent key.
+/// value: typed reads report [`MetadataError::MissingValue`]. When the optional
+/// `schema` or `filter` features are enabled, their validation and matching
+/// APIs treat it as a missing concrete value.
 ///
 /// Use [`Metadata::with`] for fluent construction and [`Metadata::set`] when
 /// mutating an existing object.
@@ -343,6 +347,7 @@ impl Metadata {
     /// Returns [`MetadataError::UnknownField`] when `key` is rejected by the
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
+    #[cfg(feature = "schema")]
     #[inline]
     pub fn insert_checked<T>(
         &mut self,
@@ -376,6 +381,7 @@ impl Metadata {
     /// Returns [`MetadataError::UnknownField`] when `key` is rejected by the
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
+    #[cfg(feature = "schema")]
     #[inline(always)]
     pub fn set_checked<T>(
         &mut self,
@@ -407,6 +413,7 @@ impl Metadata {
     /// Returns [`MetadataError::UnknownField`] when `key` is rejected by the
     /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
     /// concrete type does not match the schema field type.
+    #[cfg(feature = "schema")]
     #[inline(always)]
     pub fn with_checked<T>(
         mut self,
@@ -566,20 +573,30 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        let values = self
-            .0
-            .iter()
-            .map(|(key, value)| {
-                ValueWirePayloadV1::try_from(value.clone())
-                    .map(|value| (key, value))
-            })
-            .collect::<Result<std::collections::BTreeMap<_, _>, _>>()
-            .map_err(<S::Error as serde::ser::Error>::custom)?;
         MetadataWire {
             version: METADATA_WIRE_VERSION,
-            values,
+            values: MetadataWireValuesRef(&self.0),
         }
         .serialize(serializer)
+    }
+}
+
+/// Borrowed map adapter that validates and serializes V1 value payloads.
+struct MetadataWireValuesRef<'a>(&'a BTreeMap<String, Value>);
+
+impl Serialize for MetadataWireValuesRef<'_> {
+    /// Serializes each value as a validated borrowed V1 payload.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut values = serializer.serialize_map(Some(self.0.len()))?;
+        for (key, value) in self.0 {
+            let payload = ValueWirePayloadRefV1::try_from(value)
+                .map_err(<S::Error as serde::ser::Error>::custom)?;
+            values.serialize_entry(key, &payload)?;
+        }
+        values.end()
     }
 }
 

@@ -7,10 +7,12 @@
 // =============================================================================
 //! Internal strict wire envelopes for core metadata types.
 
+#[cfg(feature = "schema")]
 mod metadata_schema_wire;
 mod metadata_wire;
 mod strict_string_map;
 
+#[cfg(feature = "schema")]
 pub(crate) use metadata_schema_wire::{
     METADATA_SCHEMA_WIRE_VERSION,
     MetadataSchemaWire,

@@ -7,6 +7,8 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::MetadataError`].
 
+#![cfg(feature = "schema")]
+
 use qubit_datatype::DataType;
 use qubit_metadata::{
     FilterLimitKind,

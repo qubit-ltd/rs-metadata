@@ -21,30 +21,25 @@
 //!   APIs backed by [`qubit_value::Value`]
 //! - **Generality**: No domain-specific assumptions — usable in any Rust
 //!   project
-//! - **Schema Support**: Optional [`MetadataSchema`] validation for metadata
-//!   and filters
+//! - **Schema Support**: Optional schema validation for metadata and filters
+//!   through the `schema` feature
 //! - **Serialization**: First-class `serde` support for JSON interchange
-//! - **Filtering**: [`MetadataFilter`] for composable query conditions
+//! - **Filtering**: Composable query conditions through the `filter` feature
 //!
 //! ## Features
 //!
 //! - Core type: [`Metadata`] — an ordered key-value store with typed accessors
-//! - Schema type: [`MetadataSchema`] — field definitions based on
-//!   [`qubit_datatype::DataType`]
-//! - Filter type: [`MetadataFilter`] — composable filter expressions for
-//!   metadata queries
-//! - Expression types: [`FilterExpression`] and [`FilterExpressionView`] — a
-//!   zero-copy, read-only Boolean AST for query translation
-//! - Condition type: [`Condition`] — individual comparison predicates
+//! - Enable `filter` for composable filter expressions and their public types
+//! - Enable `schema` (which includes `filter`) for field definitions and
+//!   validation APIs
 //! - Error type: [`MetadataError`] — explicit failure reporting for `try_*`
 //!   APIs
-//! - Validation error type: [`MetadataValidationError`] — aggregate schema
-//!   validation issues
+//! - `schema` also provides aggregate validation errors
 //!
 //! ## Example
 //!
 //! ```rust
-//! use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
+//! use qubit_metadata::Metadata;
 //!
 //! let meta = Metadata::new()
 //!     .with("author", "alice")
@@ -57,53 +52,59 @@
 //! // Explicit API: preserve failure reasons for diagnostics.
 //! let priority = meta.try_get::<i64>("priority").unwrap();
 //! assert_eq!(priority, 3);
-//!
-//! let expression = FilterExpression::builder()
-//!     .eq("author", "alice")
-//!     .ge("priority", 1_i64)
-//!     .build()
-//!     .unwrap();
-//! let filter = MetadataFilter::builder()
-//!     .expression(expression)
-//!     .build()
-//!     .unwrap();
-//! assert!(filter.matches(&meta));
 //! ```
 //!
-//! Comparison predicates use fail-closed three-valued logic: a missing or
-//! unset value stays unknown through negation and does not match at the public
-//! API boundary.
+//! The `filter` feature uses fail-closed three-valued logic: a missing or unset
+//! value stays unknown through negation and does not match at the public API
+//! boundary.
 
 #![deny(missing_docs)]
 
+#[cfg(feature = "filter")]
 mod filter;
 mod metadata;
 mod metadata_error;
 mod metadata_result;
+#[cfg(feature = "schema")]
 mod metadata_validation_error;
+#[cfg(feature = "schema")]
 mod metadata_validation_result;
 #[cfg(feature = "json")]
 mod metadata_wire_decode_error;
 #[cfg(feature = "json")]
 mod metadata_wire_limits;
+#[cfg(feature = "schema")]
 mod schema;
 mod wire;
 
+#[cfg(feature = "filter")]
 pub use filter::Condition;
+#[cfg(feature = "filter")]
 pub use filter::FilterExpression;
+#[cfg(feature = "filter")]
 pub use filter::FilterExpressionBuilder;
+#[cfg(feature = "filter")]
 pub use filter::FilterExpressionView;
+#[cfg(feature = "filter")]
 pub use filter::FilterLimitKind;
+#[cfg(feature = "filter")]
 pub use filter::FilterLimits;
+#[cfg(feature = "filter")]
 pub use filter::FilterLimitsBuilder;
+#[cfg(feature = "filter")]
 pub use filter::FilterMatchOptions;
+#[cfg(feature = "filter")]
 pub use filter::FilterMatchOptionsBuilder;
+#[cfg(feature = "filter")]
 pub use filter::MetadataFilter;
+#[cfg(feature = "filter")]
 pub use filter::MetadataFilterBuilder;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
 pub use metadata_result::MetadataResult;
+#[cfg(feature = "schema")]
 pub use metadata_validation_error::MetadataValidationError;
+#[cfg(feature = "schema")]
 pub use metadata_validation_result::MetadataValidationResult;
 #[cfg(feature = "json")]
 pub use metadata_wire_decode_error::MetadataWireDecodeError;
@@ -112,8 +113,13 @@ pub use metadata_wire_limits::{
     DEFAULT_MAX_JSON_BYTES,
     MetadataWireLimits,
 };
+#[cfg(feature = "schema")]
 pub use schema::MetadataField;
+#[cfg(feature = "schema")]
 pub use schema::MetadataSchema;
+#[cfg(feature = "schema")]
 pub use schema::MetadataSchemaBuilder;
+#[cfg(feature = "schema")]
 pub use schema::UnknownFilterFieldPolicy;
+#[cfg(feature = "schema")]
 pub use schema::UnknownMetadataFieldPolicy;

@@ -14,6 +14,9 @@ use crate::{
     MetadataError,
     MetadataFilter,
     MetadataResult,
+};
+#[cfg(feature = "schema")]
+use crate::{
     MetadataSchema,
     MetadataValidationError,
     MetadataValidationResult,
@@ -89,6 +92,7 @@ impl MetadataFilterBuilder {
     /// # Errors
     ///
     /// Returns construction errors or aggregate schema-validation errors.
+    #[cfg(feature = "schema")]
     #[inline]
     pub fn build_checked(
         self,

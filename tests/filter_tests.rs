@@ -7,6 +7,8 @@
 // =============================================================================
 //! Integration-test entry point for metadata filters.
 
+#![cfg(feature = "filter")]
+
 mod support;
 
 mod filter;

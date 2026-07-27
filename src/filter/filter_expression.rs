@@ -307,6 +307,7 @@ impl FilterExpression {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor`.
+    #[cfg(feature = "schema")]
     pub(crate) fn visit_conditions<F>(
         &self,
         visitor: &mut F,

@@ -7,9 +7,11 @@
 // =============================================================================
 //! Tests for duplicate-key rejection by strict wire maps.
 
+#[cfg(feature = "schema")]
 use qubit_datatype::DataType;
+use qubit_metadata::Metadata;
+#[cfg(feature = "schema")]
 use qubit_metadata::{
-    Metadata,
     MetadataField,
     MetadataSchema,
 };
@@ -31,6 +33,7 @@ fn test_metadata_rejects_duplicate_value_key() {
 }
 
 #[test]
+#[cfg(feature = "schema")]
 fn test_metadata_schema_rejects_duplicate_field_key() {
     let field =
         serde_json::to_string(&MetadataField::new(DataType::String, true))
