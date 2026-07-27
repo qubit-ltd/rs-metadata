@@ -63,9 +63,9 @@ impl MetadataFilterWire {
             });
         }
         let sender_limits = self.limits.into_limits()?;
+        self.expression.validate_limits(sender_limits)?;
+        self.expression.validate_limits(receiver_limits)?;
         let expression = self.expression.into_expression()?;
-        expression.validate_limits(sender_limits)?;
-        expression.validate_limits(receiver_limits)?;
         let limits = sender_limits.constrained_by(receiver_limits);
         Ok(MetadataFilter::new(expression, self.options, limits))
     }

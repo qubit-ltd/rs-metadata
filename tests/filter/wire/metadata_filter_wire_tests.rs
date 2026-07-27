@@ -90,6 +90,67 @@ fn test_receiver_accepts_expression_at_exact_boundary() {
 }
 
 #[test]
+fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
+    let encoded = r#"
+        {
+            "version": 4,
+            "expression": {
+                "kind": "or",
+                "children": [
+                    { "kind": "all" },
+                    { "kind": "all" }
+                ]
+            },
+            "options": { "numeric_comparison_policy": "exact" },
+            "limits": {
+                "max_depth": 64,
+                "max_nodes": 256,
+                "max_set_values": 128,
+                "max_key_bytes": 256
+            }
+        }
+    "#;
+    let receiver = FilterLimits::builder().max_nodes(1).build().unwrap();
+
+    let error = deserialize_with_filter_limits(encoded, receiver).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Nodes value 2 exceeds the maximum of 1")
+    );
+}
+
+#[test]
+fn test_sender_rejects_raw_nodes_elided_by_normalization() {
+    let encoded = r#"
+        {
+            "version": 4,
+            "expression": {
+                "kind": "or",
+                "children": [
+                    { "kind": "all" },
+                    { "kind": "all" }
+                ]
+            },
+            "options": { "numeric_comparison_policy": "exact" },
+            "limits": {
+                "max_depth": 64,
+                "max_nodes": 1,
+                "max_set_values": 128,
+                "max_key_bytes": 256
+            }
+        }
+    "#;
+
+    let error = serde_json::from_str::<MetadataFilter>(encoded).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Nodes value 2 exceeds the maximum of 1")
+    );
+}
+
+#[test]
 fn test_metadata_filter_wire_contains_expression() {
     let expression = FilterExpression::builder()
         .exists("status")
