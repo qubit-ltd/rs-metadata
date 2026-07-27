@@ -7,6 +7,8 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::MetadataValidationResult`].
 
+#![cfg(feature = "schema")]
+
 use qubit_metadata::{
     MetadataError,
     MetadataValidationError,

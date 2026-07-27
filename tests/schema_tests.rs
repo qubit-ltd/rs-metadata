@@ -7,4 +7,6 @@
 // =============================================================================
 //! Integration-test entry point for metadata schemas.
 
+#![cfg(feature = "schema")]
+
 mod schema;

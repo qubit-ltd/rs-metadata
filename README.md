@@ -300,16 +300,24 @@ qubit-value = "0.10"
 
 ### Feature flags
 
-The default feature set contains only core scalar metadata support. Enable
-only the rich value families you need:
+The default feature set preserves the complete metadata, filter, and schema
+API. Consumers that need only `Metadata` can disable default features; this
+excludes the `filter` and `schema` modules:
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.10", default-features = false }
+```
+
+Enable rich value types in addition to the default APIs as needed:
 
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
 ```
 
-Available features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
-`url`, `json`, and `all`.
+Available features are `filter`, `schema` (which enables `filter`), `chrono`,
+`big-integer`, `big-decimal`, `big-number`, `url`, `json`, and `all`.
 
 ## Testing
 

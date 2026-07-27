@@ -17,13 +17,16 @@ use serde::{
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::MetadataFilterWire;
+#[cfg(feature = "schema")]
 use crate::{
     Condition,
+    MetadataResult,
+};
+use crate::{
     FilterExpression,
     FilterLimits,
     FilterMatchOptions,
     Metadata,
-    MetadataResult,
 };
 
 /// An expression, its matching policy, and its resource limits.
@@ -217,6 +220,7 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor`.
+    #[cfg(feature = "schema")]
     #[inline(always)]
     pub(crate) fn visit_conditions<F>(
         &self,

@@ -7,12 +7,15 @@
 // =============================================================================
 //! Tests for the crate's public exports.
 
+use qubit_metadata::Metadata;
+
+#[cfg(feature = "filter")]
 use qubit_metadata::{
     FilterExpression,
-    Metadata,
     MetadataFilter,
 };
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_public_exports_are_usable() {
     let meta = Metadata::new().with("k", "v");
@@ -22,4 +25,12 @@ fn test_public_exports_are_usable() {
         .build()
         .unwrap();
     assert!(filter.matches(&meta));
+}
+
+#[cfg(not(feature = "filter"))]
+#[test]
+fn test_core_metadata_is_usable_without_filter_feature() {
+    let metadata = Metadata::new().with("key", "value");
+
+    assert_eq!(metadata.get::<String>("key"), Some("value".to_string()));
 }

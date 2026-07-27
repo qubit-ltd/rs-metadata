@@ -9,6 +9,7 @@
 
 use std::fmt;
 
+#[cfg(feature = "filter")]
 use crate::FilterLimitKind;
 use qubit_datatype::DataType;
 use qubit_value::{
@@ -44,6 +45,7 @@ pub enum MetadataError {
         message: String,
     },
     /// A required schema field is missing from a metadata object.
+    #[cfg(feature = "schema")]
     MissingRequiredField {
         /// Required metadata key.
         key: String,
@@ -51,16 +53,19 @@ pub enum MetadataError {
         expected: DataType,
     },
     /// A metadata object contains a key not accepted by the schema.
+    #[cfg(feature = "schema")]
     UnknownField {
         /// Unknown metadata key.
         key: String,
     },
     /// A filter references a key that is not defined by the schema.
+    #[cfg(feature = "schema")]
     UnknownFilterField {
         /// Unknown filter key.
         key: String,
     },
     /// A filter uses an operator that is not compatible with the field type.
+    #[cfg(feature = "schema")]
     InvalidFilterOperator {
         /// Metadata key being filtered.
         key: String,
@@ -72,13 +77,16 @@ pub enum MetadataError {
         message: String,
     },
     /// A filter expression is structurally invalid.
+    #[cfg(feature = "filter")]
     InvalidFilterExpression {
         /// Human-readable validation message.
         message: String,
     },
     /// A metadata-filter builder was finalized without an expression.
+    #[cfg(feature = "filter")]
     MissingFilterExpression,
     /// A configured filter resource bound is outside the allowed range.
+    #[cfg(feature = "filter")]
     InvalidFilterLimit {
         /// Resource category being configured.
         kind: FilterLimitKind,
@@ -88,6 +96,7 @@ pub enum MetadataError {
         maximum: usize,
     },
     /// A filter exceeds an enforced resource bound.
+    #[cfg(feature = "filter")]
     FilterLimitExceeded {
         /// Resource category that exceeded its limit.
         kind: FilterLimitKind,
@@ -97,6 +106,7 @@ pub enum MetadataError {
         maximum: usize,
     },
     /// A schema builder declares the same field more than once.
+    #[cfg(feature = "schema")]
     DuplicateSchemaField {
         /// Duplicated schema key.
         key: String,
@@ -143,6 +153,7 @@ impl MetadataError {
     /// # Returns
     ///
     /// A structured [`MetadataError::TypeMismatch`] error.
+    #[cfg(feature = "schema")]
     #[inline]
     pub(crate) fn type_mismatch(
         key: &str,
@@ -178,24 +189,28 @@ impl fmt::Display for MetadataError {
                 formatter,
                 "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
             ),
+            #[cfg(feature = "schema")]
             Self::MissingRequiredField { key, expected } => {
                 write!(
                     formatter,
                     "Required metadata key '{key}' is missing (expected {expected})"
                 )
             }
+            #[cfg(feature = "schema")]
             Self::UnknownField { key } => {
                 write!(
                     formatter,
                     "Metadata key '{key}' is not defined in schema"
                 )
             }
+            #[cfg(feature = "schema")]
             Self::UnknownFilterField { key } => {
                 write!(
                     formatter,
                     "Metadata filter references key '{key}' not defined in schema"
                 )
             }
+            #[cfg(feature = "schema")]
             Self::InvalidFilterOperator {
                 key,
                 operator,
@@ -205,15 +220,18 @@ impl fmt::Display for MetadataError {
                 formatter,
                 "Metadata filter operator '{operator}' is invalid for key '{key}' with type {data_type}: {message}"
             ),
+            #[cfg(feature = "filter")]
             Self::InvalidFilterExpression { message } => {
                 write!(
                     formatter,
                     "Metadata filter expression is invalid: {message}"
                 )
             }
+            #[cfg(feature = "filter")]
             Self::MissingFilterExpression => {
                 write!(formatter, "Metadata filter requires an expression")
             }
+            #[cfg(feature = "filter")]
             Self::InvalidFilterLimit {
                 kind,
                 value,
@@ -222,6 +240,7 @@ impl fmt::Display for MetadataError {
                 formatter,
                 "Metadata filter {kind:?} limit {value} is outside 1..={maximum}"
             ),
+            #[cfg(feature = "filter")]
             Self::FilterLimitExceeded {
                 kind,
                 value,
@@ -230,6 +249,7 @@ impl fmt::Display for MetadataError {
                 formatter,
                 "Metadata filter {kind:?} value {value} exceeds the maximum of {maximum}"
             ),
+            #[cfg(feature = "schema")]
             Self::DuplicateSchemaField { key } => {
                 write!(
                     formatter,

@@ -10,10 +10,11 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
+#[cfg(feature = "schema")]
+use qubit_metadata::MetadataSchema;
 use qubit_metadata::{
     Metadata,
     MetadataError,
-    MetadataSchema,
 };
 use qubit_value::Value;
 
@@ -150,7 +151,7 @@ fn test_try_get_unset_value_reports_missing_value() {
 #[test]
 fn test_try_get_type_mismatch_reports_expected_and_actual_type() {
     let mut meta = Metadata::new();
-    meta.set("key", "not-a-number");
+    meta.set("key", "known-secret");
 
     let error = meta.try_get::<i64>("key").unwrap_err();
     match error {
@@ -164,6 +165,7 @@ fn test_try_get_type_mismatch_reports_expected_and_actual_type() {
             assert_eq!(expected, DataType::Int64);
             assert_eq!(actual, DataType::String);
             assert!(!message.is_empty());
+            assert!(!message.contains("known-secret"));
         }
         other => panic!("expected TypeMismatch, got {other:?}"),
     }
@@ -179,6 +181,7 @@ fn test_get_or_returns_default_for_missing_key_or_type_mismatch() {
 }
 
 #[test]
+#[cfg(feature = "schema")]
 fn test_insert_checked_returns_previous_value() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
@@ -191,6 +194,7 @@ fn test_insert_checked_returns_previous_value() {
 }
 
 #[test]
+#[cfg(feature = "schema")]
 fn test_set_checked_supports_mutable_chaining() {
     let schema = MetadataSchema::builder()
         .required("first", DataType::Int64)
@@ -208,6 +212,7 @@ fn test_set_checked_supports_mutable_chaining() {
 }
 
 #[test]
+#[cfg(feature = "schema")]
 fn test_set_checked_rejects_type_mismatch() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
@@ -232,6 +237,7 @@ fn test_set_checked_rejects_type_mismatch() {
 }
 
 #[test]
+#[cfg(feature = "schema")]
 fn test_with_checked_rejects_unknown_field() {
     let schema = MetadataSchema::builder()
         .required("known", DataType::String)

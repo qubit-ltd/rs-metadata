@@ -7,6 +7,8 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::MetadataValidationError`].
 
+#![cfg(feature = "schema")]
+
 use std::fmt::Write;
 
 use qubit_datatype::DataType;

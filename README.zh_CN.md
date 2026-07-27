@@ -279,15 +279,23 @@ qubit-value = "0.10"
 
 ### Feature flags
 
-默认 feature 集只包含核心标量 metadata 支持。请仅启用实际使用的富类型族：
+默认 feature 集保留完整的 metadata、filter 和 schema API。只需要 `Metadata`
+的消费者可以关闭默认 feature；这会排除 `filter` 和 `schema` 模块：
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.10", default-features = false }
+```
+
+如需在默认 API 之外启用富类型族：
 
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
 ```
 
-可用 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、
-`url`、`json` 和 `all`。
+可用 feature 包括 `filter`、`schema`（会启用 `filter`）、`chrono`、
+`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和 `all`。
 
 ## 测试
 
