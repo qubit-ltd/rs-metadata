@@ -28,6 +28,7 @@ use crate::schema::{
 use crate::wire::{
     METADATA_SCHEMA_WIRE_VERSION,
     MetadataSchemaWire,
+    StrictStringMap,
 };
 use crate::{
     Metadata,
@@ -305,7 +306,7 @@ impl<'de> Deserialize<'de> for MetadataSchema {
     where
         D: Deserializer<'de>,
     {
-        let wire: MetadataSchemaWire<BTreeMap<String, MetadataField>> =
+        let wire: MetadataSchemaWire<StrictStringMap<MetadataField>> =
             MetadataSchemaWire::deserialize(deserializer)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION {
             return Err(de::Error::custom(
@@ -313,7 +314,7 @@ impl<'de> Deserialize<'de> for MetadataSchema {
             ));
         }
         Ok(Self::new(
-            wire.fields,
+            wire.fields.into_inner(),
             wire.unknown_metadata_field_policy,
             wire.unknown_filter_field_policy,
         ))
