@@ -8,41 +8,15 @@
 //! Provides the [`Metadata`] type — a structured, ordered, typed key-value
 //! store.
 
-use std::{
-    collections::BTreeMap,
-    fmt,
-};
+use std::{collections::BTreeMap, fmt};
 
-use qubit_datatype::{
-    DataConversionTarget,
-    DataType,
-};
-use qubit_redact::{
-    Redact,
-    RedactValue as _,
-    RedactionPolicy,
-};
-use qubit_value::{
-    Value,
-    ValueWirePayloadV1,
-};
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de,
-};
+use qubit_datatype::{DataConversionTarget, DataType};
+use qubit_redact::{Redact, RedactedKeyedValue, RedactionPolicy};
+use qubit_value::{Value, ValueWirePayloadV1};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-use crate::wire::{
-    METADATA_WIRE_VERSION,
-    MetadataWire,
-};
-use crate::{
-    MetadataError,
-    MetadataResult,
-    MetadataSchema,
-};
+use crate::wire::{METADATA_WIRE_VERSION, MetadataWire};
+use crate::{MetadataError, MetadataResult, MetadataSchema};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -91,13 +65,8 @@ impl Metadata {
     /// metadata JSON decoding fails.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(
-        input: &[u8],
-    ) -> Result<Self, crate::MetadataWireDecodeError> {
-        Self::decode_json_slice_with_limits(
-            input,
-            crate::MetadataWireLimits::default(),
-        )
+    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(input, crate::MetadataWireLimits::default())
     }
 
     /// Decodes a strict metadata JSON envelope after applying `wire_limits`.
@@ -121,8 +90,7 @@ impl Metadata {
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         wire_limits.check_json_bytes(input.len())?;
-        serde_json::from_slice(input)
-            .map_err(crate::MetadataWireDecodeError::InvalidJson)
+        serde_json::from_slice(input).map_err(crate::MetadataWireDecodeError::InvalidJson)
     }
 
     /// Returns `true` if there are no entries.
@@ -213,9 +181,9 @@ impl Metadata {
                 data_type: value.data_type(),
             });
         }
-        value.to::<T>().map_err(|error| {
-            MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
-        })
+        value
+            .to::<T>()
+            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
@@ -534,13 +502,10 @@ impl Redact for Metadata {
     ) -> fmt::Result {
         let mut output = formatter.debug_map();
         for (key, value) in &self.0 {
-            if let Some(sensitivity) = policy.sensitivity_for(key) {
-                let redacted =
-                    value.redact_value(sensitivity, policy.masking());
-                output.entry(&key, &redacted);
-            } else {
-                output.entry(&key, &value.redacted_with(policy));
-            }
+            output.entry(
+                &key,
+                &RedactedKeyedValue::new(key.as_str(), value, policy.clone()),
+            );
         }
         output.finish()
     }
@@ -573,8 +538,7 @@ impl Serialize for Metadata {
             .0
             .iter()
             .map(|(key, value)| {
-                ValueWirePayloadV1::try_from(value.clone())
-                    .map(|value| (key, value))
+                ValueWirePayloadV1::try_from(value.clone()).map(|value| (key, value))
             })
             .collect::<Result<std::collections::BTreeMap<_, _>, _>>()
             .map_err(<S::Error as serde::ser::Error>::custom)?;
@@ -607,11 +571,7 @@ impl<'de> Deserialize<'de> for Metadata {
                     .into_container()
                     .into_scalar()
                     .map(|value| (key, value))
-                    .map_err(|_| {
-                        de::Error::custom(
-                            "metadata values must use scalar V1 payloads",
-                        )
-                    })
+                    .map_err(|_| de::Error::custom("metadata values must use scalar V1 payloads"))
             })
             .collect::<Result<_, _>>()?;
         Ok(Self(values))
