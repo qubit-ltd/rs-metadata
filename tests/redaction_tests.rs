@@ -32,7 +32,7 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
 #[test]
 fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let metadata = Metadata::new().with("secret_number", 12345_i32);
-    let policy = RedactionPolicy::empty_builder()
+    let policy = RedactionPolicy::builder()
         .raise("secret_number", Sensitivity::Low)
         .mask(
             Sensitivity::Low,
@@ -56,7 +56,7 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
             serde_json::json!({"api_key": "nested-secret", "label": "Ada"}),
         )
         .with("token", "outer-secret");
-    let policy = RedactionPolicy::empty_builder()
+    let policy = RedactionPolicy::builder()
         .raise("api_key", Sensitivity::Secret)
         .raise("token", Sensitivity::Secret)
         .build()
