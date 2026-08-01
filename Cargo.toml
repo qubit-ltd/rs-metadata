@@ -48,7 +48,7 @@ all = ["schema", "chrono", "big-number", "url", "json"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 qubit-datatype = { version = "0.9", default-features = false, features = ["converter"] }
-qubit-redact = { version = "0.3", default-features = false }
+qubit-redact = { version = "0.4", default-features = false }
 qubit-value = { path = "../rs-value", version = "0.10", default-features = false, features = ["converter", "redact"] }
 
 [dev-dependencies]
