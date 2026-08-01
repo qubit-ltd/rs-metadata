@@ -367,8 +367,10 @@ fn compare_values(
     if left.is_numeric() && right.is_numeric() {
         return left.numeric_cmp(right, numeric_comparison_policy).ok();
     }
-    match (left, right) {
-        (Value::String(left), Value::String(right)) => left.partial_cmp(right),
+    match (left.view(), right.view()) {
+        (qubit_value::ValueRef::String(left), qubit_value::ValueRef::String(right)) => {
+            left.partial_cmp(right)
+        }
         _ => None,
     }
 }
