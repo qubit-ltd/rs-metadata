@@ -9,7 +9,6 @@
 
 use qubit_value::{
     Value,
-    ValueWireEncodeError,
     ValueWirePayloadV1,
 };
 use serde::{
@@ -20,7 +19,6 @@ use serde::{
 use crate::{
     Condition,
     FilterExpression,
-    FilterExpressionView,
     FilterLimitKind,
     FilterLimits,
     MetadataError,
@@ -327,100 +325,5 @@ impl FilterExpressionWire {
             expression = combine(expression, child.into_expression()?)?;
         }
         Ok(expression)
-    }
-}
-
-impl TryFrom<&FilterExpression> for FilterExpressionWire {
-    type Error = ValueWireEncodeError;
-
-    /// Converts an expression into its v4 node representation.
-    fn try_from(expression: &FilterExpression) -> Result<Self, Self::Error> {
-        Ok(match expression.view() {
-            FilterExpressionView::True => Self::All,
-            FilterExpressionView::False => Self::None,
-            FilterExpressionView::Condition(Condition::Equal {
-                key,
-                value,
-            }) => Self::Eq {
-                key: key.clone(),
-                value: ValueWirePayloadV1::try_from(value.clone())?,
-            },
-            FilterExpressionView::Condition(Condition::NotEqual {
-                key,
-                value,
-            }) => Self::Ne {
-                key: key.clone(),
-                value: ValueWirePayloadV1::try_from(value.clone())?,
-            },
-            FilterExpressionView::Condition(Condition::Less { key, value }) => {
-                Self::Lt {
-                    key: key.clone(),
-                    value: ValueWirePayloadV1::try_from(value.clone())?,
-                }
-            }
-            FilterExpressionView::Condition(Condition::LessEqual {
-                key,
-                value,
-            }) => Self::Le {
-                key: key.clone(),
-                value: ValueWirePayloadV1::try_from(value.clone())?,
-            },
-            FilterExpressionView::Condition(Condition::Greater {
-                key,
-                value,
-            }) => Self::Gt {
-                key: key.clone(),
-                value: ValueWirePayloadV1::try_from(value.clone())?,
-            },
-            FilterExpressionView::Condition(Condition::GreaterEqual {
-                key,
-                value,
-            }) => Self::Ge {
-                key: key.clone(),
-                value: ValueWirePayloadV1::try_from(value.clone())?,
-            },
-            FilterExpressionView::Condition(Condition::In { key, values }) => {
-                Self::In {
-                    key: key.clone(),
-                    values: values
-                        .iter()
-                        .cloned()
-                        .map(ValueWirePayloadV1::try_from)
-                        .collect::<Result<_, _>>()?,
-                }
-            }
-            FilterExpressionView::Condition(Condition::NotIn {
-                key,
-                values,
-            }) => Self::NotIn {
-                key: key.clone(),
-                values: values
-                    .iter()
-                    .cloned()
-                    .map(ValueWirePayloadV1::try_from)
-                    .collect::<Result<_, _>>()?,
-            },
-            FilterExpressionView::Condition(Condition::Exists { key }) => {
-                Self::Exists { key: key.clone() }
-            }
-            FilterExpressionView::Condition(Condition::NotExists { key }) => {
-                Self::NotExists { key: key.clone() }
-            }
-            FilterExpressionView::And(children) => Self::And {
-                children: children
-                    .iter()
-                    .map(Self::try_from)
-                    .collect::<Result<_, _>>()?,
-            },
-            FilterExpressionView::Or(children) => Self::Or {
-                children: children
-                    .iter()
-                    .map(Self::try_from)
-                    .collect::<Result<_, _>>()?,
-            },
-            FilterExpressionView::Not(expression) => Self::Not {
-                expression: Box::new(Self::try_from(expression)?),
-            },
-        })
     }
 }

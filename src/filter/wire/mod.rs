@@ -8,9 +8,13 @@
 //! Wire-format support for metadata filters.
 
 mod filter_expression_wire;
+mod filter_expression_wire_ref;
 mod filter_limits_wire;
 mod metadata_filter_wire;
+mod metadata_filter_wire_ref;
 
 pub(crate) use filter_expression_wire::FilterExpressionWire;
+pub(crate) use filter_expression_wire_ref::FilterExpressionWireRef;
 pub(crate) use filter_limits_wire::FilterLimitsWire;
 pub(crate) use metadata_filter_wire::MetadataFilterWire;
+pub(crate) use metadata_filter_wire_ref::MetadataFilterWireRef;
