@@ -16,7 +16,10 @@ use serde::{
 };
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
-use super::wire::MetadataFilterWire;
+use super::wire::{
+    MetadataFilterWire,
+    MetadataFilterWireRef,
+};
 #[cfg(feature = "schema")]
 use crate::{
     Condition,
@@ -240,7 +243,7 @@ impl Serialize for MetadataFilter {
     where
         S: Serializer,
     {
-        MetadataFilterWire::try_from(self)
+        MetadataFilterWireRef::try_from(self)
             .map_err(<S::Error as serde::ser::Error>::custom)?
             .serialize(serializer)
     }

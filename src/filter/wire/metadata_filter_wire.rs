@@ -7,7 +7,6 @@
 // =============================================================================
 //! V4 [`MetadataFilter`] envelope.
 
-use qubit_value::ValueWireEncodeError;
 use serde::{
     Deserialize,
     Serialize,
@@ -68,20 +67,5 @@ impl MetadataFilterWire {
         let expression = self.expression.into_expression()?;
         let limits = sender_limits.constrained_by(receiver_limits);
         Ok(MetadataFilter::new(expression, self.options, limits))
-    }
-}
-
-impl TryFrom<&MetadataFilter> for MetadataFilterWire {
-    type Error = ValueWireEncodeError;
-
-    /// Converts a filter into its strict v4 envelope.
-    #[inline]
-    fn try_from(filter: &MetadataFilter) -> Result<Self, Self::Error> {
-        Ok(Self {
-            version: METADATA_FILTER_WIRE_VERSION,
-            expression: FilterExpressionWire::try_from(filter.expression())?,
-            options: filter.options(),
-            limits: FilterLimitsWire::from(filter.limits()),
-        })
     }
 }
