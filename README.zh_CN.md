@@ -272,7 +272,7 @@ match meta.try_get::<i64>("answer") {
 [dependencies]
 qubit-metadata = "0.10"
 # 使用 schema 数据类型或数值比较策略时需要直接依赖。
-qubit-datatype = "0.9"
+qubit-datatype = "0.10"
 # 直接构造 Value 操作数时需要依赖。
 qubit-value = "0.10"
 ```
