@@ -2,6 +2,32 @@
   "version": 1,
   "checks": [
     {
+      "name": "default-features",
+      "commands": [
+        "test"
+      ]
+    },
+    {
+      "name": "filter-only",
+      "commands": [
+        "test"
+      ],
+      "defaultFeatures": false,
+      "features": [
+        "filter"
+      ]
+    },
+    {
+      "name": "schema-only",
+      "commands": [
+        "test"
+      ],
+      "defaultFeatures": false,
+      "features": [
+        "schema"
+      ]
+    },
+    {
       "name": "minimal-features",
       "commands": [
         "test"
