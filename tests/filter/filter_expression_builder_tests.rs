@@ -8,6 +8,7 @@
 //! Tests for [`qubit_metadata::FilterExpressionBuilder`].
 
 use crate::support::test_support::sample;
+use qubit_datatype::DataType;
 use qubit_metadata::{
     FilterExpression,
     FilterExpressionView,
@@ -47,6 +48,32 @@ fn test_eq_accepts_value_and_domain_newtype() {
             .matches(&sample())
     );
     assert!(matches!(tenant.view(), FilterExpressionView::Condition(_)));
+}
+
+#[test]
+fn test_builder_rejects_unset_and_non_finite_filter_operands() {
+    assert_eq!(
+        FilterExpression::builder()
+            .eq("status", Value::Unset(DataType::String))
+            .build(),
+        Err(MetadataError::InvalidFilterOperand {
+            operator: "eq",
+            data_type: DataType::String,
+            message: "filter operands must be concrete values".to_owned(),
+        })
+    );
+    assert!(
+        FilterExpression::builder()
+            .eq("score", f64::NAN)
+            .build()
+            .is_err()
+    );
+    assert!(
+        FilterExpression::builder()
+            .eq("score", f64::INFINITY)
+            .build()
+            .is_err()
+    );
 }
 
 #[test]

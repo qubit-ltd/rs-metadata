@@ -82,6 +82,16 @@ pub enum MetadataError {
         /// Human-readable validation message.
         message: String,
     },
+    /// A filter condition uses an operand with no stable matching semantics.
+    #[cfg(feature = "filter")]
+    InvalidFilterOperand {
+        /// Stable filter operator name.
+        operator: &'static str,
+        /// Data type declared by the rejected operand.
+        data_type: DataType,
+        /// Human-readable rejection reason.
+        message: String,
+    },
     /// A metadata-filter builder was finalized without an expression.
     #[cfg(feature = "filter")]
     MissingFilterExpression,
@@ -227,6 +237,15 @@ impl fmt::Display for MetadataError {
                     "Metadata filter expression is invalid: {message}"
                 )
             }
+            #[cfg(feature = "filter")]
+            Self::InvalidFilterOperand {
+                operator,
+                data_type,
+                message,
+            } => write!(
+                formatter,
+                "Metadata filter operator '{operator}' cannot use {data_type}: {message}"
+            ),
             #[cfg(feature = "filter")]
             Self::MissingFilterExpression => {
                 write!(formatter, "Metadata filter requires an expression")

@@ -86,6 +86,17 @@ fn test_display_formats_all_variants() {
         "Metadata filter expression is invalid: empty 'and' filter group is not allowed"
     );
 
+    let invalid_operand = MetadataError::InvalidFilterOperand {
+        operator: "eq",
+        data_type: DataType::Float64,
+        message: "filter operands must be representable by the V1 wire format"
+            .to_string(),
+    };
+    assert_eq!(
+        invalid_operand.to_string(),
+        "Metadata filter operator 'eq' cannot use float64: filter operands must be representable by the V1 wire format"
+    );
+
     assert_eq!(
         MetadataError::FilterLimitExceeded {
             kind: FilterLimitKind::Depth,
