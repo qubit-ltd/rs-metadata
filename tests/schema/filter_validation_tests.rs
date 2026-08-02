@@ -57,20 +57,19 @@ fn test_schema_rejects_incompatible_filter_value() {
 }
 
 #[test]
-fn test_schema_rejects_nan_numeric_filter_value() {
-    let schema = MetadataSchema::builder()
-        .required("score", DataType::Float64)
-        .build()
-        .unwrap();
-    let expression = FilterExpression::builder()
+fn test_filter_builder_rejects_nan_numeric_filter_value() {
+    let error = FilterExpression::builder()
         .eq("score", f64::NAN)
         .build()
-        .unwrap();
-    let error = schema.validate_filter(&filter(expression)).unwrap_err();
+        .unwrap_err();
 
     assert!(matches!(
-        error.into_issues().as_slice(),
-        [MetadataError::InvalidFilterOperator { operator: "eq", .. }]
+        error,
+        MetadataError::InvalidFilterOperand {
+            operator: "eq",
+            data_type: DataType::Float64,
+            ..
+        }
     ));
 }
 

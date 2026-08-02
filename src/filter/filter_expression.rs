@@ -132,10 +132,11 @@ impl FilterExpression {
     ///
     /// A new condition expression.
     #[inline]
-    pub(crate) fn condition(condition: Condition) -> Self {
-        Self {
+    pub(crate) fn condition(condition: Condition) -> MetadataResult<Self> {
+        condition.validate_operands()?;
+        Ok(Self {
             node: FilterExpressionNode::Condition(condition),
-        }
+        })
     }
 
     /// Creates a constant true expression.

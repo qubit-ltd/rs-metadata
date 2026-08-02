@@ -52,10 +52,12 @@ When keys conflict, `merge` and `merged` give precedence to the right-hand
 
 With the `json` feature, `decode_json_slice` and
 `decode_json_slice_with_limits` bound complete untrusted JSON input before
-Serde parsing. The default limit is 1,048,576 bytes. Generic Serde
-deserialization remains appropriate only when an outer protocol already bounds
-input. Metadata `Debug` and `Display` are policy-redacted; ordinary outer keys
-also recursively redact keyed structures stored in `Value`.
+Serde parsing and reject decoded metadata or schema maps that exceed configured
+entry, field, or key-length limits. Defaults accept at most 1,048,576 input
+bytes, 4,096 metadata entries, 4,096 schema fields, and 256 bytes per key.
+Generic Serde deserialization remains appropriate only when an outer protocol
+already bounds input. Metadata `Debug` and `Display` are policy-redacted;
+ordinary outer keys also recursively redact keyed structures stored in `Value`.
 
 ```rust
 use qubit_metadata::Metadata;
@@ -232,6 +234,10 @@ usually a caller bug.
 Empty value sets are allowed. `in_set("key", [])` matches no metadata object.
 `not_in_set("key", [])` matches only when `key` stores a concrete value; an
 absent or unset value remains unknown and therefore does not match.
+
+Comparison and membership operands must be concrete values that the V1 wire
+format can represent. In particular, `Value::Unset`, `NaN`, and infinite
+floating-point operands are rejected while building or decoding a filter.
 
 Schema validation accepts every non-NaN numeric representation as compatible
 with every numeric field; this compatibility check is independent of the
