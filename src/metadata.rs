@@ -126,8 +126,10 @@ impl Metadata {
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         wire_limits.check_json_bytes(input.len())?;
-        serde_json::from_slice(input)
-            .map_err(crate::MetadataWireDecodeError::InvalidJson)
+        let metadata: Self = serde_json::from_slice(input)
+            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        metadata.validate_wire_limits(wire_limits)?;
+        Ok(metadata)
     }
 
     /// Returns `true` if there are no entries.
@@ -530,6 +532,26 @@ impl Metadata {
     #[must_use]
     pub fn into_inner(self) -> BTreeMap<String, Value> {
         self.0
+    }
+
+    /// Validates decoded map resources against JSON wire limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `wire_limits` - Bounds applied to the decoded map.
+    ///
+    /// # Errors
+    ///
+    /// Returns a wire-limit error when the map has too many entries or a key
+    /// exceeds the configured UTF-8 byte bound.
+    #[cfg(feature = "json")]
+    fn validate_wire_limits(
+        &self,
+        wire_limits: crate::MetadataWireLimits,
+    ) -> Result<(), crate::MetadataWireDecodeError> {
+        wire_limits.check_metadata_entries(self.len())?;
+        self.keys()
+            .try_for_each(|key| wire_limits.check_key_bytes(key.len()))
     }
 }
 
