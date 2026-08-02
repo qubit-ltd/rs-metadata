@@ -311,7 +311,13 @@ impl FilterExpressionBuilder {
         if self.error.is_some() {
             return self;
         }
-        let next = FilterExpression::condition(condition);
+        let next = match FilterExpression::condition(condition) {
+            Ok(expression) => expression,
+            Err(error) => {
+                self.error = Some(error);
+                return self;
+            }
+        };
         let expression = match self.expression.take() {
             Some(previous) => combine(previous, next),
             None => next,
