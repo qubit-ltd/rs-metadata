@@ -551,7 +551,7 @@ impl fmt::Debug for Metadata {
     /// Writes the default-policy redacted representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_redacted(&RedactionPolicy::default(), formatter)
+        fmt::Debug::fmt(&self.redacted().with_policy_output_limit(), formatter)
     }
 }
 

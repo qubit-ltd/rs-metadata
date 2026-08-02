@@ -83,3 +83,13 @@ fn test_metadata_display_respects_the_default_diagnostic_output_limit() {
     assert!(output.len() <= DiagnosticBudget::default().max_output_bytes());
     assert!(output.ends_with("<truncated>"));
 }
+
+#[test]
+fn test_metadata_debug_respects_the_default_diagnostic_output_limit() {
+    let metadata = Metadata::new().with("description", "x".repeat(96 * 1024));
+
+    let output = format!("{metadata:?}");
+
+    assert!(output.len() <= DiagnosticBudget::default().max_output_bytes());
+    assert!(output.ends_with("<truncated>"));
+}
