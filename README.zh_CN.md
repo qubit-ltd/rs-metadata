@@ -47,10 +47,11 @@
 发生 key 冲突时，`merge` 和 `merged` 都以右侧 `other` 的值覆盖左侧值。
 
 启用 `json` feature 后，`decode_json_slice` 和
-`decode_json_slice_with_limits` 会在 Serde 解析前限制完整不可信 JSON 输入。默认
-限制为 1,048,576 字节。通用 Serde 反序列化只适合外层协议已经限制输入的场景。
-Metadata 的 `Debug` 和 `Display` 均按策略脱敏；普通外层 key 中存储的 `Value`
-键控结构也会递归脱敏。
+`decode_json_slice_with_limits` 会在 Serde 解析前限制完整不可信 JSON 输入，并拒绝
+超出配置的 metadata 条目数、schema 字段数或 key 长度的解码结果。默认限制为：输入
+1,048,576 字节、metadata 条目 4,096 个、schema 字段 4,096 个、每个 key 256 字节。
+通用 Serde 反序列化只适合外层协议已经限制输入的场景。Metadata 的 `Debug` 和
+`Display` 均按策略脱敏；普通外层 key 中存储的 `Value` 键控结构也会递归脱敏。
 
 ```rust
 use qubit_metadata::Metadata;
@@ -219,6 +220,9 @@ true 才会让 `matches()` 返回 `true`。因此 `ne(key, value)` 与
 空集合是允许的。`in_set("key", [])` 不匹配任何 metadata 对象。
 `not_in_set("key", [])` 只在 `key` 存储具体值时匹配；键缺失或值为 unset 时仍为
 unknown，因此不匹配。
+
+比较和集合操作数必须是 V1 wire format 能表示的具体值。构造或解码 filter 时会拒绝
+`Value::Unset`、`NaN` 以及无穷浮点数。
 
 schema 校验 filter 时，任意非 NaN 数值表示都与任意数值字段兼容；这项兼容性检查与
 运行时比较策略无关。实际匹配时，`Exact` 不经舍入地比较表示出来的数学值。
