@@ -12,6 +12,8 @@ use std::{
     fmt,
 };
 
+use crate::MetadataWireLimitKind;
+
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -23,6 +25,15 @@ pub enum MetadataWireDecodeError {
         input_bytes: usize,
         /// Largest permitted input length.
         max_input_bytes: usize,
+    },
+    /// The decoded metadata or schema exceeds a configured resource bound.
+    LimitExceeded {
+        /// Decoded resource category that exceeded its bound.
+        kind: MetadataWireLimitKind,
+        /// Observed resource value.
+        value: usize,
+        /// Largest permitted resource value.
+        maximum: usize,
     },
     /// JSON syntax or strict wire-envelope decoding failed after the byte limit
     /// check.
@@ -43,6 +54,14 @@ impl fmt::Display for MetadataWireDecodeError {
                 formatter,
                 "metadata JSON input has {input_bytes} bytes, exceeding the limit of {max_input_bytes} bytes"
             ),
+            Self::LimitExceeded {
+                kind,
+                value,
+                maximum,
+            } => write!(
+                formatter,
+                "metadata JSON {kind:?} value {value} exceeds the limit of {maximum}"
+            ),
             Self::InvalidJson(error) => fmt::Display::fmt(error, formatter),
         }
     }
@@ -53,6 +72,7 @@ impl Error for MetadataWireDecodeError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::InputTooLarge { .. } => None,
+            Self::LimitExceeded { .. } => None,
             Self::InvalidJson(error) => Some(error),
         }
     }

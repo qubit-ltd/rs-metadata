@@ -150,56 +150,44 @@ impl FilterExpressionWire {
             Self::None => Ok(FilterExpression::match_none()),
             Self::Eq { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                Ok(FilterExpression::condition(Condition::Equal { key, value }))
+                FilterExpression::condition(Condition::Equal { key, value })
             }
             Self::Ne { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                Ok(FilterExpression::condition(Condition::NotEqual {
-                    key,
-                    value,
-                }))
+                FilterExpression::condition(Condition::NotEqual { key, value })
             }
             Self::Lt { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                Ok(FilterExpression::condition(Condition::Less { key, value }))
+                FilterExpression::condition(Condition::Less { key, value })
             }
             Self::Le { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                Ok(FilterExpression::condition(Condition::LessEqual {
-                    key,
-                    value,
-                }))
+                FilterExpression::condition(Condition::LessEqual { key, value })
             }
             Self::Gt { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                Ok(FilterExpression::condition(Condition::Greater {
-                    key,
-                    value,
-                }))
+                FilterExpression::condition(Condition::Greater { key, value })
             }
             Self::Ge { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                Ok(FilterExpression::condition(Condition::GreaterEqual {
+                FilterExpression::condition(Condition::GreaterEqual {
                     key,
                     value,
-                }))
+                })
             }
             Self::In { key, values } => {
                 let values = Self::into_scalar_values(values)?;
-                Ok(FilterExpression::condition(Condition::In { key, values }))
+                FilterExpression::condition(Condition::In { key, values })
             }
             Self::NotIn { key, values } => {
                 let values = Self::into_scalar_values(values)?;
-                Ok(FilterExpression::condition(Condition::NotIn {
-                    key,
-                    values,
-                }))
+                FilterExpression::condition(Condition::NotIn { key, values })
             }
             Self::Exists { key } => {
-                Ok(FilterExpression::condition(Condition::Exists { key }))
+                FilterExpression::condition(Condition::Exists { key })
             }
             Self::NotExists { key } => {
-                Ok(FilterExpression::condition(Condition::NotExists { key }))
+                FilterExpression::condition(Condition::NotExists { key })
             }
             Self::Not { expression } => expression.into_expression()?.try_not(),
             Self::And { children } => {

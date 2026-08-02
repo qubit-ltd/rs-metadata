@@ -70,3 +70,55 @@ fn test_decode_json_slice_with_limits_accepts_the_exact_byte_boundary() {
         Err(MetadataWireDecodeError::InvalidJson(_))
     ));
 }
+
+#[test]
+fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entries()
+ {
+    let metadata = Metadata::new().with("first", 1_i64).with("second", 2_i64);
+    let metadata_json = serde_json::to_vec(&metadata).unwrap();
+    let metadata_limits = MetadataWireLimits::new(metadata_json.len())
+        .with_max_metadata_entries(1);
+
+    assert!(matches!(
+        Metadata::decode_json_slice_with_limits(
+            &metadata_json,
+            metadata_limits
+        ),
+        Err(MetadataWireDecodeError::LimitExceeded {
+            kind: qubit_metadata::MetadataWireLimitKind::MetadataEntries,
+            value: 2,
+            maximum: 1,
+        })
+    ));
+    let key_limits =
+        MetadataWireLimits::new(metadata_json.len()).with_max_key_bytes(4);
+    assert!(matches!(
+        Metadata::decode_json_slice_with_limits(&metadata_json, key_limits),
+        Err(MetadataWireDecodeError::LimitExceeded {
+            kind: qubit_metadata::MetadataWireLimitKind::KeyBytes,
+            value: 5,
+            maximum: 4,
+        })
+    ));
+
+    let schema = MetadataSchema::builder()
+        .required("first", qubit_datatype::DataType::Int64)
+        .required("second", qubit_datatype::DataType::Int64)
+        .build()
+        .unwrap();
+    let schema_json = serde_json::to_vec(&schema).unwrap();
+    let schema_limits =
+        MetadataWireLimits::new(schema_json.len()).with_max_schema_fields(1);
+
+    assert!(matches!(
+        MetadataSchema::decode_json_slice_with_limits(
+            &schema_json,
+            schema_limits
+        ),
+        Err(MetadataWireDecodeError::LimitExceeded {
+            kind: qubit_metadata::MetadataWireLimitKind::SchemaFields,
+            value: 2,
+            maximum: 1,
+        })
+    ));
+}
