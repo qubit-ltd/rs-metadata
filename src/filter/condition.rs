@@ -25,7 +25,10 @@ use qubit_redact::{
     Redact,
     RedactionPolicy,
 };
-use qubit_value::Value;
+use qubit_value::{
+    Value,
+    ValueWirePayloadRefV1,
+};
 
 /// A single comparison operator applied to one metadata key.
 ///
@@ -111,6 +114,29 @@ pub enum Condition {
 }
 
 impl Condition {
+    /// Validates that every comparison operand has stable matching and wire
+    /// serialization semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterOperand`] when an operand is
+    /// unset or cannot be represented by the V1 wire format.
+    pub(crate) fn validate_operands(&self) -> MetadataResult<()> {
+        match self {
+            Self::Equal { value, .. } => validate_operand("eq", value),
+            Self::NotEqual { value, .. } => validate_operand("ne", value),
+            Self::Less { value, .. } => validate_operand("lt", value),
+            Self::LessEqual { value, .. } => validate_operand("le", value),
+            Self::Greater { value, .. } => validate_operand("gt", value),
+            Self::GreaterEqual { value, .. } => validate_operand("ge", value),
+            Self::In { values, .. } => validate_operands("in_set", values),
+            Self::NotIn { values, .. } => {
+                validate_operands("not_in_set", values)
+            }
+            Self::Exists { .. } | Self::NotExists { .. } => Ok(()),
+        }
+    }
+
     /// Validates this condition against resource limits.
     ///
     /// # Parameters
@@ -256,6 +282,59 @@ impl Condition {
     }
 }
 
+/// Validates one filter comparison operand.
+///
+/// # Parameters
+///
+/// * `operator` - Stable name of the operator using the operand.
+/// * `value` - Operand to validate.
+///
+/// # Errors
+///
+/// Returns [`MetadataError::InvalidFilterOperand`] when `value` is unset or
+/// cannot be represented by the V1 wire format.
+fn validate_operand(
+    operator: &'static str,
+    value: &Value,
+) -> MetadataResult<()> {
+    if value.is_unset() {
+        return Err(MetadataError::InvalidFilterOperand {
+            operator,
+            data_type: value.data_type(),
+            message: "filter operands must be concrete values".to_owned(),
+        });
+    }
+    if ValueWirePayloadRefV1::try_from(value).is_err() {
+        return Err(MetadataError::InvalidFilterOperand {
+            operator,
+            data_type: value.data_type(),
+            message:
+                "filter operands must be representable by the V1 wire format"
+                    .to_owned(),
+        });
+    }
+    Ok(())
+}
+
+/// Validates every operand in a set-membership condition.
+///
+/// # Parameters
+///
+/// * `operator` - Stable name of the set operator.
+/// * `values` - Candidate values to validate.
+///
+/// # Errors
+///
+/// Returns the first invalid operand error.
+fn validate_operands(
+    operator: &'static str,
+    values: &[Value],
+) -> MetadataResult<()> {
+    values
+        .iter()
+        .try_for_each(|value| validate_operand(operator, value))
+}
+
 impl Redact for Condition {
     /// Writes a diagnostic condition representation without exposing operands.
     fn fmt_redacted(
@@ -368,9 +447,10 @@ fn compare_values(
         return left.numeric_cmp(right, numeric_comparison_policy).ok();
     }
     match (left.view(), right.view()) {
-        (qubit_value::ValueRef::String(left), qubit_value::ValueRef::String(right)) => {
-            left.partial_cmp(right)
-        }
+        (
+            qubit_value::ValueRef::String(left),
+            qubit_value::ValueRef::String(right),
+        ) => left.partial_cmp(right),
         _ => None,
     }
 }

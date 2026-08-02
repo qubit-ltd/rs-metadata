@@ -11,6 +11,7 @@ use qubit_metadata::{
     FilterExpression,
     MetadataFilter,
 };
+#[cfg(feature = "json")]
 use qubit_value::Value;
 
 #[test]
@@ -52,6 +53,7 @@ fn test_metadata_filter_rejects_unknown_fields_and_versions() {
 }
 
 /// Preserves complex borrowed value payloads through the filter Wire shape.
+#[cfg(feature = "json")]
 #[test]
 fn test_complex_metadata_filter_serde_preserves_wire_shape() {
     let expression = FilterExpression::builder()

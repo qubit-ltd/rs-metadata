@@ -113,8 +113,10 @@ impl MetadataSchema {
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         wire_limits.check_json_bytes(input.len())?;
-        serde_json::from_slice(input)
-            .map_err(crate::MetadataWireDecodeError::InvalidJson)
+        let schema: Self = serde_json::from_slice(input)
+            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        schema.validate_wire_limits(wire_limits)?;
+        Ok(schema)
     }
 
     /// Creates a schema from field definitions and unknown-field policies.
@@ -281,6 +283,27 @@ impl MetadataSchema {
             }
             None => Ok(()),
         }
+    }
+
+    /// Validates decoded schema resources against JSON wire limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `wire_limits` - Bounds applied to the decoded schema.
+    ///
+    /// # Errors
+    ///
+    /// Returns a wire-limit error when the schema has too many fields or a
+    /// field name exceeds the configured UTF-8 byte bound.
+    #[cfg(feature = "json")]
+    fn validate_wire_limits(
+        &self,
+        wire_limits: crate::MetadataWireLimits,
+    ) -> Result<(), crate::MetadataWireDecodeError> {
+        wire_limits.check_schema_fields(self.fields.len())?;
+        self.fields
+            .keys()
+            .try_for_each(|key| wire_limits.check_key_bytes(key.len()))
     }
 }
 
