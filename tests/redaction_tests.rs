@@ -35,10 +35,12 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let policy = RedactionPolicy::builder()
         .disable_floor()
         .raise("secret_number", Sensitivity::Low)
+        .expect("field classification should be valid")
         .mask(
             Sensitivity::Low,
             MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
         )
+        .expect("mask policy should be valid")
         .build()
         .expect("policy should build");
 
@@ -57,9 +59,12 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
             serde_json::json!({"api_key": "nested-secret", "label": "Ada"}),
         )
         .with("token", "outer-secret");
-    let policy = RedactionPolicy::default().to_builder()
+    let policy = RedactionPolicy::default()
+        .to_builder()
         .raise("api_key", Sensitivity::Secret)
+        .expect("field classification should be valid")
         .raise("token", Sensitivity::Secret)
+        .expect("field classification should be valid")
         .build()
         .expect("policy should build");
 
