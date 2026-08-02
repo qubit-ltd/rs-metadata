@@ -8,7 +8,10 @@
 //! Tests for [`qubit_metadata::MetadataWireDecodeError`].
 
 #[cfg(feature = "json")]
-use qubit_metadata::MetadataWireDecodeError;
+use qubit_metadata::{
+    MetadataWireDecodeError,
+    MetadataWireLimitKind,
+};
 
 #[cfg(feature = "json")]
 #[test]
@@ -21,6 +24,22 @@ fn test_metadata_wire_decode_error_describes_input_limit() {
     assert_eq!(
         error.to_string(),
         "metadata JSON input has 5 bytes, exceeding the limit of 4 bytes"
+    );
+    assert!(std::error::Error::source(&error).is_none());
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn test_metadata_wire_decode_error_describes_decoded_resource_limit() {
+    let error = MetadataWireDecodeError::LimitExceeded {
+        kind: MetadataWireLimitKind::MetadataEntries,
+        value: 2,
+        maximum: 1,
+    };
+
+    assert_eq!(
+        error.to_string(),
+        "metadata JSON MetadataEntries value 2 exceeds the limit of 1"
     );
     assert!(std::error::Error::source(&error).is_none());
 }
