@@ -15,6 +15,10 @@ use qubit_metadata::{
     MetadataWireDecodeError,
     MetadataWireLimits,
 };
+use qubit_value::{
+    ValueWireDecodeError,
+    WireLimits,
+};
 
 #[test]
 fn test_decode_json_slice_with_limits_rejects_oversized_input_before_parsing() {
@@ -120,5 +124,26 @@ fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entr
             value: 2,
             maximum: 1,
         })
+    ));
+}
+
+#[test]
+fn test_decode_json_slice_with_limits_applies_shared_value_budget() {
+    let metadata = Metadata::new().with("values", serde_json::json!([1, 2]));
+    let input = serde_json::to_vec(&metadata)
+        .expect("metadata should serialize");
+    let limits = MetadataWireLimits::new(input.len()).with_wire(
+        WireLimits::new(input.len()).with_max_collection_items(1),
+    );
+
+    assert!(matches!(
+        Metadata::decode_json_slice_with_limits(&input, limits),
+        Err(MetadataWireDecodeError::Value(
+            ValueWireDecodeError::LimitExceeded {
+                kind: qubit_value::ValueWireLimitKind::CollectionItems,
+                value: 2,
+                maximum: 1,
+            }
+        ))
     ));
 }

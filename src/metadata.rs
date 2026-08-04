@@ -26,6 +26,7 @@ use qubit_value::{
     Value,
     ValueWirePayloadRefV1,
     ValueWirePayloadV1,
+    WireBudget,
 };
 use serde::{
     Deserialize,
@@ -125,10 +126,10 @@ impl Metadata {
         input: &[u8],
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        wire_limits.check_json_bytes(input.len())?;
+        let mut budget = wire_limits.wire().begin(input.len())?;
         let metadata: Self = serde_json::from_slice(input)
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        metadata.validate_wire_limits(wire_limits)?;
+        metadata.validate_wire_limits(wire_limits, &mut budget)?;
         Ok(metadata)
     }
 
@@ -548,10 +549,17 @@ impl Metadata {
     fn validate_wire_limits(
         &self,
         wire_limits: crate::MetadataWireLimits,
+        budget: &mut WireBudget,
     ) -> Result<(), crate::MetadataWireDecodeError> {
         wire_limits.check_metadata_entries(self.len())?;
-        self.keys()
-            .try_for_each(|key| wire_limits.check_key_bytes(key.len()))
+        budget.check_node()?;
+        budget.check_map_entries(self.len())?;
+        self.iter().try_for_each(|(key, value)| {
+            wire_limits.check_key_bytes(key.len())?;
+            budget.check_string_bytes(key.len())?;
+            budget.check_value(value)?;
+            Ok(())
+        })
     }
 }
 
