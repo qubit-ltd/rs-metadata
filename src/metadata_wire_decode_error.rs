@@ -94,6 +94,9 @@ impl From<ValueWireDecodeError> for MetadataWireDecodeError {
                 input_bytes,
                 max_input_bytes,
             },
+            ValueWireDecodeError::InvalidJson(error) => {
+                Self::InvalidJson(error)
+            }
             error => Self::Value(error),
         }
     }
