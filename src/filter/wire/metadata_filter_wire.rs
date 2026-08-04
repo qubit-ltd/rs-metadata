@@ -11,6 +11,7 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use qubit_value::WireBudget;
 
 use super::{
     FilterExpressionWire,
@@ -42,6 +43,14 @@ pub(crate) struct MetadataFilterWire {
 }
 
 impl MetadataFilterWire {
+    /// Charges the raw filter expression against a shared wire budget.
+    pub(crate) fn check_wire_budget(
+        &self,
+        budget: &mut WireBudget,
+    ) -> Result<(), qubit_value::ValueWireDecodeError> {
+        self.expression.check_wire_budget(budget, 1)
+    }
+
     /// Converts this envelope while enforcing `receiver_limits`.
     ///
     /// # Errors
