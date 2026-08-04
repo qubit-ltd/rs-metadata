@@ -9,7 +9,7 @@
 
 use qubit_metadata::Metadata;
 use qubit_redact::{
-    DiagnosticBudget,
+    InputOutputLimit,
     MaskPolicy,
     Redact as _,
     RedactionPolicy,
@@ -85,7 +85,7 @@ fn test_metadata_display_respects_the_default_diagnostic_output_limit() {
 
     let output = metadata.to_string();
 
-    assert!(output.len() <= DiagnosticBudget::default().max_output_bytes());
+    assert!(output.len() <= InputOutputLimit::default().max_output_bytes());
     assert!(output.ends_with("<truncated>"));
 }
 
@@ -95,6 +95,6 @@ fn test_metadata_debug_respects_the_default_diagnostic_output_limit() {
 
     let output = format!("{metadata:?}");
 
-    assert!(output.len() <= DiagnosticBudget::default().max_output_bytes());
+    assert!(output.len() <= InputOutputLimit::default().max_output_bytes());
     assert!(output.ends_with("<truncated>"));
 }
