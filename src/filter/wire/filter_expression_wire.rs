@@ -10,6 +10,7 @@
 use qubit_value::{
     Value,
     ValueWirePayloadV1,
+    WireBudget,
 };
 use serde::{
     Deserialize,
@@ -117,6 +118,50 @@ pub(crate) enum FilterExpressionWire {
 }
 
 impl FilterExpressionWire {
+    /// Charges the raw expression tree and nested Value payloads against one
+    /// shared wire budget.
+    pub(crate) fn check_wire_budget(
+        &self,
+        budget: &mut WireBudget,
+        depth: usize,
+    ) -> Result<(), qubit_value::ValueWireDecodeError> {
+        budget.check_depth(depth)?;
+        budget.check_node()?;
+        match self {
+            Self::Eq { key, value }
+            | Self::Ne { key, value }
+            | Self::Lt { key, value }
+            | Self::Le { key, value }
+            | Self::Gt { key, value }
+            | Self::Ge { key, value } => {
+                budget.check_string_bytes(key.len())?;
+                budget.check_container(value.container())
+            }
+            Self::In { key, values } | Self::NotIn { key, values } => {
+                budget.check_string_bytes(key.len())?;
+                budget.check_collection_items(values.len())?;
+                for value in values {
+                    budget.check_container(value.container())?;
+                }
+                Ok(())
+            }
+            Self::Exists { key } | Self::NotExists { key } => {
+                budget.check_string_bytes(key.len())
+            }
+            Self::And { children } | Self::Or { children } => {
+                budget.check_collection_items(children.len())?;
+                for child in children {
+                    child.check_wire_budget(budget, depth + 1)?;
+                }
+                Ok(())
+            }
+            Self::Not { expression } => {
+                expression.check_wire_budget(budget, depth + 1)
+            }
+            Self::All | Self::None => Ok(()),
+        }
+    }
+
     /// Validates the unnormalized wire tree against resource limits.
     ///
     /// This check precedes conversion because Boolean normalization can remove
