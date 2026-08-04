@@ -22,11 +22,12 @@ use qubit_redact::{
     RedactedKeyedValueSession,
     RedactionSession,
 };
+#[cfg(feature = "json")]
+use qubit_value::WireBudget;
 use qubit_value::{
     Value,
     ValueWirePayloadRefV1,
     ValueWirePayloadV1,
-    WireBudget,
 };
 use serde::{
     Deserialize,
@@ -126,7 +127,7 @@ impl Metadata {
         input: &[u8],
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        let mut budget = wire_limits.wire().begin(input.len())?;
+        let mut budget = wire_limits.wire().begin_json(input)?;
         let metadata: Self = serde_json::from_slice(input)
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         metadata.validate_wire_limits(wire_limits, &mut budget)?;

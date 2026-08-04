@@ -130,11 +130,10 @@ fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entr
 #[test]
 fn test_decode_json_slice_with_limits_applies_shared_value_budget() {
     let metadata = Metadata::new().with("values", serde_json::json!([1, 2]));
-    let input = serde_json::to_vec(&metadata)
-        .expect("metadata should serialize");
-    let limits = MetadataWireLimits::new(input.len()).with_wire(
-        WireLimits::new(input.len()).with_max_collection_items(1),
-    );
+    let input =
+        serde_json::to_vec(&metadata).expect("metadata should serialize");
+    let limits = MetadataWireLimits::new(input.len())
+        .with_wire(WireLimits::new(input.len()).with_max_collection_items(1));
 
     assert!(matches!(
         Metadata::decode_json_slice_with_limits(&input, limits),

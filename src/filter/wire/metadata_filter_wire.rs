@@ -7,11 +7,11 @@
 // =============================================================================
 //! V4 [`MetadataFilter`] envelope.
 
+use qubit_value::WireBudget;
 use serde::{
     Deserialize,
     Serialize,
 };
-use qubit_value::WireBudget;
 
 use super::{
     FilterExpressionWire,
