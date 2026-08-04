@@ -19,8 +19,8 @@ use qubit_datatype::{
 };
 use qubit_redact::{
     Redact,
-    RedactedKeyedMap,
-    RedactionPolicy,
+    RedactedKeyedValueSession,
+    RedactionSession,
 };
 use qubit_value::{
     Value,
@@ -559,13 +559,17 @@ impl Redact for Metadata {
     /// Writes a policy-redacted metadata representation.
     fn fmt_redacted(
         &self,
-        policy: &RedactionPolicy,
+        session: &RedactionSession<'_>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        fmt::Debug::fmt(
-            &RedactedKeyedMap::new(&self.0, policy.clone()),
-            formatter,
-        )
+        let mut output = formatter.debug_map();
+        for (key, value) in &self.0 {
+            output.entry(
+                key,
+                &RedactedKeyedValueSession::new(key, value, session),
+            );
+        }
+        output.finish()
     }
 }
 

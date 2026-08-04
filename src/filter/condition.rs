@@ -23,7 +23,7 @@ use crate::{
 use qubit_datatype::NumericComparisonPolicy;
 use qubit_redact::{
     Redact,
-    RedactionPolicy,
+    RedactionSession,
 };
 use qubit_value::{
     Value,
@@ -339,7 +339,7 @@ impl Redact for Condition {
     /// Writes a diagnostic condition representation without exposing operands.
     fn fmt_redacted(
         &self,
-        _policy: &RedactionPolicy,
+        _session: &RedactionSession<'_>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         write!(
@@ -354,7 +354,7 @@ impl fmt::Debug for Condition {
     /// Writes the default-policy diagnostic representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_redacted(&RedactionPolicy::default(), formatter)
+        fmt::Debug::fmt(&self.redacted(), formatter)
     }
 }
 
