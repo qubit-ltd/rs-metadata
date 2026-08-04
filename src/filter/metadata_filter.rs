@@ -14,6 +14,7 @@ use serde::{
     Serializer,
     de,
 };
+use serde::de::Error as _;
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
 use super::wire::{
@@ -163,17 +164,21 @@ impl MetadataFilter {
         wire_limits: crate::MetadataWireLimits,
         receiver_filter_limits: FilterLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        wire_limits.check_json_bytes(input.len())?;
+        let mut budget = wire_limits.wire().begin(input.len())?;
         let mut deserializer = serde_json::Deserializer::from_slice(input);
-        let filter = Self::deserialize_with_filter_limits(
-            &mut deserializer,
-            receiver_filter_limits,
-        )
-        .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let wire = MetadataFilterWire::deserialize(&mut deserializer)
+            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         deserializer
             .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        Ok(filter)
+        wire.check_wire_budget(&mut budget)
+            .map_err(crate::MetadataWireDecodeError::from)?;
+        wire.into_filter(receiver_filter_limits)
+            .map_err(|error| {
+                crate::MetadataWireDecodeError::InvalidJson(
+                    serde_json::Error::custom(error),
+                )
+            })
     }
 
     /// Creates a filter from already validated parts.

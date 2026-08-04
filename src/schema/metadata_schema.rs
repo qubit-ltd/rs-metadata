@@ -10,7 +10,10 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
-use qubit_value::Value;
+use qubit_value::{
+    Value,
+    WireBudget,
+};
 use serde::{
     Deserialize,
     Deserializer,
@@ -112,10 +115,10 @@ impl MetadataSchema {
         input: &[u8],
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        wire_limits.check_json_bytes(input.len())?;
+        let mut budget = wire_limits.wire().begin(input.len())?;
         let schema: Self = serde_json::from_slice(input)
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        schema.validate_wire_limits(wire_limits)?;
+        schema.validate_wire_limits(wire_limits, &mut budget)?;
         Ok(schema)
     }
 
@@ -299,11 +302,16 @@ impl MetadataSchema {
     fn validate_wire_limits(
         &self,
         wire_limits: crate::MetadataWireLimits,
+        budget: &mut WireBudget,
     ) -> Result<(), crate::MetadataWireDecodeError> {
         wire_limits.check_schema_fields(self.fields.len())?;
-        self.fields
-            .keys()
-            .try_for_each(|key| wire_limits.check_key_bytes(key.len()))
+        budget.check_node()?;
+        budget.check_map_entries(self.fields.len())?;
+        self.fields.keys().try_for_each(|key| {
+            wire_limits.check_key_bytes(key.len())?;
+            budget.check_string_bytes(key.len())?;
+            Ok(())
+        })
     }
 }
 

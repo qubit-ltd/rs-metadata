@@ -11,6 +11,7 @@ use crate::{
     MetadataWireDecodeError,
     MetadataWireLimitKind,
 };
+use qubit_value::WireLimits;
 
 /// Maximum JSON input size used by the default bounded decoding APIs.
 pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
@@ -28,6 +29,8 @@ pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub struct MetadataWireLimits {
+    /// Shared Value and JSON structural limits.
+    wire: WireLimits,
     /// Maximum number of input bytes accepted before parsing begins.
     max_json_bytes: usize,
     /// Maximum entries in a decoded metadata object.
@@ -52,11 +55,27 @@ impl MetadataWireLimits {
     #[inline(always)]
     pub const fn new(max_json_bytes: usize) -> Self {
         Self {
+            wire: WireLimits::new(max_json_bytes),
             max_json_bytes,
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
             max_key_bytes: DEFAULT_MAX_KEY_BYTES,
         }
+    }
+
+    /// Sets the shared Value and JSON structural limits.
+    #[inline(always)]
+    #[must_use = "the configured wire limits should be used"]
+    pub const fn with_wire(mut self, wire: WireLimits) -> Self {
+        self.wire = wire;
+        self.max_json_bytes = wire.max_input_bytes();
+        self
+    }
+
+    /// Returns the shared Value and JSON structural limits.
+    #[inline(always)]
+    pub const fn wire(&self) -> WireLimits {
+        self.wire
     }
 
     /// Sets the largest accepted decoded metadata entry count.
