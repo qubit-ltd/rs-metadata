@@ -4,13 +4,15 @@
     {
       "name": "default-features",
       "commands": [
-        "test"
+        "test",
+        "clippy"
       ]
     },
     {
       "name": "filter-only",
       "commands": [
-        "test"
+        "test",
+        "clippy"
       ],
       "defaultFeatures": false,
       "features": [
@@ -20,7 +22,8 @@
     {
       "name": "schema-only",
       "commands": [
-        "test"
+        "test",
+        "clippy"
       ],
       "defaultFeatures": false,
       "features": [
@@ -30,9 +33,21 @@
     {
       "name": "minimal-features",
       "commands": [
-        "test"
+        "test",
+        "clippy"
       ],
       "defaultFeatures": false
+    },
+    {
+      "name": "json-only",
+      "commands": [
+        "test",
+        "clippy"
+      ],
+      "defaultFeatures": false,
+      "features": [
+        "json"
+      ]
     }
   ]
 }

@@ -200,6 +200,7 @@ impl MetadataWireLimits {
     }
 
     /// Checks decoded metadata-schema field count against this limit.
+    #[cfg(feature = "schema")]
     pub(crate) fn check_schema_fields(
         &self,
         fields: usize,
