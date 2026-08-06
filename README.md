@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![中文文档](https://img.shields.io/badge/文档-中文版-blue.svg)](README.zh_CN.md)
 
-A general-purpose, type-safe metadata model for Rust.
+A general-purpose, typed-value metadata model for Rust.
 
 ## Overview
 
