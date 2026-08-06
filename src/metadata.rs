@@ -127,7 +127,7 @@ impl Metadata {
         input: &[u8],
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        let mut budget = wire_limits.wire().begin_json(input)?;
+        let mut budget = wire_limits.wire().begin(input.len())?;
         let metadata: Self = serde_json::from_slice(input)
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         metadata.validate_wire_limits(wire_limits, &mut budget)?;
