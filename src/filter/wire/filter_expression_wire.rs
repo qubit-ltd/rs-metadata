@@ -135,13 +135,19 @@ impl FilterExpressionWire {
             | Self::Gt { key, value }
             | Self::Ge { key, value } => {
                 budget.check_string_bytes(key.len())?;
-                budget.check_container(value.container())
+                budget.check_container_at(
+                    value.container(),
+                    depth.saturating_add(1),
+                )
             }
             Self::In { key, values } | Self::NotIn { key, values } => {
                 budget.check_string_bytes(key.len())?;
                 budget.check_collection_items(values.len())?;
                 for value in values {
-                    budget.check_container(value.container())?;
+                    budget.check_container_at(
+                        value.container(),
+                        depth.saturating_add(1),
+                    )?;
                 }
                 Ok(())
             }
