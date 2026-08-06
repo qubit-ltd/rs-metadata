@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![English Document](https://img.shields.io/badge/Document-English-blue.svg)](README.md)
 
-适用于 Rust 的通用、类型安全元数据模型。
+适用于 Rust 的通用、保留具体值类型的元数据模型。
 
 ## 概述
 

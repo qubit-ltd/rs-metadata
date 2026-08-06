@@ -7,19 +7,18 @@
 // =============================================================================
 //! # qubit-metadata
 //!
-//! A general-purpose, type-safe, extensible metadata model for Rust.
+//! A general-purpose, typed-value, extensible metadata model for Rust.
 //!
 //! This crate provides a [`Metadata`] type — a structured key-value store
 //! designed for any domain that needs to attach typed annotations to its data
 //! models. It is not a plain `HashMap` — it is a structured extensibility point
-//! with type-safe access, [`qubit_value::Value`] backing, and first-class
-//! `serde` support.
+//! with typed conversion access, [`qubit_value::Value`] backing, and
+//! first-class `serde` support.
 //!
 //! ## Design Goals
 //!
-//! - **Type Safety**: Conversion-based typed get, chainable set, and
-//!   replacement-aware insert
-//!   APIs backed by [`qubit_value::Value`]
+//! - **Typed Values**: Conversion-based typed get, chainable set, and
+//!   replacement-aware insert APIs backed by [`qubit_value::Value`]
 //! - **Generality**: No domain-specific assumptions — usable in any Rust
 //!   project
 //! - **Schema Support**: Optional schema validation for metadata and filters
