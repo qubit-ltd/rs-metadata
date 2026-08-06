@@ -62,7 +62,11 @@ use crate::{
 /// APIs treat it as a missing concrete value.
 ///
 /// Use [`Metadata::with`] for fluent construction and [`Metadata::set`] when
-/// mutating an existing object.
+/// mutating an existing object. The typed [`Metadata::get`] and
+/// [`Metadata::try_get`] accessors convert stored values through
+/// [`qubit_datatype::DataConversionTarget`]; use [`Metadata::get_raw`] when
+/// the stored runtime [`qubit_value::Value`] must be inspected without
+/// conversion.
 #[derive(Clone, PartialEq, Default)]
 pub struct Metadata(
     /// Stored values indexed by metadata key.
@@ -591,8 +595,12 @@ impl fmt::Debug for Metadata {
 }
 
 impl fmt::Display for Metadata {
-    /// Writes the default-policy redacted representation as single-line,
-    /// log-safe text.
+    /// Writes a bounded, default-policy redacted representation as
+    /// single-line diagnostic text.
+    ///
+    /// The default policy is not a confidentiality boundary for arbitrary
+    /// user-defined keys or error text; callers should apply an explicit
+    /// redaction policy before emitting untrusted metadata to logs.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(

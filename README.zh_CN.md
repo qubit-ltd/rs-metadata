@@ -39,7 +39,8 @@
 
 ### 1) 类型化 metadata 容器
 
-`Metadata` 是有序的 `String -> Value` 映射，支持 `get`、链式 `set`、返回旧值的
+`Metadata` 是有序的 `String -> Value` 映射。`get` 和 `try_get` 会将存储值转换为
+请求的目标类型；需要不经转换检查具体运行时 `Value` 时使用 `get_raw`。它支持链式 `set`、返回旧值的
 `insert`、`try_get`、带 schema 校验的 `set_checked` / `insert_checked` /
 `with_checked`、链式 `with`、迭代、合并、保留和
 `BTreeMap<String, Value>` 转换。
@@ -51,7 +52,9 @@
 超出配置的 metadata 条目数、schema 字段数或 key 长度的解码结果。默认限制为：输入
 1,048,576 字节、metadata 条目 4,096 个、schema 字段 4,096 个、每个 key 256 字节。
 通用 Serde 反序列化只适合外层协议已经限制输入的场景。Metadata 的 `Debug` 和
-`Display` 均按策略脱敏；普通外层 key 中存储的 `Value` 键控结构也会递归脱敏。
+`Display` 均按默认策略限制长度并脱敏；普通外层 key 中存储的 `Value` 键控结构也会递归脱敏。
+默认策略并不是任意自定义 key 或错误文本的机密性边界；将不可信 metadata 写入日志前，
+调用方应使用显式的脱敏策略。
 
 ```rust
 use qubit_metadata::Metadata;
@@ -298,8 +301,9 @@ qubit-metadata = { version = "0.10", default-features = false }
 qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
 ```
 
-可用 feature 包括 `filter`、`schema`（会启用 `filter`）、`chrono`、
-`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和 `all`。
+可用 feature 包括 `filter`、`schema`（会启用 `filter`）、`json`、`chrono`、
+`big-integer`、`big-decimal`、`big-number`、`url` 和 `all`。`filter` 提供过滤表达式、匹配和
+Serde wire 支持；`json` 额外启用有界 JSON 解码及 JSON 类型 metadata。
 
 ## 测试
 
