@@ -114,6 +114,40 @@ fn test_missing_comparison_stays_unknown_through_not() {
 }
 
 #[test]
+fn test_incomparable_concrete_value_stays_unknown_through_not() {
+    let expression = FilterExpression::builder()
+        .lt("age", 18_i64)
+        .not()
+        .build()
+        .expect("expression should build");
+    let metadata = Metadata::new().with("age", "not-a-number");
+
+    assert!(!filter(expression).matches(&metadata));
+}
+
+#[test]
+fn test_not_equal_incomparable_concrete_value_fails_closed() {
+    let expression = FilterExpression::builder()
+        .ne("age", 18_i64)
+        .build()
+        .expect("expression should build");
+    let metadata = Metadata::new().with("age", "not-a-number");
+
+    assert!(!filter(expression).matches(&metadata));
+}
+
+#[test]
+fn test_membership_with_incomparable_candidates_stays_unknown() {
+    let expression = FilterExpression::builder()
+        .not_in_set("age", [18_i64, 21_i64])
+        .build()
+        .expect("expression should build");
+    let metadata = Metadata::new().with("age", "not-a-number");
+
+    assert!(!filter(expression).matches(&metadata));
+}
+
+#[test]
 fn test_not_equal_and_negated_equal_both_fail_closed_for_missing_value() {
     let not_equal = FilterExpression::builder()
         .ne("missing", "value")
