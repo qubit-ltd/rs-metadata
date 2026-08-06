@@ -42,7 +42,9 @@ it, and filters treat it like an absent key.
 
 ### 1) Typed metadata storage
 
-`Metadata` is an ordered `String -> Value` map. It supports typed `get`,
+`Metadata` is an ordered `String -> Value` map. Its typed `get` and `try_get`
+accessors convert stored values to the requested target type; use `get_raw`
+when the concrete runtime `Value` must be inspected without conversion. It supports
 chainable `set`, replacement-aware `insert`, `try_get`, schema-checked
 `set_checked` / `insert_checked` / `with_checked`, fluent `with`, iteration,
 merge, retain, and conversion to/from `BTreeMap<String, Value>`.
@@ -56,8 +58,11 @@ Serde parsing and reject decoded metadata or schema maps that exceed configured
 entry, field, or key-length limits. Defaults accept at most 1,048,576 input
 bytes, 4,096 metadata entries, 4,096 schema fields, and 256 bytes per key.
 Generic Serde deserialization remains appropriate only when an outer protocol
-already bounds input. Metadata `Debug` and `Display` are policy-redacted;
-ordinary outer keys also recursively redact keyed structures stored in `Value`.
+already bounds input. Metadata `Debug` and `Display` are bounded and
+policy-redacted; ordinary outer keys also recursively redact keyed structures
+stored in `Value`. The default policy is not a confidentiality boundary for
+arbitrary user-defined keys or error text, so callers should apply an explicit
+redaction policy before logging untrusted metadata.
 
 ```rust
 use qubit_metadata::Metadata;
@@ -322,8 +327,10 @@ Enable rich value types in addition to the default APIs as needed:
 qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
 ```
 
-Available features are `filter`, `schema` (which enables `filter`), `chrono`,
-`big-integer`, `big-decimal`, `big-number`, `url`, `json`, and `all`.
+Available features are `filter`, `schema` (which enables `filter`), `json`,
+`chrono`, `big-integer`, `big-decimal`, `big-number`, `url`, and `all`.
+`filter` provides expression construction, matching, and serde wire support;
+`json` additionally enables bounded JSON decoding and JSON-valued metadata.
 
 ## Testing
 

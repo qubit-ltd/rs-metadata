@@ -17,7 +17,8 @@
 //!
 //! ## Design Goals
 //!
-//! - **Type Safety**: Typed get, chainable set, and replacement-aware insert
+//! - **Type Safety**: Conversion-based typed get, chainable set, and
+//!   replacement-aware insert
 //!   APIs backed by [`qubit_value::Value`]
 //! - **Generality**: No domain-specific assumptions — usable in any Rust
 //!   project
@@ -45,7 +46,8 @@
 //!     .with("author", "alice")
 //!     .with("priority", 3_i64);
 //!
-//! // Convenience API: missing key and type mismatch both collapse to None.
+//! // Convenience API: get converts the stored value to the requested target;
+//! // missing keys and failed conversions both collapse to None.
 //! let author: Option<String> = meta.get("author");
 //! assert_eq!(author.as_deref(), Some("alice"));
 //!
@@ -57,6 +59,10 @@
 //! The `filter` feature uses fail-closed three-valued logic: a missing or unset
 //! value stays unknown through negation and does not match at the public API
 //! boundary.
+//!
+//! `Metadata`'s `Debug` and `Display` implementations are bounded and rendered
+//! through the default redaction policy. They are useful diagnostic views, not
+//! a confidentiality boundary for arbitrary user-defined keys or error text.
 
 #![deny(missing_docs)]
 
