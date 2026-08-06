@@ -129,6 +129,40 @@ fn test_get_wrong_type_returns_none() {
 }
 
 #[test]
+fn test_get_str_borrows_stored_string() {
+    let metadata = Metadata::new().with("name", "alice");
+
+    assert_eq!(metadata.get_str("name"), Some("alice"));
+    assert_eq!(metadata.try_get_str("name"), Ok("alice"));
+}
+
+#[test]
+fn test_try_get_str_reports_missing_unset_and_non_string_values() {
+    let metadata = Metadata::new()
+        .with("unset", Value::Unset(DataType::String))
+        .with("count", 1_i64);
+
+    assert!(matches!(
+        metadata.try_get_str("missing"),
+        Err(MetadataError::MissingKey(key)) if key == "missing"
+    ));
+    assert!(matches!(
+        metadata.try_get_str("unset"),
+        Err(MetadataError::MissingValue { key, data_type })
+            if key == "unset" && data_type == DataType::String
+    ));
+    assert!(matches!(
+        metadata.try_get_str("count"),
+        Err(MetadataError::TypeMismatch {
+            key,
+            expected: DataType::String,
+            actual: DataType::Int64,
+            ..
+        }) if key == "count"
+    ));
+}
+
+#[test]
 fn test_try_get_missing_key_reports_error() {
     let meta = Metadata::new();
     let error = meta.try_get::<String>("missing").unwrap_err();
@@ -234,6 +268,29 @@ fn test_set_checked_rejects_type_mismatch() {
         }
         other => panic!("expected TypeMismatch, got {other:?}"),
     }
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn test_insert_checked_rejects_unset_required_field() {
+    let schema = MetadataSchema::builder()
+        .required("key", DataType::String)
+        .build()
+        .expect("schema should build");
+    let mut metadata = Metadata::new();
+
+    let error = metadata
+        .insert_checked(&schema, "key", Value::Unset(DataType::String))
+        .expect_err("required fields should reject unset values");
+
+    assert_eq!(
+        error,
+        MetadataError::MissingRequiredField {
+            key: "key".to_string(),
+            expected: DataType::String,
+        }
+    );
+    assert!(metadata.is_empty());
 }
 
 #[test]
