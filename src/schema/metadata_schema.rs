@@ -234,6 +234,12 @@ impl MetadataSchema {
         }
 
         for (key, value) in meta.iter() {
+            if self
+                .field(key)
+                .is_some_and(|field| field.is_required() && value.is_unset())
+            {
+                continue;
+            }
             if let Err(error) = self.validate_entry(key, value) {
                 issues.push(error);
             }
@@ -266,6 +272,12 @@ impl MetadataSchema {
         value: &Value,
     ) -> MetadataResult<()> {
         match self.field(key) {
+            Some(field) if field.is_required() && value.is_unset() => {
+                Err(MetadataError::MissingRequiredField {
+                    key: key.to_string(),
+                    expected: field.data_type(),
+                })
+            }
             Some(field) if field.data_type() != value.data_type() => {
                 Err(MetadataError::type_mismatch(
                     key,

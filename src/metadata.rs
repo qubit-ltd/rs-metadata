@@ -26,6 +26,7 @@ use qubit_redact::{
 use qubit_value::WireBudget;
 use qubit_value::{
     Value,
+    ValueRef,
     ValueWirePayloadRefV1,
     ValueWirePayloadV1,
 };
@@ -196,6 +197,61 @@ impl Metadata {
         self.try_get(key).ok()
     }
 
+    /// Retrieves a borrowed string stored under `key`.
+    ///
+    /// This accessor only succeeds when the stored value is a concrete string;
+    /// it does not allocate or perform a conversion.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// The borrowed string, or `None` when the key is absent, unset, or stores
+    /// another value type.
+    #[inline(always)]
+    #[must_use]
+    pub fn get_str(&self, key: &str) -> Option<&str> {
+        self.try_get_str(key).ok()
+    }
+
+    /// Retrieves a borrowed concrete string stored under `key`.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// The borrowed string stored under `key`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::MissingKey`] when the key is absent,
+    /// [`MetadataError::MissingValue`] when it stores [`Value::Unset`], or
+    /// [`MetadataError::TypeMismatch`] when the stored value is not a string.
+    #[inline(always)]
+    pub fn try_get_str(&self, key: &str) -> MetadataResult<&str> {
+        let value = self
+            .0
+            .get(key)
+            .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
+        match value.view() {
+            ValueRef::String(string) => Ok(string),
+            ValueRef::Unset(data_type) => Err(MetadataError::MissingValue {
+                key: key.to_string(),
+                data_type,
+            }),
+            _ => Err(MetadataError::TypeMismatch {
+                key: key.to_string(),
+                expected: DataType::String,
+                actual: value.data_type(),
+                message: "stored value is not a string".to_string(),
+            }),
+        }
+    }
+
     /// Retrieves the value associated with `key` and converts it to `T`.
     ///
     /// # Parameters
@@ -353,8 +409,9 @@ impl Metadata {
     /// # Errors
     ///
     /// Returns [`MetadataError::UnknownField`] when `key` is rejected by the
-    /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
-    /// concrete type does not match the schema field type.
+    /// schema, [`MetadataError::MissingRequiredField`] when a required field is
+    /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
+    /// constructed value's concrete type does not match the schema field type.
     #[cfg(feature = "schema")]
     #[inline]
     pub fn insert_checked<T>(
@@ -387,8 +444,9 @@ impl Metadata {
     /// # Errors
     ///
     /// Returns [`MetadataError::UnknownField`] when `key` is rejected by the
-    /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
-    /// concrete type does not match the schema field type.
+    /// schema, [`MetadataError::MissingRequiredField`] when a required field is
+    /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
+    /// constructed value's concrete type does not match the schema field type.
     #[cfg(feature = "schema")]
     #[inline(always)]
     pub fn set_checked<T>(
@@ -419,8 +477,9 @@ impl Metadata {
     /// # Errors
     ///
     /// Returns [`MetadataError::UnknownField`] when `key` is rejected by the
-    /// schema, or [`MetadataError::TypeMismatch`] when the constructed value's
-    /// concrete type does not match the schema field type.
+    /// schema, [`MetadataError::MissingRequiredField`] when a required field is
+    /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
+    /// constructed value's concrete type does not match the schema field type.
     #[cfg(feature = "schema")]
     #[inline(always)]
     pub fn with_checked<T>(
