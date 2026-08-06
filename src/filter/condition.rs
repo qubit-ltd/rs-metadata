@@ -198,61 +198,75 @@ impl Condition {
             Condition::Equal { key, value } => {
                 evaluate_concrete(meta, key, |stored| {
                     values_equal(stored, value, numeric_comparison_policy)
+                        .map_or(MatchOutcome::Unknown, MatchOutcome::from_bool)
                 })
             }
             Condition::NotEqual { key, value } => {
                 evaluate_concrete(meta, key, |stored| {
-                    !values_equal(stored, value, numeric_comparison_policy)
+                    values_equal(stored, value, numeric_comparison_policy)
+                        .map_or(MatchOutcome::Unknown, |equal| {
+                            MatchOutcome::from_bool(!equal)
+                        })
                 })
             }
             Condition::Less { key, value } => {
                 evaluate_concrete(meta, key, |stored| {
                     compare_values(stored, value, numeric_comparison_policy)
-                        == Some(Ordering::Less)
+                        .map_or(MatchOutcome::Unknown, |ordering| {
+                            MatchOutcome::from_bool(ordering == Ordering::Less)
+                        })
                 })
             }
             Condition::LessEqual { key, value } => {
                 evaluate_concrete(meta, key, |stored| {
-                    matches!(
-                        compare_values(
-                            stored,
-                            value,
-                            numeric_comparison_policy
-                        ),
-                        Some(Ordering::Less) | Some(Ordering::Equal)
-                    )
+                    compare_values(stored, value, numeric_comparison_policy)
+                        .map_or(MatchOutcome::Unknown, |ordering| {
+                            MatchOutcome::from_bool(matches!(
+                                ordering,
+                                Ordering::Less | Ordering::Equal
+                            ))
+                        })
                 })
             }
             Condition::Greater { key, value } => {
                 evaluate_concrete(meta, key, |stored| {
                     compare_values(stored, value, numeric_comparison_policy)
-                        == Some(Ordering::Greater)
+                        .map_or(MatchOutcome::Unknown, |ordering| {
+                            MatchOutcome::from_bool(
+                                ordering == Ordering::Greater,
+                            )
+                        })
                 })
             }
             Condition::GreaterEqual { key, value } => {
                 evaluate_concrete(meta, key, |stored| {
-                    matches!(
-                        compare_values(
-                            stored,
-                            value,
-                            numeric_comparison_policy
-                        ),
-                        Some(Ordering::Greater) | Some(Ordering::Equal)
-                    )
+                    compare_values(stored, value, numeric_comparison_policy)
+                        .map_or(MatchOutcome::Unknown, |ordering| {
+                            MatchOutcome::from_bool(matches!(
+                                ordering,
+                                Ordering::Greater | Ordering::Equal
+                            ))
+                        })
                 })
             }
             Condition::In { key, values } => {
                 evaluate_concrete(meta, key, |stored| {
-                    values.iter().any(|value| {
-                        values_equal(stored, value, numeric_comparison_policy)
-                    })
+                    evaluate_membership(
+                        stored,
+                        values,
+                        numeric_comparison_policy,
+                        false,
+                    )
                 })
             }
             Condition::NotIn { key, values } => {
                 evaluate_concrete(meta, key, |stored| {
-                    values.iter().all(|value| {
-                        !values_equal(stored, value, numeric_comparison_policy)
-                    })
+                    evaluate_membership(
+                        stored,
+                        values,
+                        numeric_comparison_policy,
+                        true,
+                    )
                 })
             }
             Condition::Exists { key } => {
@@ -377,11 +391,43 @@ fn evaluate_concrete<F>(
     predicate: F,
 ) -> MatchOutcome
 where
-    F: FnOnce(&Value) -> bool,
+    F: FnOnce(&Value) -> MatchOutcome,
 {
-    concrete_value(meta, key).map_or(MatchOutcome::Unknown, |value| {
-        MatchOutcome::from_bool(predicate(value))
-    })
+    concrete_value(meta, key).map_or(MatchOutcome::Unknown, predicate)
+}
+
+/// Evaluates one membership condition while preserving unknown comparisons.
+///
+/// # Parameters
+///
+/// * `stored` - Concrete metadata value being matched.
+/// * `candidates` - Values accepted or excluded by the condition.
+/// * `numeric_comparison_policy` - Policy for mixed numeric comparisons.
+/// * `negated` - Whether a matching candidate means the condition is false.
+///
+/// # Returns
+///
+/// `Unknown` when no candidate matches but at least one candidate cannot be
+/// compared to `stored`; otherwise the normal inclusion or exclusion result.
+fn evaluate_membership(
+    stored: &Value,
+    candidates: &[Value],
+    numeric_comparison_policy: NumericComparisonPolicy,
+    negated: bool,
+) -> MatchOutcome {
+    let mut unknown = false;
+    for candidate in candidates {
+        match values_equal(stored, candidate, numeric_comparison_policy) {
+            Some(true) => return MatchOutcome::from_bool(!negated),
+            Some(false) => {}
+            None => unknown = true,
+        }
+    }
+    if unknown {
+        MatchOutcome::Unknown
+    } else {
+        MatchOutcome::from_bool(negated)
+    }
 }
 
 /// Returns the concrete metadata value stored under `key`.
@@ -417,13 +463,17 @@ fn values_equal(
     left: &Value,
     right: &Value,
     numeric_comparison_policy: NumericComparisonPolicy,
-) -> bool {
+) -> Option<bool> {
     if left.is_numeric() && right.is_numeric() {
         return left
             .numeric_cmp(right, numeric_comparison_policy)
-            .is_ok_and(|ordering| ordering == Ordering::Equal);
+            .ok()
+            .map(|ordering| ordering == Ordering::Equal);
     }
-    left == right
+    if left.data_type() != right.data_type() {
+        return None;
+    }
+    Some(left == right)
 }
 
 /// Compares two numeric values or two strings.
