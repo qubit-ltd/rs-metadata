@@ -7,12 +7,12 @@
 // =============================================================================
 //! V4 wire representation of [`crate::FilterExpression`].
 
+#[cfg(feature = "json")]
+use qubit_value::WireBudget;
 use qubit_value::{
     Value,
     ValueWirePayloadV1,
 };
-#[cfg(feature = "json")]
-use qubit_value::WireBudget;
 use serde::{
     Deserialize,
     Serialize,
