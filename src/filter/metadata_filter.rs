@@ -164,7 +164,7 @@ impl MetadataFilter {
         wire_limits: crate::MetadataWireLimits,
         receiver_filter_limits: FilterLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        let mut budget = wire_limits.wire().begin_json(input)?;
+        let mut budget = wire_limits.wire().begin(input.len())?;
         let mut deserializer = serde_json::Deserializer::from_slice(input);
         let wire = MetadataFilterWire::deserialize(&mut deserializer)
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
