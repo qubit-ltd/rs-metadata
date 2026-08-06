@@ -7,6 +7,7 @@
 // =============================================================================
 //! V4 [`MetadataFilter`] envelope.
 
+#[cfg(feature = "json")]
 use qubit_value::WireBudget;
 use serde::{
     Deserialize,
@@ -44,6 +45,7 @@ pub(crate) struct MetadataFilterWire {
 
 impl MetadataFilterWire {
     /// Charges the raw filter expression against a shared wire budget.
+    #[cfg(feature = "json")]
     pub(crate) fn check_wire_budget(
         &self,
         budget: &mut WireBudget,

@@ -10,8 +10,9 @@
 use qubit_value::{
     Value,
     ValueWirePayloadV1,
-    WireBudget,
 };
+#[cfg(feature = "json")]
+use qubit_value::WireBudget;
 use serde::{
     Deserialize,
     Serialize,
@@ -120,6 +121,7 @@ pub(crate) enum FilterExpressionWire {
 impl FilterExpressionWire {
     /// Charges the raw expression tree and nested Value payloads against one
     /// shared wire budget.
+    #[cfg(feature = "json")]
     pub(crate) fn check_wire_budget(
         &self,
         budget: &mut WireBudget,

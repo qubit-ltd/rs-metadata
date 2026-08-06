@@ -7,6 +7,7 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
+#[cfg(feature = "json")]
 use serde::de::Error as _;
 use serde::{
     Deserialize,

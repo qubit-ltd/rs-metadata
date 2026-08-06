@@ -10,10 +10,9 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
-use qubit_value::{
-    Value,
-    WireBudget,
-};
+use qubit_value::Value;
+#[cfg(feature = "json")]
+use qubit_value::WireBudget;
 use serde::{
     Deserialize,
     Deserializer,
