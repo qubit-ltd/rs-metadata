@@ -99,8 +99,10 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns a deserialization error for malformed V1 data or an unsupported
-    /// version. Structured filter-limit and policy failures are preserved in
-    /// [`crate::MetadataWireDecodeError::Filter`].
+    /// version. The underlying deserializer's error type receives the
+    /// structured filter-limit or policy failure through `D::Error::custom`;
+    /// this generic API cannot return [`crate::MetadataWireDecodeError`]
+    /// directly.
     pub fn deserialize_with_filter_limits<'de, D>(
         deserializer: D,
         receiver_limits: FilterLimits,
@@ -126,8 +128,9 @@ impl MetadataFilter {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing or an invalid-JSON error for
-    /// malformed strict filter input or AST limits rejected after decoding.
+    /// Returns an input-size error before parsing, a nested-value limit error,
+    /// a structured filter-limit error, or `InvalidJson` for malformed strict
+    /// filter input.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(
@@ -155,8 +158,9 @@ impl MetadataFilter {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing or an invalid-JSON error for
-    /// syntax, strict-envelope, sender-limit, or receiver-limit failures.
+    /// Returns an input-size error before parsing, a nested-value limit error,
+    /// a structured filter-limit error in `Filter`, or `InvalidJson` for
+    /// syntax and strict-envelope failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],

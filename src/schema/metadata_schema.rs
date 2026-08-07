@@ -93,7 +93,8 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// Returns an input-size error before parsing, a structured resource-limit
+    /// error when decoded fields exceed their bounds, or `InvalidJson` for
     /// malformed strict schema input.
     #[cfg(feature = "json")]
     #[inline]
@@ -120,7 +121,8 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing or an invalid-JSON error for
+    /// Returns an input-size error before parsing, a structured resource-limit
+    /// error when decoded fields exceed their bounds, or `InvalidJson` for
     /// syntax or strict schema-envelope failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
