@@ -36,7 +36,7 @@ Metadata -> MetadataSchema -> 已存值校验
 
 ## 安装与 feature 选择
 
-使用默认 metadata、filter 和 schema API：
+使用核心 metadata API（crate 默认只启用核心功能）：
 
 ```toml
 [dependencies]
@@ -44,16 +44,29 @@ qubit-metadata = "0.10"
 qubit-datatype = "0.10"
 ```
 
-如果只需要 metadata 容器，可以关闭默认 feature：
+使用可选能力时请显式启用对应 feature：
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.10", features = ["schema", "json"] }
+qubit-datatype = "0.10"
+```
+
+`schema` 会包含 `filter`；不需要 schema 校验时可使用
+`features = ["filter"]`。crate 没有默认 feature，因此只依赖 metadata 容器时
+无需额外配置。
+
+crate 声明了 `filter`、`schema`、`chrono`、`big-integer`、`big-decimal`、`big-number`、
+`url`、`json` 和 `all`。`all` 会启用声明的可选值类型族和 JSON 支持。
+
+如果希望显式记录“只使用 metadata”的意图，可以关闭默认 feature：
 
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", default-features = false }
 ```
 
-crate 声明了 `filter`、`schema`、`chrono`、`big-integer`、`big-decimal`、`big-number`、
-`url`、`json` 和 `all`。`schema` 包含 `filter`；`all` 会启用声明的可选值类型族和 JSON
-支持。
+这与当前核心功能默认配置等价，同时能明确记录应用自身的 feature 边界。
 
 ## 核心工作流
 
@@ -248,6 +261,10 @@ Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知�
 expression 节点使用 `eq`、`ge`、`in`、`and`、`or`、`not`、`all` 和 `none` 等 tag。
 除非版本化格式本身是集成契约，否则不要手写这些结构，优先使用公开的 Serde 实现。
 
+Metadata 和 schema 的序列化器会拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8
+字节 key 的 map。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
+在限制以内。针对特定边界时，接收方控制的 JSON 限制可以进一步降低资源上限。
+
 ## 错误与诊断
 
 根据校验边界选择错误类型：
@@ -295,6 +312,7 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 - 有 schema 时使用 `MetadataFilter::build_checked`；只有在目标后端负责字段校验时才使用
   unchecked builder。
 - 将诊断格式化视为有界、脱敏的输出，不要把它当成任意用户 key 或错误消息的完整安全策略。
+- 序列化 metadata 和 schema map 时遵守 4,096 个条目及 256 字节 key 的 wire 限制。
 - 将 V1 Serde 表示放在集成边界后面，以便未来 wire version 变化时能够有意识地处理。
 
 ## 下一步

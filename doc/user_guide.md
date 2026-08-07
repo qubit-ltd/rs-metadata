@@ -40,7 +40,7 @@ The following sections implement this path incrementally.
 
 ## Installation and feature selection
 
-For the default metadata, filter, and schema APIs:
+For the core metadata API (the crate's default feature set is core-only):
 
 ```toml
 [dependencies]
@@ -48,16 +48,31 @@ qubit-metadata = "0.10"
 qubit-datatype = "0.10"
 ```
 
-For a metadata-only crate, disable default features:
+Enable optional layers explicitly when they are used:
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.10", features = ["schema", "json"] }
+qubit-datatype = "0.10"
+```
+
+The `schema` feature includes `filter`; use `features = ["filter"]` when
+schema validation is not needed. There are no default features, so a
+metadata-only dependency needs no additional configuration.
+
+The crate declares `filter`, `schema`, `chrono`, `big-integer`, `big-decimal`,
+`big-number`, `url`, `json`, and `all`. `all` enables the declared optional
+value families and JSON support.
+
+For an explicit metadata-only declaration, disable default features:
 
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", default-features = false }
 ```
 
-The crate declares `filter`, `schema`, `chrono`, `big-integer`, `big-decimal`,
-`big-number`, `url`, `json`, and `all`. `schema` includes `filter`; `all`
-enables the declared optional value families and JSON support.
+This is equivalent to the core-only default today and documents the intended
+feature boundary for applications that manage feature flags centrally.
 
 ## Core workflow
 
@@ -273,6 +288,12 @@ nodes use tags such as `eq`, `ge`, `in`, `and`, `or`, `not`, `all`, and `none`.
 Do not hand-author these structures unless the versioned format is part of your
 integration contract; prefer the public Serde implementations.
 
+Metadata and schema serializers reject maps larger than 4,096 entries or keys
+longer than 256 UTF-8 bytes. These hard wire bounds are shared with the
+default strict decoders; keep them in producer-side validation when generating
+interchange data. Receiver-controlled JSON limits may be lowered for a
+particular boundary.
+
 ## Errors and diagnostics
 
 Use the error type that matches the boundary being validated:
@@ -327,6 +348,8 @@ the caller must distinguish absence from a type mismatch or unset value.
   unchecked builder only when the target backend owns field validation.
 - Treat diagnostic formatting as bounded and redacted output, not a complete
   security policy for arbitrary user-defined keys or error messages.
+- Keep serialized metadata and schema maps within the 4,096-entry and
+  256-byte-key wire bounds enforced by the Serde implementations.
 - Keep the V1 Serde representation behind an integration boundary so a future
   wire-version change can be handled deliberately.
 
