@@ -163,3 +163,27 @@ fn test_not_equal_and_negated_equal_both_fail_closed_for_missing_value() {
     assert!(!filter(not_equal).matches(&metadata));
     assert!(!filter(negated_equal).matches(&metadata));
 }
+
+#[test]
+fn test_condition_debug_identifies_operator_without_exposing_value() {
+    let comparison = FilterExpression::builder()
+        .gt("score", 42_i64)
+        .build()
+        .expect("expression should build");
+    let existence = FilterExpression::builder()
+        .exists("verified")
+        .build()
+        .expect("expression should build");
+
+    let comparison_debug = format!("{comparison:?}");
+    let existence_debug = format!("{existence:?}");
+
+    assert_eq!(
+        comparison_debug,
+        "FilterExpression { node: Condition(Condition { operator: \"greater\", key: \"score\", value: <redacted> }) }"
+    );
+    assert_eq!(
+        existence_debug,
+        "FilterExpression { node: Condition(Condition { operator: \"exists\", key: \"verified\" }) }"
+    );
+}
