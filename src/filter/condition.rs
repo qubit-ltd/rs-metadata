@@ -356,11 +356,31 @@ impl Redact for Condition {
         _session: &RedactionSession<'_>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(
-            formatter,
-            "Condition {{ key: {:?}, value: <redacted> }}",
-            self.key()
-        )
+        let (operator, has_value) = match self {
+            Self::Equal { .. } => ("equal", true),
+            Self::NotEqual { .. } => ("not_equal", true),
+            Self::Less { .. } => ("less", true),
+            Self::LessEqual { .. } => ("less_equal", true),
+            Self::Greater { .. } => ("greater", true),
+            Self::GreaterEqual { .. } => ("greater_equal", true),
+            Self::In { .. } => ("in", true),
+            Self::NotIn { .. } => ("not_in", true),
+            Self::Exists { .. } => ("exists", false),
+            Self::NotExists { .. } => ("not_exists", false),
+        };
+        if has_value {
+            write!(
+                formatter,
+                "Condition {{ operator: \"{operator}\", key: {:?}, value: <redacted> }}",
+                self.key()
+            )
+        } else {
+            write!(
+                formatter,
+                "Condition {{ operator: \"{operator}\", key: {:?} }}",
+                self.key()
+            )
+        }
     }
 }
 
