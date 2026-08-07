@@ -53,12 +53,12 @@ provider or domain model.
 qubit-metadata = "0.10"
 ```
 
-The default feature set includes `schema`, which includes `filter`. For a
-metadata-only dependency, disable default features:
+The default feature set provides the core metadata container only. Enable
+`schema` when you need schema validation; it includes `filter`:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", default-features = false }
+qubit-metadata = { version = "0.10", features = ["schema"] }
 ```
 
 Optional features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
@@ -95,8 +95,10 @@ operands directly.
   concrete field type, even though filter schema checks accept compatible
   numeric representations.
 - Default JSON decoding limits input bytes, entry counts, schema field counts,
-  key length, and Value wire structure. Generic Serde deserialization is not a
-  substitute for caller-controlled limits on untrusted outer protocols.
+  key length, and Value wire structure. Generic Serde deserialization also
+  enforces hard map-entry and key-length bounds, but it is not a substitute for
+  caller-controlled input-byte and Value-structure limits on untrusted outer
+  protocols.
 - Redacted `Debug` and `Display` output is intended for diagnostics, not as a
   confidentiality boundary for arbitrary user keys or error text.
 

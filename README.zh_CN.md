@@ -47,12 +47,12 @@ metadata 容器不依赖任何存储 provider 或具体领域模型。
 qubit-metadata = "0.10"
 ```
 
-默认 feature 集包含 `schema`，而 `schema` 会包含 `filter`。如果只需要 metadata 容器，
-可以关闭默认 feature：
+默认 feature 集只提供核心 metadata 容器。需要 schema 校验时启用 `schema`；它会包含
+`filter`：
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", default-features = false }
+qubit-metadata = { version = "0.10", features = ["schema"] }
 ```
 
 可选 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和
@@ -81,7 +81,8 @@ qubit-metadata = { version = "0.10", default-features = false }
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
 - 默认 JSON 解码会限制输入字节数、条目数、schema 字段数、key 长度和 Value wire 结构。
-  对不可信外层协议，通用 Serde 反序列化不能替代调用方控制的资源限制。
+  通用 Serde 反序列化也会执行 map 条目数和 key 长度硬限制，但对于不可信外层协议，
+  它不能替代调用方对输入字节数和 Value wire 结构的资源控制。
 - 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。
 
 ## 延伸阅读
