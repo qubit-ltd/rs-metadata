@@ -12,9 +12,9 @@ use std::{
     fmt,
 };
 
-use crate::MetadataWireLimitKind;
 #[cfg(feature = "filter")]
 use crate::MetadataError;
+use crate::MetadataWireLimitKind;
 use qubit_value::ValueWireDecodeError;
 
 /// Failure returned by a bounded metadata JSON decoding API.

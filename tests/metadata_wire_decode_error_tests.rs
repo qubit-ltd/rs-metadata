@@ -51,9 +51,6 @@ fn test_metadata_wire_decode_error_preserves_filter_contract_failure() {
         qubit_metadata::MetadataError::MissingFilterExpression,
     );
 
-    assert_eq!(
-        error.to_string(),
-        "Metadata filter requires an expression"
-    );
+    assert_eq!(error.to_string(), "Metadata filter requires an expression");
     assert!(std::error::Error::source(&error).is_some());
 }

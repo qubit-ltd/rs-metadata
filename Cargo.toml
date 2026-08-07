@@ -59,6 +59,7 @@ serde_json = "1.0"
 [[bench]]
 name = "metadata_benchmarks"
 harness = false
+required-features = ["filter"]
 
 [profile.release]
 opt-level = 3
