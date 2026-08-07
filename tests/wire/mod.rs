@@ -12,4 +12,5 @@ mod metadata_schema_wire_v1_tests;
 #[cfg(all(feature = "json", feature = "schema"))]
 mod metadata_wire_limits_tests;
 mod metadata_wire_v1_tests;
+mod metadata_wire_values_ref_tests;
 mod strict_string_map_tests;

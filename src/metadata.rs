@@ -27,7 +27,6 @@ use qubit_value::WireBudget;
 use qubit_value::{
     Value,
     ValueRef,
-    ValueWirePayloadRefV1,
     ValueWirePayloadV1,
 };
 #[cfg(feature = "json")]
@@ -40,7 +39,6 @@ use serde::{
     de::{
         self,
     },
-    ser::SerializeMap,
 };
 
 #[cfg(feature = "schema")]
@@ -52,6 +50,7 @@ use crate::constants::{
 use crate::wire::{
     METADATA_WIRE_VERSION_V1,
     MetadataWireV1,
+    MetadataWireValuesRef,
     StrictStringMap,
 };
 #[cfg(feature = "json")]
@@ -112,8 +111,9 @@ impl Metadata {
     /// # Errors
     ///
     /// Returns [`crate::MetadataWireDecodeError::InputTooLarge`] before parsing
-    /// when `input` exceeds the default limit, or `InvalidJson` when strict
-    /// metadata JSON decoding fails.
+    /// when `input` exceeds the default limit. It returns `LimitExceeded` or
+    /// `Value` when decoded resources exceed their bounds, and `InvalidJson`
+    /// for syntax, envelope, or scalar wire-value failures.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(
@@ -138,8 +138,9 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing or an invalid-JSON error for
-    /// syntax, strict-envelope, or metadata wire-value failures.
+    /// Returns an input-size error before parsing, a structured resource or
+    /// nested-value limit error when decoded data exceeds its bounds, or
+    /// `InvalidJson` for syntax, strict-envelope, or scalar wire-value failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -729,25 +730,6 @@ impl Serialize for Metadata {
             values: MetadataWireValuesRef(&self.0),
         }
         .serialize(serializer)
-    }
-}
-
-/// Borrowed map adapter that validates and serializes V1 value payloads.
-struct MetadataWireValuesRef<'a>(&'a BTreeMap<String, Value>);
-
-impl Serialize for MetadataWireValuesRef<'_> {
-    /// Serializes each value as a validated borrowed V1 payload.
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut values = serializer.serialize_map(Some(self.0.len()))?;
-        for (key, value) in self.0 {
-            let payload = ValueWirePayloadRefV1::try_from(value)
-                .map_err(<S::Error as serde::ser::Error>::custom)?;
-            values.serialize_entry(key, &payload)?;
-        }
-        values.end()
     }
 }
 
