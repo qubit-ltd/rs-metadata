@@ -128,6 +128,24 @@ fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entr
 }
 
 #[test]
+fn test_decode_json_slice_with_limits_honors_expanded_map_bounds() {
+    let mut metadata = Metadata::new();
+    for index in 0..=4_096 {
+        let key = format!("key-{index}");
+        metadata.set(&key, index as i64);
+    }
+    let input = serde_json::to_vec(&metadata)
+        .expect("expanded metadata should serialize");
+    let limits = MetadataWireLimits::new(input.len())
+        .with_wire(WireLimits::new(input.len()).with_max_map_entries(4_097))
+        .with_max_metadata_entries(4_097);
+
+    let decoded = Metadata::decode_json_slice_with_limits(&input, limits)
+        .expect("expanded metadata should fit expanded limits");
+    assert_eq!(decoded, metadata);
+}
+
+#[test]
 fn test_decode_json_slice_with_limits_applies_shared_value_budget() {
     let metadata = Metadata::new().with("values", serde_json::json!([1, 2]));
     let input =
