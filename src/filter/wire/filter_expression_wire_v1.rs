@@ -5,7 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! V4 wire representation of [`crate::FilterExpression`].
+//! V1 wire representation of [`crate::FilterExpression`].
 
 #[cfg(feature = "json")]
 use qubit_value::WireBudget;
@@ -27,10 +27,10 @@ use crate::{
     MetadataResult,
 };
 
-/// One v4 expression node.
+/// One V1 expression node.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-pub(crate) enum FilterExpressionWire {
+pub(crate) enum FilterExpressionWireV1 {
     /// Constant true.
     All,
     /// Constant false.
@@ -104,21 +104,21 @@ pub(crate) enum FilterExpressionWire {
     /// Logical AND with at least two children.
     And {
         /// Child expressions.
-        children: Vec<FilterExpressionWire>,
+        children: Vec<FilterExpressionWireV1>,
     },
     /// Logical OR with at least two children.
     Or {
         /// Child expressions.
-        children: Vec<FilterExpressionWire>,
+        children: Vec<FilterExpressionWireV1>,
     },
     /// Logical negation.
     Not {
         /// Expression to negate.
-        expression: Box<FilterExpressionWire>,
+        expression: Box<FilterExpressionWireV1>,
     },
 }
 
-impl FilterExpressionWire {
+impl FilterExpressionWireV1 {
     /// Charges the raw expression tree and nested Value payloads against one
     /// shared wire budget.
     #[cfg(feature = "json")]
@@ -191,13 +191,23 @@ impl FilterExpressionWire {
         self.validate_limits_at(limits, 1, &mut node_count)
     }
 
-    /// Converts a v4 node into an expression.
+    /// Converts a V1 node into an expression.
     ///
     /// # Errors
     ///
     /// Returns an invalid-expression error for AND/OR groups with fewer than
     /// two children, or a hard-limit error for oversized trees.
     pub(crate) fn into_expression(self) -> MetadataResult<FilterExpression> {
+        let expression = self.into_expression_unchecked()?;
+        expression.validate_limits(FilterLimits::MAX)?;
+        Ok(expression)
+    }
+
+    /// Converts a node recursively without repeatedly traversing the partial
+    /// expression tree for hard-limit validation.
+    fn into_expression_unchecked(
+        self,
+    ) -> MetadataResult<FilterExpression> {
         match self {
             Self::All => Ok(FilterExpression::match_all()),
             Self::None => Ok(FilterExpression::match_none()),
@@ -242,12 +252,22 @@ impl FilterExpressionWire {
             Self::NotExists { key } => {
                 FilterExpression::condition(Condition::NotExists { key })
             }
-            Self::Not { expression } => expression.into_expression()?.try_not(),
+            Self::Not { expression } => {
+                Ok(expression.into_expression_unchecked()?.negated_unchecked())
+            }
             Self::And { children } => {
-                Self::combine(children, FilterExpression::try_and, "and")
+                Self::combine(
+                    children,
+                    FilterExpression::and_unchecked,
+                    "and",
+                )
             }
             Self::Or { children } => {
-                Self::combine(children, FilterExpression::try_or, "or")
+                Self::combine(
+                    children,
+                    FilterExpression::or_unchecked,
+                    "or",
+                )
             }
         }
     }
@@ -339,10 +359,7 @@ impl FilterExpressionWire {
     /// Folds a non-trivial Boolean group into an expression.
     fn combine(
         children: Vec<Self>,
-        combine: fn(
-            FilterExpression,
-            FilterExpression,
-        ) -> MetadataResult<FilterExpression>,
+        combine: fn(FilterExpression, FilterExpression) -> FilterExpression,
         operator: &'static str,
     ) -> MetadataResult<FilterExpression> {
         let mut children = children.into_iter();
@@ -360,10 +377,15 @@ impl FilterExpressionWire {
                 ),
             });
         };
-        let mut expression =
-            combine(first.into_expression()?, second.into_expression()?)?;
+        let mut expression = combine(
+            first.into_expression_unchecked()?,
+            second.into_expression_unchecked()?,
+        );
         for child in children {
-            expression = combine(expression, child.into_expression()?)?;
+            expression = combine(
+                expression,
+                child.into_expression_unchecked()?,
+            );
         }
         Ok(expression)
     }

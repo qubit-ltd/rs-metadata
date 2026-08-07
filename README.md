@@ -264,12 +264,12 @@ filter into their native query language.
 
 ### 5) Versioned filter serde format
 
-Serialized `MetadataFilter` values use the strict v4 wire format with
+Serialized `MetadataFilter` values use the strict V1 wire format with
 `version`, `expression`, `options`, and `limits` fields. Every expression node
 uses a `kind` tag. Condition data is inline in nodes such as `eq`, `ge`, `in`,
 and `not_exists`; Boolean nodes use `and`, `or`, `not`, `all`, and `none`.
 Policy enum values use lowercase underscore names such as `exact` and
-`approximate`. Unknown fields, malformed nodes, and versions other than v4 are
+`approximate`. Unknown fields, malformed nodes, and versions other than V1 are
 rejected. `Metadata` and `MetadataSchema` separately use strict v1 envelopes;
 their unknown fields and unsupported versions are also rejected.
 

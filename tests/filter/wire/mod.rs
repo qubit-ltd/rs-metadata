@@ -7,9 +7,9 @@
 // =============================================================================
 //! Filter wire-format test modules.
 
-mod filter_expression_wire_ref_tests;
-mod filter_expression_wire_tests;
-mod filter_limits_wire_tests;
+mod filter_expression_wire_v1_ref_tests;
+mod filter_expression_wire_v1_tests;
+mod filter_limits_wire_v1_tests;
 mod metadata_filter_serde_tests;
-mod metadata_filter_wire_ref_tests;
-mod metadata_filter_wire_tests;
+mod metadata_filter_wire_v1_ref_tests;
+mod metadata_filter_wire_v1_tests;

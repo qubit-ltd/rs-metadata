@@ -93,7 +93,7 @@ fn test_receiver_accepts_expression_at_exact_boundary() {
 fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
     let encoded = r#"
         {
-            "version": 4,
+            "version": 1,
             "expression": {
                 "kind": "or",
                 "children": [
@@ -124,7 +124,7 @@ fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
 fn test_sender_rejects_raw_nodes_elided_by_normalization() {
     let encoded = r#"
         {
-            "version": 4,
+            "version": 1,
             "expression": {
                 "kind": "or",
                 "children": [
@@ -162,7 +162,7 @@ fn test_metadata_filter_wire_contains_expression() {
         .unwrap();
     let encoded = serde_json::to_value(filter).unwrap();
 
-    assert_eq!(encoded["version"], json!(4));
+    assert_eq!(encoded["version"], json!(1));
     assert_eq!(encoded["expression"]["kind"], json!("exists"));
     assert_eq!(
         encoded["limits"]["max_depth"],

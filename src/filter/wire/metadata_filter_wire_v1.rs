@@ -5,7 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! V4 [`MetadataFilter`] envelope.
+//! V1 [`MetadataFilter`] envelope.
 
 #[cfg(feature = "json")]
 use qubit_value::WireBudget;
@@ -15,8 +15,8 @@ use serde::{
 };
 
 use super::{
-    FilterExpressionWire,
-    FilterLimitsWire,
+    FilterExpressionWireV1,
+    FilterLimitsWireV1,
 };
 use crate::{
     FilterLimits,
@@ -27,23 +27,23 @@ use crate::{
 };
 
 /// Current serialized metadata-filter format version.
-pub(crate) const METADATA_FILTER_WIRE_VERSION: u8 = 4;
+pub(crate) const METADATA_FILTER_WIRE_VERSION_V1: u8 = 1;
 
-/// Strict v4 serialized envelope for a metadata filter.
+/// Strict V1 serialized envelope for a metadata filter.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct MetadataFilterWire {
+pub(crate) struct MetadataFilterWireV1 {
     /// Wire-format version.
     version: u8,
     /// Root Boolean expression.
-    expression: FilterExpressionWire,
+    expression: FilterExpressionWireV1,
     /// Evaluation options.
     options: FilterMatchOptions,
     /// Expression limits declared by the sender.
-    limits: FilterLimitsWire,
+    limits: FilterLimitsWireV1,
 }
 
-impl MetadataFilterWire {
+impl MetadataFilterWireV1 {
     /// Charges the raw filter expression against a shared wire budget.
     #[cfg(feature = "json")]
     pub(crate) fn check_wire_budget(
@@ -64,11 +64,11 @@ impl MetadataFilterWire {
         self,
         receiver_limits: FilterLimits,
     ) -> MetadataResult<MetadataFilter> {
-        if self.version != METADATA_FILTER_WIRE_VERSION {
+        if self.version != METADATA_FILTER_WIRE_VERSION_V1 {
             return Err(MetadataError::InvalidFilterExpression {
                 message: format!(
                     "unsupported MetadataFilter wire format version {}; expected {}",
-                    self.version, METADATA_FILTER_WIRE_VERSION
+                    self.version, METADATA_FILTER_WIRE_VERSION_V1
                 ),
             });
         }

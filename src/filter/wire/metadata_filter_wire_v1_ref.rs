@@ -5,43 +5,43 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Borrowed V4 wire envelope for [`crate::MetadataFilter`].
+//! Borrowed V1 wire envelope for [`crate::MetadataFilter`].
 
 use qubit_value::ValueWireEncodeError;
 use serde::Serialize;
 
 use super::{
-    FilterExpressionWireRef,
-    FilterLimitsWire,
+    FilterExpressionWireV1Ref,
+    FilterLimitsWireV1,
 };
 use crate::MetadataFilter;
 
-use super::metadata_filter_wire::METADATA_FILTER_WIRE_VERSION;
+use super::metadata_filter_wire_v1::METADATA_FILTER_WIRE_VERSION_V1;
 
-/// Borrowed V4 metadata-filter envelope used only for serialization.
+/// Borrowed V1 metadata-filter envelope used only for serialization.
 #[derive(Serialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct MetadataFilterWireRef<'a> {
+pub(crate) struct MetadataFilterWireV1Ref<'a> {
     /// Wire-format version.
     version: u8,
     /// Root Boolean expression.
-    expression: FilterExpressionWireRef<'a>,
+    expression: FilterExpressionWireV1Ref<'a>,
     /// Evaluation options.
     options: crate::FilterMatchOptions,
     /// Expression limits declared by the sender.
-    limits: FilterLimitsWire,
+    limits: FilterLimitsWireV1,
 }
 
-impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireRef<'a> {
+impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
     type Error = ValueWireEncodeError;
 
-    /// Converts a filter into a borrowed strict v4 envelope.
+    /// Converts a filter into a borrowed strict V1 envelope.
     fn try_from(filter: &'a MetadataFilter) -> Result<Self, Self::Error> {
         Ok(Self {
-            version: METADATA_FILTER_WIRE_VERSION,
-            expression: FilterExpressionWireRef::try_from(filter.expression())?,
+            version: METADATA_FILTER_WIRE_VERSION_V1,
+            expression: FilterExpressionWireV1Ref::try_from(filter.expression())?,
             options: filter.options(),
-            limits: FilterLimitsWire::from(filter.limits()),
+            limits: FilterLimitsWireV1::from(filter.limits()),
         })
     }
 }

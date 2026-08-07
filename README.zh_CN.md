@@ -241,11 +241,11 @@ schema 校验 filter 时，任意非 NaN 数值表示都与任意数值字段兼
 
 ### 5) 版本化 filter 序列化格式
 
-`MetadataFilter` 使用严格的 v4 wire format，包含 `version`、`expression`、
+`MetadataFilter` 使用严格的 V1 wire format，包含 `version`、`expression`、
 `options` 和 `limits` 字段。每个表达式节点使用 `kind` tag；`eq`、`ge`、`in`、
 `not_exists` 等条件数据直接内联在节点中，布尔节点使用 `and`、`or`、`not`、
 `all` 和 `none`。`options` 中的策略枚举使用 lowercase underscore 值，例如
-`exact` 和 `approximate`。未知字段、畸形节点和非 v4 版本都会被拒绝。
+`exact` 和 `approximate`。未知字段、畸形节点和非 V1 版本都会被拒绝。
 `Metadata` 与 `MetadataSchema` 分别使用严格的 v1 envelope，同样拒绝未知字段和
 不支持的版本。
 

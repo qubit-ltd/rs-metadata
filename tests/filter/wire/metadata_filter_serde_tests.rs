@@ -76,7 +76,7 @@ fn test_complex_metadata_filter_serde_preserves_wire_shape() {
 
     let encoded =
         serde_json::to_value(&filter).expect("filter should serialize");
-    assert_eq!(encoded["version"], serde_json::json!(4));
+    assert_eq!(encoded["version"], serde_json::json!(1));
     assert_eq!(encoded["expression"]["kind"], "or");
     assert!(encoded["expression"]["children"].is_array());
     assert!(encoded.to_string().contains("\"payload\""));
