@@ -34,7 +34,7 @@ name = "qubit_metadata"
 all-features = true
 
 [features]
-default = ["schema"]
+default = []
 filter = []
 schema = ["filter"]
 chrono = ["qubit-value/chrono"]
