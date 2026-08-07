@@ -7,8 +7,12 @@
 // =============================================================================
 //! Unit tests for [`qubit_metadata::MetadataFilterBuilder`] default behavior.
 use qubit_metadata::{
-    FilterExpression, FilterExpressionView, FilterLimits, FilterMatchOptions,
-    MetadataError, MetadataFilter,
+    FilterExpression,
+    FilterExpressionView,
+    FilterLimits,
+    FilterMatchOptions,
+    MetadataError,
+    MetadataFilter,
 };
 
 #[test]
