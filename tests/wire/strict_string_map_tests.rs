@@ -11,10 +11,7 @@
 use qubit_datatype::DataType;
 use qubit_metadata::Metadata;
 #[cfg(feature = "schema")]
-use qubit_metadata::{
-    MetadataField,
-    MetadataSchema,
-};
+use qubit_metadata::{MetadataField, MetadataSchema};
 
 #[test]
 fn test_metadata_rejects_duplicate_value_key() {
@@ -24,6 +21,22 @@ fn test_metadata_rejects_duplicate_value_key() {
             "values": {
                 "name": { "scalar": { "string": "alice" } },
                 "name": { "scalar": { "string": "bob" } }
+            }
+        }
+    "#;
+
+    let error = serde_json::from_str::<Metadata>(encoded).unwrap_err();
+    assert!(error.to_string().contains("duplicate map key 'name'"));
+}
+
+#[test]
+fn test_metadata_rejects_duplicate_key_before_decoding_duplicate_value() {
+    let encoded = r#"
+        {
+            "version": 1,
+            "values": {
+                "name": { "scalar": { "string": "alice" } },
+                "name": { "invalid": }
             }
         }
     "#;
