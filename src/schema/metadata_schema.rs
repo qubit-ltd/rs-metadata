@@ -18,8 +18,12 @@ use serde::{
     Deserializer,
     Serialize,
     Serializer,
-    de,
+    de::{
+        self,
+    },
 };
+#[cfg(feature = "json")]
+use serde::de::DeserializeSeed;
 
 use crate::schema::{
     MetadataField,
@@ -32,6 +36,8 @@ use crate::wire::{
     MetadataSchemaWireV1,
     StrictStringMap,
 };
+#[cfg(feature = "json")]
+use crate::wire::{MetadataSchemaWireV1Seed, StrictStringMapSeed};
 use crate::{
     Metadata,
     MetadataError,
@@ -115,8 +121,33 @@ impl MetadataSchema {
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         let mut budget = wire_limits.wire().begin(input.len())?;
-        let schema: Self = serde_json::from_slice(input)
+        let mut deserializer = serde_json::Deserializer::from_slice(input);
+        let wire = MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
+            wire_limits.max_schema_fields(),
+            wire_limits.max_key_bytes(),
+        ))
+        .deserialize(&mut deserializer)
+        .map_err(|error| {
+            crate::MetadataWireDecodeError::from_strict_map_error(
+                error,
+                crate::MetadataWireLimitKind::SchemaFields,
+            )
+        })?;
+        deserializer
+            .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
+            return Err(crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(
+                    "unsupported MetadataSchema wire format version",
+                ),
+            ));
+        }
+        let schema = Self::new(
+            wire.fields.into_inner(),
+            wire.unknown_metadata_field_policy,
+            wire.unknown_filter_field_policy,
+        );
         schema.validate_wire_limits(wire_limits, &mut budget)?;
         Ok(schema)
     }

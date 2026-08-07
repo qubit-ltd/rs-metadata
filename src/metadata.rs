@@ -35,9 +35,13 @@ use serde::{
     Deserializer,
     Serialize,
     Serializer,
-    de,
+    de::{
+        self,
+    },
     ser::SerializeMap,
 };
+#[cfg(feature = "json")]
+use serde::de::DeserializeSeed;
 
 #[cfg(feature = "schema")]
 use crate::MetadataSchema;
@@ -46,6 +50,8 @@ use crate::wire::{
     MetadataWireV1,
     StrictStringMap,
 };
+#[cfg(feature = "json")]
+use crate::wire::{MetadataWireV1Seed, StrictStringMapSeed};
 use crate::{
     MetadataError,
     MetadataResult,
@@ -133,8 +139,27 @@ impl Metadata {
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         let mut budget = wire_limits.wire().begin(input.len())?;
-        let metadata: Self = serde_json::from_slice(input)
+        let mut deserializer = serde_json::Deserializer::from_slice(input);
+        let wire = MetadataWireV1Seed::new(StrictStringMapSeed::new(
+            wire_limits.max_metadata_entries(),
+            wire_limits.max_key_bytes(),
+        ))
+        .deserialize(&mut deserializer)
+        .map_err(|error| {
+            crate::MetadataWireDecodeError::from_strict_map_error(
+                error,
+                crate::MetadataWireLimitKind::MetadataEntries,
+            )
+        })?;
+        deserializer
+            .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let metadata = Self(Self::from_wire(wire)
+            .map_err(|error| {
+                crate::MetadataWireDecodeError::InvalidJson(
+                    <serde_json::Error as serde::de::Error>::custom(error),
+                )
+            })?);
         metadata.validate_wire_limits(wire_limits, &mut budget)?;
         Ok(metadata)
     }
@@ -715,8 +740,17 @@ impl<'de> Deserialize<'de> for Metadata {
                 "unsupported Metadata wire format version",
             ));
         }
-        let values = wire
-            .values
+        let values = Self::from_wire(wire).map_err(de::Error::custom)?;
+        Ok(Self(values))
+    }
+}
+
+impl Metadata {
+    /// Converts a decoded wire envelope into scalar metadata values.
+    fn from_wire(
+        wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>>,
+    ) -> Result<BTreeMap<String, Value>, &'static str> {
+        wire.values
             .into_inner()
             .into_iter()
             .map(|(key, value)| {
@@ -724,14 +758,9 @@ impl<'de> Deserialize<'de> for Metadata {
                     .into_container()
                     .into_scalar()
                     .map(|value| (key, value))
-                    .map_err(|_| {
-                        de::Error::custom(
-                            "metadata values must use scalar V1 payloads",
-                        )
-                    })
+                    .map_err(|_| "metadata values must use scalar V1 payloads")
             })
-            .collect::<Result<_, _>>()?;
-        Ok(Self(values))
+            .collect()
     }
 }
 

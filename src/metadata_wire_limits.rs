@@ -11,19 +11,23 @@ use crate::{
     MetadataWireDecodeError,
     MetadataWireLimitKind,
 };
+use crate::wire::{
+    STRICT_STRING_MAP_MAX_ENTRIES,
+    STRICT_STRING_MAP_MAX_KEY_BYTES,
+};
 use qubit_value::WireLimits;
 
 /// Maximum JSON input size used by the default bounded decoding APIs.
 pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
 
 /// Maximum decoded metadata entries accepted by the default JSON APIs.
-pub const DEFAULT_MAX_METADATA_ENTRIES: usize = 4_096;
+pub const DEFAULT_MAX_METADATA_ENTRIES: usize = STRICT_STRING_MAP_MAX_ENTRIES;
 
 /// Maximum decoded metadata-schema fields accepted by the default JSON APIs.
-pub const DEFAULT_MAX_SCHEMA_FIELDS: usize = 4_096;
+pub const DEFAULT_MAX_SCHEMA_FIELDS: usize = STRICT_STRING_MAP_MAX_ENTRIES;
 
 /// Maximum UTF-8 byte length of one decoded metadata or schema key.
-pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
+pub const DEFAULT_MAX_KEY_BYTES: usize = STRICT_STRING_MAP_MAX_KEY_BYTES;
 
 /// Immutable resource limits applied to JSON wire decoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
