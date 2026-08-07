@@ -7,19 +7,12 @@
 // =============================================================================
 //! A strict string-keyed map for wire-format decoding.
 
-use std::{
-    collections::BTreeMap,
-    fmt,
-};
+use std::{collections::btree_map::Entry, collections::BTreeMap, fmt};
 
 use serde::{
-    Deserialize,
     de::DeserializeSeed,
-    de::{
-        self,
-        MapAccess,
-        Visitor,
-    },
+    de::{self, MapAccess, Visitor},
+    Deserialize,
 };
 
 /// Hard maximum number of entries accepted by strict metadata maps.
@@ -48,10 +41,7 @@ pub(crate) struct StrictStringMapSeed<V> {
 
 impl<V> StrictStringMapSeed<V> {
     /// Creates a bounded strict-map seed.
-    pub(crate) const fn new(
-        max_entries: usize,
-        max_key_bytes: usize,
-    ) -> Self {
+    pub(crate) const fn new(max_entries: usize, max_key_bytes: usize) -> Self {
         Self {
             max_entries,
             max_key_bytes,
@@ -144,11 +134,17 @@ where
                             self.max_entries,
                         )));
                     }
-                    let value = map.next_value::<V>()?;
-                    if values.insert(key.clone(), value).is_some() {
-                        return Err(de::Error::custom(format!(
-                            "duplicate map key '{key}'"
-                        )));
+                    match values.entry(key) {
+                        Entry::Occupied(entry) => {
+                            return Err(de::Error::custom(format!(
+                                "duplicate map key '{}'",
+                                entry.key()
+                            )));
+                        }
+                        Entry::Vacant(entry) => {
+                            let value = map.next_value::<V>()?;
+                            entry.insert(value);
+                        }
                     }
                 }
                 Ok(StrictStringMap(values))
