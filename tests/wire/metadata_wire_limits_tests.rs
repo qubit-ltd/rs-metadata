@@ -8,17 +8,10 @@
 //! Tests for the bounded public JSON decoding APIs.
 
 use qubit_metadata::{
-    FilterLimits,
-    Metadata,
-    MetadataFilter,
-    MetadataSchema,
-    MetadataWireDecodeError,
-    MetadataWireLimits,
+    FilterLimits, Metadata, MetadataFilter, MetadataSchema,
+    MetadataWireDecodeError, MetadataWireLimits,
 };
-use qubit_value::{
-    ValueWireDecodeError,
-    WireLimits,
-};
+use qubit_value::{ValueWireDecodeError, WireLimits};
 
 #[test]
 fn test_decode_json_slice_with_limits_rejects_oversized_input_before_parsing() {
@@ -76,8 +69,88 @@ fn test_decode_json_slice_with_limits_accepts_the_exact_byte_boundary() {
 }
 
 #[test]
-fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entries()
- {
+fn test_decode_json_slice_success_paths_for_metadata_schema_and_filter() {
+    let metadata = Metadata::new().with("name", "alice");
+    let metadata_input =
+        serde_json::to_vec(&metadata).expect("metadata should serialize");
+    assert_eq!(
+        Metadata::decode_json_slice(&metadata_input)
+            .expect("metadata should decode"),
+        metadata
+    );
+
+    let schema = MetadataSchema::builder()
+        .required("name", qubit_datatype::DataType::String)
+        .build()
+        .expect("schema should build");
+    let schema_input =
+        serde_json::to_vec(&schema).expect("schema should serialize");
+    assert_eq!(
+        MetadataSchema::decode_json_slice(&schema_input)
+            .expect("schema should decode"),
+        schema
+    );
+
+    let filter = MetadataFilter::builder()
+        .expression(
+            qubit_metadata::FilterExpression::builder()
+                .exists("name")
+                .build()
+                .expect("expression should build"),
+        )
+        .build()
+        .expect("filter should build");
+    let filter_input =
+        serde_json::to_vec(&filter).expect("filter should serialize");
+    assert_eq!(
+        MetadataFilter::decode_json_slice(&filter_input)
+            .expect("filter should decode"),
+        filter
+    );
+}
+
+#[test]
+fn test_decode_json_slice_rejects_malformed_metadata_envelopes() {
+    for input in [
+        br#"{"values":{}}"#.as_slice(),
+        br#"{"version":1}"#.as_slice(),
+        br#"{"version":1,"version":1,"values":{}}"#.as_slice(),
+        br#"{"version":1,"values":{},"values":{}}"#.as_slice(),
+        br#"{"version":1,"values":{},"extra":true}"#.as_slice(),
+        br#"null"#.as_slice(),
+    ] {
+        assert!(
+            Metadata::decode_json_slice(input).is_err(),
+            "metadata envelope should be rejected: {}",
+            String::from_utf8_lossy(input)
+        );
+    }
+}
+
+#[test]
+fn test_decode_json_slice_rejects_malformed_schema_envelopes() {
+    for input in [
+        br#"{"fields":{},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"fields":{},"unknown_filter_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"fields":{},"unknown_metadata_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"version":1,"fields":{},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"fields":{},"fields":{},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"fields":{},"unknown_metadata_field_policy":"reject","unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#.as_slice(),
+        br#"{"version":1,"fields":{},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject","extra":true}"#.as_slice(),
+        br#"null"#.as_slice(),
+    ] {
+        assert!(
+            MetadataSchema::decode_json_slice(input).is_err(),
+            "schema envelope should be rejected: {}",
+            String::from_utf8_lossy(input)
+        );
+    }
+}
+
+#[test]
+fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entries(
+) {
     let metadata = Metadata::new().with("first", 1_i64).with("second", 2_i64);
     let metadata_json = serde_json::to_vec(&metadata).unwrap();
     let metadata_limits = MetadataWireLimits::new(metadata_json.len())

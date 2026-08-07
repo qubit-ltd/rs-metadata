@@ -10,12 +10,11 @@
 use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
+#[cfg(feature = "filter")]
+use qubit_metadata::FilterLimitKind;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
-use qubit_metadata::{
-    Metadata,
-    MetadataError,
-};
+use qubit_metadata::{Metadata, MetadataError};
 use qubit_value::Value;
 
 mod support;
@@ -313,6 +312,20 @@ fn test_with_checked_rejects_unknown_field() {
 }
 
 #[test]
+#[cfg(feature = "schema")]
+fn test_with_checked_accepts_schema_compatible_value() {
+    let schema = MetadataSchema::builder()
+        .required("known", DataType::String)
+        .build()
+        .expect("schema should build");
+    let metadata = Metadata::new()
+        .with_checked(&schema, "known", "value")
+        .expect("compatible value should be accepted");
+
+    assert_eq!(metadata.get_str("known"), Some("value"));
+}
+
+#[test]
 fn test_get_raw_and_set_value_support_mutable_chaining() {
     let mut meta = Metadata::new();
     meta.set("raw", Value::String("stored".to_string()))
@@ -374,6 +387,28 @@ fn test_metadata_error_display_messages_are_human_readable() {
         mismatch.to_string(),
         "Metadata key 'answer' expected int64 but actual string: invalid type"
     );
+
+    #[cfg(feature = "filter")]
+    {
+        assert_eq!(
+            MetadataError::InvalidFilterLimit {
+                kind: FilterLimitKind::Depth,
+                value: 0,
+                maximum: 64,
+            }
+            .to_string(),
+            "Metadata filter Depth limit 0 is outside 1..=64"
+        );
+        assert_eq!(
+            MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Nodes,
+                value: 3,
+                maximum: 2,
+            }
+            .to_string(),
+            "Metadata filter Nodes value 3 exceeds the maximum of 2"
+        );
+    }
 
     let _error_ref: &dyn std::error::Error = &mismatch;
 }

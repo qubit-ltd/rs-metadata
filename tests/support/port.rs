@@ -8,12 +8,8 @@
 //! A downstream conversion target used by metadata tests.
 
 use qubit_datatype::{
-    DataConversionError,
-    DataConversionOptions,
-    DataConversionTarget,
-    DataConverter,
-    DataType,
-    DataTypeOf,
+    DataConversionError, DataConversionOptions, DataConversionTarget,
+    DataConverter, DataType, DataTypeOf,
 };
 
 /// Strongly typed port number used as a downstream conversion target.
