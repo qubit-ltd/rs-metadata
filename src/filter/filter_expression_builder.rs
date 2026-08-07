@@ -41,18 +41,21 @@ impl FilterExpressionBuilder {
     /// # Errors
     ///
     /// Returns [`MetadataError::InvalidFilterExpression`] for empty or invalid
-    /// groups.
+    /// groups, or [`MetadataError::FilterLimitExceeded`] for oversized trees.
     #[inline]
     pub fn build(self) -> MetadataResult<FilterExpression> {
         if let Some(error) = self.error {
             return Err(error);
         }
-        self.expression
+        let expression = self
+            .expression
             .ok_or(MetadataError::InvalidFilterExpression {
                 message:
                     "a filter expression must contain at least one condition"
                         .to_string(),
-            })
+            })?;
+        expression.validate_limits(FilterLimits::MAX)?;
+        Ok(expression)
     }
 
     /// Appends `key == value` with logical AND.
@@ -67,7 +70,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 value: to_value(value),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -83,7 +86,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 value: to_value(value),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -99,7 +102,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 value: to_value(value),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -115,7 +118,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 value: to_value(value),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -131,7 +134,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 value: to_value(value),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -147,7 +150,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 value: to_value(value),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -164,7 +167,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 values: collect_values(values),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -181,7 +184,7 @@ impl FilterExpressionBuilder {
                 key: key.to_string(),
                 values: collect_values(values),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -193,7 +196,7 @@ impl FilterExpressionBuilder {
             Condition::Exists {
                 key: key.to_string(),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -205,7 +208,7 @@ impl FilterExpressionBuilder {
             Condition::NotExists {
                 key: key.to_string(),
             },
-            FilterExpression::and,
+            FilterExpression::and_unchecked,
         )
     }
 
@@ -228,7 +231,11 @@ impl FilterExpressionBuilder {
     where
         F: FnOnce(Self) -> Self,
     {
-        self.combine_group("AND", build(Self::new()), FilterExpression::and)
+        self.combine_group(
+            "AND",
+            build(Self::new()),
+            FilterExpression::and_unchecked,
+        )
     }
 
     /// Appends a grouped expression with logical OR.
@@ -266,7 +273,11 @@ impl FilterExpressionBuilder {
     where
         F: FnOnce(Self) -> Self,
     {
-        self.combine_group("OR", build(Self::new()), FilterExpression::or)
+        self.combine_group(
+            "OR",
+            build(Self::new()),
+            FilterExpression::or_unchecked,
+        )
     }
 
     /// Negates the expression built so far.
@@ -302,7 +313,7 @@ impl FilterExpressionBuilder {
         self
     }
 
-    /// Adds one condition with hard-limit validation.
+    /// Adds one condition, deferring hard-limit validation to [`Self::build`].
     fn append(
         mut self,
         condition: Condition,
@@ -322,15 +333,12 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, next),
             None => next,
         };
-        if let Err(error) = expression.validate_limits(FilterLimits::MAX) {
-            self.error = Some(error);
-        } else {
-            self.expression = Some(expression);
-        }
+        self.expression = Some(expression);
         self
     }
 
-    /// Combines a non-empty nested group with hard-limit validation.
+    /// Combines a non-empty nested group and defers hard-limit validation to
+    /// [`Self::build`].
     fn combine_group(
         mut self,
         operator: &'static str,
@@ -355,11 +363,7 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, group),
             None => group,
         };
-        if let Err(error) = expression.validate_limits(FilterLimits::MAX) {
-            self.error = Some(error);
-        } else {
-            self.expression = Some(expression);
-        }
+        self.expression = Some(expression);
         self
     }
 }

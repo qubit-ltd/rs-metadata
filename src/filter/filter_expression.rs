@@ -66,7 +66,7 @@ impl FilterExpression {
     /// expression exceeds library hard limits.
     #[inline]
     pub fn try_and(self, other: Self) -> MetadataResult<Self> {
-        let expression = Self::and(self, other);
+        let expression = Self::and_unchecked(self, other);
         expression.validate_limits(FilterLimits::MAX)?;
         Ok(expression)
     }
@@ -79,7 +79,7 @@ impl FilterExpression {
     /// expression exceeds library hard limits.
     #[inline]
     pub fn try_or(self, other: Self) -> MetadataResult<Self> {
-        let expression = Self::or(self, other);
+        let expression = Self::or_unchecked(self, other);
         expression.validate_limits(FilterLimits::MAX)?;
         Ok(expression)
     }
@@ -92,7 +92,7 @@ impl FilterExpression {
     /// expression exceeds library hard limits.
     #[inline]
     pub fn try_not(self) -> MetadataResult<Self> {
-        let expression = self.negated();
+        let expression = self.negated_unchecked();
         expression.validate_limits(FilterLimits::MAX)?;
         Ok(expression)
     }
@@ -173,7 +173,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A simplified AND expression.
-    pub(crate) fn and(left: Self, right: Self) -> Self {
+    pub(crate) fn and_unchecked(left: Self, right: Self) -> Self {
         if left.is_false() || right.is_false() {
             return Self::false_expression();
         }
@@ -196,7 +196,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A simplified OR expression.
-    pub(crate) fn or(left: Self, right: Self) -> Self {
+    pub(crate) fn or_unchecked(left: Self, right: Self) -> Self {
         if left.is_true() || right.is_true() {
             return Self::true_expression();
         }
@@ -230,7 +230,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A simplified negated expression.
-    pub(crate) fn negated(self) -> Self {
+    pub(crate) fn negated_unchecked(self) -> Self {
         match self.node {
             FilterExpressionNode::True => Self::false_expression(),
             FilterExpressionNode::False => Self::true_expression(),
