@@ -5,7 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Borrowed V4 wire representation of [`crate::FilterExpression`].
+//! Borrowed V1 wire representation of [`crate::FilterExpression`].
 
 use qubit_value::{
     ValueWireEncodeError,
@@ -19,10 +19,10 @@ use crate::{
     FilterExpressionView,
 };
 
-/// Borrowed V4 expression node used only for serialization.
+/// Borrowed V1 expression node used only for serialization.
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub(crate) enum FilterExpressionWireRef<'a> {
+pub(crate) enum FilterExpressionWireV1Ref<'a> {
     /// Constant true.
     All,
     /// Constant false.
@@ -96,24 +96,24 @@ pub(crate) enum FilterExpressionWireRef<'a> {
     /// Logical AND with at least two children.
     And {
         /// Child expressions.
-        children: Vec<FilterExpressionWireRef<'a>>,
+        children: Vec<FilterExpressionWireV1Ref<'a>>,
     },
     /// Logical OR with at least two children.
     Or {
         /// Child expressions.
-        children: Vec<FilterExpressionWireRef<'a>>,
+        children: Vec<FilterExpressionWireV1Ref<'a>>,
     },
     /// Logical negation.
     Not {
         /// Expression to negate.
-        expression: Box<FilterExpressionWireRef<'a>>,
+        expression: Box<FilterExpressionWireV1Ref<'a>>,
     },
 }
 
-impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireRef<'a> {
+impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
     type Error = ValueWireEncodeError;
 
-    /// Converts an expression into a borrowed v4 serialization node.
+    /// Converts an expression into a borrowed V1 serialization node.
     fn try_from(expression: &'a FilterExpression) -> Result<Self, Self::Error> {
         Ok(match expression.view() {
             FilterExpressionView::True => Self::All,

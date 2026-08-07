@@ -13,12 +13,12 @@ use serde::{
 };
 
 /// Current serialized metadata format version.
-pub(crate) const METADATA_WIRE_VERSION: u8 = 1;
+pub(crate) const METADATA_WIRE_VERSION_V1: u8 = 1;
 
 /// Strict metadata envelope with a generic borrowed or owned value map.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct MetadataWire<T> {
+pub(crate) struct MetadataWireV1<T> {
     /// Wire-format version.
     pub(crate) version: u8,
     /// Borrowed or owned metadata values.

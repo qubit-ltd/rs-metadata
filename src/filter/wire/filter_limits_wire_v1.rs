@@ -20,7 +20,7 @@ use crate::{
 /// Serializable filter resource limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct FilterLimitsWire {
+pub(crate) struct FilterLimitsWireV1 {
     /// Maximum expression depth.
     max_depth: usize,
     /// Maximum expression nodes.
@@ -31,7 +31,7 @@ pub(crate) struct FilterLimitsWire {
     max_key_bytes: usize,
 }
 
-impl FilterLimitsWire {
+impl FilterLimitsWireV1 {
     /// Converts this wire value into validated limits.
     ///
     /// # Errors
@@ -47,7 +47,7 @@ impl FilterLimitsWire {
     }
 }
 
-impl From<FilterLimits> for FilterLimitsWire {
+impl From<FilterLimits> for FilterLimitsWireV1 {
     /// Converts validated limits into their wire representation.
     #[inline(always)]
     fn from(limits: FilterLimits) -> Self {

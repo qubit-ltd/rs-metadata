@@ -13,6 +13,8 @@ use std::{
 };
 
 use crate::MetadataWireLimitKind;
+#[cfg(feature = "filter")]
+use crate::MetadataError;
 use qubit_value::ValueWireDecodeError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
@@ -38,6 +40,9 @@ pub enum MetadataWireDecodeError {
     },
     /// A nested Value or JSON payload exceeded a shared structural limit.
     Value(ValueWireDecodeError),
+    /// A decoded metadata-filter envelope violated its structured contract.
+    #[cfg(feature = "filter")]
+    Filter(MetadataError),
     /// JSON syntax or strict wire-envelope decoding failed after the byte limit
     /// check.
     InvalidJson(
@@ -66,6 +71,8 @@ impl fmt::Display for MetadataWireDecodeError {
                 "metadata JSON {kind:?} value {value} exceeds the limit of {maximum}"
             ),
             Self::Value(error) => fmt::Display::fmt(error, formatter),
+            #[cfg(feature = "filter")]
+            Self::Filter(error) => fmt::Display::fmt(error, formatter),
             Self::InvalidJson(error) => fmt::Display::fmt(error, formatter),
         }
     }
@@ -78,6 +85,8 @@ impl Error for MetadataWireDecodeError {
             Self::InputTooLarge { .. } => None,
             Self::LimitExceeded { .. } => None,
             Self::Value(error) => Some(error),
+            #[cfg(feature = "filter")]
+            Self::Filter(error) => Some(error),
             Self::InvalidJson(error) => Some(error),
         }
     }

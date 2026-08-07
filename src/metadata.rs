@@ -42,8 +42,8 @@ use serde::{
 #[cfg(feature = "schema")]
 use crate::MetadataSchema;
 use crate::wire::{
-    METADATA_WIRE_VERSION,
-    MetadataWire,
+    METADATA_WIRE_VERSION_V1,
+    MetadataWireV1,
     StrictStringMap,
 };
 use crate::{
@@ -675,8 +675,8 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        MetadataWire {
-            version: METADATA_WIRE_VERSION,
+        MetadataWireV1 {
+            version: METADATA_WIRE_VERSION_V1,
             values: MetadataWireValuesRef(&self.0),
         }
         .serialize(serializer)
@@ -708,9 +708,9 @@ impl<'de> Deserialize<'de> for Metadata {
     where
         D: Deserializer<'de>,
     {
-        let wire: MetadataWire<StrictStringMap<ValueWirePayloadV1>> =
-            MetadataWire::deserialize(deserializer)?;
-        if wire.version != METADATA_WIRE_VERSION {
+        let wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>> =
+            MetadataWireV1::deserialize(deserializer)?;
+        if wire.version != METADATA_WIRE_VERSION_V1 {
             return Err(de::Error::custom(
                 "unsupported Metadata wire format version",
             ));

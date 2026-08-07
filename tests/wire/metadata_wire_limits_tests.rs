@@ -146,3 +146,22 @@ fn test_decode_json_slice_with_limits_applies_shared_value_budget() {
         ))
     ));
 }
+
+#[test]
+fn test_decode_json_slice_with_limits_preserves_structured_filter_errors() {
+    let mut filter = serde_json::to_value(MetadataFilter::all()).unwrap();
+    filter["limits"]["max_nodes"] = serde_json::json!(0);
+    let input = serde_json::to_vec(&filter).unwrap();
+    let limits = MetadataWireLimits::new(input.len());
+
+    assert!(matches!(
+        MetadataFilter::decode_json_slice_with_limits(
+            &input,
+            limits,
+            FilterLimits::MAX,
+        ),
+        Err(MetadataWireDecodeError::Filter(
+            qubit_metadata::MetadataError::InvalidFilterLimit { .. }
+        ))
+    ));
+}

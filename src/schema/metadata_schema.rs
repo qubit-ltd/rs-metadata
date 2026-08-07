@@ -28,8 +28,8 @@ use crate::schema::{
     UnknownMetadataFieldPolicy,
 };
 use crate::wire::{
-    METADATA_SCHEMA_WIRE_VERSION,
-    MetadataSchemaWire,
+    METADATA_SCHEMA_WIRE_VERSION_V1,
+    MetadataSchemaWireV1,
     StrictStringMap,
 };
 use crate::{
@@ -332,8 +332,8 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        MetadataSchemaWire {
-            version: METADATA_SCHEMA_WIRE_VERSION,
+        MetadataSchemaWireV1 {
+            version: METADATA_SCHEMA_WIRE_VERSION_V1,
             fields: &self.fields,
             unknown_metadata_field_policy: self.unknown_metadata_field_policy,
             unknown_filter_field_policy: self.unknown_filter_field_policy,
@@ -348,9 +348,9 @@ impl<'de> Deserialize<'de> for MetadataSchema {
     where
         D: Deserializer<'de>,
     {
-        let wire: MetadataSchemaWire<StrictStringMap<MetadataField>> =
-            MetadataSchemaWire::deserialize(deserializer)?;
-        if wire.version != METADATA_SCHEMA_WIRE_VERSION {
+        let wire: MetadataSchemaWireV1<StrictStringMap<MetadataField>> =
+            MetadataSchemaWireV1::deserialize(deserializer)?;
+        if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
             return Err(de::Error::custom(
                 "unsupported MetadataSchema wire format version",
             ));

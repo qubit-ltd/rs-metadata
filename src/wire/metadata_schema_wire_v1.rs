@@ -18,12 +18,12 @@ use crate::{
 };
 
 /// Current serialized metadata-schema format version.
-pub(crate) const METADATA_SCHEMA_WIRE_VERSION: u8 = 1;
+pub(crate) const METADATA_SCHEMA_WIRE_VERSION_V1: u8 = 1;
 
 /// Strict schema envelope with a generic borrowed or owned field map.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct MetadataSchemaWire<F> {
+pub(crate) struct MetadataSchemaWireV1<F> {
     /// Wire-format version.
     pub(crate) version: u8,
     /// Borrowed or owned metadata field definitions.

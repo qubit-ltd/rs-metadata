@@ -7,14 +7,14 @@
 // =============================================================================
 //! Wire-format support for metadata filters.
 
-mod filter_expression_wire;
-mod filter_expression_wire_ref;
-mod filter_limits_wire;
-mod metadata_filter_wire;
-mod metadata_filter_wire_ref;
+mod filter_expression_wire_v1;
+mod filter_expression_wire_v1_ref;
+mod filter_limits_wire_v1;
+mod metadata_filter_wire_v1;
+mod metadata_filter_wire_v1_ref;
 
-pub(crate) use filter_expression_wire::FilterExpressionWire;
-pub(crate) use filter_expression_wire_ref::FilterExpressionWireRef;
-pub(crate) use filter_limits_wire::FilterLimitsWire;
-pub(crate) use metadata_filter_wire::MetadataFilterWire;
-pub(crate) use metadata_filter_wire_ref::MetadataFilterWireRef;
+pub(crate) use filter_expression_wire_v1::FilterExpressionWireV1;
+pub(crate) use filter_expression_wire_v1_ref::FilterExpressionWireV1Ref;
+pub(crate) use filter_limits_wire_v1::FilterLimitsWireV1;
+pub(crate) use metadata_filter_wire_v1::MetadataFilterWireV1;
+pub(crate) use metadata_filter_wire_v1_ref::MetadataFilterWireV1Ref;

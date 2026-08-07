@@ -43,3 +43,17 @@ fn test_metadata_wire_decode_error_describes_decoded_resource_limit() {
     );
     assert!(std::error::Error::source(&error).is_none());
 }
+
+#[test]
+#[cfg(all(feature = "json", feature = "filter"))]
+fn test_metadata_wire_decode_error_preserves_filter_contract_failure() {
+    let error = MetadataWireDecodeError::Filter(
+        qubit_metadata::MetadataError::MissingFilterExpression,
+    );
+
+    assert_eq!(
+        error.to_string(),
+        "Metadata filter requires an expression"
+    );
+    assert!(std::error::Error::source(&error).is_some());
+}
