@@ -7,303 +7,89 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![English Document](https://img.shields.io/badge/Document-English-blue.svg)](README.md)
 
-适用于 Rust 的通用、保留具体值类型的元数据模型。
+`qubit-metadata` 是面向 Rust 应用的类型明确、有序 metadata 模型，适合在不削弱
+核心数据模型类型的前提下附加可扩展字段。它在一个简洁的 API 中提供类型转换读取、
+可选 schema、可组合 filter 以及严格的 Serde wire format。
 
-## 概述
+## 一个真实场景
 
-`qubit-metadata` 提供 `Metadata` 类型，用于给数据对象附加类型明确的扩展字段，
-避免把所有辅助字段都写死进核心结构体。典型场景包括：
-
-- 文档入库：为每个分片保留 `file_id`、`chunk_index`、`language`、`source`、`confidence`。
-- 向量检索：保存 `tenant_id`、`doc_type`、`created_at`、`score`、`acl_group` 等后续会进入向量数据库 metadata column 或过滤条件的字段。
-- 消息与事件链路：透传 `trace_id`、`request_id`、`tenant_id`、`route`、重试信息等上下文。
-- 外部服务集成：记录模型版本、延迟、计费标签、请求编号等便于诊断和统计的紧凑字段。
-
-`Metadata` 底层使用 `qubit_value::Value`，因此标量类型是明确的：`i64` 和
-`u32` 不会混成一个模糊的 number，`f64` 和 `String` 也不会混淆。如果确实需要嵌套
-结构，可以显式存 `Value::Json`；但常见的文档元信息、向量库 metadata、链路上下文，
-通常都是扁平字段集合。
-`Value::Unset` 会保留声明类型，但不表示具体 metadata 值：类型化读取返回
-`MetadataError::MissingValue`，required schema 字段拒绝它，filter 则将其视为缺失 key。
-
-## 设计目标
-
-- **类型明确**：用 `qubit_value::Value` 保留具体运行时类型。
-- **构造方便**：支持可变链式 `set()`、返回旧值的 `insert()` 和取得所有权的
-  链式 `with()`。
-- **可选 schema**：用 `MetadataSchema` 校验字段名、必填字段和具体 `DataType`。
-- **过滤器 builder**：通过 builder 构造不可变的 `MetadataFilter`。
-- **序列化友好**：metadata、schema、filter 都支持 `serde`，便于配置、存储和跨服务传输。
-
-## 特性
-
-### 1) 类型化 metadata 容器
-
-`Metadata` 是有序的 `String -> Value` 映射。`get` 和 `try_get` 会将存储值转换为
-请求的目标类型；需要不经转换检查具体运行时 `Value` 时使用 `get_raw`。它支持链式 `set`、返回旧值的
-`insert`、`try_get`、带 schema 校验的 `set_checked` / `insert_checked` /
-`with_checked`、链式 `with`、迭代、合并、保留和
-`BTreeMap<String, Value>` 转换。
-
-发生 key 冲突时，`merge` 和 `merged` 都以右侧 `other` 的值覆盖左侧值。
-
-启用 `json` feature 后，`decode_json_slice` 和
-`decode_json_slice_with_limits` 会在 Serde 解析前限制完整不可信 JSON 输入，并拒绝
-超出配置的 metadata 条目数、schema 字段数或 key 长度的解码结果。默认限制为：输入
-1,048,576 字节、metadata 条目 4,096 个、schema 字段 4,096 个、每个 key 256 字节。
-通用 Serde 反序列化只适合外层协议已经限制输入的场景。Metadata 的 `Debug` 和
-`Display` 均按默认策略限制长度并脱敏；普通外层 key 中存储的 `Value` 键控结构也会递归脱敏。
-默认策略并不是任意自定义 key 或错误文本的机密性边界；将不可信 metadata 写入日志前，
-调用方应使用显式的脱敏策略。
+假设文档处理流水线会把分片发送到向量数据库。分片类型可以把稳定字段保留在自身的
+结构体中，把随数据来源或索引后端变化的字段放入 `Metadata`：
 
 ```rust
 use qubit_metadata::Metadata;
 
-let meta = Metadata::new()
-    .with("author", "alice")
-    .with("priority", 3_i64)
-    .with("reviewed", true);
-
-assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
-assert_eq!(meta.try_get::<i64>("priority").unwrap(), 3);
-```
-
-可变写入可以链式调用且不会移动 metadata；需要旧值时使用 `insert()`：
-
-```rust
-use qubit_metadata::Metadata;
-
-let mut meta = Metadata::new();
-meta.set("author", "alice").set("priority", 3_i64);
-let previous = meta.insert("priority", 4_i64);
-assert!(previous.is_some());
-```
-
-`Value::Unset` 记录声明类型，但不提供具体值：
-
-| 操作 | 键缺失 | 存储 `Unset` | 具体值 |
-|---|---|---|---|
-| `contains_key` | `false` | `true` | `true` |
-| `get_raw` | `None` | `Some(Unset)` | `Some(value)` |
-| `data_type` | `None` | 声明类型 | 具体类型 |
-| `try_get` | `MissingKey` | `MissingValue` | 值或转换错误 |
-| required schema 字段 | 拒绝 | 拒绝 | 正常校验 |
-| filter `exists` | `false` | `false` | `true` |
-| 比较类 filter | 不匹配 | 不匹配 | 正常比较 |
-
-### 2) 用 schema 做校验和存储规划
-
-`MetadataSchema` 使用 `qubit_datatype::DataType`。当存储后端要求预先声明 metadata 字段时，
-schema 可以直接作为字段定义来源；在构造 filter 时，也可以提前校验字段、操作符和
-过滤值类型是否匹配。`UnknownMetadataFieldPolicy` 和
-`UnknownFilterFieldPolicy` 相互独立：允许未声明 metadata 字段并不会同时允许未经校验的
-filter 字段。两者默认都拒绝未知字段；只有
-`UnknownFilterFieldPolicy::AllowUnchecked` 才会接受未知 filter 字段。
-
-```rust
-use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataSchema};
-
-let schema = MetadataSchema::builder()
-    .required("tenant_id", DataType::String)
-    .required("score", DataType::Int64)
-    .optional("source", DataType::String)
-    .build()
-    .expect("schema should build");
-
-let meta = Metadata::new()
+let metadata = Metadata::new()
     .with("tenant_id", "acme")
-    .with("score", 42_i64);
+    .with("document_id", "doc-42")
+    .with("chunk_index", 3_i64)
+    .with("language", "en");
 
-schema.validate(&meta).unwrap();
+let tenant: Option<String> = metadata.get("tenant_id");
+assert_eq!(tenant.as_deref(), Some("acme"));
+assert_eq!(metadata.try_get::<i64>("chunk_index").unwrap(), 3);
 ```
 
-### 3) builder 构造不可变 filter
+存储值通过 `qubit_value::Value` 保留具体运行时类型。当后端需要固定字段和查询校验时，
+可以增加 `MetadataSchema`，并据此构造 `MetadataFilter`。完整场景以及错误诊断、wire
+限制见[中文用户手册](doc/user_guide.zh_CN.md)。
 
-`FilterExpression::builder()` 负责构造必需的布尔表达式，
-`MetadataFilter::builder()` 则把表达式与匹配选项和资源限制绑定。调用 `build()` 后得到
-`Result<MetadataFilter, MetadataError>`。如果已有 schema，可以用 `build_checked(&schema)`
-在构建时校验字段是否存在、操作符是否适用于字段类型、过滤值类型是否兼容。schema 级校验会
-返回聚合错误，调用方可以一次拿到所有相互独立的问题。
+## 为什么需要这个项目
 
-```rust
-use qubit_datatype::DataType;
-use qubit_metadata::{FilterExpression, Metadata, MetadataFilter, MetadataSchema};
-
-let schema = MetadataSchema::builder()
-    .required("status", DataType::String)
-    .required("score", DataType::Int64)
-    .build()
-    .expect("schema should build");
-
-let expression = FilterExpression::builder()
-    .eq("status", "active")
-    .ge("score", 10)
-    .build()
-    .unwrap();
-let filter = MetadataFilter::builder()
-    .expression(expression)
-    .build_checked(&schema)
-    .unwrap();
-
-let meta = Metadata::new()
-    .with("status", "active")
-    .with("score", 42_i64);
-
-assert!(filter.matches(&meta));
-```
-
-### 4) 过滤 DSL
-
-| 方法 | 含义 |
-|------|------|
-| `eq` / `ne` | 相等 / 不相等 |
-| `gt` / `ge` / `lt` / `le` | 数值范围或字符串字典序比较 |
-| `exists` / `not_exists` | 具体值存在 / 不存在 |
-| `in_set` / `not_in_set` | 集合包含 / 排除 |
-| `and_group` / `or_group` | 追加分组子表达式 |
-| `not` | 对当前表达式取反 |
-
-未指定连接词的谓词按 AND 连接。分组子表达式使用闭包构造。闭包会收到一个新的 builder，
-闭包返回的表达式会作为一个整体追加到外层表达式中：
-
-```rust
-use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
-
-let expression = FilterExpression::builder()
-    .eq("status", "active")
-    .and_group(|group| {
-        group.ge("score", 80).or_group(|alternative| alternative.eq("tag", "rust"))
-    })
-    .build()
-    .unwrap();
-let filter = MetadataFilter::builder()
-    .expression(expression)
-    .build()
-    .unwrap();
-
-let meta = Metadata::new()
-    .with("status", "active")
-    .with("score", 42_i64)
-    .with("tag", "rust");
-
-assert!(filter.matches(&meta));
-```
-
-上面的表达式等价于：
-
-```text
-status == "active" AND (score >= 80 OR tag == "rust")
-```
-
-如果需要对已构造的表达式取反，可以使用 `FilterExpression::try_not()`：
-
-```rust
-let expression = FilterExpression::builder()
-    .eq("status", "active")
-    .build()
-    .unwrap()
-    .try_not()
-    .unwrap();
-let filter = MetadataFilter::builder()
-    .expression(expression)
-    .build()
-    .unwrap();
-```
-
-缺失键和 `Value::Unset` 使用 fail-closed 三值逻辑。没有具体存储值的比较结果为
-unknown；`not` 不会把 unknown 变成 true，AND/OR 会继续传播 unknown，最终只有确定的
-true 才会让 `matches()` 返回 `true`。因此 `ne(key, value)` 与
-`not(eq(key, value))` 等价，并且都不会匹配缺失值或 unset 值。数值相等、集合成员判断
-和范围谓词中的混合数值比较策略由 `NumericComparisonPolicy` 控制。
-
-分组表达式必须至少包含一个谓词。例如 `and_group(|group| group)` 会被 `build()` 拒绝，
-因为空分组通常代表调用方构造条件时漏传了约束。
-
-空集合是允许的。`in_set("key", [])` 不匹配任何 metadata 对象。
-`not_in_set("key", [])` 只在 `key` 存储具体值时匹配；键缺失或值为 unset 时仍为
-unknown，因此不匹配。
-
-比较和集合操作数必须是 V1 wire format 能表示的具体值。构造或解码 filter 时会拒绝
-`Value::Unset`、`NaN` 以及无穷浮点数。
-
-schema 校验 filter 时，任意非 NaN 数值表示都与任意数值字段兼容；这项兼容性检查与
-运行时比较策略无关。实际匹配时，`Exact` 不经舍入地比较表示出来的数学值。
-`Approximate` 会单独排序原生无穷值；有限原生浮点数参与时，它尝试把两个操作数投影为
-有限 `f64`，任一操作数无法完成这种投影时回退到精确比较。投影比较取决于当前操作数对
-且不满足传递性，因此不得用于排序、分组、实现 `Ord` 或有序键。实际调用
-`MetadataSchema::validate(&metadata)` 校验 metadata 时仍然严格：metadata 中存储的值
-必须和 schema 声明的具体字段类型一致。
-
-通过 `MetadataFilter::expression()` 和 `FilterExpression::view()` 可以读取完整布尔
-结构。只读 view 会暴露 condition、AND、OR、NOT、true、false 节点，但不会暴露私有
-构造表示，因此存储 provider 可以安全地把 filter 翻译为自己的查询语言。
-
-### 5) 版本化 filter 序列化格式
-
-`MetadataFilter` 使用严格的 V1 wire format，包含 `version`、`expression`、
-`options` 和 `limits` 字段。每个表达式节点使用 `kind` tag；`eq`、`ge`、`in`、
-`not_exists` 等条件数据直接内联在节点中，布尔节点使用 `and`、`or`、`not`、
-`all` 和 `none`。`options` 中的策略枚举使用 lowercase underscore 值，例如
-`exact` 和 `approximate`。未知字段、畸形节点和非 V1 版本都会被拒绝。
-`Metadata` 与 `MetadataSchema` 分别使用严格的 v1 envelope，同样拒绝未知字段和
-不支持的版本。
-
-## 错误处理
-
-当调用方需要明确区分“键不存在”和“类型不匹配”时，使用 `try_get` 或 schema 校验。
-单字段访问返回 `MetadataError`；schema 级校验返回 `MetadataValidationError`，
-可以通过 `issues()` 拿到本轮收集到的全部 `MetadataError`。转换诊断会保留结构化
-失败原因，但不会嵌入被拒绝的原始值：
-
-```rust
-use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataError};
-
-let meta = Metadata::new().with("answer", "forty-two");
-
-match meta.try_get::<i64>("answer") {
-    Err(MetadataError::TypeMismatch { expected, actual, .. }) => {
-        assert_eq!(expected, DataType::Int64);
-        assert_eq!(actual, DataType::String);
-    }
-    other => panic!("unexpected result: {other:?}"),
-}
-```
+普通 map 虽然方便，却会把许多重要决策分散给每个调用方：字段允许什么值、字段是否必填、
+filter 如何分组，以及不可信序列化输入如何限制。本 crate 集中表达这些决策，同时让核心
+metadata 容器不依赖任何存储 provider 或具体领域模型。
 
 ## 安装
-
-在 `Cargo.toml` 中添加：
 
 ```toml
 [dependencies]
 qubit-metadata = "0.10"
-# 使用 schema 数据类型或数值比较策略时需要直接依赖。
-qubit-datatype = "0.10"
-# 直接构造 Value 操作数时需要依赖。
-qubit-value = "0.10"
 ```
 
-### Feature flags
-
-默认 feature 集保留完整的 metadata、filter 和 schema API。只需要 `Metadata`
-的消费者可以关闭默认 feature；这会排除 `filter` 和 `schema` 模块：
+默认 feature 集包含 `schema`，而 `schema` 会包含 `filter`。如果只需要 metadata 容器，
+可以关闭默认 feature：
 
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", default-features = false }
 ```
 
-如需在默认 API 之外启用富类型族：
+可选 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和
+`all`。声明 schema 字段类型时直接依赖 `qubit-datatype`；直接构造 `Value` 操作数时依赖
+`qubit-value`。
 
-```toml
-[dependencies]
-qubit-metadata = { version = "0.10", features = ["chrono", "json"] }
-```
+## 提供的能力
 
-可用 feature 包括 `filter`、`schema`（会启用 `filter`）、`json`、`chrono`、
-`big-integer`、`big-decimal`、`big-number`、`url` 和 `all`。`filter` 提供过滤表达式、匹配和
-Serde wire 支持；`json` 额外启用有界 JSON 解码及 JSON 类型 metadata。
+- `Metadata`：有序的 `String -> Value` 存储，支持 `get`、带诊断的 `try_get`、`set`、
+  `insert`、`with`、迭代、合并和 schema 校验写入。
+- `MetadataSchema`：必填/可选字段定义、具体 `qubit_datatype::DataType` 校验，以及相互
+  独立的未知 metadata 字段和未知 filter 字段策略。
+- `FilterExpression` 与 `MetadataFilter`：不可变布尔表达式，支持相等、范围、集合、存在性、
+  分组、取反、匹配选项和表达式资源限制。
+- metadata、schema、filter 的严格 V1 Serde 格式。启用 `json` 后，还可使用带资源限制的
+  JSON slice 解码。
+- 结构化的 `MetadataError`、校验错误和 wire 解码错误，帮助调用方区分键缺失、unset 值、
+  类型不匹配、非法表达式以及输入限制失败。
+
+## 重要边界
+
+- `get` 会有意把键缺失和转换失败都折叠为 `None`；需要判断具体原因时使用 `try_get`。
+- `Value::Unset` 会记录声明类型，但不是具体值。required schema 字段会拒绝它，filter
+  谓词也不会将它视为匹配。
+- filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。
+- 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
+  数值表示。
+- 默认 JSON 解码会限制输入字节数、条目数、schema 字段数、key 长度和 Value wire 结构。
+  对不可信外层协议，通用 Serde 反序列化不能替代调用方控制的资源限制。
+- 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。
+
+## 延伸阅读
+
+- [中文用户手册](doc/user_guide.zh_CN.md)
+- [English User Guide](doc/user_guide.md)
+- [Rust API 文档](https://docs.rs/qubit-metadata)
+- [English README](README.md)
 
 ## 测试
 
@@ -325,13 +111,12 @@ cargo test --all-features
 
 Copyright (c) 2025 - 2026. Haixing Hu. All rights reserved.
 
-本项目基于 Apache License 2.0 授权。完整许可证文本请参阅
-[LICENSE](LICENSE)。
+本项目基于 Apache License 2.0 授权。完整许可证文本请参阅 [LICENSE](LICENSE)。
 
 ## 贡献
 
-欢迎贡献。请遵循 Rust API 指南，及时更新公共 API 文档与测试，并在提交
-Pull Request 前运行 `./align-ci.sh`格式化代码，运行`./ci-check.sh`对齐CI要求。
+欢迎贡献。请遵循 Rust API 指南，及时更新公共 API 文档与测试，并在提交 Pull Request 前运行
+`./align-ci.sh` 格式化代码，运行 `./ci-check.sh` 满足 CI 要求。
 
 ## 作者
 
