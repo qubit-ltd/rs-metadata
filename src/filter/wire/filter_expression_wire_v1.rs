@@ -205,9 +205,7 @@ impl FilterExpressionWireV1 {
 
     /// Converts a node recursively without repeatedly traversing the partial
     /// expression tree for hard-limit validation.
-    fn into_expression_unchecked(
-        self,
-    ) -> MetadataResult<FilterExpression> {
+    fn into_expression_unchecked(self) -> MetadataResult<FilterExpression> {
         match self {
             Self::All => Ok(FilterExpression::match_all()),
             Self::None => Ok(FilterExpression::match_none()),
@@ -256,18 +254,10 @@ impl FilterExpressionWireV1 {
                 Ok(expression.into_expression_unchecked()?.negated_unchecked())
             }
             Self::And { children } => {
-                Self::combine(
-                    children,
-                    FilterExpression::and_unchecked,
-                    "and",
-                )
+                Self::combine(children, FilterExpression::and_unchecked, "and")
             }
             Self::Or { children } => {
-                Self::combine(
-                    children,
-                    FilterExpression::or_unchecked,
-                    "or",
-                )
+                Self::combine(children, FilterExpression::or_unchecked, "or")
             }
         }
     }
@@ -382,10 +372,8 @@ impl FilterExpressionWireV1 {
             second.into_expression_unchecked()?,
         );
         for child in children {
-            expression = combine(
-                expression,
-                child.into_expression_unchecked()?,
-            );
+            expression =
+                combine(expression, child.into_expression_unchecked()?);
         }
         Ok(expression)
     }

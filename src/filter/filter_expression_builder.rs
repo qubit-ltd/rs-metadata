@@ -47,9 +47,9 @@ impl FilterExpressionBuilder {
         if let Some(error) = self.error {
             return Err(error);
         }
-        let expression = self
-            .expression
-            .ok_or(MetadataError::InvalidFilterExpression {
+        let expression =
+            self.expression
+                .ok_or(MetadataError::InvalidFilterExpression {
                 message:
                     "a filter expression must contain at least one condition"
                         .to_string(),
