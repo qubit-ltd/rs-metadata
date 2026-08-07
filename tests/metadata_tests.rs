@@ -14,7 +14,10 @@ use qubit_datatype::DataType;
 use qubit_metadata::FilterLimitKind;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
-use qubit_metadata::{Metadata, MetadataError};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+};
 use qubit_value::Value;
 
 mod support;

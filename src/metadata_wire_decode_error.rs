@@ -122,8 +122,8 @@ impl MetadataWireDecodeError {
         entry_kind: MetadataWireLimitKind,
     ) -> Self {
         let message = error.to_string();
-        if let Some(rest) = message
-            .strip_prefix(STRICT_STRING_MAP_ENTRY_LIMIT_MARKER)
+        if let Some(rest) =
+            message.strip_prefix(STRICT_STRING_MAP_ENTRY_LIMIT_MARKER)
             && let Some(maximum) = rest
                 .split_whitespace()
                 .next()
