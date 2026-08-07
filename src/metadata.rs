@@ -30,6 +30,8 @@ use qubit_value::{
     ValueWirePayloadRefV1,
     ValueWirePayloadV1,
 };
+#[cfg(feature = "json")]
+use serde::de::DeserializeSeed;
 use serde::{
     Deserialize,
     Deserializer,
@@ -40,18 +42,23 @@ use serde::{
     },
     ser::SerializeMap,
 };
-#[cfg(feature = "json")]
-use serde::de::DeserializeSeed;
 
 #[cfg(feature = "schema")]
 use crate::MetadataSchema;
+use crate::constants::{
+    STRICT_STRING_MAP_MAX_ENTRIES,
+    STRICT_STRING_MAP_MAX_KEY_BYTES,
+};
 use crate::wire::{
     METADATA_WIRE_VERSION_V1,
     MetadataWireV1,
     StrictStringMap,
 };
 #[cfg(feature = "json")]
-use crate::wire::{MetadataWireV1Seed, StrictStringMapSeed};
+use crate::wire::{
+    MetadataWireV1Seed,
+    StrictStringMapSeed,
+};
 use crate::{
     MetadataError,
     MetadataResult,
@@ -154,12 +161,11 @@ impl Metadata {
         deserializer
             .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let metadata = Self(Self::from_wire(wire)
-            .map_err(|error| {
-                crate::MetadataWireDecodeError::InvalidJson(
-                    <serde_json::Error as serde::de::Error>::custom(error),
-                )
-            })?);
+        let metadata = Self(Self::from_wire(wire).map_err(|error| {
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
+        })?);
         metadata.validate_wire_limits(wire_limits, &mut budget)?;
         Ok(metadata)
     }
@@ -700,6 +706,24 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
+        if self.0.len() > STRICT_STRING_MAP_MAX_ENTRIES {
+            return Err(<S::Error as serde::ser::Error>::custom(format!(
+                "metadata map contains {} entries, maximum is {}",
+                self.0.len(),
+                STRICT_STRING_MAP_MAX_ENTRIES,
+            )));
+        }
+        if let Some(key) = self
+            .0
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
+        {
+            return Err(<S::Error as serde::ser::Error>::custom(format!(
+                "metadata key is {} bytes, maximum is {}",
+                key.len(),
+                STRICT_STRING_MAP_MAX_KEY_BYTES,
+            )));
+        }
         MetadataWireV1 {
             version: METADATA_WIRE_VERSION_V1,
             values: MetadataWireValuesRef(&self.0),

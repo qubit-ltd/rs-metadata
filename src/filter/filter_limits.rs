@@ -7,6 +7,12 @@
 // =============================================================================
 //! [`FilterLimits`] — resource bounds for metadata filters.
 
+use crate::constants::{
+    FILTER_MAX_DEPTH,
+    FILTER_MAX_KEY_BYTES,
+    FILTER_MAX_NODES,
+    FILTER_MAX_SET_VALUES,
+};
 use crate::{
     MetadataError,
     MetadataResult,
@@ -37,10 +43,10 @@ pub struct FilterLimits {
 impl FilterLimits {
     /// Library-wide hard maximums for every resource bound.
     pub const MAX: Self = Self {
-        max_depth: 64,
-        max_nodes: 256,
-        max_set_values: 128,
-        max_key_length: 256,
+        max_depth: FILTER_MAX_DEPTH,
+        max_nodes: FILTER_MAX_NODES,
+        max_set_values: FILTER_MAX_SET_VALUES,
+        max_key_length: FILTER_MAX_KEY_BYTES,
     };
 
     /// Creates a fluent builder for validated resource limits.

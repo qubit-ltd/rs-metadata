@@ -13,6 +13,8 @@ use qubit_datatype::DataType;
 use qubit_value::Value;
 #[cfg(feature = "json")]
 use qubit_value::WireBudget;
+#[cfg(feature = "json")]
+use serde::de::DeserializeSeed;
 use serde::{
     Deserialize,
     Deserializer,
@@ -22,9 +24,11 @@ use serde::{
         self,
     },
 };
-#[cfg(feature = "json")]
-use serde::de::DeserializeSeed;
 
+use crate::constants::{
+    STRICT_STRING_MAP_MAX_ENTRIES,
+    STRICT_STRING_MAP_MAX_KEY_BYTES,
+};
 use crate::schema::{
     MetadataField,
     MetadataSchemaBuilder,
@@ -37,7 +41,10 @@ use crate::wire::{
     StrictStringMap,
 };
 #[cfg(feature = "json")]
-use crate::wire::{MetadataSchemaWireV1Seed, StrictStringMapSeed};
+use crate::wire::{
+    MetadataSchemaWireV1Seed,
+    StrictStringMapSeed,
+};
 use crate::{
     Metadata,
     MetadataError,
@@ -363,6 +370,24 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
+        if self.fields.len() > STRICT_STRING_MAP_MAX_ENTRIES {
+            return Err(<S::Error as serde::ser::Error>::custom(format!(
+                "metadata schema contains {} fields, maximum is {}",
+                self.fields.len(),
+                STRICT_STRING_MAP_MAX_ENTRIES,
+            )));
+        }
+        if let Some(key) = self
+            .fields
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
+        {
+            return Err(<S::Error as serde::ser::Error>::custom(format!(
+                "metadata schema key is {} bytes, maximum is {}",
+                key.len(),
+                STRICT_STRING_MAP_MAX_KEY_BYTES,
+            )));
+        }
         MetadataSchemaWireV1 {
             version: METADATA_SCHEMA_WIRE_VERSION_V1,
             fields: &self.fields,

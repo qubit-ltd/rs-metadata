@@ -52,22 +52,27 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
         let key = format!("key-{index}");
         metadata.set(&key, index as i64);
     }
-    let encoded = serde_json::to_vec(&metadata)
-        .expect("metadata with many entries should serialize");
-
-    assert!(serde_json::from_slice::<Metadata>(&encoded).is_err());
+    assert!(serde_json::to_vec(&metadata).is_err());
 
     let long_key = "k".repeat(257);
     let metadata = Metadata::new().with(&long_key, 1_i64);
-    let encoded = serde_json::to_vec(&metadata)
-        .expect("metadata with a long key should serialize");
+    assert!(serde_json::to_vec(&metadata).is_err());
 
-    assert!(serde_json::from_slice::<Metadata>(&encoded).is_err());
-
-    let malformed_after_limit = format!(
-        r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#
-    );
-    let error = serde_json::from_slice::<Metadata>(malformed_after_limit.as_bytes())
-        .expect_err("the hard entry limit should reject before the value");
+    let malformed_after_limit =
+        format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
+    let error =
+        serde_json::from_slice::<Metadata>(malformed_after_limit.as_bytes())
+            .expect_err("the hard entry limit should reject before the value");
     assert!(error.to_string().contains("256 bytes"));
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn test_metadata_json_decoder_exercises_seed_error_paths() {
+    let wrong_values_type = br#"{"version":1,"values":[]}"#;
+
+    assert!(Metadata::decode_json_slice(wrong_values_type).is_err());
+
+    let invalid_value = br#"{"version":1,"values":{"name":{"invalid":true}}}"#;
+    assert!(Metadata::decode_json_slice(invalid_value).is_err());
 }

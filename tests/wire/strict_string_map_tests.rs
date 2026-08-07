@@ -11,7 +11,10 @@
 use qubit_datatype::DataType;
 use qubit_metadata::Metadata;
 #[cfg(feature = "schema")]
-use qubit_metadata::{MetadataField, MetadataSchema};
+use qubit_metadata::{
+    MetadataField,
+    MetadataSchema,
+};
 
 #[test]
 fn test_metadata_rejects_duplicate_value_key() {
