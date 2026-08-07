@@ -101,6 +101,10 @@ operands directly.
   protocols.
 - Redacted `Debug` and `Display` output is intended for diagnostics, not as a
   confidentiality boundary for arbitrary user keys or error text.
+- Metadata keys are plain strings. When a key crosses a module, provider, or
+  storage boundary, define one string constant at the owning boundary and use
+  it for both writes and reads; use `MetadataSchema` when the key/value contract
+  must be validated.
 
 ## Learn more
 

@@ -84,6 +84,9 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
   通用 Serde 反序列化也会执行 map 条目数和 key 长度硬限制，但对于不可信外层协议，
   它不能替代调用方对输入字节数和 Value wire 结构的资源控制。
 - 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。
+- Metadata key 本身是普通字符串。当 key 跨越模块、provider 或存储边界时，应在所属边界定义
+  唯一的字符串常量，并在读写时复用；如果还需要校验 key/value 契约，应使用
+  `MetadataSchema`。
 
 ## 延伸阅读
 
@@ -112,12 +115,13 @@ cargo test --all-features
 
 Copyright (c) 2025 - 2026. Haixing Hu. All rights reserved.
 
-本项目基于 Apache License 2.0 授权。完整许可证文本请参阅 [LICENSE](LICENSE)。
+本项目基于 Apache License 2.0 授权。完整许可证文本请参阅
+[LICENSE](LICENSE)。
 
 ## 贡献
 
 欢迎贡献。请遵循 Rust API 指南，及时更新公共 API 文档与测试，并在提交
-Pull Request 前运行 `./align-ci.sh`格式化代码，运行`./ci-check.sh`对齐 CI 要求。
+Pull Request 前运行 `./align-ci.sh` 格式化代码，运行 `./ci-check.sh` 对齐 CI 要求。
 
 ## 作者
 
