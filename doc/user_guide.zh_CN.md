@@ -92,6 +92,23 @@ assert!(previous.is_some());
 key 会按顺序参与迭代和序列化。`merge` 与 `merged` 遇到相同 key 时都使用右侧 metadata
 中的值。
 
+### 1a. 保持跨组件 key 稳定
+
+Metadata key 是普通字符串，拼写差异会静默地产生不同字段。应在负责该 key 的边界定义
+字符串常量，并在所有写入、读取和 filter 中复用：
+
+```rust
+use qubit_metadata::Metadata;
+
+const TENANT_ID: &str = "tenant_id";
+
+let metadata = Metadata::new().with(TENANT_ID, "acme");
+assert_eq!(metadata.get_str(TENANT_ID), Some("acme"));
+```
+
+如果 key/value 契约需要和存储 provider 共享，应增加 `MetadataSchema`，并在跨越边界前校验
+metadata。本 crate 不会替调用方规范化 key 的拼写或命名风格。
+
 ### 2. 选择合适的读取失败模型
 
 当键缺失和转换失败都应视为不存在时使用 `get`。需要不经转换检查存储的 `Value` 时使用

@@ -100,6 +100,25 @@ assert!(previous.is_some());
 Keys are ordered for iteration and serialization. `merge` and `merged` use the
 right-hand metadata value when both objects contain the same key.
 
+### 1a. Keep cross-component keys stable
+
+Metadata keys are plain strings, so a spelling difference silently creates a
+different field. Define a constant at the boundary that owns a key and reuse it
+for every write, read, and filter:
+
+```rust
+use qubit_metadata::Metadata;
+
+const TENANT_ID: &str = "tenant_id";
+
+let metadata = Metadata::new().with(TENANT_ID, "acme");
+assert_eq!(metadata.get_str(TENANT_ID), Some("acme"));
+```
+
+When a key/value contract is shared with a storage provider, add a
+`MetadataSchema` and validate metadata before it crosses that boundary. The
+crate does not normalize key spelling or naming style for callers.
+
 ### 2. Read values with the right failure model
 
 Use `get` when both a missing key and a conversion failure should be treated as
