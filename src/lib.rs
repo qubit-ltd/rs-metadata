@@ -65,6 +65,7 @@
 
 #![deny(missing_docs)]
 
+mod constants;
 #[cfg(feature = "filter")]
 mod filter;
 mod metadata;

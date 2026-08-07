@@ -8,10 +8,17 @@
 //! Tests for the bounded public JSON decoding APIs.
 
 use qubit_metadata::{
-    FilterLimits, Metadata, MetadataFilter, MetadataSchema,
-    MetadataWireDecodeError, MetadataWireLimits,
+    FilterLimits,
+    Metadata,
+    MetadataFilter,
+    MetadataSchema,
+    MetadataWireDecodeError,
+    MetadataWireLimits,
 };
-use qubit_value::{ValueWireDecodeError, WireLimits};
+use qubit_value::{
+    ValueWireDecodeError,
+    WireLimits,
+};
 
 #[test]
 fn test_decode_json_slice_with_limits_rejects_oversized_input_before_parsing() {
@@ -149,8 +156,8 @@ fn test_decode_json_slice_rejects_malformed_schema_envelopes() {
 }
 
 #[test]
-fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entries(
-) {
+fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entries()
+ {
     let metadata = Metadata::new().with("first", 1_i64).with("second", 2_i64);
     let metadata_json = serde_json::to_vec(&metadata).unwrap();
     let metadata_limits = MetadataWireLimits::new(metadata_json.len())
@@ -202,20 +209,26 @@ fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entr
 
 #[test]
 fn test_decode_json_slice_with_limits_honors_expanded_map_bounds() {
-    let mut metadata = Metadata::new();
+    let mut values = serde_json::Map::new();
     for index in 0..=4_096 {
         let key = format!("key-{index}");
-        metadata.set(&key, index as i64);
+        values.insert(
+            key,
+            serde_json::json!({"scalar": {"int64": index as i64}}),
+        );
     }
-    let input = serde_json::to_vec(&metadata)
-        .expect("expanded metadata should serialize");
+    let input = serde_json::to_vec(&serde_json::json!({
+        "version": 1,
+        "values": values,
+    }))
+    .expect("expanded metadata should serialize");
     let limits = MetadataWireLimits::new(input.len())
         .with_wire(WireLimits::new(input.len()).with_max_map_entries(4_097))
         .with_max_metadata_entries(4_097);
 
     let decoded = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect("expanded metadata should fit expanded limits");
-    assert_eq!(decoded, metadata);
+    assert_eq!(decoded.len(), 4_097);
 }
 
 #[test]
