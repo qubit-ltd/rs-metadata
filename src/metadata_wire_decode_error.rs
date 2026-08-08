@@ -17,10 +17,6 @@ use qubit_value::ValueWireDecodeError;
 #[cfg(feature = "filter")]
 use crate::MetadataError;
 use crate::MetadataWireLimitKind;
-use crate::wire::{
-    STRICT_STRING_MAP_ENTRY_LIMIT_MARKER,
-    STRICT_STRING_MAP_KEY_LIMIT_MARKER,
-};
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
@@ -131,47 +127,5 @@ impl From<ValueWireDecodeError> for MetadataWireDecodeError {
             }
             error => Self::Value(error),
         }
-    }
-}
-
-impl MetadataWireDecodeError {
-    /// Converts a bounded strict-map Serde error into a structured limit error.
-    pub(crate) fn from_strict_map_error(
-        error: serde_json::Error,
-        entry_kind: MetadataWireLimitKind,
-    ) -> Self {
-        let message = error.to_string();
-        if let Some(rest) =
-            message.strip_prefix(STRICT_STRING_MAP_ENTRY_LIMIT_MARKER)
-            && let Some(maximum) = rest
-                .split_whitespace()
-                .next()
-                .and_then(|value| value.parse::<usize>().ok())
-        {
-            return Self::LimitExceeded {
-                kind: entry_kind,
-                value: maximum.saturating_add(1),
-                maximum,
-            };
-        }
-        if let Some(rest) =
-            message.strip_prefix(STRICT_STRING_MAP_KEY_LIMIT_MARKER)
-        {
-            let mut values = rest.splitn(2, ':');
-            if let (Some(value), Some(maximum)) = (
-                values.next().and_then(|value| value.parse::<usize>().ok()),
-                values
-                    .next()
-                    .and_then(|value| value.split_whitespace().next())
-                    .and_then(|value| value.parse::<usize>().ok()),
-            ) {
-                return Self::LimitExceeded {
-                    kind: MetadataWireLimitKind::KeyBytes,
-                    value,
-                    maximum,
-                };
-            }
-        }
-        Self::InvalidJson(error)
     }
 }

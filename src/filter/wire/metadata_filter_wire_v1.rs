@@ -7,8 +7,6 @@
 // =============================================================================
 //! V1 [`MetadataFilter`] envelope.
 
-#[cfg(feature = "json")]
-use qubit_value::WireBudget;
 use serde::{
     Deserialize,
     Serialize,
@@ -44,13 +42,20 @@ pub(crate) struct MetadataFilterWireV1 {
 }
 
 impl MetadataFilterWireV1 {
-    /// Charges the raw filter expression against a shared wire budget.
+    /// Creates a decoded V1 envelope from strict visitor output.
     #[cfg(feature = "json")]
-    pub(crate) fn check_wire_budget(
-        &self,
-        budget: &mut WireBudget,
-    ) -> Result<(), qubit_value::ValueWireDecodeError> {
-        self.expression.check_wire_budget(budget, 1)
+    pub(crate) const fn new(
+        version: u8,
+        expression: FilterExpressionWireV1,
+        options: FilterMatchOptions,
+        limits: FilterLimitsWireV1,
+    ) -> Self {
+        Self {
+            version,
+            expression,
+            options,
+            limits,
+        }
     }
 
     /// Converts this envelope while enforcing `receiver_limits`.

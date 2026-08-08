@@ -34,9 +34,4 @@ pub(crate) use metadata_wire_v1_seed::MetadataWireV1Seed;
 pub(crate) use metadata_wire_values_ref::MetadataWireValuesRef;
 pub(crate) use strict_string_map::StrictStringMap;
 #[cfg(feature = "json")]
-pub(crate) use strict_string_map::{
-    STRICT_STRING_MAP_ENTRY_LIMIT_MARKER,
-    STRICT_STRING_MAP_KEY_LIMIT_MARKER,
-};
-#[cfg(feature = "json")]
 pub(crate) use strict_string_map_seed::StrictStringMapSeed;

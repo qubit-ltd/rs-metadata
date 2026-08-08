@@ -7,6 +7,8 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
+#[cfg(feature = "json")]
+use serde::de::DeserializeSeed;
 use serde::{
     Deserialize,
     Deserializer,
@@ -16,6 +18,8 @@ use serde::{
 };
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
+#[cfg(feature = "json")]
+use super::wire::MetadataFilterWireV1Seed;
 use super::wire::{
     MetadataFilterWireV1,
     MetadataFilterWireV1Ref,
@@ -131,8 +135,9 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns an input-size error before parsing, a nested-value limit error,
-    /// a structured filter-limit error, or `InvalidJson` for malformed strict
-    /// filter input.
+    /// a structured sender-limit error, or `InvalidJson` for malformed strict
+    /// filter input and receiver-limit failures found during incremental
+    /// decoding.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(
@@ -160,12 +165,12 @@ impl MetadataFilter {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a nested-value limit error,
-    /// a structured filter-limit error in `Filter`, or `InvalidJson` for
-    /// syntax and strict-envelope failures. The AST and nested-value checks
-    /// do not reduce peak allocations made by the underlying deserializer;
-    /// callers requiring that guarantee must use a streaming deserializer or
-    /// a smaller outer input limit.
+    /// Returns an input-size error before parsing, a structured sender-limit
+    /// error in `Filter`, or `InvalidJson` for syntax, strict-envelope, nested
+    /// value, and receiver-limit failures. Receiver AST limits and the shared
+    /// wire budget are charged while the expression tree is read; individual
+    /// JSON strings and embedded value payloads remain bounded by the outer
+    /// input-byte limit.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -174,13 +179,13 @@ impl MetadataFilter {
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         let mut budget = wire_limits.wire().begin(input.len())?;
         let mut deserializer = serde_json::Deserializer::from_slice(input);
-        let wire = MetadataFilterWireV1::deserialize(&mut deserializer)
-            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let wire =
+            MetadataFilterWireV1Seed::new(receiver_filter_limits, &mut budget)
+                .deserialize(&mut deserializer)
+                .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         deserializer
             .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        wire.check_wire_budget(&mut budget)
-            .map_err(crate::MetadataWireDecodeError::from)?;
         wire.into_filter(receiver_filter_limits)
             .map_err(crate::MetadataWireDecodeError::Filter)
     }

@@ -16,11 +16,7 @@ use serde::de::{
     Visitor,
 };
 
-use super::strict_string_map::{
-    STRICT_STRING_MAP_ENTRY_LIMIT_MARKER,
-    STRICT_STRING_MAP_KEY_LIMIT_MARKER,
-    StrictStringMap,
-};
+use super::strict_string_map::StrictStringMap;
 
 /// Deserializes a strict string map with caller-provided resource bounds.
 pub(crate) struct StrictStringMapSeed<V> {
@@ -80,19 +76,14 @@ where
                 while let Some(key) = map.next_key::<String>()? {
                     if key.len() > self.max_key_bytes {
                         return Err(de::Error::custom(format!(
-                            "{}{}:{} (map key has {} bytes, exceeding the limit of {} bytes)",
-                            STRICT_STRING_MAP_KEY_LIMIT_MARKER,
-                            key.len(),
-                            self.max_key_bytes,
+                            "map key has {} bytes, exceeding the limit of {} bytes",
                             key.len(),
                             self.max_key_bytes,
                         )));
                     }
                     if values.len() >= self.max_entries {
                         return Err(de::Error::custom(format!(
-                            "{}{} (map has more than the limit of {} entries)",
-                            STRICT_STRING_MAP_ENTRY_LIMIT_MARKER,
-                            self.max_entries,
+                            "map has more than the limit of {} entries",
                             self.max_entries,
                         )));
                     }
