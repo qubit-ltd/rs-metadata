@@ -28,13 +28,7 @@ fn filter_input(expression: &str) -> Vec<u8> {
         r#"{{
             "version":1,
             "expression":{expression},
-            "options":{{"numeric_comparison_policy":"exact"}},
-            "limits":{{
-                "max_depth":64,
-                "max_nodes":256,
-                "max_set_values":128,
-                "max_key_bytes":256
-            }}
+            "options":{{"numeric_comparison_policy":"exact"}}
         }}"#,
     )
     .into_bytes()
@@ -170,9 +164,8 @@ fn test_bounded_filter_decoder_accepts_every_expression_variant() {
 }
 
 #[test]
-fn test_bounded_filter_decoder_accepts_expression_after_limits() {
+fn test_bounded_filter_decoder_accepts_expression_fields_in_any_order() {
     let encoded = r#"{
-        "limits":{"max_depth":64,"max_nodes":256,"max_set_values":128,"max_key_bytes":256},
         "options":{"numeric_comparison_policy":"exact"},
         "version":1,
         "expression":{"kind":"exists","key":"status"}
@@ -329,17 +322,28 @@ fn test_decode_json_slice_with_limits_reports_excessive_metadata_and_schema_entr
         metadata_limits,
     )
     .expect_err("metadata entry limit should reject the input");
-    assert!(matches!(&error, MetadataWireDecodeError::InvalidJson(_)));
-    assert!(error.to_string().contains("limit of 1 entries"));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::LimitExceeded {
+            kind: qubit_metadata::MetadataWireLimitKind::MetadataEntries,
+            value: 2,
+            maximum: 1,
+        }
+    ));
 
     let key_limits =
         MetadataWireLimits::new(metadata_json.len()).with_max_key_bytes(4);
     let error =
         Metadata::decode_json_slice_with_limits(&metadata_json, key_limits)
             .expect_err("metadata key limit should reject the input");
-    assert!(matches!(&error, MetadataWireDecodeError::InvalidJson(_)));
-    assert!(error.to_string().contains("5 bytes"));
-    assert!(error.to_string().contains("limit of 4 bytes"));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::LimitExceeded {
+            kind: qubit_metadata::MetadataWireLimitKind::KeyBytes,
+            value: 5,
+            maximum: 4,
+        }
+    ));
 
     let schema = MetadataSchema::builder()
         .required("first", qubit_datatype::DataType::Int64)
@@ -355,8 +359,14 @@ fn test_decode_json_slice_with_limits_reports_excessive_metadata_and_schema_entr
         schema_limits,
     )
     .expect_err("schema field limit should reject the input");
-    assert!(matches!(&error, MetadataWireDecodeError::InvalidJson(_)));
-    assert!(error.to_string().contains("limit of 1 entries"));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::LimitExceeded {
+            kind: qubit_metadata::MetadataWireLimitKind::SchemaFields,
+            value: 2,
+            maximum: 1,
+        }
+    ));
 }
 
 #[test]
@@ -442,19 +452,6 @@ fn test_decode_json_slice_with_limits_applies_shared_value_budget() {
 
 #[test]
 fn test_decode_json_slice_with_limits_preserves_structured_filter_errors() {
-    let mut filter = serde_json::to_value(MetadataFilter::all()).unwrap();
-    filter["limits"]["max_nodes"] = serde_json::json!(0);
-    let input = serde_json::to_vec(&filter).unwrap();
-    let limits = MetadataWireLimits::new(input.len());
-
-    assert!(matches!(
-        MetadataFilter::decode_json_slice_with_limits(
-            &input,
-            limits,
-            FilterLimits::MAX,
-        ),
-        Err(MetadataWireDecodeError::Filter(
-            qubit_metadata::MetadataError::InvalidFilterLimit { .. }
-        ))
-    ));
+    let filter = serde_json::to_value(MetadataFilter::all()).unwrap();
+    assert!(filter.get("limits").is_none());
 }

@@ -56,6 +56,7 @@ use crate::wire::{
 #[cfg(feature = "json")]
 use crate::wire::{
     MetadataWireV1Seed,
+    StrictStringMapLimitExceeded,
     StrictStringMapSeed,
 };
 use crate::{
@@ -140,8 +141,8 @@ impl Metadata {
     ///
     /// Returns an input-size or nested-value limit error before or during
     /// decoding, or `InvalidJson` for syntax, strict-envelope, strict-map, or
-    /// scalar wire-value failures. Strict-map limit details remain in the
-    /// `InvalidJson` message.
+    /// scalar wire-value failures. Strict-map entry and key limits return
+    /// structured `LimitExceeded` errors.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -150,12 +151,25 @@ impl Metadata {
         wire_limits.validate_metadata_limits()?;
         let mut budget = wire_limits.wire().begin(input.len())?;
         let mut deserializer = serde_json::Deserializer::from_slice(input);
-        let wire = MetadataWireV1Seed::new(StrictStringMapSeed::new(
-            wire_limits.max_metadata_entries(),
-            wire_limits.max_key_bytes(),
-        ))
-        .deserialize(&mut deserializer)
-        .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let mut map_limit_error = None;
+        let decoded =
+            MetadataWireV1Seed::new(StrictStringMapSeed::with_limit_reporting(
+                wire_limits.max_metadata_entries(),
+                wire_limits.max_key_bytes(),
+                crate::MetadataWireLimitKind::MetadataEntries,
+                &mut map_limit_error,
+            ))
+            .deserialize(&mut deserializer);
+        let wire = match decoded {
+            Ok(wire) => wire,
+            Err(error) => {
+                return Err(map_limit_error
+                    .map(metadata_wire_limit_error)
+                    .unwrap_or(crate::MetadataWireDecodeError::InvalidJson(
+                        error,
+                    )));
+            }
+        };
         deserializer
             .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
@@ -653,6 +667,18 @@ impl Metadata {
             budget.check_value_at(value, 2)?;
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "json")]
+/// Converts an internal strict-map limit record into the public wire error.
+fn metadata_wire_limit_error(
+    error: StrictStringMapLimitExceeded,
+) -> crate::MetadataWireDecodeError {
+    crate::MetadataWireDecodeError::LimitExceeded {
+        kind: error.kind,
+        value: error.value,
+        maximum: error.maximum,
     }
 }
 
