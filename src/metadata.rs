@@ -138,9 +138,10 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a structured resource or
-    /// nested-value limit error when decoded data exceeds its bounds, or
-    /// `InvalidJson` for syntax, strict-envelope, or scalar wire-value failures.
+    /// Returns an input-size or nested-value limit error before or during
+    /// decoding, or `InvalidJson` for syntax, strict-envelope, strict-map, or
+    /// scalar wire-value failures. Strict-map limit details remain in the
+    /// `InvalidJson` message.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -154,12 +155,7 @@ impl Metadata {
             wire_limits.max_key_bytes(),
         ))
         .deserialize(&mut deserializer)
-        .map_err(|error| {
-            crate::MetadataWireDecodeError::from_strict_map_error(
-                error,
-                crate::MetadataWireLimitKind::MetadataEntries,
-            )
-        })?;
+        .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         deserializer
             .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;

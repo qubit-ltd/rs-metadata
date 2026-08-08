@@ -93,9 +93,9 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a structured resource-limit
-    /// error when decoded fields exceed their bounds, or `InvalidJson` for
-    /// malformed strict schema input.
+    /// Returns an input-size error before parsing, or `InvalidJson` for
+    /// malformed strict schema input and strict-map limit failures. The
+    /// specific map limit remains in the `InvalidJson` message.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(
@@ -121,9 +121,9 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a structured resource-limit
-    /// error when decoded fields exceed their bounds, or `InvalidJson` for
-    /// syntax or strict schema-envelope failures.
+    /// Returns an input-size error before parsing, or `InvalidJson` for syntax,
+    /// strict schema-envelope, and strict-map limit failures. The specific map
+    /// limit remains in the `InvalidJson` message.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -137,12 +137,7 @@ impl MetadataSchema {
             wire_limits.max_key_bytes(),
         ))
         .deserialize(&mut deserializer)
-        .map_err(|error| {
-            crate::MetadataWireDecodeError::from_strict_map_error(
-                error,
-                crate::MetadataWireLimitKind::SchemaFields,
-            )
-        })?;
+        .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         deserializer
             .end()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;

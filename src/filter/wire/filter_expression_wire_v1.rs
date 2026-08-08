@@ -7,8 +7,6 @@
 // =============================================================================
 //! V1 wire representation of [`crate::FilterExpression`].
 
-#[cfg(feature = "json")]
-use qubit_value::WireBudget;
 use qubit_value::{
     Value,
     ValueWirePayloadV1,
@@ -119,57 +117,6 @@ pub(crate) enum FilterExpressionWireV1 {
 }
 
 impl FilterExpressionWireV1 {
-    /// Charges the raw expression tree and nested Value payloads against one
-    /// shared wire budget.
-    #[cfg(feature = "json")]
-    pub(crate) fn check_wire_budget(
-        &self,
-        budget: &mut WireBudget,
-        depth: usize,
-    ) -> Result<(), qubit_value::ValueWireDecodeError> {
-        budget.check_depth(depth)?;
-        budget.check_node()?;
-        match self {
-            Self::Eq { key, value }
-            | Self::Ne { key, value }
-            | Self::Lt { key, value }
-            | Self::Le { key, value }
-            | Self::Gt { key, value }
-            | Self::Ge { key, value } => {
-                budget.check_string_bytes(key.len())?;
-                budget.check_container_at(
-                    value.container(),
-                    depth.saturating_add(1),
-                )
-            }
-            Self::In { key, values } | Self::NotIn { key, values } => {
-                budget.check_string_bytes(key.len())?;
-                budget.check_collection_items(values.len())?;
-                for value in values {
-                    budget.check_container_at(
-                        value.container(),
-                        depth.saturating_add(1),
-                    )?;
-                }
-                Ok(())
-            }
-            Self::Exists { key } | Self::NotExists { key } => {
-                budget.check_string_bytes(key.len())
-            }
-            Self::And { children } | Self::Or { children } => {
-                budget.check_collection_items(children.len())?;
-                for child in children {
-                    child.check_wire_budget(budget, depth + 1)?;
-                }
-                Ok(())
-            }
-            Self::Not { expression } => {
-                expression.check_wire_budget(budget, depth + 1)
-            }
-            Self::All | Self::None => Ok(()),
-        }
-    }
-
     /// Validates the unnormalized wire tree against resource limits.
     ///
     /// This check precedes conversion because Boolean normalization can remove

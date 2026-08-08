@@ -12,14 +12,6 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 use serde::de::DeserializeSeed;
 
-/// Marker used to preserve structured map-entry limit errors across Serde.
-pub(crate) const STRICT_STRING_MAP_ENTRY_LIMIT_MARKER: &str =
-    "qubit_metadata_map_entry_limit:";
-
-/// Marker used to preserve structured map-key limit errors across Serde.
-pub(crate) const STRICT_STRING_MAP_KEY_LIMIT_MARKER: &str =
-    "qubit_metadata_map_key_limit:";
-
 /// A string-keyed map that rejects duplicate keys while deserializing.
 pub(crate) struct StrictStringMap<V>(pub(crate) BTreeMap<String, V>);
 

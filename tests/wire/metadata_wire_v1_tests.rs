@@ -46,6 +46,18 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
 }
 
 #[test]
+#[cfg(feature = "json")]
+fn test_metadata_v1_user_guide_example_decodes() {
+    const INPUT: &[u8] =
+        br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#;
+
+    let metadata = Metadata::decode_json_slice(INPUT)
+        .expect("the user-guide V1 example should decode");
+
+    assert_eq!(metadata.get_str("tenant_id"), Some("acme"));
+}
+
+#[test]
 fn test_metadata_deserialization_enforces_hard_map_limits() {
     let mut metadata = Metadata::new();
     for index in 0..=4_096 {
