@@ -45,6 +45,22 @@ fn test_metadata_wire_decode_error_describes_decoded_resource_limit() {
 }
 
 #[test]
+#[cfg(feature = "json")]
+fn test_metadata_wire_decode_error_describes_invalid_configured_limit() {
+    let error = MetadataWireDecodeError::InvalidLimit {
+        kind: MetadataWireLimitKind::MetadataEntries,
+        value: 4_097,
+        maximum: 4_096,
+    };
+
+    assert_eq!(
+        error.to_string(),
+        "metadata JSON MetadataEntries limit 4097 exceeds the canonical maximum of 4096"
+    );
+    assert!(std::error::Error::source(&error).is_none());
+}
+
+#[test]
 #[cfg(all(feature = "json", feature = "filter"))]
 fn test_metadata_wire_decode_error_preserves_filter_contract_failure() {
     let error = MetadataWireDecodeError::Filter(

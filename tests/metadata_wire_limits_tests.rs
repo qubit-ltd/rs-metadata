@@ -7,6 +7,8 @@
 // =============================================================================
 //! Tests for the bounded public JSON decoding APIs.
 
+#![cfg(all(feature = "json", feature = "schema"))]
+
 use qubit_metadata::{
     FilterLimits,
     Metadata,
@@ -208,7 +210,7 @@ fn test_decode_json_slice_with_limits_rejects_excessive_metadata_and_schema_entr
 }
 
 #[test]
-fn test_decode_json_slice_with_limits_honors_expanded_map_bounds() {
+fn test_decode_json_slice_with_limits_rejects_unserializable_expanded_bounds() {
     let mut values = serde_json::Map::new();
     for index in 0..=4_096 {
         let key = format!("key-{index}");
@@ -226,9 +228,46 @@ fn test_decode_json_slice_with_limits_honors_expanded_map_bounds() {
         .with_wire(WireLimits::new(input.len()).with_max_map_entries(4_097))
         .with_max_metadata_entries(4_097);
 
-    let decoded = Metadata::decode_json_slice_with_limits(&input, limits)
-        .expect("expanded metadata should fit expanded limits");
-    assert_eq!(decoded.len(), 4_097);
+    assert!(matches!(
+        Metadata::decode_json_slice_with_limits(&input, limits),
+        Err(MetadataWireDecodeError::InvalidLimit {
+            kind: qubit_metadata::MetadataWireLimitKind::MetadataEntries,
+            value: 4_097,
+            maximum: 4_096,
+        })
+    ));
+
+    let key_limits = MetadataWireLimits::new(input.len())
+        .with_max_key_bytes(257);
+    assert!(matches!(
+        Metadata::decode_json_slice_with_limits(&input, key_limits),
+        Err(MetadataWireDecodeError::InvalidLimit {
+            kind: qubit_metadata::MetadataWireLimitKind::KeyBytes,
+            value: 257,
+            maximum: 256,
+        })
+    ));
+}
+
+#[test]
+fn test_schema_decode_rejects_unserializable_expanded_field_bounds() {
+    let schema = MetadataSchema::builder()
+        .required("field", qubit_datatype::DataType::Int64)
+        .build()
+        .expect("schema should build");
+    let input = serde_json::to_vec(&schema).expect("schema should serialize");
+    let limits = MetadataWireLimits::new(input.len())
+        .with_wire(WireLimits::new(input.len()).with_max_map_entries(4_097))
+        .with_max_schema_fields(4_097);
+
+    assert!(matches!(
+        MetadataSchema::decode_json_slice_with_limits(&input, limits),
+        Err(MetadataWireDecodeError::InvalidLimit {
+            kind: qubit_metadata::MetadataWireLimitKind::SchemaFields,
+            value: 4_097,
+            maximum: 4_096,
+        })
+    ));
 }
 
 #[test]

@@ -13,6 +13,10 @@ pub use crate::constants::{
     DEFAULT_MAX_METADATA_ENTRIES,
     DEFAULT_MAX_SCHEMA_FIELDS,
 };
+use crate::constants::{
+    STRICT_STRING_MAP_MAX_ENTRIES,
+    STRICT_STRING_MAP_MAX_KEY_BYTES,
+};
 use crate::{
     MetadataWireDecodeError,
     MetadataWireLimitKind,
@@ -80,7 +84,8 @@ impl MetadataWireLimits {
     ///
     /// # Returns
     ///
-    /// This limit with the requested metadata-entry bound.
+    /// This limit with the requested metadata-entry bound. Decoding rejects
+    /// values above the canonical V1 entry maximum.
     #[inline(always)]
     #[must_use = "the configured metadata-entry limit should be used"]
     pub const fn with_max_metadata_entries(
@@ -99,7 +104,8 @@ impl MetadataWireLimits {
     ///
     /// # Returns
     ///
-    /// This limit with the requested schema-field bound.
+    /// This limit with the requested schema-field bound. Decoding rejects
+    /// values above the canonical V1 field maximum.
     #[inline(always)]
     #[must_use = "the configured schema-field limit should be used"]
     pub const fn with_max_schema_fields(
@@ -118,7 +124,8 @@ impl MetadataWireLimits {
     ///
     /// # Returns
     ///
-    /// This limit with the requested key-byte bound.
+    /// This limit with the requested key-byte bound. Decoding rejects values
+    /// above the canonical V1 key maximum.
     #[inline(always)]
     #[must_use = "the configured key-byte limit should be used"]
     pub const fn with_max_key_bytes(mut self, max_key_bytes: usize) -> Self {
@@ -193,6 +200,22 @@ impl MetadataWireLimits {
         )
     }
 
+    /// Validates limits that affect metadata objects accepted by the decoder.
+    pub(crate) fn validate_metadata_limits(
+        &self,
+    ) -> Result<(), MetadataWireDecodeError> {
+        Self::validate_configured_limit(
+            MetadataWireLimitKind::MetadataEntries,
+            self.max_metadata_entries,
+            STRICT_STRING_MAP_MAX_ENTRIES,
+        )?;
+        Self::validate_configured_limit(
+            MetadataWireLimitKind::KeyBytes,
+            self.max_key_bytes,
+            STRICT_STRING_MAP_MAX_KEY_BYTES,
+        )
+    }
+
     /// Checks decoded metadata-schema field count against this limit.
     #[cfg(feature = "schema")]
     pub(crate) fn check_schema_fields(
@@ -203,6 +226,23 @@ impl MetadataWireLimits {
             MetadataWireLimitKind::SchemaFields,
             fields,
             self.max_schema_fields,
+        )
+    }
+
+    /// Validates limits that affect schema objects accepted by the decoder.
+    #[cfg(feature = "schema")]
+    pub(crate) fn validate_schema_limits(
+        &self,
+    ) -> Result<(), MetadataWireDecodeError> {
+        Self::validate_configured_limit(
+            MetadataWireLimitKind::SchemaFields,
+            self.max_schema_fields,
+            STRICT_STRING_MAP_MAX_ENTRIES,
+        )?;
+        Self::validate_configured_limit(
+            MetadataWireLimitKind::KeyBytes,
+            self.max_key_bytes,
+            STRICT_STRING_MAP_MAX_KEY_BYTES,
         )
     }
 
@@ -227,6 +267,22 @@ impl MetadataWireLimits {
     ) -> Result<(), MetadataWireDecodeError> {
         if value > maximum {
             return Err(MetadataWireDecodeError::LimitExceeded {
+                kind,
+                value,
+                maximum,
+            });
+        }
+        Ok(())
+    }
+
+    /// Rejects a configured bound that cannot be represented by the V1 wire.
+    fn validate_configured_limit(
+        kind: MetadataWireLimitKind,
+        value: usize,
+        maximum: usize,
+    ) -> Result<(), MetadataWireDecodeError> {
+        if value > maximum {
+            return Err(MetadataWireDecodeError::InvalidLimit {
                 kind,
                 value,
                 maximum,
