@@ -12,6 +12,8 @@ use std::{
     fmt,
 };
 
+use qubit_value::ValueWireDecodeError;
+
 #[cfg(feature = "filter")]
 use crate::MetadataError;
 use crate::MetadataWireLimitKind;
@@ -19,7 +21,6 @@ use crate::wire::{
     STRICT_STRING_MAP_ENTRY_LIMIT_MARKER,
     STRICT_STRING_MAP_KEY_LIMIT_MARKER,
 };
-use qubit_value::ValueWireDecodeError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
@@ -40,6 +41,15 @@ pub enum MetadataWireDecodeError {
         /// Observed resource value.
         value: usize,
         /// Largest permitted resource value.
+        maximum: usize,
+    },
+    /// A receiver configured a resource bound above the canonical wire limit.
+    InvalidLimit {
+        /// Resource category whose configured bound is invalid.
+        kind: MetadataWireLimitKind,
+        /// Configured resource bound.
+        value: usize,
+        /// Largest bound supported by the canonical wire format.
         maximum: usize,
     },
     /// A nested Value or JSON payload exceeded a shared structural limit.
@@ -74,6 +84,14 @@ impl fmt::Display for MetadataWireDecodeError {
                 formatter,
                 "metadata JSON {kind:?} value {value} exceeds the limit of {maximum}"
             ),
+            Self::InvalidLimit {
+                kind,
+                value,
+                maximum,
+            } => write!(
+                formatter,
+                "metadata JSON {kind:?} limit {value} exceeds the canonical maximum of {maximum}"
+            ),
             Self::Value(error) => fmt::Display::fmt(error, formatter),
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),
@@ -88,6 +106,7 @@ impl Error for MetadataWireDecodeError {
         match self {
             Self::InputTooLarge { .. } => None,
             Self::LimitExceeded { .. } => None,
+            Self::InvalidLimit { .. } => None,
             Self::Value(error) => Some(error),
             #[cfg(feature = "filter")]
             Self::Filter(error) => Some(error),

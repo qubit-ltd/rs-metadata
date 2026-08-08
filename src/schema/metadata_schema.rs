@@ -129,6 +129,7 @@ impl MetadataSchema {
         input: &[u8],
         wire_limits: crate::MetadataWireLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
+        wire_limits.validate_schema_limits()?;
         let mut budget = wire_limits.wire().begin(input.len())?;
         let mut deserializer = serde_json::Deserializer::from_slice(input);
         let wire = MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
