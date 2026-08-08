@@ -264,12 +264,14 @@ let metadata = Metadata::decode_json_slice_with_limits(
 ```
 
 默认限制是输入 1,048,576 字节、4,096 个 metadata 条目、4,096 个 schema 字段，以及每个
-key 256 个 UTF-8 字节。`MetadataWireLimits` 可以降低解码资源限制，`with_wire` 会替换
-共享的 Value 和 JSON 结构限制。输入字节数会在 JSON 解析前检查。
+key 256 个 UTF-8 字节。`MetadataWireLimits` 可以降低解码资源限制，metadata 条目数、schema
+字段数和 key 长度不能超过 V1 序列化的规范硬上限；`with_wire` 会替换共享的 Value 和 JSON
+结构限制。输入字节数会在 JSON 解析前检查。
 
 `MetadataSchema` 和 `MetadataFilter` 也提供对应的有界 JSON 解码器。Filter 解码还接受由
-接收方控制的 `FilterLimits`。通用 `serde::Deserialize` 使用严格 V1 envelope，但不能替代
-不可信外层协议的资源限制。
+接收方控制的 `FilterLimits`。Filter AST 和嵌套 Value 限制会在底层 deserializer 完成 wire
+值构造后校验；如果必须限制峰值分配，应使用流式 deserializer 或更小的外层输入限制。通用
+`serde::Deserialize` 使用严格 V1 envelope，但不能替代不可信外层协议的资源限制。
 
 ### 严格的 V1 wire format
 

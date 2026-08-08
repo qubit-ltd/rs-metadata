@@ -86,10 +86,12 @@ impl MetadataFilter {
         MetadataFilterBuilder::new()
     }
 
-    /// Deserializes a filter while enforcing a receiver-controlled AST bound.
+    /// Deserializes a filter and validates a receiver-controlled AST bound.
     ///
-    /// This method limits only the decoded AST. Callers must separately bound
-    /// the raw input byte length before deserializing untrusted data.
+    /// The AST is materialized by the underlying deserializer before the
+    /// receiver bound is checked. Callers must separately bound raw input
+    /// bytes and any deserializer-specific resources before accepting
+    /// untrusted data.
     ///
     /// # Parameters
     ///
@@ -143,14 +145,14 @@ impl MetadataFilter {
         )
     }
 
-    /// Decodes a strict metadata-filter JSON envelope after enforcing both
+    /// Decodes a strict metadata-filter JSON envelope after validating both
     /// wire-byte and receiver-controlled AST limits.
     ///
     /// # Parameters
     ///
     /// * `input` - Complete untrusted JSON input.
     /// * `wire_limits` - Byte limit checked before JSON parsing.
-    /// * `receiver_filter_limits` - Local AST limits applied after decoding.
+    /// * `receiver_filter_limits` - Local AST limits validated after decoding.
     ///
     /// # Returns
     ///
@@ -160,7 +162,10 @@ impl MetadataFilter {
     ///
     /// Returns an input-size error before parsing, a nested-value limit error,
     /// a structured filter-limit error in `Filter`, or `InvalidJson` for
-    /// syntax and strict-envelope failures.
+    /// syntax and strict-envelope failures. The AST and nested-value checks
+    /// do not reduce peak allocations made by the underlying deserializer;
+    /// callers requiring that guarantee must use a streaming deserializer or
+    /// a smaller outer input limit.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],

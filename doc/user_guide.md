@@ -291,12 +291,17 @@ let metadata = Metadata::decode_json_slice_with_limits(
 The default limits are 1,048,576 input bytes, 4,096 metadata entries, 4,096
 schema fields, and 256 UTF-8 bytes per key. `MetadataWireLimits` can lower
 decoded-resource limits, and its `with_wire` method replaces the shared Value
-and JSON structural limits. The input byte limit is checked before JSON parsing.
+and JSON structural limits. Its metadata-entry, schema-field, and key limits
+cannot exceed the canonical V1 serialization limits. The input byte limit is
+checked before JSON parsing.
 
 `MetadataSchema` and `MetadataFilter` provide corresponding bounded JSON
 decoders. Filter decoding additionally accepts receiver-controlled
 `FilterLimits`. Generic `serde::Deserialize` uses the strict V1 envelope but
-does not replace limits for an untrusted outer protocol.
+does not replace limits for an untrusted outer protocol. Filter AST and nested
+Value limits are validated after the underlying deserializer materializes the
+wire value; use a streaming deserializer or a smaller input limit when peak
+allocation must be bounded.
 
 ### Strict V1 wire formats
 
