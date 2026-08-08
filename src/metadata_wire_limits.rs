@@ -29,8 +29,6 @@ use qubit_value::WireLimits;
 pub struct MetadataWireLimits {
     /// Shared Value and JSON structural limits.
     wire: WireLimits,
-    /// Maximum number of input bytes accepted before parsing begins.
-    max_json_bytes: usize,
     /// Maximum entries in a decoded metadata object.
     max_metadata_entries: usize,
     /// Maximum field definitions in a decoded metadata schema.
@@ -54,7 +52,6 @@ impl MetadataWireLimits {
     pub const fn new(max_json_bytes: usize) -> Self {
         Self {
             wire: WireLimits::new(max_json_bytes),
-            max_json_bytes,
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
             max_key_bytes: DEFAULT_MAX_KEY_BYTES,
@@ -66,7 +63,6 @@ impl MetadataWireLimits {
     #[must_use = "the configured wire limits should be used"]
     pub const fn with_wire(mut self, wire: WireLimits) -> Self {
         self.wire = wire;
-        self.max_json_bytes = wire.max_input_bytes();
         self
     }
 
@@ -140,7 +136,7 @@ impl MetadataWireLimits {
     /// The number of bytes accepted before JSON parsing begins.
     #[inline(always)]
     pub const fn max_json_bytes(&self) -> usize {
-        self.max_json_bytes
+        self.wire.max_input_bytes()
     }
 
     /// Returns the maximum accepted decoded metadata entry count.
@@ -162,30 +158,6 @@ impl MetadataWireLimits {
     #[must_use]
     pub const fn max_key_bytes(&self) -> usize {
         self.max_key_bytes
-    }
-
-    /// Rejects `input_bytes` when it exceeds this limit.
-    ///
-    /// # Parameters
-    ///
-    /// * `input_bytes` - Complete byte length of the untrusted input.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`MetadataWireDecodeError::InputTooLarge`] before a parser is
-    /// invoked when `input_bytes` exceeds this limit.
-    #[inline(always)]
-    pub fn check_json_bytes(
-        &self,
-        input_bytes: usize,
-    ) -> Result<(), MetadataWireDecodeError> {
-        if input_bytes > self.max_json_bytes {
-            return Err(MetadataWireDecodeError::InputTooLarge {
-                input_bytes,
-                max_input_bytes: self.max_json_bytes,
-            });
-        }
-        Ok(())
     }
 
     /// Checks decoded metadata entry count against this limit.

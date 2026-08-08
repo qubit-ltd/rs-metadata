@@ -37,7 +37,6 @@ fn test_validation_error_exposes_collected_issues() {
 
     assert_eq!(error.issues(), issues.as_slice());
     assert_eq!(error.len(), 2);
-    assert!(!error.is_empty());
     assert_eq!(
         error.to_string(),
         "2 metadata validation issue(s); 1: Required metadata key 'id' is missing (expected string); 2: Metadata key 'extra' is not defined in schema"

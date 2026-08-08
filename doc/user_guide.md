@@ -298,18 +298,19 @@ checked before JSON parsing.
 `MetadataSchema` and `MetadataFilter` provide corresponding bounded JSON
 decoders. Filter decoding additionally accepts receiver-controlled
 `FilterLimits`. The explicit filter JSON decoder enforces receiver AST limits
-and the shared wire budget while reading the expression tree. Sender-declared
-limits are validated after the complete envelope is available. Individual JSON
-strings and embedded value payloads may still require temporary allocations
-bounded by the outer input-byte limit. Generic `serde::Deserialize` remains
-intended for an already-bounded outer protocol.
+and the shared wire budget while reading the expression tree. Filter limits are
+transient receiver-side policy and are not serialized. Individual JSON strings
+and embedded value payloads may still require temporary allocations bounded by
+the outer input-byte limit. Generic `serde::Deserialize` remains intended for
+an already-bounded outer protocol.
 
 ### Strict V1 wire formats
 
 Metadata, schema, and filters serialize through strict V1 envelopes. Unknown
 fields, malformed nodes, and unsupported versions are rejected. Filter
-envelopes contain `version`, `expression`, `options`, and `limits`; expression
-nodes use tags such as `eq`, `ge`, `in`, `and`, `or`, `not`, `all`, and `none`.
+envelopes contain only `version`, `expression`, and `options`; a legacy V1
+`limits` field is rejected as an unknown field. Expression nodes use tags such
+as `eq`, `ge`, `in`, `and`, `or`, `not`, `all`, and `none`.
 Do not hand-author these structures unless the versioned format is part of your
 integration contract; prefer the public Serde implementations.
 
