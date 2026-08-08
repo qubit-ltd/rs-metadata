@@ -9,7 +9,12 @@
 
 #![cfg(all(feature = "json", feature = "schema"))]
 
+use qubit_budget::{
+    ResourceBudget,
+    ResourceLimit,
+};
 use qubit_metadata::{
+    FilterLimitKind,
     FilterLimits,
     Metadata,
     MetadataFilter,
@@ -32,6 +37,86 @@ fn filter_input(expression: &str) -> Vec<u8> {
         }}"#,
     )
     .into_bytes()
+}
+
+#[test]
+fn test_resource_budget_preserves_filter_limit_facts() {
+    let mut budget = ResourceBudget::new(ResourceLimit::new(1));
+
+    budget
+        .consume(FilterLimitKind::Nodes, 1)
+        .expect("first node should fit the budget");
+    let error = budget
+        .consume(FilterLimitKind::Nodes, 1)
+        .expect_err("second node should exceed the budget");
+
+    assert_eq!(error.kind(), &FilterLimitKind::Nodes);
+    assert_eq!(error.maximum(), 1);
+    assert_eq!(error.observed_at_least(), 2);
+}
+
+#[test]
+fn test_filter_decode_accepts_exact_node_boundary() {
+    let input = filter_input(r#"{"kind":"not","expression":{"kind":"all"}}"#);
+    let limits = FilterLimits::builder().max_nodes(2).build().unwrap();
+
+    assert!(
+        MetadataFilter::decode_json_slice_with_limits(
+            &input,
+            MetadataWireLimits::new(input.len()),
+            limits,
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn test_filter_decode_accepts_exact_depth_boundary() {
+    let input = filter_input(r#"{"kind":"not","expression":{"kind":"all"}}"#);
+    let limits = FilterLimits::builder().max_depth(2).build().unwrap();
+
+    assert!(
+        MetadataFilter::decode_json_slice_with_limits(
+            &input,
+            MetadataWireLimits::new(input.len()),
+            limits,
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn test_filter_decode_accepts_exact_set_value_boundary() {
+    let input = filter_input(
+        r#"{"kind":"in","key":"k","values":[{"scalar":{"int64":1}},{"scalar":{"int64":2}}]}"#,
+    );
+    let limits = FilterLimits::builder().max_set_values(2).build().unwrap();
+
+    assert!(
+        MetadataFilter::decode_json_slice_with_limits(
+            &input,
+            MetadataWireLimits::new(input.len()),
+            limits,
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn test_filter_decode_accepts_exact_key_byte_boundary() {
+    let input = filter_input(
+        r#"{"kind":"eq","key":"long","value":{"scalar":{"int64":1}}}"#,
+    );
+    let limits = FilterLimits::builder().max_key_bytes(4).build().unwrap();
+
+    assert!(
+        MetadataFilter::decode_json_slice_with_limits(
+            &input,
+            MetadataWireLimits::new(input.len()),
+            limits,
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -367,6 +452,94 @@ fn test_decode_json_slice_with_limits_reports_excessive_metadata_and_schema_entr
             maximum: 1,
         }
     ));
+}
+
+#[test]
+fn test_decode_json_slice_with_limits_accepts_exact_metadata_schema_and_key_bounds()
+ {
+    let metadata = Metadata::new().with("first", 1_i64).with("second", 2_i64);
+    let metadata_json =
+        serde_json::to_vec(&metadata).expect("metadata should serialize");
+    let metadata_limits = MetadataWireLimits::new(metadata_json.len())
+        .with_max_metadata_entries(2)
+        .with_max_key_bytes(6);
+
+    assert_eq!(
+        Metadata::decode_json_slice_with_limits(
+            &metadata_json,
+            metadata_limits
+        )
+        .expect("metadata exact bounds should decode"),
+        metadata
+    );
+
+    let schema = MetadataSchema::builder()
+        .required("first", qubit_datatype::DataType::Int64)
+        .required("second", qubit_datatype::DataType::Int64)
+        .build()
+        .expect("schema should build");
+    let schema_json =
+        serde_json::to_vec(&schema).expect("schema should serialize");
+    let schema_limits = MetadataWireLimits::new(schema_json.len())
+        .with_max_schema_fields(2)
+        .with_max_key_bytes(6);
+
+    assert_eq!(
+        MetadataSchema::decode_json_slice_with_limits(
+            &schema_json,
+            schema_limits
+        )
+        .expect("schema exact bounds should decode"),
+        schema
+    );
+}
+
+#[test]
+fn test_filter_wire_unknown_field_precedes_unsupported_version() {
+    let input = br#"{
+        "version": 2,
+        "expression": {"kind": "all"},
+        "options": {"numeric_comparison_policy": "exact"},
+        "extra": true
+    }"#;
+
+    let error = MetadataFilter::decode_json_slice(input)
+        .expect_err("unknown field should reject before version conversion");
+
+    assert!(error.to_string().contains("unknown field `extra`"));
+}
+
+#[test]
+fn test_filter_wire_duplicate_field_precedes_unsupported_version() {
+    let input = br#"{
+        "version": 2,
+        "version": 1,
+        "expression": {"kind": "all"},
+        "options": {"numeric_comparison_policy": "exact"}
+    }"#;
+
+    let error = MetadataFilter::decode_json_slice(input)
+        .expect_err("duplicate field should reject before version conversion");
+
+    assert!(error.to_string().contains("duplicate field `version`"));
+}
+
+#[test]
+fn test_filter_wire_reports_unsupported_version_after_valid_fields() {
+    let input = br#"{
+        "version": 2,
+        "expression": {"kind": "all"},
+        "options": {"numeric_comparison_policy": "exact"}
+    }"#;
+
+    let error = MetadataFilter::decode_json_slice(input)
+        .expect_err("unsupported version should reject after field decoding");
+
+    assert!(
+        error
+            .to_string()
+            .contains("unsupported MetadataFilter wire format version 2")
+    );
 }
 
 #[test]
