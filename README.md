@@ -76,7 +76,7 @@ operands directly.
   metadata and filter fields.
 - `FilterExpression` and `MetadataFilter`: immutable Boolean expressions with
   equality, range, membership, existence, grouping, negation, matching options,
-  and expression limits.
+  and receiver-side expression limits.
 - Strict V1 Serde formats for metadata, schemas, and filters. The `json`
   feature also provides bounded JSON-slice decoding.
 - Structured `MetadataError`, validation errors, and wire-decode errors for
@@ -96,8 +96,9 @@ operands directly.
   numeric representations.
 - Default JSON decoding limits input bytes, entry counts, schema field counts,
   key length, and Value wire structure. Configured metadata-entry, schema-field,
-  and key limits cannot exceed the canonical V1 serialization limits. Filter AST
-  and nested Value limits are validated after deserialization, so use a
+  and key limits cannot exceed the canonical V1 serialization limits. Filter
+  limits are transient receiver-side policy and are omitted from the V1 wire;
+  filter AST and nested Value limits are validated while decoding, so use a
   streaming deserializer or a smaller outer input limit when peak allocation
   must be bounded. Generic Serde deserialization also enforces hard map-entry
   and key-length bounds, but it is not a substitute for caller-controlled

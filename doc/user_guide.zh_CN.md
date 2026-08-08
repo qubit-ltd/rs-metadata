@@ -270,15 +270,16 @@ key 256 个 UTF-8 字节。`MetadataWireLimits` 可以降低解码资源限制�
 
 `MetadataSchema` 和 `MetadataFilter` 也提供对应的有界 JSON 解码器。Filter 解码还接受由
 接收方控制的 `FilterLimits`。显式 filter JSON decoder 会在读取 expression tree 时执行接收方
-AST 限制和共享 wire budget；sender limits 会在完整 envelope 可用后校验。单个 JSON 字符串和
-嵌套 value 仍可能产生临时分配，但会受到外层输入字节上限约束。通用 `serde::Deserialize`
-适用于外层已经受控的协议。
+AST 限制和共享 wire budget。Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
+字符串和嵌套 value 仍可能产生临时分配，但会受到外层输入字节上限约束。通用
+`serde::Deserialize` 适用于外层已经受控的协议。
 
 ### 严格的 V1 wire format
 
 Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知字段、畸形节点和不支持
-的版本都会被拒绝。Filter envelope 包含 `version`、`expression`、`options` 和 `limits`；
-expression 节点使用 `eq`、`ge`、`in`、`and`、`or`、`not`、`all` 和 `none` 等 tag。
+的版本都会被拒绝。Filter envelope 只包含 `version`、`expression` 和 `options`；旧 V1
+载荷中的 `limits` 会作为未知字段被拒绝。expression 节点使用 `eq`、`ge`、`in`、`and`、
+`or`、`not`、`all` 和 `none` 等 tag。
 除非版本化格式本身是集成契约，否则不要手写这些结构，优先使用公开的 Serde 实现。
 
 `Metadata` 和 `MetadataSchema` 在内存模型中不限制条目数和 key 长度。序列化器只在 V1

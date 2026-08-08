@@ -75,19 +75,9 @@ impl MetadataValidationError {
     /// The issue count.
     #[inline(always)]
     #[must_use]
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.issues.len()
-    }
-
-    /// Returns `true` when no issues are stored.
-    ///
-    /// # Returns
-    ///
-    /// `true` when the aggregate contains no issues.
-    #[inline(always)]
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.issues.is_empty()
     }
 
     /// Converts this aggregate error into its collected issues.

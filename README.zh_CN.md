@@ -66,7 +66,7 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 - `MetadataSchema`：必填/可选字段定义、具体 `qubit_datatype::DataType` 校验，以及相互
   独立的未知 metadata 字段和未知 filter 字段策略。
 - `FilterExpression` 与 `MetadataFilter`：不可变布尔表达式，支持相等、范围、集合、存在性、
-  分组、取反、匹配选项和表达式资源限制。
+  分组、取反、匹配选项和接收端表达式资源限制。
 - metadata、schema、filter 的严格 V1 Serde 格式。启用 `json` 后，还可使用带资源限制的
   JSON slice 解码。
 - 结构化的 `MetadataError`、校验错误和 wire 解码错误，帮助调用方区分键缺失、unset 值、
@@ -82,7 +82,8 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
   数值表示。
 - 默认 JSON 解码会限制输入字节数、条目数、schema 字段数、key 长度和 Value wire 结构。
   配置的 metadata 条目数、schema 字段数和 key 长度不能超过 V1 序列化的规范硬上限。
-  Filter AST 和嵌套 Value 限制会在反序列化完成后校验；如果必须限制峰值分配，应使用流式
+  Filter limits 是接收端瞬态策略，不会写入 V1 wire；Filter AST 和嵌套 Value 限制会在解码过程中
+  校验。如果必须限制峰值分配，应使用流式
   deserializer 或更小的外层输入限制。通用 Serde 反序列化也会执行 map 条目数和 key 长度
   硬限制，但对于不可信外层协议，它不能替代调用方对输入字节数和 Value wire 结构的资源控制。
 - 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。

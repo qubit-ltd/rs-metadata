@@ -1,0 +1,1 @@
+multiple-public-types | src/wire/strict_string_map_seed.rs | The private seed and its internal structured limit record share one focused decoder module.
