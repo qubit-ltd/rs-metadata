@@ -282,7 +282,7 @@ let limits = MetadataWireLimits::default()
     .with_max_metadata_entries(128)
     .with_max_key_bytes(128);
 let metadata = Metadata::decode_json_slice_with_limits(
-    br#"{"version":1,"values":{"tenant_id":"acme"}}"#,
+    br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
 )?;
 # Ok::<(), qubit_metadata::MetadataWireDecodeError>(())
@@ -297,11 +297,12 @@ checked before JSON parsing.
 
 `MetadataSchema` and `MetadataFilter` provide corresponding bounded JSON
 decoders. Filter decoding additionally accepts receiver-controlled
-`FilterLimits`. Generic `serde::Deserialize` uses the strict V1 envelope but
-does not replace limits for an untrusted outer protocol. Filter AST and nested
-Value limits are validated after the underlying deserializer materializes the
-wire value; use a streaming deserializer or a smaller input limit when peak
-allocation must be bounded.
+`FilterLimits`. The explicit filter JSON decoder enforces receiver AST limits
+and the shared wire budget while reading the expression tree. Sender-declared
+limits are validated after the complete envelope is available. Individual JSON
+strings and embedded value payloads may still require temporary allocations
+bounded by the outer input-byte limit. Generic `serde::Deserialize` remains
+intended for an already-bounded outer protocol.
 
 ### Strict V1 wire formats
 
@@ -312,11 +313,12 @@ nodes use tags such as `eq`, `ge`, `in`, `and`, `or`, `not`, `all`, and `none`.
 Do not hand-author these structures unless the versioned format is part of your
 integration contract; prefer the public Serde implementations.
 
-Metadata and schema serializers reject maps larger than 4,096 entries or keys
-longer than 256 UTF-8 bytes. These hard wire bounds are shared with the
-default strict decoders; keep them in producer-side validation when generating
-interchange data. Receiver-controlled JSON limits may be lowered for a
-particular boundary.
+`Metadata` and `MetadataSchema` are unbounded in memory. Their serializers
+reject maps larger than 4,096 entries or keys longer than 256 UTF-8 bytes only
+at the V1 wire boundary, returning a readable serializer error. These hard wire
+bounds are shared with the default strict decoders; keep them in producer-side
+validation when generating interchange data. Receiver-controlled JSON limits
+may be lowered for a particular boundary.
 
 ## Errors and diagnostics
 
