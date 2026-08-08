@@ -142,28 +142,6 @@ impl FilterLimits {
         self.max_key_length
     }
 
-    /// Restricts every resource bound to the smaller bound from `other`.
-    ///
-    /// Both operands are already validated, so their component-wise minimums
-    /// remain valid non-zero limits.
-    ///
-    /// # Parameters
-    ///
-    /// * `other` - Additional limits to enforce.
-    ///
-    /// # Returns
-    ///
-    /// The component-wise intersection of both limit sets.
-    #[inline(always)]
-    pub(crate) fn constrained_by(self, other: Self) -> Self {
-        Self {
-            max_depth: self.max_depth.min(other.max_depth),
-            max_nodes: self.max_nodes.min(other.max_nodes),
-            max_set_values: self.max_set_values.min(other.max_set_values),
-            max_key_length: self.max_key_length.min(other.max_key_length),
-        }
-    }
-
     /// Validates one configured resource bound.
     ///
     /// # Parameters

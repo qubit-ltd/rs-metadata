@@ -10,10 +10,7 @@
 use qubit_value::ValueWireEncodeError;
 use serde::Serialize;
 
-use super::{
-    FilterExpressionWireV1Ref,
-    FilterLimitsWireV1,
-};
+use super::FilterExpressionWireV1Ref;
 use crate::MetadataFilter;
 
 use super::metadata_filter_wire_v1::METADATA_FILTER_WIRE_VERSION_V1;
@@ -28,8 +25,6 @@ pub(crate) struct MetadataFilterWireV1Ref<'a> {
     expression: FilterExpressionWireV1Ref<'a>,
     /// Evaluation options.
     options: crate::FilterMatchOptions,
-    /// Expression limits declared by the sender.
-    limits: FilterLimitsWireV1,
 }
 
 impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
@@ -43,7 +38,6 @@ impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
                 filter.expression(),
             )?,
             options: filter.options(),
-            limits: FilterLimitsWireV1::from(filter.limits()),
         })
     }
 }
