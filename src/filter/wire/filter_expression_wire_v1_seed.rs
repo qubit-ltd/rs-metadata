@@ -9,6 +9,10 @@
 
 use std::fmt;
 
+use qubit_budget::{
+    LimitExceeded,
+    ResourceBudget,
+};
 use qubit_value::{
     ValueWirePayloadV1,
     WireBudget,
@@ -69,7 +73,7 @@ enum ExpressionKind {
 /// Seed that decodes one expression while charging shared resource budgets.
 pub(crate) struct FilterExpressionWireV1Seed<'a> {
     receiver_limits: FilterLimits,
-    node_count: &'a mut usize,
+    node_budget: &'a mut ResourceBudget,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -78,13 +82,13 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
     /// Creates a seed for one expression at `depth`.
     pub(crate) const fn new(
         receiver_limits: FilterLimits,
-        node_count: &'a mut usize,
+        node_budget: &'a mut ResourceBudget,
         budget: &'a mut WireBudget,
         depth: usize,
     ) -> Self {
         Self {
             receiver_limits,
-            node_count,
+            node_budget,
             budget,
             depth,
         }
@@ -102,14 +106,10 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
                 maximum: self.receiver_limits.max_depth(),
             }));
         }
-        *self.node_count = (*self.node_count).saturating_add(1);
-        if *self.node_count > self.receiver_limits.max_nodes() {
-            return Err(E::custom(MetadataError::FilterLimitExceeded {
-                kind: FilterLimitKind::Nodes,
-                value: *self.node_count,
-                maximum: self.receiver_limits.max_nodes(),
-            }));
-        }
+        self.node_budget
+            .consume(FilterLimitKind::Nodes, 1)
+            .map_err(filter_limit_error)
+            .map_err(E::custom)?;
         self.budget.check_depth(self.depth).map_err(E::custom)?;
         self.budget.check_node().map_err(E::custom)
     }
@@ -129,10 +129,19 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
         self.enter_node()?;
         deserializer.deserialize_map(ExpressionVisitor {
             receiver_limits: self.receiver_limits,
-            node_count: self.node_count,
+            node_budget: self.node_budget,
             budget: self.budget,
             depth: self.depth,
         })
+    }
+}
+
+/// Converts shared budget facts to the established metadata filter error.
+fn filter_limit_error(error: LimitExceeded<FilterLimitKind>) -> MetadataError {
+    MetadataError::FilterLimitExceeded {
+        kind: error.into_kind(),
+        value: error.observed_at_least(),
+        maximum: error.maximum(),
     }
 }
 
@@ -332,7 +341,7 @@ where
 /// Visitor for one expression map.
 struct ExpressionVisitor<'a> {
     receiver_limits: FilterLimits,
-    node_count: &'a mut usize,
+    node_budget: &'a mut ResourceBudget,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -409,7 +418,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     fields.children = Some(map.next_value_seed(
                         ExpressionSequenceSeed::new(
                             self.receiver_limits,
-                            &mut *self.node_count,
+                            &mut *self.node_budget,
                             &mut *self.budget,
                             self.depth.saturating_add(1),
                         ),
@@ -422,7 +431,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     fields.expression = Some(Box::new(map.next_value_seed(
                         FilterExpressionWireV1Seed::new(
                             self.receiver_limits,
-                            &mut *self.node_count,
+                            &mut *self.node_budget,
                             &mut *self.budget,
                             self.depth.saturating_add(1),
                         ),
@@ -450,7 +459,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
 /// Seed that bounds a sequence of child expressions.
 struct ExpressionSequenceSeed<'a> {
     receiver_limits: FilterLimits,
-    node_count: &'a mut usize,
+    node_budget: &'a mut ResourceBudget,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -459,13 +468,13 @@ impl<'a> ExpressionSequenceSeed<'a> {
     /// Creates a bounded child-expression sequence seed.
     const fn new(
         receiver_limits: FilterLimits,
-        node_count: &'a mut usize,
+        node_budget: &'a mut ResourceBudget,
         budget: &'a mut WireBudget,
         depth: usize,
     ) -> Self {
         Self {
             receiver_limits,
-            node_count,
+            node_budget,
             budget,
             depth,
         }
@@ -482,7 +491,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
     {
         deserializer.deserialize_seq(ExpressionSequenceVisitor {
             receiver_limits: self.receiver_limits,
-            node_count: self.node_count,
+            node_budget: self.node_budget,
             budget: self.budget,
             depth: self.depth,
         })
@@ -492,7 +501,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
 /// Visitor for a bounded child-expression sequence.
 struct ExpressionSequenceVisitor<'a> {
     receiver_limits: FilterLimits,
-    node_count: &'a mut usize,
+    node_budget: &'a mut ResourceBudget,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -516,7 +525,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
         while let Some(child) =
             sequence.next_element_seed(ExpressionElementSeed {
                 receiver_limits: self.receiver_limits,
-                node_count: &mut *self.node_count,
+                node_budget: &mut *self.node_budget,
                 budget: &mut *self.budget,
                 depth: self.depth,
                 next_len: children.len().saturating_add(1),
@@ -531,7 +540,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
 /// Seed that checks one child collection item before reading its body.
 struct ExpressionElementSeed<'a> {
     receiver_limits: FilterLimits,
-    node_count: &'a mut usize,
+    node_budget: &'a mut ResourceBudget,
     budget: &'a mut WireBudget,
     depth: usize,
     next_len: usize,
@@ -551,7 +560,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
             .map_err(D::Error::custom)?;
         FilterExpressionWireV1Seed::new(
             self.receiver_limits,
-            self.node_count,
+            self.node_budget,
             self.budget,
             self.depth,
         )
