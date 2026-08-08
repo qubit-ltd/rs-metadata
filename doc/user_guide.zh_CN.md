@@ -257,7 +257,7 @@ let limits = MetadataWireLimits::default()
     .with_max_metadata_entries(128)
     .with_max_key_bytes(128);
 let metadata = Metadata::decode_json_slice_with_limits(
-    br#"{"version":1,"values":{"tenant_id":"acme"}}"#,
+    br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
 )?;
 # Ok::<(), qubit_metadata::MetadataWireDecodeError>(())
@@ -269,9 +269,10 @@ key 256 个 UTF-8 字节。`MetadataWireLimits` 可以降低解码资源限制�
 结构限制。输入字节数会在 JSON 解析前检查。
 
 `MetadataSchema` 和 `MetadataFilter` 也提供对应的有界 JSON 解码器。Filter 解码还接受由
-接收方控制的 `FilterLimits`。Filter AST 和嵌套 Value 限制会在底层 deserializer 完成 wire
-值构造后校验；如果必须限制峰值分配，应使用流式 deserializer 或更小的外层输入限制。通用
-`serde::Deserialize` 使用严格 V1 envelope，但不能替代不可信外层协议的资源限制。
+接收方控制的 `FilterLimits`。显式 filter JSON decoder 会在读取 expression tree 时执行接收方
+AST 限制和共享 wire budget；sender limits 会在完整 envelope 可用后校验。单个 JSON 字符串和
+嵌套 value 仍可能产生临时分配，但会受到外层输入字节上限约束。通用 `serde::Deserialize`
+适用于外层已经受控的协议。
 
 ### 严格的 V1 wire format
 
@@ -280,8 +281,9 @@ Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知�
 expression 节点使用 `eq`、`ge`、`in`、`and`、`or`、`not`、`all` 和 `none` 等 tag。
 除非版本化格式本身是集成契约，否则不要手写这些结构，优先使用公开的 Serde 实现。
 
-Metadata 和 schema 的序列化器会拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8
-字节 key 的 map。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
+`Metadata` 和 `MetadataSchema` 在内存模型中不限制条目数和 key 长度。序列化器只在 V1
+wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 字节 key 的 map，并返回
+可读的序列化错误。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
 在限制以内。针对特定边界时，接收方控制的 JSON 限制可以进一步降低资源上限。
 
 ## 错误与诊断
