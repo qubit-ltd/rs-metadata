@@ -125,7 +125,7 @@ fn test_build_checked_rejects_schema_incompatible_filter() {
         .build_checked(&schema)
         .expect_err("schema-incompatible filter should be rejected");
 
-    assert!(!error.is_empty());
+    assert!(!error.issues().is_empty());
 }
 
 #[test]

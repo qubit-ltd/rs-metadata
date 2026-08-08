@@ -68,16 +68,14 @@ fn test_receiver_rejects_expression_exceeding_its_key_limit() {
 
 #[test]
 fn test_receiver_rejects_expression_exceeding_sender_declaration() {
-    let mut encoded =
-        serde_json::to_value(filter_for_existing_key("status")).unwrap();
-    encoded["limits"]["max_key_bytes"] = json!(5);
+    let encoded = json!({
+        "version": 1,
+        "expression": {"kind": "exists", "key": "status"},
+        "options": {"numeric_comparison_policy": "exact"},
+        "limits": {"max_key_bytes": 5}
+    });
 
-    let error = serde_json::from_value::<MetadataFilter>(encoded).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("KeyBytes value 6 exceeds the maximum of 5")
-    );
+    assert!(serde_json::from_value::<MetadataFilter>(encoded).is_err());
 }
 
 #[test]
@@ -101,48 +99,12 @@ fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
                     { "kind": "all" }
                 ]
             },
-            "options": { "numeric_comparison_policy": "exact" },
-            "limits": {
-                "max_depth": 64,
-                "max_nodes": 256,
-                "max_set_values": 128,
-                "max_key_bytes": 256
-            }
+            "options": { "numeric_comparison_policy": "exact" }
         }
     "#;
     let receiver = FilterLimits::builder().max_nodes(1).build().unwrap();
 
     let error = deserialize_with_filter_limits(encoded, receiver).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("Nodes value 2 exceeds the maximum of 1")
-    );
-}
-
-#[test]
-fn test_sender_rejects_raw_nodes_elided_by_normalization() {
-    let encoded = r#"
-        {
-            "version": 1,
-            "expression": {
-                "kind": "or",
-                "children": [
-                    { "kind": "all" },
-                    { "kind": "all" }
-                ]
-            },
-            "options": { "numeric_comparison_policy": "exact" },
-            "limits": {
-                "max_depth": 64,
-                "max_nodes": 1,
-                "max_set_values": 128,
-                "max_key_bytes": 256
-            }
-        }
-    "#;
-
-    let error = serde_json::from_str::<MetadataFilter>(encoded).unwrap_err();
     assert!(
         error
             .to_string()
@@ -164,8 +126,5 @@ fn test_metadata_filter_wire_contains_expression() {
 
     assert_eq!(encoded["version"], json!(1));
     assert_eq!(encoded["expression"]["kind"], json!("exists"));
-    assert_eq!(
-        encoded["limits"]["max_depth"],
-        json!(FilterLimits::MAX.max_depth())
-    );
+    assert!(encoded.get("limits").is_none());
 }

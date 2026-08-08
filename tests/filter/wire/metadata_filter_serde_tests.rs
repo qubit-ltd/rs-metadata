@@ -9,6 +9,7 @@
 
 use qubit_metadata::{
     FilterExpression,
+    FilterLimits,
     MetadataFilter,
 };
 #[cfg(feature = "json")]
@@ -47,9 +48,39 @@ fn test_metadata_filter_rejects_unknown_fields_and_versions() {
     unknown["extra"] = serde_json::json!(true);
     let mut version = serde_json::to_value(MetadataFilter::all()).unwrap();
     version["version"] = serde_json::json!(5);
+    let legacy_limits = serde_json::json!({
+        "version": 1,
+        "expression": {"kind": "all"},
+        "options": {"numeric_comparison_policy": "exact"},
+        "limits": {"max_depth": 64}
+    });
 
     assert!(serde_json::from_value::<MetadataFilter>(unknown).is_err());
     assert!(serde_json::from_value::<MetadataFilter>(version).is_err());
+    assert!(serde_json::from_value::<MetadataFilter>(legacy_limits).is_err());
+}
+
+#[test]
+fn test_metadata_filter_serialization_excludes_transient_limits() {
+    let expression = FilterExpression::builder()
+        .exists("status")
+        .build()
+        .unwrap();
+    let filter = MetadataFilter::builder()
+        .expression(expression.clone())
+        .limits(FilterLimits::builder().max_key_bytes(6).build().unwrap())
+        .build()
+        .unwrap();
+    let default_limits_filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .unwrap();
+    assert_eq!(filter, default_limits_filter);
+
+    let encoded = serde_json::to_value(&filter).unwrap();
+    assert!(encoded.get("limits").is_none());
+    let decoded: MetadataFilter = serde_json::from_value(encoded).unwrap();
+    assert_eq!(decoded.limits(), FilterLimits::MAX);
 }
 
 /// Preserves complex borrowed value payloads through the filter Wire shape.

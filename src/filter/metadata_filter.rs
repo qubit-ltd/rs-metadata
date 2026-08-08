@@ -7,6 +7,7 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
+use qubit_utils::Transient;
 #[cfg(feature = "json")]
 use serde::de::DeserializeSeed;
 use serde::{
@@ -47,7 +48,7 @@ pub struct MetadataFilter {
     /// Evaluation options.
     options: FilterMatchOptions,
     /// Bounds that the expression satisfies.
-    limits: FilterLimits,
+    limits: Transient<FilterLimits>,
 }
 
 impl MetadataFilter {
@@ -135,9 +136,9 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns an input-size error before parsing, a nested-value limit error,
-    /// a structured sender-limit error, or `InvalidJson` for malformed strict
-    /// filter input and receiver-limit failures found during incremental
-    /// decoding.
+    /// a structured filter-contract error, or `InvalidJson` for malformed
+    /// strict filter input and receiver-limit failures found during
+    /// incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(
@@ -161,11 +162,11 @@ impl MetadataFilter {
     ///
     /// # Returns
     ///
-    /// The decoded filter constrained by the sender and receiver limits.
+    /// The decoded filter constrained by receiver-controlled limits.
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a structured sender-limit
+    /// Returns an input-size error before parsing, a structured filter-contract
     /// error in `Filter`, or `InvalidJson` for syntax, strict-envelope, nested
     /// value, and receiver-limit failures. Receiver AST limits and the shared
     /// wire budget are charged while the expression tree is read; individual
@@ -200,7 +201,7 @@ impl MetadataFilter {
         Self {
             expression,
             options,
-            limits,
+            limits: Transient::new(limits),
         }
     }
 
@@ -222,7 +223,7 @@ impl MetadataFilter {
     #[inline(always)]
     #[must_use = "the filter limits should be inspected"]
     pub const fn limits(&self) -> FilterLimits {
-        self.limits
+        *self.limits.get()
     }
 
     /// Returns whether `metadata` satisfies this filter.

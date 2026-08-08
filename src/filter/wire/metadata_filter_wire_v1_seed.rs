@@ -19,7 +19,6 @@ use serde::de::{
 
 use super::{
     FilterExpressionWireV1Seed,
-    FilterLimitsWireV1,
     MetadataFilterWireV1,
 };
 use crate::{
@@ -83,7 +82,6 @@ impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
         let mut version = None;
         let mut expression = None;
         let mut options = None;
-        let mut limits = None;
         let mut node_count = 0;
         while let Some(field) = map.next_key::<String>()? {
             match field.as_str() {
@@ -112,16 +110,10 @@ impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
                     }
                     options = Some(map.next_value::<FilterMatchOptions>()?);
                 }
-                "limits" => {
-                    if limits.is_some() {
-                        return Err(de::Error::duplicate_field("limits"));
-                    }
-                    limits = Some(map.next_value::<FilterLimitsWireV1>()?);
-                }
                 _ => {
                     return Err(de::Error::unknown_field(
                         &field,
-                        &["version", "expression", "options", "limits"],
+                        &["version", "expression", "options"],
                     ));
                 }
             }
@@ -130,7 +122,6 @@ impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
             version.ok_or_else(|| de::Error::missing_field("version"))?,
             expression.ok_or_else(|| de::Error::missing_field("expression"))?,
             options.ok_or_else(|| de::Error::missing_field("options"))?,
-            limits.ok_or_else(|| de::Error::missing_field("limits"))?,
         ))
     }
 }

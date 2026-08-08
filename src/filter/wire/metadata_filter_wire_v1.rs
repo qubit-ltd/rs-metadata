@@ -12,12 +12,8 @@ use serde::{
     Serialize,
 };
 
-use super::{
-    FilterExpressionWireV1,
-    FilterLimitsWireV1,
-};
+use super::FilterExpressionWireV1;
 use crate::{
-    FilterLimits,
     FilterMatchOptions,
     MetadataError,
     MetadataFilter,
@@ -37,8 +33,6 @@ pub(crate) struct MetadataFilterWireV1 {
     expression: FilterExpressionWireV1,
     /// Evaluation options.
     options: FilterMatchOptions,
-    /// Expression limits declared by the sender.
-    limits: FilterLimitsWireV1,
 }
 
 impl MetadataFilterWireV1 {
@@ -48,13 +42,11 @@ impl MetadataFilterWireV1 {
         version: u8,
         expression: FilterExpressionWireV1,
         options: FilterMatchOptions,
-        limits: FilterLimitsWireV1,
     ) -> Self {
         Self {
             version,
             expression,
             options,
-            limits,
         }
     }
 
@@ -62,12 +54,11 @@ impl MetadataFilterWireV1 {
     ///
     /// # Errors
     ///
-    /// Returns an invalid-expression error for unsupported versions, a limit
-    /// configuration error for invalid sender limits, or an expression-limit
-    /// error when the expression exceeds either sender or receiver limits.
+    /// Returns an invalid-expression error for unsupported versions or an
+    /// expression-limit error when the expression exceeds receiver limits.
     pub(crate) fn into_filter(
         self,
-        receiver_limits: FilterLimits,
+        receiver_limits: crate::FilterLimits,
     ) -> MetadataResult<MetadataFilter> {
         if self.version != METADATA_FILTER_WIRE_VERSION_V1 {
             return Err(MetadataError::InvalidFilterExpression {
@@ -77,11 +68,12 @@ impl MetadataFilterWireV1 {
                 ),
             });
         }
-        let sender_limits = self.limits.into_limits()?;
-        self.expression.validate_limits(sender_limits)?;
         self.expression.validate_limits(receiver_limits)?;
         let expression = self.expression.into_expression()?;
-        let limits = sender_limits.constrained_by(receiver_limits);
-        Ok(MetadataFilter::new(expression, self.options, limits))
+        Ok(MetadataFilter::new(
+            expression,
+            self.options,
+            receiver_limits,
+        ))
     }
 }
