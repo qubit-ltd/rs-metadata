@@ -238,11 +238,11 @@ impl MetadataWireLimits {
         value: usize,
         maximum: usize,
     ) -> Result<(), MetadataWireDecodeError> {
-        ResourceLimit::new(maximum)
-            .check(kind, value)
+        ResourceLimit::bounded(kind, maximum)
+            .check(value)
             .map_err(|error| MetadataWireDecodeError::LimitExceeded {
                 kind: error.into_kind(),
-                value: error.observed_at_least(),
+                value: error.observed(),
                 maximum: error.maximum(),
             })
     }
@@ -253,11 +253,11 @@ impl MetadataWireLimits {
         value: usize,
         maximum: usize,
     ) -> Result<(), MetadataWireDecodeError> {
-        ResourceLimit::new(maximum)
-            .check(kind, value)
+        ResourceLimit::bounded(kind, maximum)
+            .check(value)
             .map_err(|error| MetadataWireDecodeError::InvalidLimit {
                 kind: error.into_kind(),
-                value: error.observed_at_least(),
+                value: error.observed(),
                 maximum: error.maximum(),
             })
     }
