@@ -105,7 +105,14 @@ fn test_builder_rejects_expression_over_its_configured_limits() {
         .build()
         .expect_err("the configured node limit should reject the expression");
 
-    assert!(matches!(error, MetadataError::FilterLimitExceeded { .. }));
+    assert_eq!(
+        error,
+        MetadataError::FilterLimitExceeded {
+            kind: qubit_metadata::FilterLimitKind::Nodes,
+            value: 2,
+            maximum: 1,
+        }
+    );
 }
 
 #[test]

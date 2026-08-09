@@ -9,10 +9,7 @@
 
 use std::fmt;
 
-use qubit_budget::{
-    LimitExceeded,
-    ResourceBudget,
-};
+use qubit_budget::ResourceBudget;
 use qubit_value::{
     ValueWirePayloadV1,
     WireBudget,
@@ -107,7 +104,7 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
             }));
         }
         self.node_budget
-            .try_consume(1)
+            .try_charge(1)
             .map_err(filter_limit_error)
             .map_err(E::custom)?;
         self.budget.check_depth(self.depth).map_err(E::custom)?;
@@ -137,11 +134,28 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 }
 
 /// Converts shared budget facts to the established metadata filter error.
-fn filter_limit_error(error: LimitExceeded<FilterLimitKind>) -> MetadataError {
-    MetadataError::FilterLimitExceeded {
-        kind: error.into_kind(),
-        value: error.observed_at_least(),
-        maximum: error.maximum(),
+fn filter_limit_error(
+    error: qubit_budget::BudgetError<FilterLimitKind, usize>,
+) -> MetadataError {
+    match error {
+        qubit_budget::BudgetError::Exceeded {
+            kind,
+            maximum,
+            observed,
+            ..
+        } => MetadataError::FilterLimitExceeded {
+            kind,
+            value: observed,
+            maximum,
+        },
+        qubit_budget::BudgetError::Closed { kind, charged, .. }
+        | qubit_budget::BudgetError::CounterOverflow {
+            kind, charged, ..
+        } => MetadataError::FilterLimitExceeded {
+            kind,
+            value: charged,
+            maximum: usize::MAX,
+        },
     }
 }
 
