@@ -73,7 +73,7 @@ enum ExpressionKind {
 /// Seed that decodes one expression while charging shared resource budgets.
 pub(crate) struct FilterExpressionWireV1Seed<'a> {
     receiver_limits: FilterLimits,
-    node_budget: &'a mut ResourceBudget,
+    node_budget: &'a mut ResourceBudget<FilterLimitKind>,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -82,7 +82,7 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
     /// Creates a seed for one expression at `depth`.
     pub(crate) const fn new(
         receiver_limits: FilterLimits,
-        node_budget: &'a mut ResourceBudget,
+        node_budget: &'a mut ResourceBudget<FilterLimitKind>,
         budget: &'a mut WireBudget,
         depth: usize,
     ) -> Self {
@@ -107,7 +107,7 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
             }));
         }
         self.node_budget
-            .try_consume(FilterLimitKind::Nodes, 1)
+            .try_consume(1)
             .map_err(filter_limit_error)
             .map_err(E::custom)?;
         self.budget.check_depth(self.depth).map_err(E::custom)?;
@@ -341,7 +341,7 @@ where
 /// Visitor for one expression map.
 struct ExpressionVisitor<'a> {
     receiver_limits: FilterLimits,
-    node_budget: &'a mut ResourceBudget,
+    node_budget: &'a mut ResourceBudget<FilterLimitKind>,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -459,7 +459,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
 /// Seed that bounds a sequence of child expressions.
 struct ExpressionSequenceSeed<'a> {
     receiver_limits: FilterLimits,
-    node_budget: &'a mut ResourceBudget,
+    node_budget: &'a mut ResourceBudget<FilterLimitKind>,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -468,7 +468,7 @@ impl<'a> ExpressionSequenceSeed<'a> {
     /// Creates a bounded child-expression sequence seed.
     const fn new(
         receiver_limits: FilterLimits,
-        node_budget: &'a mut ResourceBudget,
+        node_budget: &'a mut ResourceBudget<FilterLimitKind>,
         budget: &'a mut WireBudget,
         depth: usize,
     ) -> Self {
@@ -501,7 +501,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
 /// Visitor for a bounded child-expression sequence.
 struct ExpressionSequenceVisitor<'a> {
     receiver_limits: FilterLimits,
-    node_budget: &'a mut ResourceBudget,
+    node_budget: &'a mut ResourceBudget<FilterLimitKind>,
     budget: &'a mut WireBudget,
     depth: usize,
 }
@@ -540,7 +540,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
 /// Seed that checks one child collection item before reading its body.
 struct ExpressionElementSeed<'a> {
     receiver_limits: FilterLimits,
-    node_budget: &'a mut ResourceBudget,
+    node_budget: &'a mut ResourceBudget<FilterLimitKind>,
     budget: &'a mut WireBudget,
     depth: usize,
     next_len: usize,
