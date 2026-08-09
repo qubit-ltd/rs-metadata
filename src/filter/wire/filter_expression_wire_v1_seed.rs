@@ -104,7 +104,7 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
             }));
         }
         self.node_budget
-            .try_charge(1)
+            .try_consume(1)
             .map_err(filter_limit_error)
             .map_err(E::custom)?;
         self.budget.check_depth(self.depth).map_err(E::custom)?;
@@ -135,27 +135,17 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 
 /// Converts shared budget facts to the established metadata filter error.
 fn filter_limit_error(
-    error: qubit_budget::BudgetError<FilterLimitKind, usize>,
+    error: qubit_budget::ResourceBudgetError<FilterLimitKind>,
 ) -> MetadataError {
-    match error {
-        qubit_budget::BudgetError::Exceeded {
-            kind,
-            maximum,
-            observed,
-            ..
-        } => MetadataError::FilterLimitExceeded {
-            kind,
-            value: observed,
-            maximum,
-        },
-        qubit_budget::BudgetError::Closed { kind, charged, .. }
-        | qubit_budget::BudgetError::CounterOverflow {
-            kind, charged, ..
-        } => MetadataError::FilterLimitExceeded {
-            kind,
-            value: charged,
-            maximum: usize::MAX,
-        },
+    let maximum = error.limit().maximum();
+    let value = maximum
+        .saturating_sub(error.remaining())
+        .saturating_add(error.requested());
+    MetadataError::FilterLimitExceeded {
+        kind: error.into_resource(),
+        value: usize::try_from(value).unwrap_or(usize::MAX),
+        maximum: usize::try_from(maximum)
+            .expect("filter node limits originate from usize"),
     }
 }
 

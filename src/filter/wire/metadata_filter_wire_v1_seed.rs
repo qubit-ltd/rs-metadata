@@ -85,10 +85,10 @@ impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
         let mut version = None;
         let mut expression = None;
         let mut options = None;
-        let mut node_budget = ResourceBudget::new(ResourceLimit::bounded(
+        let mut node_budget = ResourceBudget::new(
             FilterLimitKind::Nodes,
-            self.receiver_limits.max_nodes(),
-        ));
+            ResourceLimit::new(self.receiver_limits.max_nodes() as u64),
+        );
         while let Some(field) = map.next_key::<String>()? {
             match field.as_str() {
                 "version" => {

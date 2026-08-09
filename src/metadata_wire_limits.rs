@@ -238,12 +238,14 @@ impl MetadataWireLimits {
         value: usize,
         maximum: usize,
     ) -> Result<(), MetadataWireDecodeError> {
-        ResourceLimit::bounded(kind, maximum)
-            .check(value)
+        ResourceLimit::new(maximum as u64)
+            .check(kind, value as u64)
             .map_err(|error| MetadataWireDecodeError::LimitExceeded {
-                kind: error.into_kind(),
-                value: error.observed(),
-                maximum: error.maximum(),
+                kind: error.into_resource(),
+                value: usize::try_from(error.observed())
+                    .expect("metadata wire observations originate from usize"),
+                maximum: usize::try_from(error.limit().maximum())
+                    .expect("metadata wire limits originate from usize"),
             })
     }
 
@@ -253,12 +255,14 @@ impl MetadataWireLimits {
         value: usize,
         maximum: usize,
     ) -> Result<(), MetadataWireDecodeError> {
-        ResourceLimit::bounded(kind, maximum)
-            .check(value)
+        ResourceLimit::new(maximum as u64)
+            .check(kind, value as u64)
             .map_err(|error| MetadataWireDecodeError::InvalidLimit {
-                kind: error.into_kind(),
-                value: error.observed(),
-                maximum: error.maximum(),
+                kind: error.into_resource(),
+                value: usize::try_from(error.observed())
+                    .expect("configured metadata limits originate from usize"),
+                maximum: usize::try_from(error.limit().maximum())
+                    .expect("canonical metadata limits originate from usize"),
             })
     }
 }
