@@ -10,7 +10,6 @@
 #![cfg(all(feature = "json", feature = "schema"))]
 
 use qubit_budget::ResourceBudget;
-use qubit_budget::ResourceLimit;
 use qubit_metadata::{
     FilterLimitKind,
     FilterLimits,
@@ -39,8 +38,10 @@ fn filter_input(expression: &str) -> Vec<u8> {
 
 #[test]
 fn test_resource_budget_preserves_filter_limit_facts() {
-    let mut budget =
-        ResourceBudget::new(FilterLimitKind::Nodes, ResourceLimit::new(1));
+    let mut budget = ResourceBudget::<FilterLimitKind, usize>::new(
+        FilterLimitKind::Nodes,
+        1,
+    );
 
     budget
         .try_consume(1)
@@ -50,7 +51,7 @@ fn test_resource_budget_preserves_filter_limit_facts() {
         .expect_err("second node should exceed the budget");
 
     assert_eq!(error.resource(), &FilterLimitKind::Nodes);
-    assert_eq!(error.limit().maximum(), 1);
+    assert_eq!(error.limit(), 1);
     assert_eq!(error.remaining(), 0);
     assert_eq!(error.requested(), 1);
     assert_eq!(budget.used(), 1);

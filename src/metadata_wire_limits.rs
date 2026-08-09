@@ -21,7 +21,6 @@ use crate::{
     MetadataWireDecodeError,
     MetadataWireLimitKind,
 };
-use qubit_budget::ResourceLimit;
 use qubit_value::WireLimits;
 
 /// Immutable resource limits applied to JSON wire decoding.
@@ -238,15 +237,15 @@ impl MetadataWireLimits {
         value: usize,
         maximum: usize,
     ) -> Result<(), MetadataWireDecodeError> {
-        ResourceLimit::new(maximum as u64)
-            .check(kind, value as u64)
-            .map_err(|error| MetadataWireDecodeError::LimitExceeded {
-                kind: error.into_resource(),
-                value: usize::try_from(error.observed())
-                    .expect("metadata wire observations originate from usize"),
-                maximum: usize::try_from(error.limit().maximum())
-                    .expect("metadata wire limits originate from usize"),
+        if value > maximum {
+            Err(MetadataWireDecodeError::LimitExceeded {
+                kind,
+                value,
+                maximum,
             })
+        } else {
+            Ok(())
+        }
     }
 
     /// Rejects a configured bound that cannot be represented by the V1 wire.
@@ -255,15 +254,15 @@ impl MetadataWireLimits {
         value: usize,
         maximum: usize,
     ) -> Result<(), MetadataWireDecodeError> {
-        ResourceLimit::new(maximum as u64)
-            .check(kind, value as u64)
-            .map_err(|error| MetadataWireDecodeError::InvalidLimit {
-                kind: error.into_resource(),
-                value: usize::try_from(error.observed())
-                    .expect("configured metadata limits originate from usize"),
-                maximum: usize::try_from(error.limit().maximum())
-                    .expect("canonical metadata limits originate from usize"),
+        if value > maximum {
+            Err(MetadataWireDecodeError::InvalidLimit {
+                kind,
+                value,
+                maximum,
             })
+        } else {
+            Ok(())
+        }
     }
 }
 
