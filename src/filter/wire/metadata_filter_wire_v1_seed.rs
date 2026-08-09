@@ -9,7 +9,7 @@
 
 use std::fmt;
 
-use qubit_budget::ResourceLimit;
+use qubit_budget::ResourceBudget;
 use qubit_value::WireBudget;
 use serde::de::{
     self,
@@ -23,6 +23,7 @@ use super::{
     MetadataFilterWireV1,
 };
 use crate::{
+    FilterLimitKind,
     FilterLimits,
     FilterMatchOptions,
 };
@@ -83,8 +84,10 @@ impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
         let mut version = None;
         let mut expression = None;
         let mut options = None;
-        let mut node_budget =
-            ResourceLimit::new(self.receiver_limits.max_nodes()).budget();
+        let mut node_budget = ResourceBudget::new(
+            FilterLimitKind::Nodes,
+            self.receiver_limits.max_nodes(),
+        );
         while let Some(field) = map.next_key::<String>()? {
             match field.as_str() {
                 "version" => {
