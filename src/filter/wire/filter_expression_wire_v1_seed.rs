@@ -107,7 +107,7 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
             }));
         }
         self.node_budget
-            .consume(FilterLimitKind::Nodes, 1)
+            .try_consume(FilterLimitKind::Nodes, 1)
             .map_err(filter_limit_error)
             .map_err(E::custom)?;
         self.budget.check_depth(self.depth).map_err(E::custom)?;

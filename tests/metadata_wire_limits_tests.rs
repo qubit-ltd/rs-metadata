@@ -44,10 +44,10 @@ fn test_resource_budget_preserves_filter_limit_facts() {
     let mut budget = ResourceBudget::new(ResourceLimit::new(1));
 
     budget
-        .consume(FilterLimitKind::Nodes, 1)
+        .try_consume(FilterLimitKind::Nodes, 1)
         .expect("first node should fit the budget");
     let error = budget
-        .consume(FilterLimitKind::Nodes, 1)
+        .try_consume(FilterLimitKind::Nodes, 1)
         .expect_err("second node should exceed the budget");
 
     assert_eq!(error.kind(), &FilterLimitKind::Nodes);
