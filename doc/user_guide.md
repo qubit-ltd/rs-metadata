@@ -276,9 +276,9 @@ When `json` is enabled, use the slice decoding methods for complete untrusted
 JSON input:
 
 ```rust
-use qubit_metadata::{Metadata, MetadataWireLimits};
+use qubit_metadata::{Metadata, MetadataLimits};
 
-let limits = MetadataWireLimits::default()
+let limits = MetadataLimits::default()
     .with_max_metadata_entries(128)
     .with_max_key_bytes(128);
 let metadata = Metadata::decode_json_slice_with_limits(
@@ -289,16 +289,16 @@ let metadata = Metadata::decode_json_slice_with_limits(
 ```
 
 The default limits are 1,048,576 input bytes, 4,096 metadata entries, 4,096
-schema fields, and 256 UTF-8 bytes per key. `MetadataWireLimits` can lower
-decoded-resource limits, and its `with_wire` method replaces the shared Value
-and JSON structural limits. Its metadata-entry, schema-field, and key limits
-cannot exceed the canonical V1 serialization limits. The input byte limit is
-checked before JSON parsing.
+schema fields, and 256 UTF-8 bytes per key. `MetadataLimits` keeps these
+metadata-domain limits separate from its `JsonLimits` profile; use
+`with_json` to replace generic traversal and byte limits. Domain limits cannot
+exceed the canonical V1 serialization limits. The input byte limit is checked
+before JSON parsing.
 
 `MetadataSchema` and `MetadataFilter` provide corresponding bounded JSON
 decoders. Filter decoding additionally accepts receiver-controlled
 `FilterLimits`. The explicit filter JSON decoder enforces receiver AST limits
-and the shared wire budget while reading the expression tree. Filter limits are
+and the shared JSON budget while reading the expression tree. Filter limits are
 transient receiver-side policy and are not serialized. Individual JSON strings
 and embedded value payloads may still require temporary allocations bounded by
 the outer input-byte limit. Generic `serde::Deserialize` remains intended for
@@ -330,7 +330,7 @@ Use the error type that matches the boundary being validated:
 | One metadata read | `try_get` | missing key, unset value, conversion/type mismatch |
 | One schema check | `MetadataSchema::validate` | all independent metadata issues through `issues()` |
 | Filter construction | `build` / `build_checked` | empty groups, invalid operands, unknown fields, incompatible operators |
-| JSON input | `decode_json_slice_with_limits` | input too large, invalid JSON, wire budget or V1 validation failure |
+| JSON input | `decode_json_slice_with_limits` | budget, invalid JSON, or V1 validation failure |
 
 Conversion diagnostics keep structured expected and actual types without
 embedding the rejected source value. This makes errors suitable for logs while
@@ -355,10 +355,10 @@ type.
 
 ### JSON decoding fails before parsing appears to start
 
-Compare the input byte length with `MetadataWireLimits::max_json_bytes()`. The
-input-size check is intentionally performed before the JSON parser is invoked.
-If the input is within that bound, inspect entry, field, key, and Value wire
-limits in the returned `MetadataWireDecodeError`.
+Compare the input byte length with the `JsonLimits` profile held by
+`MetadataLimits`. The input-size check is intentionally performed before the
+JSON parser is invoked. If the input is within that bound, inspect domain and
+generic budget facts in the returned `MetadataWireDecodeError`.
 
 ### `get` hides the reason for failure
 
@@ -370,7 +370,7 @@ the caller must distinguish absence from a type mismatch or unset value.
 - Keep metadata keys and values small enough for the receiving storage system;
   this crate does not provide a storage-provider indexing strategy.
 - Validate at the boundary where metadata enters a trusted domain, and apply
-  explicit wire limits before parsing untrusted JSON.
+  explicit JSON and domain limits before parsing untrusted JSON.
 - Use `MetadataFilter::build_checked` when a schema is available. Use the
   unchecked builder only when the target backend owns field validation.
 - Treat diagnostic formatting as bounded and redacted output, not a complete

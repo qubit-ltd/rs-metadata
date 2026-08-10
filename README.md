@@ -94,15 +94,12 @@ operands directly.
 - Schema validation of stored metadata remains strict about the declared
   concrete field type, even though filter schema checks accept compatible
   numeric representations.
-- Default JSON decoding limits input bytes, entry counts, schema field counts,
-  key length, and Value wire structure. Configured metadata-entry, schema-field,
-  and key limits cannot exceed the canonical V1 serialization limits. Filter
-  limits are transient receiver-side policy and are omitted from the V1 wire;
-  filter AST and nested Value limits are validated while decoding, so use a
-  streaming deserializer or a smaller outer input limit when peak allocation
-  must be bounded. Generic Serde deserialization also enforces hard map-entry
-  and key-length bounds, but it is not a substitute for caller-controlled
-  input-byte and Value-structure limits on untrusted outer protocols.
+- Default JSON decoding limits input bytes, generic JSON structure, and
+  metadata-domain entry, schema-field, and key counts. Domain limits cannot
+  exceed the canonical V1 serialization limits. Filter limits are transient
+  receiver-side policy and are omitted from the V1 wire; the shared JSON
+  adapter handles generic traversal while filter seeds enforce AST and
+  membership limits.
 - Redacted `Debug` and `Display` output is intended for diagnostics, not as a
   confidentiality boundary for arbitrary user keys or error text.
 - Metadata keys are plain strings. When a key crosses a module, provider, or

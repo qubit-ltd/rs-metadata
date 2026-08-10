@@ -251,9 +251,9 @@ assert!(filter.matches(&metadata));
 启用 `json` 后，对于完整的不可信 JSON 输入使用 slice 解码方法：
 
 ```rust
-use qubit_metadata::{Metadata, MetadataWireLimits};
+use qubit_metadata::{Metadata, MetadataLimits};
 
-let limits = MetadataWireLimits::default()
+let limits = MetadataLimits::default()
     .with_max_metadata_entries(128)
     .with_max_key_bytes(128);
 let metadata = Metadata::decode_json_slice_with_limits(
@@ -264,13 +264,13 @@ let metadata = Metadata::decode_json_slice_with_limits(
 ```
 
 默认限制是输入 1,048,576 字节、4,096 个 metadata 条目、4,096 个 schema 字段，以及每个
-key 256 个 UTF-8 字节。`MetadataWireLimits` 可以降低解码资源限制，metadata 条目数、schema
-字段数和 key 长度不能超过 V1 序列化的规范硬上限；`with_wire` 会替换共享的 Value 和 JSON
-结构限制。输入字节数会在 JSON 解析前检查。
+key 256 个 UTF-8 字节。`MetadataLimits` 将这些 metadata 领域限制与内部的 `JsonLimits`
+profile 分开；使用 `with_json` 替换通用遍历和字节限制。领域限制不能超过 V1 序列化的规范
+硬上限。输入字节数会在 JSON 解析前检查。
 
 `MetadataSchema` 和 `MetadataFilter` 也提供对应的有界 JSON 解码器。Filter 解码还接受由
 接收方控制的 `FilterLimits`。显式 filter JSON decoder 会在读取 expression tree 时执行接收方
-AST 限制和共享 wire budget。Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
+AST 限制和共享 JSON budget。Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
 字符串和嵌套 value 仍可能产生临时分配，但会受到外层输入字节上限约束。通用
 `serde::Deserialize` 适用于外层已经受控的协议。
 
@@ -296,7 +296,7 @@ wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 �
 | 单次 metadata 读取 | `try_get` | key 缺失、unset、转换/类型不匹配 |
 | 单次 schema 校验 | `MetadataSchema::validate` | 通过 `issues()` 获取所有独立 metadata 问题 |
 | Filter 构造 | `build` / `build_checked` | 空分组、非法操作数、未知字段、操作符不兼容 |
-| JSON 输入 | `decode_json_slice_with_limits` | 输入过大、JSON 非法、wire budget 或 V1 校验失败 |
+| JSON 输入 | `decode_json_slice_with_limits` | JSON budget、JSON 非法或 V1 校验失败 |
 
 转换诊断会保留期望类型和实际类型等结构化信息，而不会嵌入被拒绝的原始值。这使错误
 适合写入日志，同时减少意外泄露 metadata 内容的风险。
@@ -316,9 +316,9 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 
 ### JSON 解码在看起来开始解析前就失败
 
-将输入字节数与 `MetadataWireLimits::max_json_bytes()` 比较。输入大小检查会有意在 JSON
-解析器调用前执行。如果输入在限制内，再根据返回的 `MetadataWireDecodeError` 检查条目数、
-字段数、key 长度和 Value wire 限制。
+将输入字节数与 `MetadataLimits` 内部 `JsonLimits` profile 的输入上限比较。输入大小检查会
+有意在 JSON 解析器调用前执行。如果输入在限制内，再根据返回的 `MetadataWireDecodeError`
+检查领域限制和通用 JSON 预算事实。
 
 ### `get` 隐藏了失败原因
 

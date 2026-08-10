@@ -80,12 +80,9 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 - filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
-- 默认 JSON 解码会限制输入字节数、条目数、schema 字段数、key 长度和 Value wire 结构。
-  配置的 metadata 条目数、schema 字段数和 key 长度不能超过 V1 序列化的规范硬上限。
-  Filter limits 是接收端瞬态策略，不会写入 V1 wire；Filter AST 和嵌套 Value 限制会在解码过程中
-  校验。如果必须限制峰值分配，应使用流式
-  deserializer 或更小的外层输入限制。通用 Serde 反序列化也会执行 map 条目数和 key 长度
-  硬限制，但对于不可信外层协议，它不能替代调用方对输入字节数和 Value wire 结构的资源控制。
+- 默认 JSON 解码会限制输入字节数、通用 JSON 结构，以及 metadata 条目数、schema 字段数和
+  key 长度。领域限制不能超过 V1 序列化的规范硬上限。Filter limits 是接收端瞬态策略，不会
+  写入 V1 wire；共享 JSON adapter 负责通用遍历，filter seed 负责 AST 和 membership 领域限制。
 - 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。
 - Metadata key 本身是普通字符串。当 key 跨越模块、provider 或存储边界时，应在所属边界定义
   唯一的字符串常量，并在读写时复用；如果还需要校验 key/value 契约，应使用
