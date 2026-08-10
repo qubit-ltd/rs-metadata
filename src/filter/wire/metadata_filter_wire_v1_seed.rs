@@ -10,7 +10,6 @@
 use std::fmt;
 
 use qubit_budget::ResourceBudget;
-use qubit_value::WireBudget;
 use serde::de::{
     self,
     DeserializeSeed,
@@ -29,25 +28,18 @@ use crate::{
 };
 
 /// Seed that decodes one strict metadata-filter envelope.
-pub(crate) struct MetadataFilterWireV1Seed<'a> {
+pub(crate) struct MetadataFilterWireV1Seed {
     receiver_limits: FilterLimits,
-    budget: &'a mut WireBudget,
 }
 
-impl<'a> MetadataFilterWireV1Seed<'a> {
+impl MetadataFilterWireV1Seed {
     /// Creates a bounded filter-envelope seed.
-    pub(crate) const fn new(
-        receiver_limits: FilterLimits,
-        budget: &'a mut WireBudget,
-    ) -> Self {
-        Self {
-            receiver_limits,
-            budget,
-        }
+    pub(crate) const fn new(receiver_limits: FilterLimits) -> Self {
+        Self { receiver_limits }
     }
 }
 
-impl<'de, 'a> DeserializeSeed<'de> for MetadataFilterWireV1Seed<'a> {
+impl<'de> DeserializeSeed<'de> for MetadataFilterWireV1Seed {
     type Value = MetadataFilterWireV1;
 
     /// Decodes the strict envelope and delegates expression decoding to a seed.
@@ -57,18 +49,16 @@ impl<'de, 'a> DeserializeSeed<'de> for MetadataFilterWireV1Seed<'a> {
     {
         deserializer.deserialize_map(MetadataFilterWireVisitor {
             receiver_limits: self.receiver_limits,
-            budget: self.budget,
         })
     }
 }
 
 /// Visitor for the strict metadata-filter envelope.
-struct MetadataFilterWireVisitor<'a> {
+struct MetadataFilterWireVisitor {
     receiver_limits: FilterLimits,
-    budget: &'a mut WireBudget,
 }
 
-impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
+impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
     type Value = MetadataFilterWireV1;
 
     /// Describes the strict metadata-filter envelope.
@@ -104,7 +94,6 @@ impl<'de, 'a> Visitor<'de> for MetadataFilterWireVisitor<'a> {
                         FilterExpressionWireV1Seed::new(
                             self.receiver_limits,
                             &mut node_budget,
-                            &mut *self.budget,
                             1,
                         ),
                     )?);

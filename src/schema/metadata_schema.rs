@@ -11,10 +11,6 @@ use std::collections::BTreeMap;
 
 use qubit_datatype::DataType;
 use qubit_value::Value;
-#[cfg(feature = "json")]
-use qubit_value::WireBudget;
-#[cfg(feature = "json")]
-use serde::de::DeserializeSeed;
 use serde::{
     Deserialize,
     Deserializer,
@@ -29,6 +25,8 @@ use crate::constants::{
     STRICT_STRING_MAP_MAX_ENTRIES,
     STRICT_STRING_MAP_MAX_KEY_BYTES,
 };
+#[cfg(feature = "json")]
+use crate::metadata_limits::MetadataLimits;
 use crate::schema::{
     MetadataField,
     MetadataSchemaBuilder,
@@ -43,7 +41,6 @@ use crate::wire::{
 #[cfg(feature = "json")]
 use crate::wire::{
     MetadataSchemaWireV1Seed,
-    StrictStringMapLimitExceeded,
     StrictStringMapSeed,
 };
 use crate::{
@@ -52,6 +49,12 @@ use crate::{
     MetadataResult,
     MetadataValidationError,
     MetadataValidationResult,
+};
+#[cfg(feature = "json")]
+use qubit_budget::{
+    JsonResource,
+    JsonSerdeError,
+    from_slice_seed_with_budget,
 };
 
 /// Schema for metadata fields.
@@ -81,8 +84,8 @@ impl MetadataSchema {
         MetadataSchemaBuilder::default()
     }
 
-    /// Decodes a strict metadata-schema JSON envelope using the default byte
-    /// limit.
+    /// Decodes a strict metadata-schema JSON envelope using the metadata
+    /// profile.
     ///
     /// # Parameters
     ///
@@ -94,26 +97,23 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, structured map-limit errors,
-    /// or `InvalidJson` for malformed strict schema input.
+    /// Returns a structured budget error or `InvalidJson` for malformed strict
+    /// schema input.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(
         input: &[u8],
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        Self::decode_json_slice_with_limits(
-            input,
-            crate::MetadataWireLimits::default(),
-        )
+        Self::decode_json_slice_with_limits(input, MetadataLimits::default())
     }
 
     /// Decodes a strict metadata-schema JSON envelope after applying
-    /// `wire_limits`.
+    /// `limits`.
     ///
     /// # Parameters
     ///
     /// * `input` - Complete untrusted JSON input.
-    /// * `wire_limits` - Byte limit checked before JSON parsing.
+    /// * `limits` - Shared JSON limits for this decoding session.
     ///
     /// # Returns
     ///
@@ -121,39 +121,26 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, structured map-limit errors,
-    /// or `InvalidJson` for syntax and strict schema-envelope failures.
+    /// Returns a structured budget error or `InvalidJson` for syntax and strict
+    /// schema-envelope failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
-        wire_limits: crate::MetadataWireLimits,
+        limits: MetadataLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        wire_limits.validate_schema_limits()?;
-        let mut budget = wire_limits.wire().begin(input.len())?;
-        let mut deserializer = serde_json::Deserializer::from_slice(input);
-        let mut map_limit_error = None;
-        let decoded = MetadataSchemaWireV1Seed::new(
-            StrictStringMapSeed::with_limit_reporting(
-                wire_limits.max_schema_fields(),
-                wire_limits.max_key_bytes(),
-                crate::MetadataWireLimitKind::SchemaFields,
-                &mut map_limit_error,
-            ),
-        )
-        .deserialize(&mut deserializer);
-        let wire = match decoded {
-            Ok(wire) => wire,
-            Err(error) => {
-                return Err(map_limit_error
-                    .map(schema_wire_limit_error)
-                    .unwrap_or(crate::MetadataWireDecodeError::InvalidJson(
-                        error,
-                    )));
-            }
-        };
-        deserializer
-            .end()
+        limits
+            .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let mut budget = limits.json().budget();
+        let wire = from_slice_seed_with_budget(
+            input,
+            MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
+                limits.max_schema_fields(),
+                limits.max_key_bytes(),
+            )),
+            &mut budget,
+        )
+        .map_err(schema_json_error)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
             return Err(crate::MetadataWireDecodeError::InvalidJson(
                 <serde_json::Error as serde::de::Error>::custom(
@@ -161,13 +148,11 @@ impl MetadataSchema {
                 ),
             ));
         }
-        let schema = Self::new(
+        Ok(Self::new(
             wire.fields.into_inner(),
             wire.unknown_metadata_field_policy,
             wire.unknown_filter_field_policy,
-        );
-        schema.validate_wire_limits(wire_limits, &mut budget)?;
-        Ok(schema)
+        ))
     }
 
     /// Creates a schema from field definitions and unknown-field policies.
@@ -347,43 +332,25 @@ impl MetadataSchema {
             None => Ok(()),
         }
     }
-
-    /// Validates decoded schema resources against JSON wire limits.
-    ///
-    /// # Parameters
-    ///
-    /// * `wire_limits` - Bounds applied to the decoded schema.
-    ///
-    /// # Errors
-    ///
-    /// Returns a wire-limit error when the schema has too many fields or a
-    /// field name exceeds the configured UTF-8 byte bound.
-    #[cfg(feature = "json")]
-    fn validate_wire_limits(
-        &self,
-        wire_limits: crate::MetadataWireLimits,
-        budget: &mut WireBudget,
-    ) -> Result<(), crate::MetadataWireDecodeError> {
-        wire_limits.check_schema_fields(self.fields.len())?;
-        budget.check_node()?;
-        budget.check_map_entries(self.fields.len())?;
-        self.fields.keys().try_for_each(|key| {
-            wire_limits.check_key_bytes(key.len())?;
-            budget.check_key_bytes(key.len())?;
-            Ok(())
-        })
-    }
 }
 
 #[cfg(feature = "json")]
-/// Converts an internal strict-map limit record into the public wire error.
-fn schema_wire_limit_error(
-    error: StrictStringMapLimitExceeded,
+/// Converts a shared JSON adapter error into the schema decoding error.
+fn schema_json_error(
+    error: JsonSerdeError<JsonResource>,
 ) -> crate::MetadataWireDecodeError {
-    crate::MetadataWireDecodeError::LimitExceeded {
-        kind: error.kind,
-        value: error.value,
-        maximum: error.maximum,
+    match error {
+        JsonSerdeError::Budget(error) => {
+            crate::MetadataWireDecodeError::Budget(error)
+        }
+        JsonSerdeError::Json(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(error)
+        }
+        JsonSerdeError::Io(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
+        }
     }
 }
 
