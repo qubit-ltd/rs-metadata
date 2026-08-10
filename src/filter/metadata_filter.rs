@@ -8,8 +8,6 @@
 //! [`MetadataFilter`].
 
 use qubit_utils::Transient;
-#[cfg(feature = "json")]
-use serde::de::DeserializeSeed;
 use serde::{
     Deserialize,
     Deserializer,
@@ -25,6 +23,8 @@ use super::wire::{
     MetadataFilterWireV1,
     MetadataFilterWireV1Ref,
 };
+#[cfg(feature = "json")]
+use crate::metadata_limits::MetadataLimits;
 #[cfg(feature = "schema")]
 use crate::{
     Condition,
@@ -35,6 +35,12 @@ use crate::{
     FilterLimits,
     FilterMatchOptions,
     Metadata,
+};
+#[cfg(feature = "json")]
+use qubit_budget::{
+    JsonResource,
+    JsonSerdeError,
+    from_slice_seed_with_budget,
 };
 
 /// An expression, its matching policy, and its resource limits.
@@ -146,7 +152,7 @@ impl MetadataFilter {
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(
             input,
-            crate::MetadataWireLimits::default(),
+            MetadataLimits::default(),
             FilterLimits::MAX,
         )
     }
@@ -157,7 +163,7 @@ impl MetadataFilter {
     /// # Parameters
     ///
     /// * `input` - Complete untrusted JSON input.
-    /// * `wire_limits` - Byte limit checked before JSON parsing.
+    /// * `limits` - Shared JSON limits for this decoding session.
     /// * `receiver_filter_limits` - Local AST limits validated after decoding.
     ///
     /// # Returns
@@ -168,25 +174,27 @@ impl MetadataFilter {
     ///
     /// Returns an input-size error before parsing, a structured filter-contract
     /// error in `Filter`, or `InvalidJson` for syntax, strict-envelope, nested
-    /// value, and receiver-limit failures. Receiver AST limits and the shared
-    /// wire budget are charged while the expression tree is read; individual
+    /// value, and receiver-limit failures. Receiver AST limits are charged
+    /// while the expression tree is read; generic JSON traversal is handled by
+    /// the shared budget adapter. Individual
     /// JSON strings and embedded value payloads remain bounded by the outer
     /// input-byte limit.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
-        wire_limits: crate::MetadataWireLimits,
+        limits: MetadataLimits,
         receiver_filter_limits: FilterLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        let mut budget = wire_limits.wire().begin(input.len())?;
-        let mut deserializer = serde_json::Deserializer::from_slice(input);
-        let wire =
-            MetadataFilterWireV1Seed::new(receiver_filter_limits, &mut budget)
-                .deserialize(&mut deserializer)
-                .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        deserializer
-            .end()
+        limits
+            .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let mut budget = limits.json().budget();
+        let wire = from_slice_seed_with_budget(
+            input,
+            MetadataFilterWireV1Seed::new(receiver_filter_limits),
+            &mut budget,
+        )
+        .map_err(filter_json_error)?;
         wire.into_filter(receiver_filter_limits)
             .map_err(crate::MetadataWireDecodeError::Filter)
     }
@@ -272,5 +280,25 @@ impl<'de> Deserialize<'de> for MetadataFilter {
         D: Deserializer<'de>,
     {
         Self::deserialize_with_filter_limits(deserializer, FilterLimits::MAX)
+    }
+}
+
+#[cfg(feature = "json")]
+/// Converts a shared JSON adapter error into the filter decoding error.
+fn filter_json_error(
+    error: JsonSerdeError<JsonResource>,
+) -> crate::MetadataWireDecodeError {
+    match error {
+        JsonSerdeError::Budget(error) => {
+            crate::MetadataWireDecodeError::Budget(error)
+        }
+        JsonSerdeError::Json(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(error)
+        }
+        JsonSerdeError::Io(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
+        }
     }
 }

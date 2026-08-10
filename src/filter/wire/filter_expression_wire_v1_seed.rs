@@ -13,10 +13,7 @@ use qubit_budget::{
     BudgetError,
     ResourceBudget,
 };
-use qubit_value::{
-    ValueWirePayloadV1,
-    WireBudget,
-};
+use qubit_value::ValueWirePayloadV1;
 use serde::Deserialize;
 use serde::de::{
     self,
@@ -70,11 +67,10 @@ enum ExpressionKind {
     Not,
 }
 
-/// Seed that decodes one expression while charging shared resource budgets.
+/// Seed that decodes one expression while charging filter-domain budgets.
 pub(crate) struct FilterExpressionWireV1Seed<'a> {
     receiver_limits: FilterLimits,
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-    budget: &'a mut WireBudget,
     depth: usize,
 }
 
@@ -83,13 +79,11 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
     pub(crate) const fn new(
         receiver_limits: FilterLimits,
         node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-        budget: &'a mut WireBudget,
         depth: usize,
     ) -> Self {
         Self {
             receiver_limits,
             node_budget,
-            budget,
             depth,
         }
     }
@@ -110,8 +104,7 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
             .try_consume(1)
             .map_err(filter_limit_error)
             .map_err(E::custom)?;
-        self.budget.check_depth(self.depth).map_err(E::custom)?;
-        self.budget.check_node().map_err(E::custom)
+        Ok(())
     }
 }
 
@@ -130,7 +123,6 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
         deserializer.deserialize_map(ExpressionVisitor {
             receiver_limits: self.receiver_limits,
             node_budget: self.node_budget,
-            budget: self.budget,
             depth: self.depth,
         })
     }
@@ -148,14 +140,13 @@ fn filter_limit_error(
             requested,
         } => MetadataError::FilterLimitExceeded {
             kind: resource,
-            value: limit
-                .saturating_sub(remaining)
-                .saturating_add(requested),
+            value: limit.saturating_sub(remaining).saturating_add(requested),
             maximum: limit,
         },
-        BudgetError::LimitExceeded { .. }
-        | BudgetError::InvalidRelease { .. } => {
-            unreachable!("filter node budgets only report insufficient capacity")
+        BudgetError::LimitExceeded { .. } => {
+            unreachable!(
+                "filter node budgets only report insufficient capacity"
+            )
         }
     }
 }
@@ -334,12 +325,8 @@ fn ensure_absent<T>(value: Option<T>, field: &str) -> Result<(), String> {
     }
 }
 
-/// Checks one decoded key against receiver and shared wire limits.
-fn check_key<E>(
-    key: &str,
-    receiver_limits: FilterLimits,
-    budget: &mut WireBudget,
-) -> Result<(), E>
+/// Checks one decoded key against receiver filter limits.
+fn check_key<E>(key: &str, receiver_limits: FilterLimits) -> Result<(), E>
 where
     E: de::Error,
 {
@@ -350,14 +337,13 @@ where
             maximum: receiver_limits.max_key_bytes(),
         }));
     }
-    budget.check_key_bytes(key.len()).map_err(E::custom)
+    Ok(())
 }
 
 /// Visitor for one expression map.
 struct ExpressionVisitor<'a> {
     receiver_limits: FilterLimits,
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-    budget: &'a mut WireBudget,
     depth: usize,
 }
 
@@ -395,11 +381,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         return Err(de::Error::duplicate_field("key"));
                     }
                     let key = map.next_value::<String>()?;
-                    check_key::<A::Error>(
-                        &key,
-                        self.receiver_limits,
-                        &mut *self.budget,
-                    )?;
+                    check_key::<A::Error>(&key, self.receiver_limits)?;
                     fields.key = Some(key);
                 }
                 "value" => {
@@ -407,24 +389,15 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         return Err(de::Error::duplicate_field("value"));
                     }
                     let value = map.next_value::<ValueWirePayloadV1>()?;
-                    self.budget
-                        .check_container_at(
-                            value.container(),
-                            self.depth.saturating_add(1),
-                        )
-                        .map_err(A::Error::custom)?;
                     fields.value = Some(value);
                 }
                 "values" => {
                     if fields.values.is_some() {
                         return Err(de::Error::duplicate_field("values"));
                     }
-                    fields.values =
-                        Some(map.next_value_seed(ValueSequenceSeed::new(
-                            self.receiver_limits,
-                            &mut *self.budget,
-                            self.depth.saturating_add(1),
-                        ))?);
+                    fields.values = Some(map.next_value_seed(
+                        ValueSequenceSeed::new(self.receiver_limits),
+                    )?);
                 }
                 "children" => {
                     if fields.children.is_some() {
@@ -434,7 +407,6 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         ExpressionSequenceSeed::new(
                             self.receiver_limits,
                             &mut *self.node_budget,
-                            &mut *self.budget,
                             self.depth.saturating_add(1),
                         ),
                     )?);
@@ -447,7 +419,6 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         FilterExpressionWireV1Seed::new(
                             self.receiver_limits,
                             &mut *self.node_budget,
-                            &mut *self.budget,
                             self.depth.saturating_add(1),
                         ),
                     )?));
@@ -475,7 +446,6 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
 struct ExpressionSequenceSeed<'a> {
     receiver_limits: FilterLimits,
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-    budget: &'a mut WireBudget,
     depth: usize,
 }
 
@@ -484,13 +454,11 @@ impl<'a> ExpressionSequenceSeed<'a> {
     const fn new(
         receiver_limits: FilterLimits,
         node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-        budget: &'a mut WireBudget,
         depth: usize,
     ) -> Self {
         Self {
             receiver_limits,
             node_budget,
-            budget,
             depth,
         }
     }
@@ -507,7 +475,6 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
         deserializer.deserialize_seq(ExpressionSequenceVisitor {
             receiver_limits: self.receiver_limits,
             node_budget: self.node_budget,
-            budget: self.budget,
             depth: self.depth,
         })
     }
@@ -517,7 +484,6 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
 struct ExpressionSequenceVisitor<'a> {
     receiver_limits: FilterLimits,
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-    budget: &'a mut WireBudget,
     depth: usize,
 }
 
@@ -534,16 +500,14 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
     where
         A: SeqAccess<'de>,
     {
-        let maximum = self.budget.limits().max_collection_items();
+        let maximum = self.receiver_limits.max_nodes();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut children = Vec::with_capacity(capacity);
         while let Some(child) =
             sequence.next_element_seed(ExpressionElementSeed {
                 receiver_limits: self.receiver_limits,
                 node_budget: &mut *self.node_budget,
-                budget: &mut *self.budget,
                 depth: self.depth,
-                next_len: children.len().saturating_add(1),
             })?
         {
             children.push(child);
@@ -556,9 +520,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
 struct ExpressionElementSeed<'a> {
     receiver_limits: FilterLimits,
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
-    budget: &'a mut WireBudget,
     depth: usize,
-    next_len: usize,
 }
 
 impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
@@ -570,13 +532,9 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
     where
         D: serde::Deserializer<'de>,
     {
-        self.budget
-            .check_collection_items(self.next_len)
-            .map_err(D::Error::custom)?;
         FilterExpressionWireV1Seed::new(
             self.receiver_limits,
             self.node_budget,
-            self.budget,
             self.depth,
         )
         .deserialize(deserializer)
@@ -584,51 +542,37 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
 }
 
 /// Seed that bounds a membership-value sequence.
-struct ValueSequenceSeed<'a> {
+struct ValueSequenceSeed {
     receiver_limits: FilterLimits,
-    budget: &'a mut WireBudget,
-    depth: usize,
 }
 
-impl<'a> ValueSequenceSeed<'a> {
+impl ValueSequenceSeed {
     /// Creates a bounded membership-value sequence seed.
-    const fn new(
-        receiver_limits: FilterLimits,
-        budget: &'a mut WireBudget,
-        depth: usize,
-    ) -> Self {
-        Self {
-            receiver_limits,
-            budget,
-            depth,
-        }
+    const fn new(receiver_limits: FilterLimits) -> Self {
+        Self { receiver_limits }
     }
 }
 
-impl<'de, 'a> DeserializeSeed<'de> for ValueSequenceSeed<'a> {
+impl<'de> DeserializeSeed<'de> for ValueSequenceSeed {
     type Value = Vec<ValueWirePayloadV1>;
 
-    /// Decodes membership values with receiver and shared wire limits.
+    /// Decodes membership values with receiver-controlled bounds.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_seq(ValueSequenceVisitor {
             receiver_limits: self.receiver_limits,
-            budget: self.budget,
-            depth: self.depth,
         })
     }
 }
 
 /// Visitor for a bounded membership-value sequence.
-struct ValueSequenceVisitor<'a> {
+struct ValueSequenceVisitor {
     receiver_limits: FilterLimits,
-    budget: &'a mut WireBudget,
-    depth: usize,
 }
 
-impl<'de, 'a> Visitor<'de> for ValueSequenceVisitor<'a> {
+impl<'de> Visitor<'de> for ValueSequenceVisitor {
     type Value = Vec<ValueWirePayloadV1>;
 
     /// Describes a sequence of scalar V1 payloads.
@@ -641,17 +585,12 @@ impl<'de, 'a> Visitor<'de> for ValueSequenceVisitor<'a> {
     where
         A: SeqAccess<'de>,
     {
-        let maximum = self
-            .receiver_limits
-            .max_set_values()
-            .min(self.budget.limits().max_collection_items());
+        let maximum = self.receiver_limits.max_set_values();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut values = Vec::with_capacity(capacity);
         while let Some(value) =
             sequence.next_element_seed(ValueElementSeed {
                 receiver_limits: self.receiver_limits,
-                budget: &mut *self.budget,
-                depth: self.depth,
                 next_len: values.len().saturating_add(1),
             })?
         {
@@ -662,14 +601,12 @@ impl<'de, 'a> Visitor<'de> for ValueSequenceVisitor<'a> {
 }
 
 /// Seed that checks one membership item before reading its payload.
-struct ValueElementSeed<'a> {
+struct ValueElementSeed {
     receiver_limits: FilterLimits,
-    budget: &'a mut WireBudget,
-    depth: usize,
     next_len: usize,
 }
 
-impl<'de, 'a> DeserializeSeed<'de> for ValueElementSeed<'a> {
+impl<'de> DeserializeSeed<'de> for ValueElementSeed {
     type Value = ValueWirePayloadV1;
 
     /// Decodes one membership payload after charging its collection position.
@@ -684,13 +621,6 @@ impl<'de, 'a> DeserializeSeed<'de> for ValueElementSeed<'a> {
                 maximum: self.receiver_limits.max_set_values(),
             }));
         }
-        self.budget
-            .check_collection_items(self.next_len)
-            .map_err(D::Error::custom)?;
-        let value = ValueWirePayloadV1::deserialize(deserializer)?;
-        self.budget
-            .check_container_at(value.container(), self.depth)
-            .map_err(D::Error::custom)?;
-        Ok(value)
+        ValueWirePayloadV1::deserialize(deserializer)
     }
 }
