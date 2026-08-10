@@ -369,7 +369,7 @@ impl MetadataSchema {
         budget.check_map_entries(self.fields.len())?;
         self.fields.keys().try_for_each(|key| {
             wire_limits.check_key_bytes(key.len())?;
-            budget.check_string_bytes(key.len())?;
+            budget.check_key_bytes(key.len())?;
             Ok(())
         })
     }

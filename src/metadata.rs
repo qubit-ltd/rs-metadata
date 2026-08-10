@@ -663,7 +663,7 @@ impl Metadata {
         budget.check_map_entries(self.len())?;
         self.iter().try_for_each(|(key, value)| {
             wire_limits.check_key_bytes(key.len())?;
-            budget.check_string_bytes(key.len())?;
+            budget.check_key_bytes(key.len())?;
             budget.check_value_at(value, 2)?;
             Ok(())
         })
