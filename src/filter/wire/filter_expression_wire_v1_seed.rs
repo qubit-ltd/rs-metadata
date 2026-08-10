@@ -9,7 +9,10 @@
 
 use std::fmt;
 
-use qubit_budget::ResourceBudget;
+use qubit_budget::{
+    BudgetError,
+    ResourceBudget,
+};
 use qubit_value::{
     ValueWirePayloadV1,
     WireBudget,
@@ -135,16 +138,25 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 
 /// Converts shared budget facts to the established metadata filter error.
 fn filter_limit_error(
-    error: qubit_budget::ResourceBudgetError<FilterLimitKind, usize>,
+    error: BudgetError<FilterLimitKind, usize>,
 ) -> MetadataError {
-    let maximum = error.limit();
-    let value = maximum
-        .saturating_sub(error.remaining())
-        .saturating_add(error.requested());
-    MetadataError::FilterLimitExceeded {
-        kind: error.into_resource(),
-        value,
-        maximum,
+    match error {
+        BudgetError::Insufficient {
+            resource,
+            limit,
+            remaining,
+            requested,
+        } => MetadataError::FilterLimitExceeded {
+            kind: resource,
+            value: limit
+                .saturating_sub(remaining)
+                .saturating_add(requested),
+            maximum: limit,
+        },
+        BudgetError::LimitExceeded { .. }
+        | BudgetError::InvalidRelease { .. } => {
+            unreachable!("filter node budgets only report insufficient capacity")
+        }
     }
 }
 

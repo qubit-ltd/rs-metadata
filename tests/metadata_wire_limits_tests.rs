@@ -9,7 +9,10 @@
 
 #![cfg(all(feature = "json", feature = "schema"))]
 
-use qubit_budget::ResourceBudget;
+use qubit_budget::{
+    BudgetError,
+    ResourceBudget,
+};
 use qubit_metadata::{
     FilterLimitKind,
     FilterLimits,
@@ -50,10 +53,15 @@ fn test_resource_budget_preserves_filter_limit_facts() {
         .try_consume(1)
         .expect_err("second node should exceed the budget");
 
-    assert_eq!(error.resource(), &FilterLimitKind::Nodes);
-    assert_eq!(error.limit(), 1);
-    assert_eq!(error.remaining(), 0);
-    assert_eq!(error.requested(), 1);
+    assert_eq!(
+        error,
+        BudgetError::Insufficient {
+            resource: FilterLimitKind::Nodes,
+            limit: 1,
+            remaining: 0,
+            requested: 1,
+        }
+    );
     assert_eq!(budget.used(), 1);
 }
 
