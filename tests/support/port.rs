@@ -8,8 +8,8 @@
 //! A downstream conversion target used by metadata tests.
 
 use qubit_datatype::{
+    ConversionSession,
     DataConversionError,
-    DataConversionOptions,
     DataConversionTarget,
     DataConverter,
     DataType,
@@ -30,8 +30,8 @@ impl DataTypeOf for Port {
 impl DataConversionTarget for Port {
     fn convert_from(
         source: &DataConverter<'_>,
-        options: &DataConversionOptions,
+        session: &mut ConversionSession<'_>,
     ) -> Result<Self, DataConversionError> {
-        u16::convert_from(source, options).map(Self)
+        session.delegate::<u16>(source).map(Self)
     }
 }
