@@ -17,7 +17,7 @@ use libfuzzer_sys::fuzz_target;
 use qubit_metadata::{
     FilterLimits,
     MetadataFilter,
-    MetadataWireLimits,
+    MetadataLimits,
 };
 
 fuzz_target!(|data: &[u8]| {
@@ -30,14 +30,14 @@ fuzz_target!(|data: &[u8]| {
         .expect("fixed fuzz limits should be valid");
     if let Ok(value) = MetadataFilter::decode_json_slice_with_limits(
         data,
-        MetadataWireLimits::default(),
+        MetadataLimits::default(),
         receiver_limits,
     ) {
         let encoded =
             serde_json::to_vec(&value).expect("filter should serialize");
         let decoded = MetadataFilter::decode_json_slice_with_limits(
             &encoded,
-            MetadataWireLimits::default(),
+            MetadataLimits::default(),
             receiver_limits,
         )
         .expect("filter should round trip");

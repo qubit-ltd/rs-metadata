@@ -2,71 +2,35 @@
 //    Copyright (c) 2025 - 2026 Haixing Hu.
 //
 //    SPDX-License-Identifier: Apache-2.0
-//
-//    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Tests for [`qubit_metadata::MetadataWireDecodeError`].
+//! Tests for structured metadata JSON decoding errors.
 
-#[cfg(feature = "json")]
-use qubit_metadata::{
-    MetadataWireDecodeError,
-    MetadataWireLimitKind,
+#![cfg(feature = "json")]
+
+use std::error::Error;
+
+use qubit_budget::{
+    BudgetError,
+    JsonResource,
 };
+use qubit_metadata::MetadataWireDecodeError;
 
-#[cfg(feature = "json")]
 #[test]
-fn test_metadata_wire_decode_error_describes_input_limit() {
-    let error = MetadataWireDecodeError::InputTooLarge {
-        input_bytes: 5,
-        max_input_bytes: 4,
-    };
-
-    assert_eq!(
-        error.to_string(),
-        "metadata JSON input has 5 bytes, exceeding the limit of 4 bytes"
-    );
-    assert!(std::error::Error::source(&error).is_none());
+fn test_budget_error_preserves_source_chain() {
+    let error = MetadataWireDecodeError::Budget(BudgetError::LimitExceeded {
+        resource: JsonResource::InputBytes,
+        actual: 5,
+        maximum: 4,
+    });
+    assert!(error.to_string().contains("InputBytes"));
+    assert!(error.source().is_some());
 }
 
 #[test]
-#[cfg(feature = "json")]
-fn test_metadata_wire_decode_error_describes_decoded_resource_limit() {
-    let error = MetadataWireDecodeError::LimitExceeded {
-        kind: MetadataWireLimitKind::MetadataEntries,
-        value: 2,
-        maximum: 1,
-    };
-
-    assert_eq!(
-        error.to_string(),
-        "metadata JSON MetadataEntries value 2 exceeds the limit of 1"
+fn test_invalid_json_preserves_source_chain() {
+    let error = MetadataWireDecodeError::InvalidJson(
+        serde_json::from_str::<serde_json::Value>("{")
+            .expect_err("input should be malformed"),
     );
-    assert!(std::error::Error::source(&error).is_none());
-}
-
-#[test]
-#[cfg(feature = "json")]
-fn test_metadata_wire_decode_error_describes_invalid_configured_limit() {
-    let error = MetadataWireDecodeError::InvalidLimit {
-        kind: MetadataWireLimitKind::MetadataEntries,
-        value: 4_097,
-        maximum: 4_096,
-    };
-
-    assert_eq!(
-        error.to_string(),
-        "metadata JSON MetadataEntries limit 4097 exceeds the canonical maximum of 4096"
-    );
-    assert!(std::error::Error::source(&error).is_none());
-}
-
-#[test]
-#[cfg(all(feature = "json", feature = "filter"))]
-fn test_metadata_wire_decode_error_preserves_filter_contract_failure() {
-    let error = MetadataWireDecodeError::Filter(
-        qubit_metadata::MetadataError::MissingFilterExpression,
-    );
-
-    assert_eq!(error.to_string(), "Metadata filter requires an expression");
-    assert!(std::error::Error::source(&error).is_some());
+    assert!(error.source().is_some());
 }
