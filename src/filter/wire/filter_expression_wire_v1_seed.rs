@@ -350,7 +350,7 @@ where
             maximum: receiver_limits.max_key_bytes(),
         }));
     }
-    budget.check_string_bytes(key.len()).map_err(E::custom)
+    budget.check_key_bytes(key.len()).map_err(E::custom)
 }
 
 /// Visitor for one expression map.
