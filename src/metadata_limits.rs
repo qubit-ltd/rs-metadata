@@ -1,0 +1,182 @@
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+//! Default JSON and metadata-domain limits for metadata wire documents.
+
+use qubit_budget::{
+    JsonLimits,
+    JsonResource,
+    ResourceLimit,
+    StructureLimits,
+};
+use serde::de::Error as _;
+
+/// Default maximum complete metadata JSON input or output length.
+pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
+
+/// Default maximum metadata map entries accepted by the JSON profile.
+pub const DEFAULT_MAX_METADATA_ENTRIES: usize = 4_096;
+
+/// Default maximum schema fields accepted by the JSON profile.
+pub const DEFAULT_MAX_SCHEMA_FIELDS: usize = 4_096;
+
+/// Default maximum UTF-8 bytes in one metadata key.
+pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
+
+/// Domain-specific metadata limits composed with a shared JSON profile.
+///
+/// `MetadataLimits` deliberately keeps metadata-entry, schema-field, and key
+/// bounds separate from generic JSON map/key accounting. This preserves the
+/// protocol's domain limits while [`JsonLimits`] handles document traversal,
+/// string/number lengths, and complete input/output bytes.
+#[must_use]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MetadataLimits {
+    json: JsonLimits,
+    max_metadata_entries: usize,
+    max_schema_fields: usize,
+    max_key_bytes: usize,
+}
+
+impl MetadataLimits {
+    /// Creates metadata limits with the default JSON profile and the supplied
+    /// input/output byte bound.
+    pub fn new(max_json_bytes: usize) -> Self {
+        Self {
+            json: default_json_limits()
+                .with_input_bytes_limit(ResourceLimit::new(
+                    JsonResource::InputBytes,
+                    max_json_bytes,
+                ))
+                .with_output_bytes_limit(ResourceLimit::new(
+                    JsonResource::OutputBytes,
+                    max_json_bytes,
+                )),
+            max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
+            max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
+            max_key_bytes: DEFAULT_MAX_KEY_BYTES,
+        }
+    }
+
+    /// Replaces the shared generic JSON profile.
+    pub fn with_json(mut self, json: JsonLimits) -> Self {
+        self.json = json;
+        self
+    }
+
+    /// Returns the shared generic JSON profile.
+    pub const fn json(&self) -> &JsonLimits {
+        &self.json
+    }
+
+    /// Sets the metadata-entry domain limit.
+    pub const fn with_max_metadata_entries(mut self, maximum: usize) -> Self {
+        self.max_metadata_entries = maximum;
+        self
+    }
+
+    /// Sets the schema-field domain limit.
+    pub const fn with_max_schema_fields(mut self, maximum: usize) -> Self {
+        self.max_schema_fields = maximum;
+        self
+    }
+
+    /// Sets the metadata/schema key-byte domain limit.
+    pub const fn with_max_key_bytes(mut self, maximum: usize) -> Self {
+        self.max_key_bytes = maximum;
+        self
+    }
+
+    /// Returns the metadata-entry domain limit.
+    pub const fn max_metadata_entries(&self) -> usize {
+        self.max_metadata_entries
+    }
+
+    /// Returns the schema-field domain limit.
+    pub const fn max_schema_fields(&self) -> usize {
+        self.max_schema_fields
+    }
+
+    /// Returns the metadata/schema key-byte domain limit.
+    pub const fn max_key_bytes(&self) -> usize {
+        self.max_key_bytes
+    }
+
+    /// Validates receiver-controlled domain limits against protocol hard caps.
+    pub fn validate(&self) -> Result<(), serde_json::Error> {
+        if self.max_metadata_entries > DEFAULT_MAX_METADATA_ENTRIES {
+            return Err(serde_json::Error::custom(format!(
+                "metadata entries limit {} exceeds {}",
+                self.max_metadata_entries, DEFAULT_MAX_METADATA_ENTRIES,
+            )));
+        }
+        if self.max_schema_fields > DEFAULT_MAX_SCHEMA_FIELDS {
+            return Err(serde_json::Error::custom(format!(
+                "schema fields limit {} exceeds {}",
+                self.max_schema_fields, DEFAULT_MAX_SCHEMA_FIELDS,
+            )));
+        }
+        if self.max_key_bytes > DEFAULT_MAX_KEY_BYTES {
+            return Err(serde_json::Error::custom(format!(
+                "metadata key limit {} exceeds {}",
+                self.max_key_bytes, DEFAULT_MAX_KEY_BYTES,
+            )));
+        }
+        Ok(())
+    }
+}
+
+impl Default for MetadataLimits {
+    fn default() -> Self {
+        Self::new(DEFAULT_MAX_JSON_BYTES)
+    }
+}
+
+/// Creates the default metadata JSON budget profile.
+///
+/// The profile owns protocol policy while the actual accounting remains in
+/// `qubit_budget::JsonBudget`. Callers may replace any limit before creating a
+/// budget session.
+pub fn default_json_limits() -> JsonLimits {
+    JsonLimits::empty()
+        .with_input_bytes_limit(ResourceLimit::new(
+            JsonResource::InputBytes,
+            DEFAULT_MAX_JSON_BYTES,
+        ))
+        .with_output_bytes_limit(ResourceLimit::new(
+            JsonResource::OutputBytes,
+            DEFAULT_MAX_JSON_BYTES,
+        ))
+        .with_string_bytes_limit(ResourceLimit::new(
+            JsonResource::StringBytes,
+            256 * 1024,
+        ))
+        .with_number_bytes_limit(ResourceLimit::new(
+            JsonResource::NumberBytes,
+            4_096,
+        ))
+        .with_structure_limits(
+            StructureLimits::empty()
+                .with_depth_limit(ResourceLimit::new(JsonResource::Depth, 64))
+                .with_nodes_limit(ResourceLimit::new(
+                    JsonResource::Nodes,
+                    100_000,
+                ))
+                .with_sequence_items_limit(ResourceLimit::new(
+                    JsonResource::SequenceItems,
+                    4_096,
+                ))
+                .with_map_entries_limit(ResourceLimit::new(
+                    JsonResource::MapEntries,
+                    DEFAULT_MAX_METADATA_ENTRIES,
+                ))
+                .with_key_bytes_limit(ResourceLimit::new(
+                    JsonResource::KeyBytes,
+                    DEFAULT_MAX_KEY_BYTES,
+                )),
+        )
+}

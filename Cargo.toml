@@ -40,7 +40,7 @@ big-integer = ["qubit-value/big-integer"]
 big-decimal = ["qubit-value/big-decimal"]
 big-number = ["big-integer", "big-decimal"]
 url = ["qubit-value/url"]
-json = ["dep:serde_json", "qubit-value/json"]
+json = ["dep:serde_json", "qubit-value/json", "qubit-budget/serde-json"]
 all = ["schema", "chrono", "big-number", "url", "json"]
 
 [dependencies]
