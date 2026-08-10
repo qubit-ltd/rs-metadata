@@ -14,10 +14,10 @@ use criterion::{
     criterion_group,
     criterion_main,
 };
+#[cfg(feature = "json")]
+use qubit_metadata::MetadataLimits;
 #[cfg(all(feature = "json", feature = "schema"))]
 use qubit_metadata::MetadataSchema;
-#[cfg(feature = "json")]
-use qubit_metadata::MetadataWireLimits;
 use qubit_metadata::{
     FilterExpression,
     Metadata,
@@ -151,7 +151,7 @@ fn benchmark_schema_json_decode(criterion: &mut Criterion) {
         bencher.iter(|| {
             let decoded = MetadataSchema::decode_json_slice_with_limits(
                 black_box(&encoded),
-                MetadataWireLimits::default(),
+                MetadataLimits::default(),
             )
             .expect("benchmark schema should decode");
             black_box(decoded)
