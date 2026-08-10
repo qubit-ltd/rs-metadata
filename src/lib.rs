@@ -70,6 +70,8 @@ mod constants;
 mod filter;
 mod metadata;
 mod metadata_error;
+#[cfg(feature = "json")]
+mod metadata_limits;
 mod metadata_result;
 #[cfg(feature = "schema")]
 mod metadata_validation_error;
@@ -77,10 +79,6 @@ mod metadata_validation_error;
 mod metadata_validation_result;
 #[cfg(feature = "json")]
 mod metadata_wire_decode_error;
-#[cfg(feature = "json")]
-mod metadata_wire_limit_kind;
-#[cfg(feature = "json")]
-mod metadata_wire_limits;
 #[cfg(feature = "schema")]
 mod schema;
 mod wire;
@@ -109,6 +107,15 @@ pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
+#[cfg(feature = "json")]
+pub use metadata_limits::{
+    DEFAULT_MAX_JSON_BYTES,
+    DEFAULT_MAX_KEY_BYTES,
+    DEFAULT_MAX_METADATA_ENTRIES,
+    DEFAULT_MAX_SCHEMA_FIELDS,
+    MetadataLimits,
+    default_json_limits,
+};
 pub use metadata_result::MetadataResult;
 #[cfg(feature = "schema")]
 pub use metadata_validation_error::MetadataValidationError;
@@ -116,16 +123,6 @@ pub use metadata_validation_error::MetadataValidationError;
 pub use metadata_validation_result::MetadataValidationResult;
 #[cfg(feature = "json")]
 pub use metadata_wire_decode_error::MetadataWireDecodeError;
-#[cfg(feature = "json")]
-pub use metadata_wire_limit_kind::MetadataWireLimitKind;
-#[cfg(feature = "json")]
-pub use metadata_wire_limits::{
-    DEFAULT_MAX_JSON_BYTES,
-    DEFAULT_MAX_KEY_BYTES,
-    DEFAULT_MAX_METADATA_ENTRIES,
-    DEFAULT_MAX_SCHEMA_FIELDS,
-    MetadataWireLimits,
-};
 #[cfg(feature = "schema")]
 pub use schema::MetadataField;
 #[cfg(feature = "schema")]

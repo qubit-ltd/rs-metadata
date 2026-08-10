@@ -12,44 +12,19 @@ use std::{
     fmt,
 };
 
-use qubit_value::ValueWireDecodeError;
-
 #[cfg(feature = "filter")]
 use crate::MetadataError;
-use crate::MetadataWireLimitKind;
+use qubit_budget::{
+    BudgetError,
+    JsonResource,
+};
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum MetadataWireDecodeError {
-    /// The input was rejected before JSON parsing because it exceeded the byte
-    /// limit.
-    InputTooLarge {
-        /// Complete received input length.
-        input_bytes: usize,
-        /// Largest permitted input length.
-        max_input_bytes: usize,
-    },
-    /// The decoded metadata or schema exceeds a configured resource bound.
-    LimitExceeded {
-        /// Decoded resource category that exceeded its bound.
-        kind: MetadataWireLimitKind,
-        /// Observed resource value.
-        value: usize,
-        /// Largest permitted resource value.
-        maximum: usize,
-    },
-    /// A receiver configured a resource bound above the canonical wire limit.
-    InvalidLimit {
-        /// Resource category whose configured bound is invalid.
-        kind: MetadataWireLimitKind,
-        /// Configured resource bound.
-        value: usize,
-        /// Largest bound supported by the canonical wire format.
-        maximum: usize,
-    },
-    /// A nested Value or JSON payload exceeded a shared structural limit.
-    Value(ValueWireDecodeError),
+    /// The JSON document exceeded one shared budget limit.
+    Budget(BudgetError<JsonResource, usize>),
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
     Filter(MetadataError),
@@ -65,30 +40,7 @@ impl fmt::Display for MetadataWireDecodeError {
     /// Formats a bounded JSON decoding failure.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InputTooLarge {
-                input_bytes,
-                max_input_bytes,
-            } => write!(
-                formatter,
-                "metadata JSON input has {input_bytes} bytes, exceeding the limit of {max_input_bytes} bytes"
-            ),
-            Self::LimitExceeded {
-                kind,
-                value,
-                maximum,
-            } => write!(
-                formatter,
-                "metadata JSON {kind:?} value {value} exceeds the limit of {maximum}"
-            ),
-            Self::InvalidLimit {
-                kind,
-                value,
-                maximum,
-            } => write!(
-                formatter,
-                "metadata JSON {kind:?} limit {value} exceeds the canonical maximum of {maximum}"
-            ),
-            Self::Value(error) => fmt::Display::fmt(error, formatter),
+            Self::Budget(error) => fmt::Display::fmt(error, formatter),
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),
             Self::InvalidJson(error) => fmt::Display::fmt(error, formatter),
@@ -97,35 +49,13 @@ impl fmt::Display for MetadataWireDecodeError {
 }
 
 impl Error for MetadataWireDecodeError {
-    /// Returns the underlying serde_json error for parsed inputs.
+    /// Returns the budget, filter, or Serde source associated with the error.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::InputTooLarge { .. } => None,
-            Self::LimitExceeded { .. } => None,
-            Self::InvalidLimit { .. } => None,
-            Self::Value(error) => Some(error),
+            Self::Budget(error) => Some(error),
             #[cfg(feature = "filter")]
             Self::Filter(error) => Some(error),
             Self::InvalidJson(error) => Some(error),
-        }
-    }
-}
-
-impl From<ValueWireDecodeError> for MetadataWireDecodeError {
-    /// Wraps a nested Value wire resource failure.
-    fn from(error: ValueWireDecodeError) -> Self {
-        match error {
-            ValueWireDecodeError::InputTooLarge {
-                input_bytes,
-                max_input_bytes,
-            } => Self::InputTooLarge {
-                input_bytes,
-                max_input_bytes,
-            },
-            ValueWireDecodeError::InvalidJson(error) => {
-                Self::InvalidJson(error)
-            }
-            error => Self::Value(error),
         }
     }
 }
