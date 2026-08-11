@@ -7,10 +7,20 @@
 // =============================================================================
 //! Immutable filter expressions and their read-only views.
 
-use crate::filter::internal::{FilterExpressionNode, MatchOutcome};
+use crate::filter::internal::{
+    FilterExpressionNode,
+    MatchOutcome,
+};
 use crate::{
-    Condition, FilterExpressionBuilder, FilterExpressionView, FilterLimitKind, FilterLimits,
-    FilterMatchOptions, Metadata, MetadataError, MetadataResult,
+    Condition,
+    FilterExpressionBuilder,
+    FilterExpressionView,
+    FilterLimitKind,
+    FilterLimits,
+    FilterMatchOptions,
+    Metadata,
+    MetadataError,
+    MetadataResult,
 };
 
 /// An immutable Boolean expression in a [`crate::MetadataFilter`].
@@ -98,9 +108,15 @@ impl FilterExpression {
             FilterExpressionNode::Condition(condition) => {
                 FilterExpressionView::Condition(condition)
             }
-            FilterExpressionNode::And(children) => FilterExpressionView::And(children),
-            FilterExpressionNode::Or(children) => FilterExpressionView::Or(children),
-            FilterExpressionNode::Not(inner) => FilterExpressionView::Not(inner),
+            FilterExpressionNode::And(children) => {
+                FilterExpressionView::And(children)
+            }
+            FilterExpressionNode::Or(children) => {
+                FilterExpressionView::Or(children)
+            }
+            FilterExpressionNode::Not(inner) => {
+                FilterExpressionView::Not(inner)
+            }
             FilterExpressionNode::True => FilterExpressionView::True,
             FilterExpressionNode::False => FilterExpressionView::False,
         }
@@ -259,9 +275,8 @@ impl FilterExpression {
         options: FilterMatchOptions,
     ) -> MatchOutcome {
         match &self.node {
-            FilterExpressionNode::Condition(condition) => {
-                condition.evaluate(metadata, options.numeric_comparison_policy())
-            }
+            FilterExpressionNode::Condition(condition) => condition
+                .evaluate(metadata, options.numeric_comparison_policy()),
             FilterExpressionNode::And(children) => MatchOutcome::and(
                 children
                     .iter()
@@ -272,7 +287,9 @@ impl FilterExpression {
                     .iter()
                     .map(|child| child.evaluate(metadata, options)),
             ),
-            FilterExpressionNode::Not(inner) => inner.evaluate(metadata, options).not(),
+            FilterExpressionNode::Not(inner) => {
+                inner.evaluate(metadata, options).not()
+            }
             FilterExpressionNode::True => MatchOutcome::True,
             FilterExpressionNode::False => MatchOutcome::False,
         }
@@ -292,13 +309,17 @@ impl FilterExpression {
     ///
     /// Returns the first error produced by `visitor`.
     #[cfg(feature = "schema")]
-    pub(crate) fn visit_conditions<F>(&self, visitor: &mut F) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(
+        &self,
+        visitor: &mut F,
+    ) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
         match &self.node {
             FilterExpressionNode::Condition(condition) => visitor(condition),
-            FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
+            FilterExpressionNode::And(children)
+            | FilterExpressionNode::Or(children) => {
                 for child in children {
                     child.visit_conditions(visitor)?;
                 }
@@ -323,7 +344,10 @@ impl FilterExpression {
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when depth, node count,
     /// key length, or membership values exceed a configured bound.
-    pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
+    pub(crate) fn validate_limits(
+        &self,
+        limits: FilterLimits,
+    ) -> MetadataResult<()> {
         let mut node_count = 0;
         self.validate_limits_at(limits, 1, &mut node_count)
     }
@@ -351,8 +375,11 @@ impl FilterExpression {
             });
         }
         match &self.node {
-            FilterExpressionNode::Condition(condition) => condition.validate_limits(limits),
-            FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
+            FilterExpressionNode::Condition(condition) => {
+                condition.validate_limits(limits)
+            }
+            FilterExpressionNode::And(children)
+            | FilterExpressionNode::Or(children) => {
                 for child in children {
                     child.validate_limits_at(limits, depth + 1, node_count)?;
                 }
@@ -373,7 +400,9 @@ impl FilterExpression {
             node => vec![Self { node }],
         };
         match right.node {
-            FilterExpressionNode::And(mut nested) => children.append(&mut nested),
+            FilterExpressionNode::And(mut nested) => {
+                children.append(&mut nested)
+            }
             node => children.push(Self { node }),
         }
         Self {
@@ -389,7 +418,9 @@ impl FilterExpression {
             node => vec![Self { node }],
         };
         match right.node {
-            FilterExpressionNode::Or(mut nested) => children.append(&mut nested),
+            FilterExpressionNode::Or(mut nested) => {
+                children.append(&mut nested)
+            }
             node => children.push(Self { node }),
         }
         Self {

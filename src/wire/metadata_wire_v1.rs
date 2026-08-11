@@ -7,7 +7,10 @@
 // =============================================================================
 //! Strict v1 wire envelope for [`crate::Metadata`].
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Current serialized metadata format version.
 pub(crate) const METADATA_WIRE_VERSION_V1: u8 = 1;
