@@ -9,20 +9,11 @@
 
 use std::collections::BTreeMap;
 
-use qubit_value::{
-    Value,
-    ValueWirePayloadRefV1,
-};
-use serde::{
-    Serialize,
-    Serializer,
-    ser::SerializeMap,
-};
+use qubit_value::{Value, ValueWirePayloadRefV1};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 
 /// Borrowed map adapter that validates and serializes V1 value payloads.
-pub(crate) struct MetadataWireValuesRef<'a>(
-    pub(crate) &'a BTreeMap<String, Value>,
-);
+pub(crate) struct MetadataWireValuesRef<'a>(pub(crate) &'a BTreeMap<String, Value>);
 
 impl Serialize for MetadataWireValuesRef<'_> {
     /// Serializes each value as a validated borrowed V1 payload.
