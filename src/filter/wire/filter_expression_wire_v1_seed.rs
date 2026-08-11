@@ -9,27 +9,13 @@
 
 use std::fmt;
 
-use qubit_budget::{
-    BudgetError,
-    ResourceBudget,
-};
+use qubit_budget::{BudgetError, ResourceBudget};
 use qubit_value::ValueWirePayloadV1;
 use serde::Deserialize;
-use serde::de::{
-    self,
-    DeserializeSeed,
-    Error as _,
-    MapAccess,
-    SeqAccess,
-    Visitor,
-};
+use serde::de::{self, DeserializeSeed, Error as _, MapAccess, SeqAccess, Visitor};
 
 use super::FilterExpressionWireV1;
-use crate::{
-    FilterLimitKind,
-    FilterLimits,
-    MetadataError,
-};
+use crate::{FilterLimitKind, FilterLimits, MetadataError};
 
 /// Expression variant tag in the V1 wire representation.
 #[derive(Clone, Copy, Deserialize)]
@@ -112,10 +98,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
     type Value = FilterExpressionWireV1;
 
     /// Decodes one expression map after charging its depth and node budget.
-    fn deserialize<D>(
-        mut self,
-        deserializer: D,
-    ) -> Result<Self::Value, D::Error>
+    fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
@@ -129,9 +112,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 }
 
 /// Converts shared budget facts to the established metadata filter error.
-fn filter_limit_error(
-    error: BudgetError<FilterLimitKind, usize>,
-) -> MetadataError {
+fn filter_limit_error(error: BudgetError<FilterLimitKind, usize>) -> MetadataError {
     match error {
         BudgetError::Insufficient {
             resource,
@@ -144,9 +125,7 @@ fn filter_limit_error(
             maximum: limit,
         },
         BudgetError::LimitExceeded { .. } => {
-            unreachable!(
-                "filter node budgets only report insufficient capacity"
-            )
+            unreachable!("filter node budgets only report insufficient capacity")
         }
     }
 }
@@ -395,21 +374,18 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     if fields.values.is_some() {
                         return Err(de::Error::duplicate_field("values"));
                     }
-                    fields.values = Some(map.next_value_seed(
-                        ValueSequenceSeed::new(self.receiver_limits),
-                    )?);
+                    fields.values =
+                        Some(map.next_value_seed(ValueSequenceSeed::new(self.receiver_limits))?);
                 }
                 "children" => {
                     if fields.children.is_some() {
                         return Err(de::Error::duplicate_field("children"));
                     }
-                    fields.children = Some(map.next_value_seed(
-                        ExpressionSequenceSeed::new(
-                            self.receiver_limits,
-                            &mut *self.node_budget,
-                            self.depth.saturating_add(1),
-                        ),
-                    )?);
+                    fields.children = Some(map.next_value_seed(ExpressionSequenceSeed::new(
+                        self.receiver_limits,
+                        &mut *self.node_budget,
+                        self.depth.saturating_add(1),
+                    ))?);
                 }
                 "expression" => {
                     if fields.expression.is_some() {
@@ -426,14 +402,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                 _ => {
                     return Err(de::Error::unknown_field(
                         &field,
-                        &[
-                            "kind",
-                            "key",
-                            "value",
-                            "values",
-                            "children",
-                            "expression",
-                        ],
+                        &["kind", "key", "value", "values", "children", "expression"],
                     ));
                 }
             }
@@ -503,13 +472,11 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
         let maximum = self.receiver_limits.max_nodes();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut children = Vec::with_capacity(capacity);
-        while let Some(child) =
-            sequence.next_element_seed(ExpressionElementSeed {
-                receiver_limits: self.receiver_limits,
-                node_budget: &mut *self.node_budget,
-                depth: self.depth,
-            })?
-        {
+        while let Some(child) = sequence.next_element_seed(ExpressionElementSeed {
+            receiver_limits: self.receiver_limits,
+            node_budget: &mut *self.node_budget,
+            depth: self.depth,
+        })? {
             children.push(child);
         }
         Ok(children)
@@ -532,12 +499,8 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
     where
         D: serde::Deserializer<'de>,
     {
-        FilterExpressionWireV1Seed::new(
-            self.receiver_limits,
-            self.node_budget,
-            self.depth,
-        )
-        .deserialize(deserializer)
+        FilterExpressionWireV1Seed::new(self.receiver_limits, self.node_budget, self.depth)
+            .deserialize(deserializer)
     }
 }
 
@@ -588,12 +551,10 @@ impl<'de> Visitor<'de> for ValueSequenceVisitor {
         let maximum = self.receiver_limits.max_set_values();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut values = Vec::with_capacity(capacity);
-        while let Some(value) =
-            sequence.next_element_seed(ValueElementSeed {
-                receiver_limits: self.receiver_limits,
-                next_len: values.len().saturating_add(1),
-            })?
-        {
+        while let Some(value) = sequence.next_element_seed(ValueElementSeed {
+            receiver_limits: self.receiver_limits,
+            next_len: values.len().saturating_add(1),
+        })? {
             values.push(value);
         }
         Ok(values)
