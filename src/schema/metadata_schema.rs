@@ -12,51 +12,24 @@ use std::collections::BTreeMap;
 use qubit_datatype::DataType;
 use qubit_value::Value;
 use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de::{
-        self,
-    },
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{self},
 };
 
-use crate::constants::{
-    STRICT_STRING_MAP_MAX_ENTRIES,
-    STRICT_STRING_MAP_MAX_KEY_BYTES,
-};
+use crate::constants::{STRICT_STRING_MAP_MAX_ENTRIES, STRICT_STRING_MAP_MAX_KEY_BYTES};
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 use crate::schema::{
-    MetadataField,
-    MetadataSchemaBuilder,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
+    MetadataField, MetadataSchemaBuilder, UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
 };
-use crate::wire::{
-    METADATA_SCHEMA_WIRE_VERSION_V1,
-    MetadataSchemaWireV1,
-    StrictStringMap,
-};
+use crate::wire::{METADATA_SCHEMA_WIRE_VERSION_V1, MetadataSchemaWireV1, StrictStringMap};
 #[cfg(feature = "json")]
-use crate::wire::{
-    MetadataSchemaWireV1Seed,
-    StrictStringMapSeed,
-};
+use crate::wire::{MetadataSchemaWireV1Seed, StrictStringMapSeed};
 use crate::{
-    Metadata,
-    MetadataError,
-    MetadataResult,
-    MetadataValidationError,
-    MetadataValidationResult,
+    Metadata, MetadataError, MetadataResult, MetadataValidationError, MetadataValidationResult,
 };
 #[cfg(feature = "json")]
-use qubit_budget::{
-    JsonDecodeSession,
-    JsonResource,
-    JsonSerdeError,
-    decode_slice_seed,
-};
+use qubit_budget::{JsonDecodeSession, JsonResource, JsonSerdeError, decode_slice_seed};
 
 /// Schema for metadata fields.
 ///
@@ -102,9 +75,7 @@ impl MetadataSchema {
     /// schema input.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(
-        input: &[u8],
-    ) -> Result<Self, crate::MetadataWireDecodeError> {
+    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(input, MetadataLimits::default())
     }
 
@@ -132,7 +103,7 @@ impl MetadataSchema {
         limits
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut session = JsonDecodeSession::new(limits.json_decode());
+        let mut session = JsonDecodeSession::owned(limits.json_decode());
         let wire = decode_slice_seed(
             MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
                 limits.max_schema_fields(),
@@ -258,9 +229,7 @@ impl MetadataSchema {
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
-            if field.is_required()
-                && meta.get_raw(key).is_none_or(Value::is_unset)
-            {
+            if field.is_required() && meta.get_raw(key).is_none_or(Value::is_unset) {
                 issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),
@@ -301,11 +270,7 @@ impl MetadataSchema {
     ///
     /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
     /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
-    pub(crate) fn validate_entry(
-        &self,
-        key: &str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
             Some(field) if field.is_required() && value.is_unset() => {
                 Err(MetadataError::MissingRequiredField {
@@ -313,13 +278,9 @@ impl MetadataSchema {
                     expected: field.data_type(),
                 })
             }
-            Some(field) if field.data_type() != value.data_type() => {
-                Err(MetadataError::type_mismatch(
-                    key,
-                    field.data_type(),
-                    value.data_type(),
-                ))
-            }
+            Some(field) if field.data_type() != value.data_type() => Err(
+                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
+            ),
             Some(_) => Ok(()),
             None if matches!(
                 self.unknown_metadata_field_policy,
@@ -337,21 +298,13 @@ impl MetadataSchema {
 
 #[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the schema decoding error.
-fn schema_json_error(
-    error: JsonSerdeError<JsonResource>,
-) -> crate::MetadataWireDecodeError {
+fn schema_json_error(error: JsonSerdeError<JsonResource>) -> crate::MetadataWireDecodeError {
     match error {
-        JsonSerdeError::Budget(error) => {
-            crate::MetadataWireDecodeError::Budget(error)
-        }
-        JsonSerdeError::Json(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(error)
-        }
-        JsonSerdeError::Io(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as serde::de::Error>::custom(error),
-            )
-        }
+        JsonSerdeError::Budget(error) => crate::MetadataWireDecodeError::Budget(error),
+        JsonSerdeError::Json(error) => crate::MetadataWireDecodeError::InvalidJson(error),
+        JsonSerdeError::Io(error) => crate::MetadataWireDecodeError::InvalidJson(
+            <serde_json::Error as serde::de::Error>::custom(error),
+        ),
     }
 }
 
@@ -361,18 +314,19 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        if self.fields.len() > STRICT_STRING_MAP_MAX_ENTRIES {
+        if u64::try_from(self.fields.len()).expect("schema field count must fit in u64")
+            > STRICT_STRING_MAP_MAX_ENTRIES
+        {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata schema contains {} fields, maximum is {}",
                 self.fields.len(),
                 STRICT_STRING_MAP_MAX_ENTRIES,
             )));
         }
-        if let Some(key) = self
-            .fields
-            .keys()
-            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
-        {
+        if let Some(key) = self.fields.keys().find(|key| {
+            u64::try_from(key.len()).expect("schema key length must fit in u64")
+                > STRICT_STRING_MAP_MAX_KEY_BYTES
+        }) {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata schema key is {} bytes, maximum is {}",
                 key.len(),

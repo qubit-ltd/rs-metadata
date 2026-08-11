@@ -9,21 +9,10 @@
 
 #![cfg(all(feature = "json", feature = "schema"))]
 
-use qubit_budget::{
-    BudgetError,
-    JsonResource,
-    ResourceBudget,
-    ResourceLimit,
-};
+use qubit_budget::{BudgetError, JsonResource, ResourceBudget, ResourceLimit};
 use qubit_metadata::{
-    FilterLimitKind,
-    FilterLimits,
-    Metadata,
-    MetadataFilter,
-    MetadataLimits,
-    MetadataSchema,
-    MetadataWireDecodeError,
-    default_json_decode_limits,
+    FilterLimitKind, FilterLimits, Metadata, MetadataFilter, MetadataLimits, MetadataSchema,
+    MetadataWireDecodeError, default_json_decode_limits,
 };
 
 fn filter_input(expression: &str) -> Vec<u8> {
@@ -33,20 +22,16 @@ fn filter_input(expression: &str) -> Vec<u8> {
     .into_bytes()
 }
 
-fn input_limit(maximum: usize) -> MetadataLimits {
+fn input_limit(maximum: u64) -> MetadataLimits {
     MetadataLimits::default().with_json_decode(
-        default_json_decode_limits().with_input_bytes_limit(
-            ResourceLimit::new(JsonResource::InputBytes, maximum),
-        ),
+        default_json_decode_limits()
+            .with_input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, maximum)),
     )
 }
 
 #[test]
 fn test_resource_budget_preserves_filter_limit_facts() {
-    let mut budget = ResourceBudget::<FilterLimitKind, usize>::new(
-        FilterLimitKind::Nodes,
-        1,
-    );
+    let mut budget = ResourceBudget::<FilterLimitKind, usize>::new(FilterLimitKind::Nodes, 1);
     budget.try_consume(1).expect("first node should fit");
     let error = budget.try_consume(1).expect_err("second node should fail");
     assert_eq!(
@@ -62,9 +47,8 @@ fn test_resource_budget_preserves_filter_limit_facts() {
 
 #[test]
 fn test_decode_rejects_input_before_json_parsing() {
-    let error =
-        Metadata::decode_json_slice_with_limits(b"null!", input_limit(4))
-            .expect_err("input bytes should be checked before parsing");
+    let error = Metadata::decode_json_slice_with_limits(b"null!", input_limit(4))
+        .expect_err("input bytes should be checked before parsing");
     assert!(
         matches!(
             error,
@@ -81,9 +65,8 @@ fn test_decode_rejects_input_before_json_parsing() {
 
 #[test]
 fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
-    let error =
-        Metadata::decode_json_slice_with_limits(b"null", input_limit(4))
-            .expect_err("null is not a metadata envelope");
+    let error = Metadata::decode_json_slice_with_limits(b"null", input_limit(4))
+        .expect_err("null is not a metadata envelope");
     assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
@@ -91,12 +74,9 @@ fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
 fn test_filter_domain_limits_remain_separate_from_json_budget() {
     let input = filter_input(r#"{"kind":"not","expression":{"kind":"all"}}"#);
     let limits = FilterLimits::builder().max_depth(1).build().unwrap();
-    let error = MetadataFilter::decode_json_slice_with_limits(
-        &input,
-        MetadataLimits::default(),
-        limits,
-    )
-    .expect_err("nested expression should exceed receiver depth");
+    let error =
+        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
+            .expect_err("nested expression should exceed receiver depth");
     assert!(error.to_string().contains("Depth value 2"));
 }
 
@@ -133,8 +113,7 @@ fn test_json_budget_structural_limit_is_structured_source() {
     let structure = value
         .structure_limits()
         .with_nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1));
-    let limits =
-        limits.with_value_limits(value.with_structure_limits(structure));
+    let limits = limits.with_value_limits(value.with_structure_limits(structure));
     let error = Metadata::decode_json_slice_with_limits(
         &input,
         MetadataLimits::default().with_json_decode(limits),

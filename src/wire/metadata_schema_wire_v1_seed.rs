@@ -7,18 +7,11 @@
 // =============================================================================
 //! Seed decoder for the strict metadata-schema v1 wire envelope.
 
-use serde::de::{
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
+use serde::de::{DeserializeSeed, MapAccess, Visitor};
 use std::fmt;
 
 use super::metadata_schema_wire_v1::MetadataSchemaWireV1;
-use crate::{
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
-};
+use crate::{UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy};
 
 /// Deserializes a schema envelope with a bounded fields seed.
 pub(crate) struct MetadataSchemaWireV1Seed<S> {
@@ -55,18 +48,12 @@ where
             type Value = MetadataSchemaWireV1<S::Value>;
 
             /// Describes the strict metadata-schema envelope.
-            fn expecting(
-                &self,
-                formatter: &mut fmt::Formatter<'_>,
-            ) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a strict metadata schema V1 envelope")
             }
 
             /// Decodes each envelope field and rejects duplicates or unknowns.
-            fn visit_map<A>(
-                mut self,
-                mut map: A,
-            ) -> Result<Self::Value, A::Error>
+            fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
             {
@@ -78,21 +65,18 @@ where
                     match key.as_str() {
                         "version" => {
                             if version.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
-                                    "version",
-                                ));
+                                return Err(serde::de::Error::duplicate_field("version"));
                             }
                             version = Some(map.next_value::<u8>()?);
                         }
                         "fields" => {
                             if fields.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
-                                    "fields",
-                                ));
+                                return Err(serde::de::Error::duplicate_field("fields"));
                             }
-                            let seed = self.fields.take().expect(
-                                "metadata schema fields seed is consumed once",
-                            );
+                            let seed = self
+                                .fields
+                                .take()
+                                .expect("metadata schema fields seed is consumed once");
                             fields = Some(map.next_value_seed(seed)?);
                         }
                         "unknown_metadata_field_policy" => {
@@ -101,9 +85,8 @@ where
                                     "unknown_metadata_field_policy",
                                 ));
                             }
-                            unknown_metadata_field_policy = Some(
-                                map.next_value::<UnknownMetadataFieldPolicy>()?,
-                            );
+                            unknown_metadata_field_policy =
+                                Some(map.next_value::<UnknownMetadataFieldPolicy>()?);
                         }
                         "unknown_filter_field_policy" => {
                             if unknown_filter_field_policy.is_some() {
@@ -111,9 +94,8 @@ where
                                     "unknown_filter_field_policy",
                                 ));
                             }
-                            unknown_filter_field_policy = Some(
-                                map.next_value::<UnknownFilterFieldPolicy>()?,
-                            );
+                            unknown_filter_field_policy =
+                                Some(map.next_value::<UnknownFilterFieldPolicy>()?);
                         }
                         _ => {
                             return Err(serde::de::Error::unknown_field(
@@ -129,24 +111,14 @@ where
                     }
                 }
                 Ok(MetadataSchemaWireV1 {
-                    version: version.ok_or_else(|| {
-                        serde::de::Error::missing_field("version")
+                    version: version.ok_or_else(|| serde::de::Error::missing_field("version"))?,
+                    fields: fields.ok_or_else(|| serde::de::Error::missing_field("fields"))?,
+                    unknown_metadata_field_policy: unknown_metadata_field_policy.ok_or_else(
+                        || serde::de::Error::missing_field("unknown_metadata_field_policy"),
+                    )?,
+                    unknown_filter_field_policy: unknown_filter_field_policy.ok_or_else(|| {
+                        serde::de::Error::missing_field("unknown_filter_field_policy")
                     })?,
-                    fields: fields.ok_or_else(|| {
-                        serde::de::Error::missing_field("fields")
-                    })?,
-                    unknown_metadata_field_policy:
-                        unknown_metadata_field_policy.ok_or_else(|| {
-                            serde::de::Error::missing_field(
-                                "unknown_metadata_field_policy",
-                            )
-                        })?,
-                    unknown_filter_field_policy: unknown_filter_field_policy
-                        .ok_or_else(|| {
-                            serde::de::Error::missing_field(
-                                "unknown_filter_field_policy",
-                            )
-                        })?,
                 })
             }
         }

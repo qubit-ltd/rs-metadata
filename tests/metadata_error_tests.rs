@@ -10,10 +10,7 @@
 #![cfg(feature = "schema")]
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterLimitKind,
-    MetadataError,
-};
+use qubit_metadata::{FilterLimitKind, MetadataError};
 
 #[test]
 fn test_display_formats_all_variants() {
@@ -70,8 +67,7 @@ fn test_display_formats_all_variants() {
         key: "active".to_string(),
         operator: "gt",
         data_type: DataType::Bool,
-        message: "range operators require a numeric or string field"
-            .to_string(),
+        message: "range operators require a numeric or string field".to_string(),
     };
     assert_eq!(
         invalid_operator.to_string(),
@@ -89,8 +85,7 @@ fn test_display_formats_all_variants() {
     let invalid_operand = MetadataError::InvalidFilterOperand {
         operator: "eq",
         data_type: DataType::Float64,
-        message: "filter operands must be representable by the V1 wire format"
-            .to_string(),
+        message: "filter operands must be representable by the V1 wire format".to_string(),
     };
     assert_eq!(
         invalid_operand.to_string(),
