@@ -2,14 +2,16 @@
 //    Copyright (c) 2025 - 2026 Haixing Hu.
 //
 //    SPDX-License-Identifier: Apache-2.0
-
+//
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! Default JSON and metadata-domain limits for metadata wire documents.
 
 use qubit_budget::{
-    JsonLimits,
+    JsonDecodeLimits,
+    JsonEncodeLimits,
     JsonResource,
+    JsonValueLimits,
     ResourceLimit,
     StructureLimits,
 };
@@ -31,12 +33,13 @@ pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 ///
 /// `MetadataLimits` deliberately keeps metadata-entry, schema-field, and key
 /// bounds separate from generic JSON map/key accounting. This preserves the
-/// protocol's domain limits while [`JsonLimits`] handles document traversal,
-/// string/number lengths, and complete input/output bytes.
+/// protocol's domain limits while the directional JSON limit types handle
+/// document traversal, payload lengths, and complete input/output bytes.
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MetadataLimits {
-    json: JsonLimits,
+    json_decode: JsonDecodeLimits,
+    json_encode: JsonEncodeLimits,
     max_metadata_entries: usize,
     max_schema_fields: usize,
     max_key_bytes: usize,
@@ -47,30 +50,38 @@ impl MetadataLimits {
     /// input/output byte bound.
     pub fn new(max_json_bytes: usize) -> Self {
         Self {
-            json: default_json_limits()
-                .with_input_bytes_limit(ResourceLimit::new(
-                    JsonResource::InputBytes,
-                    max_json_bytes,
-                ))
-                .with_output_bytes_limit(ResourceLimit::new(
-                    JsonResource::OutputBytes,
-                    max_json_bytes,
-                )),
+            json_decode: default_json_decode_limits().with_input_bytes_limit(
+                ResourceLimit::new(JsonResource::InputBytes, max_json_bytes),
+            ),
+            json_encode: default_json_encode_limits().with_output_bytes_limit(
+                ResourceLimit::new(JsonResource::OutputBytes, max_json_bytes),
+            ),
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
             max_key_bytes: DEFAULT_MAX_KEY_BYTES,
         }
     }
 
-    /// Replaces the shared generic JSON profile.
-    pub fn with_json(mut self, json: JsonLimits) -> Self {
-        self.json = json;
+    /// Replaces the JSON decoding profile.
+    pub fn with_json_decode(mut self, limits: JsonDecodeLimits) -> Self {
+        self.json_decode = limits;
         self
     }
 
-    /// Returns the shared generic JSON profile.
-    pub const fn json(&self) -> &JsonLimits {
-        &self.json
+    /// Replaces the JSON encoding profile.
+    pub fn with_json_encode(mut self, limits: JsonEncodeLimits) -> Self {
+        self.json_encode = limits;
+        self
+    }
+
+    /// Returns the JSON decoding profile.
+    pub const fn json_decode(&self) -> JsonDecodeLimits {
+        self.json_decode
+    }
+
+    /// Returns the JSON encoding profile.
+    pub const fn json_encode(&self) -> JsonEncodeLimits {
+        self.json_encode
     }
 
     /// Sets the metadata-entry domain limit.
@@ -136,21 +147,9 @@ impl Default for MetadataLimits {
     }
 }
 
-/// Creates the default metadata JSON budget profile.
-///
-/// The profile owns protocol policy while the actual accounting remains in
-/// `qubit_budget::JsonBudget`. Callers may replace any limit before creating a
-/// budget session.
-pub fn default_json_limits() -> JsonLimits {
-    JsonLimits::empty()
-        .with_input_bytes_limit(ResourceLimit::new(
-            JsonResource::InputBytes,
-            DEFAULT_MAX_JSON_BYTES,
-        ))
-        .with_output_bytes_limit(ResourceLimit::new(
-            JsonResource::OutputBytes,
-            DEFAULT_MAX_JSON_BYTES,
-        ))
+/// Creates the default direction-independent metadata JSON value profile.
+pub fn default_json_value_limits() -> JsonValueLimits {
+    JsonValueLimits::default()
         .with_string_bytes_limit(ResourceLimit::new(
             JsonResource::StringBytes,
             256 * 1024,
@@ -158,6 +157,10 @@ pub fn default_json_limits() -> JsonLimits {
         .with_number_bytes_limit(ResourceLimit::new(
             JsonResource::NumberBytes,
             4_096,
+        ))
+        .with_payload_bytes_limit(ResourceLimit::new(
+            JsonResource::PayloadBytes,
+            DEFAULT_MAX_JSON_BYTES,
         ))
         .with_structure_limits(
             StructureLimits::empty()
@@ -179,4 +182,24 @@ pub fn default_json_limits() -> JsonLimits {
                     DEFAULT_MAX_KEY_BYTES,
                 )),
         )
+}
+
+/// Creates the default metadata JSON decoding profile.
+pub fn default_json_decode_limits() -> JsonDecodeLimits {
+    JsonDecodeLimits::default()
+        .with_input_bytes_limit(ResourceLimit::new(
+            JsonResource::InputBytes,
+            DEFAULT_MAX_JSON_BYTES,
+        ))
+        .with_value_limits(default_json_value_limits())
+}
+
+/// Creates the default metadata JSON encoding profile.
+pub fn default_json_encode_limits() -> JsonEncodeLimits {
+    JsonEncodeLimits::default()
+        .with_output_bytes_limit(ResourceLimit::new(
+            JsonResource::OutputBytes,
+            DEFAULT_MAX_JSON_BYTES,
+        ))
+        .with_value_limits(default_json_value_limits())
 }

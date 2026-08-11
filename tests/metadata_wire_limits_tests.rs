@@ -2,6 +2,8 @@
 //    Copyright (c) 2025 - 2026 Haixing Hu.
 //
 //    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! Tests for metadata JSON budget integration and domain limits.
 
@@ -12,7 +14,6 @@ use qubit_budget::{
     JsonResource,
     ResourceBudget,
     ResourceLimit,
-    StructureLimits,
 };
 use qubit_metadata::{
     FilterLimitKind,
@@ -22,7 +23,7 @@ use qubit_metadata::{
     MetadataLimits,
     MetadataSchema,
     MetadataWireDecodeError,
-    default_json_limits,
+    default_json_decode_limits,
 };
 
 fn filter_input(expression: &str) -> Vec<u8> {
@@ -33,11 +34,10 @@ fn filter_input(expression: &str) -> Vec<u8> {
 }
 
 fn input_limit(maximum: usize) -> MetadataLimits {
-    MetadataLimits::default().with_json(
-        default_json_limits().with_input_bytes_limit(ResourceLimit::new(
-            JsonResource::InputBytes,
-            maximum,
-        )),
+    MetadataLimits::default().with_json_decode(
+        default_json_decode_limits().with_input_bytes_limit(
+            ResourceLimit::new(JsonResource::InputBytes, maximum),
+        ),
     )
 }
 
@@ -68,10 +68,11 @@ fn test_decode_rejects_input_before_json_parsing() {
     assert!(
         matches!(
             error,
-            MetadataWireDecodeError::Budget(BudgetError::LimitExceeded {
+            MetadataWireDecodeError::Budget(BudgetError::Insufficient {
                 resource: JsonResource::InputBytes,
-                actual: 5,
-                maximum: 4,
+                limit: 4,
+                remaining: 4,
+                requested: 5,
             })
         ),
         "unexpected budget error: {error:?}"
@@ -127,13 +128,16 @@ fn test_metadata_domain_key_limit_is_preserved() {
 fn test_json_budget_structural_limit_is_structured_source() {
     let metadata = Metadata::new().with("name", "alice");
     let input = serde_json::to_vec(&metadata).unwrap();
-    let limits = default_json_limits().with_structure_limits(
-        StructureLimits::empty()
-            .with_nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1)),
-    );
+    let limits = default_json_decode_limits();
+    let value = limits.value_limits();
+    let structure = value
+        .structure_limits()
+        .with_nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1));
+    let limits =
+        limits.with_value_limits(value.with_structure_limits(structure));
     let error = Metadata::decode_json_slice_with_limits(
         &input,
-        MetadataLimits::default().with_json(limits),
+        MetadataLimits::default().with_json_decode(limits),
     )
     .expect_err("metadata envelope needs more than one JSON node");
     assert!(
