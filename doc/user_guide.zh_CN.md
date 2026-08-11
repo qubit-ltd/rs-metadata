@@ -264,8 +264,9 @@ let metadata = Metadata::decode_json_slice_with_limits(
 ```
 
 默认限制是输入 1,048,576 字节、4,096 个 metadata 条目、4,096 个 schema 字段，以及每个
-key 256 个 UTF-8 字节。`MetadataLimits` 将这些 metadata 领域限制与内部的 `JsonLimits`
-profile 分开；使用 `with_json` 替换通用遍历和字节限制。领域限制不能超过 V1 序列化的规范
+key 256 个 UTF-8 字节。`MetadataLimits` 将这些 metadata 领域限制与内部的
+`JsonDecodeLimits`、`JsonEncodeLimits` profile 分开；使用 `with_json_decode` 或
+`with_json_encode` 替换相应的通用遍历和定向字节限制。领域限制不能超过 V1 序列化的规范
 硬上限。输入字节数会在 JSON 解析前检查。
 
 `MetadataSchema` 和 `MetadataFilter` 也提供对应的有界 JSON 解码器。Filter 解码还接受由
@@ -316,7 +317,7 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 
 ### JSON 解码在看起来开始解析前就失败
 
-将输入字节数与 `MetadataLimits` 内部 `JsonLimits` profile 的输入上限比较。输入大小检查会
+将输入字节数与 `MetadataLimits` 内部 `JsonDecodeLimits` profile 的输入上限比较。输入大小检查会
 有意在 JSON 解析器调用前执行。如果输入在限制内，再根据返回的 `MetadataWireDecodeError`
 检查领域限制和通用 JSON 预算事实。
 
