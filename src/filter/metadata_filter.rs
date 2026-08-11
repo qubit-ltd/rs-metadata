@@ -38,9 +38,10 @@ use crate::{
 };
 #[cfg(feature = "json")]
 use qubit_budget::{
+    JsonDecodeSession,
     JsonResource,
     JsonSerdeError,
-    from_slice_seed_with_budget,
+    decode_slice_seed,
 };
 
 /// An expression, its matching policy, and its resource limits.
@@ -188,11 +189,11 @@ impl MetadataFilter {
         limits
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut budget = limits.json().budget();
-        let wire = from_slice_seed_with_budget(
-            input,
+        let mut session = JsonDecodeSession::new(limits.json_decode());
+        let wire = decode_slice_seed(
             MetadataFilterWireV1Seed::new(receiver_filter_limits),
-            &mut budget,
+            input,
+            &mut session,
         )
         .map_err(filter_json_error)?;
         wire.into_filter(receiver_filter_limits)

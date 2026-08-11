@@ -52,9 +52,10 @@ use crate::{
 };
 #[cfg(feature = "json")]
 use qubit_budget::{
+    JsonDecodeSession,
     JsonResource,
     JsonSerdeError,
-    from_slice_seed_with_budget,
+    decode_slice_seed,
 };
 
 /// Schema for metadata fields.
@@ -131,14 +132,14 @@ impl MetadataSchema {
         limits
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut budget = limits.json().budget();
-        let wire = from_slice_seed_with_budget(
-            input,
+        let mut session = JsonDecodeSession::new(limits.json_decode());
+        let wire = decode_slice_seed(
             MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
                 limits.max_schema_fields(),
                 limits.max_key_bytes(),
             )),
-            &mut budget,
+            input,
+            &mut session,
         )
         .map_err(schema_json_error)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
