@@ -57,7 +57,7 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 
 可选 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和
 `all`。声明 schema 字段类型时直接依赖 `qubit-datatype`；直接构造 `Value` 操作数时依赖
-`qubit-value`。
+`qubit-value`；定制定向 JSON limits 时直接依赖 `qubit-budget`。
 
 ## 提供的能力
 
@@ -72,6 +72,30 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 - 结构化的 `MetadataError`、校验错误和 wire 解码错误，帮助调用方区分键缺失、unset 值、
   类型不匹配、非法表达式以及输入限制失败。
 
+解码和编码策略刻意保持方向独立。例如，接收端可以收紧输入准入，而不意外改变输出额度：
+
+```rust
+use qubit_budget::JsonResource;
+use qubit_budget::ResourceLimit;
+use qubit_metadata::default_json_decode_limits;
+use qubit_metadata::default_json_encode_limits;
+use qubit_metadata::MetadataLimits;
+
+let decode = default_json_decode_limits().with_input_bytes_limit(
+    ResourceLimit::new(JsonResource::InputBytes, 64 * 1024),
+);
+let encode = default_json_encode_limits().with_output_bytes_limit(
+    ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024),
+);
+let limits = MetadataLimits::default()
+    .with_json_decode(decode)
+    .with_json_encode(encode);
+```
+
+`decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
+让它同时负责完整输入准入和整个 seed wire 遍历；encode profile 则单独交给有界序列化
+边界。失败请求不会消费被拒绝的 charge，但本次操作此前已接受的消耗不会回滚。
+
 ## 重要边界
 
 - `get` 会有意把键缺失和转换失败都折叠为 `None`；需要判断具体原因时使用 `try_get`。
@@ -80,7 +104,7 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 - filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
-- 默认 JSON 解码会限制输入字节数、通用 JSON 结构，以及 metadata 条目数、schema 字段数和
+- 默认 JSON 解码会限制输入字节数、通用 JSON 结构与 payload，以及 metadata 条目数、schema 字段数和
   key 长度。领域限制不能超过 V1 序列化的规范硬上限。Filter limits 是接收端瞬态策略，不会
   写入 V1 wire；共享 JSON adapter 负责通用遍历，filter seed 负责 AST 和 membership 领域限制。
 - 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。

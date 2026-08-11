@@ -64,7 +64,8 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 Optional features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
 `url`, `json`, and `all`. Use the direct `qubit-datatype` dependency when
 declaring schema field types, and `qubit-value` when constructing `Value`
-operands directly.
+operands directly. Depend on `qubit-budget` directly when customizing the
+directional JSON limit profiles.
 
 ## What it provides
 
@@ -83,6 +84,34 @@ operands directly.
   callers that need to distinguish missing keys, unset values, type mismatches,
   invalid expressions, and input-limit failures.
 
+Decode and encode policies are deliberately directional. For example, a
+receiver can tighten input admission without accidentally changing its output
+allowance:
+
+```rust
+use qubit_budget::JsonResource;
+use qubit_budget::ResourceLimit;
+use qubit_metadata::default_json_decode_limits;
+use qubit_metadata::default_json_encode_limits;
+use qubit_metadata::MetadataLimits;
+
+let decode = default_json_decode_limits().with_input_bytes_limit(
+    ResourceLimit::new(JsonResource::InputBytes, 64 * 1024),
+);
+let encode = default_json_encode_limits().with_output_bytes_limit(
+    ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024),
+);
+let limits = MetadataLimits::default()
+    .with_json_decode(decode)
+    .with_json_encode(encode);
+```
+
+`decode_json_slice_with_limits` creates one `JsonDecodeSession` from the decode
+profile and uses it for complete-input admission plus the entire seeded wire
+traversal. The encode profile is separately available to bounded serialization
+boundaries. A failed request does not consume the rejected charge, but prior
+accepted consumption in that operation is not rolled back.
+
 ## Important boundaries
 
 - `get` intentionally collapses a missing key and a failed conversion to
@@ -94,7 +123,7 @@ operands directly.
 - Schema validation of stored metadata remains strict about the declared
   concrete field type, even though filter schema checks accept compatible
   numeric representations.
-- Default JSON decoding limits input bytes, generic JSON structure, and
+- Default JSON decoding limits input bytes, generic JSON structure and payload, and
   metadata-domain entry, schema-field, and key counts. Domain limits cannot
   exceed the canonical V1 serialization limits. Filter limits are transient
   receiver-side policy and are omitted from the V1 wire; the shared JSON
