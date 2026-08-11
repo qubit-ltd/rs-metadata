@@ -10,7 +10,11 @@
 use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::{
-    FilterExpression, FilterLimits, FilterMatchOptions, Metadata, MetadataFilter,
+    FilterExpression,
+    FilterLimits,
+    FilterMatchOptions,
+    Metadata,
+    MetadataFilter,
 };
 
 #[test]
