@@ -14,7 +14,10 @@ use qubit_datatype::DataType;
 use qubit_metadata::FilterLimitKind;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
-use qubit_metadata::{Metadata, MetadataError};
+use qubit_metadata::{
+    Metadata,
+    MetadataError,
+};
 use qubit_value::Value;
 
 mod support;
@@ -33,7 +36,8 @@ impl From<TenantId> for Value {
 
 #[test]
 fn test_typed_reads_accept_downstream_conversion_targets() {
-    let metadata = Metadata::new().with("port", Value::String("8080".to_owned()));
+    let metadata =
+        Metadata::new().with("port", Value::String("8080".to_owned()));
     assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
 }
 
@@ -86,7 +90,10 @@ fn test_set_and_get_scalar_values() {
     assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
     assert_eq!(meta.get::<i64>("priority"), Some(42));
     assert_eq!(meta.get::<bool>("reviewed"), Some(true));
-    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
+    assert!(
+        (meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs()
+            < 1e-10
+    );
 }
 
 #[test]

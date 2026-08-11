@@ -56,6 +56,8 @@ impl FilterMatchOptionsBuilder {
     /// Options containing the selected comparison policy.
     #[inline(always)]
     pub const fn build(self) -> FilterMatchOptions {
-        FilterMatchOptions::from_numeric_comparison_policy(self.numeric_comparison_policy)
+        FilterMatchOptions::from_numeric_comparison_policy(
+            self.numeric_comparison_policy,
+        )
     }
 }

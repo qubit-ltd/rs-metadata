@@ -22,8 +22,10 @@ fn test_metadata_rejects_unknown_field_and_unsupported_version() {
 #[test]
 fn test_metadata_v1_round_trip() {
     let metadata = Metadata::new().with("name", "alice");
-    let encoded = serde_json::to_string(&metadata).expect("metadata should serialize");
-    let decoded = serde_json::from_str(&encoded).expect("metadata should deserialize");
+    let encoded =
+        serde_json::to_string(&metadata).expect("metadata should serialize");
+    let decoded =
+        serde_json::from_str(&encoded).expect("metadata should deserialize");
 
     assert_eq!(metadata, decoded);
 }
@@ -33,7 +35,8 @@ fn test_metadata_v1_round_trip() {
 #[test]
 fn test_metadata_v1_embeds_unversioned_value_payloads() {
     let metadata = Metadata::new().with("port", 8080_i32);
-    let encoded = serde_json::to_value(metadata).expect("metadata should serialize");
+    let encoded =
+        serde_json::to_value(metadata).expect("metadata should serialize");
 
     assert_eq!(encoded["version"], json!(1));
     assert_eq!(
@@ -45,10 +48,11 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
 #[test]
 #[cfg(feature = "json")]
 fn test_metadata_v1_user_guide_example_decodes() {
-    const INPUT: &[u8] = br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#;
+    const INPUT: &[u8] =
+        br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#;
 
-    let metadata =
-        Metadata::decode_json_slice(INPUT).expect("the user-guide V1 example should decode");
+    let metadata = Metadata::decode_json_slice(INPUT)
+        .expect("the user-guide V1 example should decode");
 
     assert_eq!(metadata.get_str("tenant_id"), Some("acme"));
 }
@@ -68,8 +72,9 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
 
     let malformed_after_limit =
         format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
-    let error = serde_json::from_slice::<Metadata>(malformed_after_limit.as_bytes())
-        .expect_err("the hard entry limit should reject before the value");
+    let error =
+        serde_json::from_slice::<Metadata>(malformed_after_limit.as_bytes())
+            .expect_err("the hard entry limit should reject before the value");
     assert!(error.to_string().contains("256 bytes"));
 }
 

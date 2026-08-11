@@ -7,7 +7,10 @@
 // =============================================================================
 //! Tests for expression-node normalization through public views.
 
-use qubit_metadata::{FilterExpression, FilterExpressionView};
+use qubit_metadata::{
+    FilterExpression,
+    FilterExpressionView,
+};
 
 #[test]
 fn test_filter_expression_node_flattens_chained_and_children() {

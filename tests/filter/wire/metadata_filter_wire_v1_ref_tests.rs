@@ -7,7 +7,10 @@
 // =============================================================================
 //! Borrowed metadata-filter wire tests.
 
-use qubit_metadata::{FilterExpression, MetadataFilter};
+use qubit_metadata::{
+    FilterExpression,
+    MetadataFilter,
+};
 
 #[test]
 fn test_metadata_filter_serialization_keeps_wire_version_and_expression() {
@@ -20,7 +23,8 @@ fn test_metadata_filter_serialization_keeps_wire_version_and_expression() {
         .build()
         .expect("filter should build");
 
-    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded =
+        serde_json::to_value(&filter).expect("filter should serialize");
 
     assert_eq!(encoded["version"], 1);
     assert_eq!(encoded["expression"]["kind"], "exists");
