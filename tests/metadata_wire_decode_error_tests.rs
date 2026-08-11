@@ -11,17 +11,14 @@
 
 use std::error::Error;
 
-use qubit_budget::{
-    BudgetError,
-    JsonResource,
-};
+use qubit_budget::{BudgetError, JsonResource, Observation};
 use qubit_metadata::MetadataWireDecodeError;
 
 #[test]
 fn test_budget_error_preserves_source_chain() {
     let error = MetadataWireDecodeError::Budget(BudgetError::LimitExceeded {
         resource: JsonResource::InputBytes,
-        actual: 5,
+        observed: Observation::Exact(5),
         maximum: 4,
     });
     assert!(error.to_string().contains("InputBytes"));
@@ -31,8 +28,7 @@ fn test_budget_error_preserves_source_chain() {
 #[test]
 fn test_invalid_json_preserves_source_chain() {
     let error = MetadataWireDecodeError::InvalidJson(
-        serde_json::from_str::<serde_json::Value>("{")
-            .expect_err("input should be malformed"),
+        serde_json::from_str::<serde_json::Value>("{").expect_err("input should be malformed"),
     );
     assert!(error.source().is_some());
 }

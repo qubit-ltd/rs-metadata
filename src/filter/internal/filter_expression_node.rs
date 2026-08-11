@@ -7,10 +7,7 @@
 // =============================================================================
 //! Private storage for one filter expression node.
 
-use crate::{
-    Condition,
-    FilterExpression,
-};
+use crate::{Condition, FilterExpression};
 
 /// Private representation of a filter expression.
 #[derive(Debug, Clone, PartialEq)]

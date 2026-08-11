@@ -10,12 +10,7 @@
 use crate::support::test_support::sample;
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    FilterExpression,
-    FilterExpressionView,
-    FilterLimits,
-    Metadata,
-    MetadataError,
-    MetadataFilter,
+    FilterExpression, FilterExpressionView, FilterLimits, Metadata, MetadataError, MetadataFilter,
 };
 use qubit_value::Value;
 
