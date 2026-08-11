@@ -7,10 +7,7 @@
 // =============================================================================
 //! Expression wire tests through a root filter.
 
-use qubit_metadata::{
-    FilterExpression,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterExpression, MetadataFilter};
 
 #[test]
 fn test_malformed_expression_nodes_are_rejected() {
