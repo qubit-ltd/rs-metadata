@@ -8,20 +8,11 @@
 //! [`FilterLimits`] — resource bounds for metadata filters.
 
 use crate::constants::{
-    FILTER_MAX_DEPTH,
-    FILTER_MAX_KEY_BYTES,
-    FILTER_MAX_NODES,
-    FILTER_MAX_SET_VALUES,
+    FILTER_MAX_DEPTH, FILTER_MAX_KEY_BYTES, FILTER_MAX_NODES, FILTER_MAX_SET_VALUES,
 };
-use crate::{
-    MetadataError,
-    MetadataResult,
-};
+use crate::{MetadataError, MetadataResult};
 
-use super::{
-    FilterLimitKind,
-    FilterLimitsBuilder,
-};
+use super::{FilterLimitKind, FilterLimitsBuilder};
 
 /// Resource bounds enforced for every constructed or deserialized filter.
 ///
@@ -82,16 +73,8 @@ impl FilterLimits {
         max_set_values: usize,
         max_key_bytes: usize,
     ) -> MetadataResult<Self> {
-        Self::validate_limit(
-            FilterLimitKind::Depth,
-            max_depth,
-            Self::MAX.max_depth,
-        )?;
-        Self::validate_limit(
-            FilterLimitKind::Nodes,
-            max_nodes,
-            Self::MAX.max_nodes,
-        )?;
+        Self::validate_limit(FilterLimitKind::Depth, max_depth, Self::MAX.max_depth)?;
+        Self::validate_limit(FilterLimitKind::Nodes, max_nodes, Self::MAX.max_nodes)?;
         Self::validate_limit(
             FilterLimitKind::SetValues,
             max_set_values,
@@ -154,11 +137,7 @@ impl FilterLimits {
     ///
     /// Returns [`MetadataError::InvalidFilterLimit`] when `value` is zero or
     /// greater than `maximum`.
-    fn validate_limit(
-        kind: FilterLimitKind,
-        value: usize,
-        maximum: usize,
-    ) -> MetadataResult<()> {
+    fn validate_limit(kind: FilterLimitKind, value: usize, maximum: usize) -> MetadataResult<()> {
         if value == 0 || value > maximum {
             return Err(MetadataError::InvalidFilterLimit {
                 kind,

@@ -11,10 +11,7 @@
 use qubit_datatype::DataType;
 use qubit_metadata::Metadata;
 #[cfg(feature = "schema")]
-use qubit_metadata::{
-    MetadataField,
-    MetadataSchema,
-};
+use qubit_metadata::{MetadataField, MetadataSchema};
 
 #[test]
 fn test_metadata_rejects_duplicate_value_key() {
@@ -51,9 +48,8 @@ fn test_metadata_rejects_duplicate_key_before_decoding_duplicate_value() {
 #[test]
 #[cfg(feature = "schema")]
 fn test_metadata_schema_rejects_duplicate_field_key() {
-    let field =
-        serde_json::to_string(&MetadataField::new(DataType::String, true))
-            .expect("field should serialize");
+    let field = serde_json::to_string(&MetadataField::new(DataType::String, true))
+        .expect("field should serialize");
     let encoded = format!(
         r#"
             {{

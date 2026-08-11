@@ -9,13 +9,8 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataError,
-    MetadataSchema,
-    MetadataValidationError,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
+    FilterExpression, Metadata, MetadataError, MetadataSchema, MetadataValidationError,
+    UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
 };
 use qubit_value::Value;
 use serde_json::json;
