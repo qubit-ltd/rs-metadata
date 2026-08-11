@@ -8,19 +8,41 @@
 //! [`MetadataFilter`].
 
 use qubit_utils::Transient;
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de,
+};
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
 #[cfg(feature = "json")]
 use super::wire::MetadataFilterWireV1Seed;
-use super::wire::{MetadataFilterWireV1, MetadataFilterWireV1Ref};
+use super::wire::{
+    MetadataFilterWireV1,
+    MetadataFilterWireV1Ref,
+};
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 #[cfg(feature = "schema")]
-use crate::{Condition, MetadataResult};
-use crate::{FilterExpression, FilterLimits, FilterMatchOptions, Metadata};
+use crate::{
+    Condition,
+    MetadataResult,
+};
+use crate::{
+    FilterExpression,
+    FilterLimits,
+    FilterMatchOptions,
+    Metadata,
+};
 #[cfg(feature = "json")]
-use qubit_budget::{JsonDecodeSession, JsonResource, JsonSerdeError, decode_slice_seed};
+use qubit_budget::{
+    JsonDecodeSession,
+    JsonResource,
+    JsonSerdeError,
+    decode_slice_seed,
+};
 
 /// An expression, its matching policy, and its resource limits.
 ///
@@ -126,8 +148,14 @@ impl MetadataFilter {
     /// incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
-        Self::decode_json_slice_with_limits(input, MetadataLimits::default(), FilterLimits::MAX)
+    pub fn decode_json_slice(
+        input: &[u8],
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(
+            input,
+            MetadataLimits::default(),
+            FilterLimits::MAX,
+        )
     }
 
     /// Decodes a strict metadata-filter JSON envelope after validating both
@@ -221,7 +249,10 @@ impl MetadataFilter {
     /// Returns the first error produced by `visitor`.
     #[cfg(feature = "schema")]
     #[inline(always)]
-    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(
+        &self,
+        mut visitor: F,
+    ) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
@@ -255,12 +286,23 @@ impl<'de> Deserialize<'de> for MetadataFilter {
 
 #[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the filter decoding error.
-fn filter_json_error(error: JsonSerdeError<JsonResource>) -> crate::MetadataWireDecodeError {
+fn filter_json_error(
+    error: JsonSerdeError<JsonResource>,
+) -> crate::MetadataWireDecodeError {
     match error {
-        JsonSerdeError::Budget(error) => crate::MetadataWireDecodeError::Budget(error),
-        JsonSerdeError::Json(error) => crate::MetadataWireDecodeError::InvalidJson(error),
-        JsonSerdeError::Io(error) => crate::MetadataWireDecodeError::InvalidJson(
-            <serde_json::Error as serde::de::Error>::custom(error),
-        ),
+        JsonSerdeError::Budget(error) => {
+            crate::MetadataWireDecodeError::Budget(error)
+        }
+        JsonSerdeError::Quantity { resource, source } => {
+            crate::MetadataWireDecodeError::Quantity { resource, source }
+        }
+        JsonSerdeError::Json(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(error)
+        }
+        JsonSerdeError::Io(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
+        }
     }
 }
