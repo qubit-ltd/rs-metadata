@@ -8,10 +8,7 @@
 //! Tests for Boolean expression semantics.
 
 use crate::support::test_support::sample;
-use qubit_metadata::{
-    FilterExpression,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterExpression, MetadataFilter};
 
 #[test]
 fn test_and_or_and_not_are_expression_operations() {

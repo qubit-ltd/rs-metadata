@@ -7,22 +7,11 @@
 // =============================================================================
 //! V1 wire representation of [`crate::FilterExpression`].
 
-use qubit_value::{
-    Value,
-    ValueWirePayloadV1,
-};
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use qubit_value::{Value, ValueWirePayloadV1};
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    Condition,
-    FilterExpression,
-    FilterLimitKind,
-    FilterLimits,
-    MetadataError,
-    MetadataResult,
+    Condition, FilterExpression, FilterLimitKind, FilterLimits, MetadataError, MetadataResult,
 };
 
 /// One V1 expression node.
@@ -130,10 +119,7 @@ impl FilterExpressionWireV1 {
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when the raw tree depth,
     /// node count, key length, or membership value count exceeds a bound.
-    pub(crate) fn validate_limits(
-        &self,
-        limits: FilterLimits,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
         let mut node_count = 0;
         self.validate_limits_at(limits, 1, &mut node_count)
     }
@@ -178,10 +164,7 @@ impl FilterExpressionWireV1 {
             }
             Self::Ge { key, value } => {
                 let value = Self::into_scalar_value(value)?;
-                FilterExpression::condition(Condition::GreaterEqual {
-                    key,
-                    value,
-                })
+                FilterExpression::condition(Condition::GreaterEqual { key, value })
             }
             Self::In { key, values } => {
                 let values = Self::into_scalar_values(values)?;
@@ -191,21 +174,15 @@ impl FilterExpressionWireV1 {
                 let values = Self::into_scalar_values(values)?;
                 FilterExpression::condition(Condition::NotIn { key, values })
             }
-            Self::Exists { key } => {
-                FilterExpression::condition(Condition::Exists { key })
-            }
-            Self::NotExists { key } => {
-                FilterExpression::condition(Condition::NotExists { key })
-            }
+            Self::Exists { key } => FilterExpression::condition(Condition::Exists { key }),
+            Self::NotExists { key } => FilterExpression::condition(Condition::NotExists { key }),
             Self::Not { expression } => {
                 Ok(expression.into_expression_unchecked()?.negated_unchecked())
             }
             Self::And { children } => {
                 Self::combine(children, FilterExpression::and_unchecked, "and")
             }
-            Self::Or { children } => {
-                Self::combine(children, FilterExpression::or_unchecked, "or")
-            }
+            Self::Or { children } => Self::combine(children, FilterExpression::or_unchecked, "or"),
         }
     }
 
@@ -278,18 +255,16 @@ impl FilterExpressionWireV1 {
 
     /// Extracts the scalar required by a metadata filter condition.
     fn into_scalar_value(value: ValueWirePayloadV1) -> MetadataResult<Value> {
-        value.into_container().into_scalar().map_err(|_| {
-            MetadataError::InvalidFilterExpression {
-                message: "metadata filter wire values must be scalar"
-                    .to_owned(),
-            }
-        })
+        value
+            .into_container()
+            .into_scalar()
+            .map_err(|_| MetadataError::InvalidFilterExpression {
+                message: "metadata filter wire values must be scalar".to_owned(),
+            })
     }
 
     /// Extracts condition values while rejecting collection-shaped payloads.
-    fn into_scalar_values(
-        values: Vec<ValueWirePayloadV1>,
-    ) -> MetadataResult<Vec<Value>> {
+    fn into_scalar_values(values: Vec<ValueWirePayloadV1>) -> MetadataResult<Vec<Value>> {
         values.into_iter().map(Self::into_scalar_value).collect()
     }
 
@@ -302,16 +277,12 @@ impl FilterExpressionWireV1 {
         let mut children = children.into_iter();
         let Some(first) = children.next() else {
             return Err(MetadataError::InvalidFilterExpression {
-                message: format!(
-                    "'{operator}' group requires at least two children"
-                ),
+                message: format!("'{operator}' group requires at least two children"),
             });
         };
         let Some(second) = children.next() else {
             return Err(MetadataError::InvalidFilterExpression {
-                message: format!(
-                    "'{operator}' group requires at least two children"
-                ),
+                message: format!("'{operator}' group requires at least two children"),
             });
         };
         let mut expression = combine(
@@ -319,8 +290,7 @@ impl FilterExpressionWireV1 {
             second.into_expression_unchecked()?,
         );
         for child in children {
-            expression =
-                combine(expression, child.into_expression_unchecked()?);
+            expression = combine(expression, child.into_expression_unchecked()?);
         }
         Ok(expression)
     }

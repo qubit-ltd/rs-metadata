@@ -7,24 +7,18 @@
 // =============================================================================
 //! Errors from bounded JSON metadata wire decoding.
 
-use std::{
-    error::Error,
-    fmt,
-};
+use std::{error::Error, fmt};
 
 #[cfg(feature = "filter")]
 use crate::MetadataError;
-use qubit_budget::{
-    BudgetError,
-    JsonResource,
-};
+use qubit_budget::{BudgetError, JsonResource};
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum MetadataWireDecodeError {
     /// The JSON document exceeded one shared budget limit.
-    Budget(BudgetError<JsonResource, usize>),
+    Budget(BudgetError<JsonResource, u64>),
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
     Filter(MetadataError),

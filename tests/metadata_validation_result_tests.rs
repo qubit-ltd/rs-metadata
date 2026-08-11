@@ -9,17 +9,11 @@
 
 #![cfg(feature = "schema")]
 
-use qubit_metadata::{
-    MetadataError,
-    MetadataValidationError,
-    MetadataValidationResult,
-};
+use qubit_metadata::{MetadataError, MetadataValidationError, MetadataValidationResult};
 
 #[test]
 fn test_metadata_validation_result_preserves_aggregate_error() {
-    let error = MetadataValidationError::from_issue(
-        MetadataError::MissingFilterExpression,
-    );
+    let error = MetadataValidationError::from_issue(MetadataError::MissingFilterExpression);
     let result: MetadataValidationResult<()> = Err(error.clone());
 
     assert_eq!(result, Err(error));

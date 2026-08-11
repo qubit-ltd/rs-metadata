@@ -7,11 +7,7 @@
 // =============================================================================
 //! Unit tests for [`qubit_metadata::MetadataFilterBuilder`] default behavior.
 use qubit_metadata::{
-    FilterExpression,
-    FilterExpressionView,
-    FilterLimits,
-    FilterMatchOptions,
-    MetadataError,
+    FilterExpression, FilterExpressionView, FilterLimits, FilterMatchOptions, MetadataError,
     MetadataFilter,
 };
 
@@ -32,9 +28,7 @@ fn test_builder_uses_last_option_and_limit_values() {
         .expect("expression should build");
     let first_options = FilterMatchOptions::builder().build();
     let final_options = FilterMatchOptions::builder()
-        .numeric_comparison_policy(
-            qubit_datatype::NumericComparisonPolicy::Approximate,
-        )
+        .numeric_comparison_policy(qubit_datatype::NumericComparisonPolicy::Approximate)
         .build();
     let first_limits = FilterLimits::builder().max_nodes(2).build().unwrap();
     let final_limits = FilterLimits::builder().max_nodes(3).build().unwrap();

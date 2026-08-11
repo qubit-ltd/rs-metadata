@@ -7,11 +7,7 @@
 // =============================================================================
 //! Metadata-filter wire tests.
 
-use qubit_metadata::{
-    FilterExpression,
-    FilterLimits,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterExpression, FilterLimits, MetadataFilter};
 use serde_json::json;
 
 /// Builds a filter containing one existence condition.
@@ -37,8 +33,7 @@ fn deserialize_with_filter_limits(
 
 #[test]
 fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
-    let encoded =
-        serde_json::to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = serde_json::to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder()
         .max_depth(1)
         .max_nodes(1)
@@ -54,8 +49,7 @@ fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
 
 #[test]
 fn test_receiver_rejects_expression_exceeding_its_key_limit() {
-    let encoded =
-        serde_json::to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = serde_json::to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(5).build().unwrap();
 
     let error = deserialize_with_filter_limits(&encoded, receiver).unwrap_err();
@@ -80,8 +74,7 @@ fn test_receiver_rejects_expression_exceeding_sender_declaration() {
 
 #[test]
 fn test_receiver_accepts_expression_at_exact_boundary() {
-    let encoded =
-        serde_json::to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = serde_json::to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(6).build().unwrap();
 
     assert!(deserialize_with_filter_limits(&encoded, receiver).is_ok());
