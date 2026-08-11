@@ -9,13 +9,7 @@
 
 use qubit_value::Value;
 
-use crate::{
-    Condition,
-    FilterExpression,
-    FilterLimits,
-    MetadataError,
-    MetadataResult,
-};
+use crate::{Condition, FilterExpression, FilterLimits, MetadataError, MetadataResult};
 
 /// Fluent builder for a non-empty [`FilterExpression`].
 ///
@@ -47,12 +41,10 @@ impl FilterExpressionBuilder {
         if let Some(error) = self.error {
             return Err(error);
         }
-        let expression =
-            self.expression
-                .ok_or(MetadataError::InvalidFilterExpression {
-                message:
-                    "a filter expression must contain at least one condition"
-                        .to_string(),
+        let expression = self
+            .expression
+            .ok_or(MetadataError::InvalidFilterExpression {
+                message: "a filter expression must contain at least one condition".to_string(),
             })?;
         expression.validate_limits(FilterLimits::MAX)?;
         Ok(expression)
@@ -231,11 +223,7 @@ impl FilterExpressionBuilder {
     where
         F: FnOnce(Self) -> Self,
     {
-        self.combine_group(
-            "AND",
-            build(Self::new()),
-            FilterExpression::and_unchecked,
-        )
+        self.combine_group("AND", build(Self::new()), FilterExpression::and_unchecked)
     }
 
     /// Appends a grouped expression with logical OR.
@@ -273,11 +261,7 @@ impl FilterExpressionBuilder {
     where
         F: FnOnce(Self) -> Self,
     {
-        self.combine_group(
-            "OR",
-            build(Self::new()),
-            FilterExpression::or_unchecked,
-        )
+        self.combine_group("OR", build(Self::new()), FilterExpression::or_unchecked)
     }
 
     /// Negates the expression built so far.
@@ -379,9 +363,7 @@ impl FilterExpressionBuilder {
 /// An invalid-expression error whose message identifies `operator`.
 fn empty_group_error(operator: &'static str) -> MetadataError {
     MetadataError::InvalidFilterExpression {
-        message: format!(
-            "{operator} group must contain at least one condition"
-        ),
+        message: format!("{operator} group must contain at least one condition"),
     }
 }
 

@@ -8,65 +8,29 @@
 //! Provides the [`Metadata`] type — a structured, ordered, typed key-value
 //! store.
 
-use std::{
-    collections::BTreeMap,
-    fmt,
-};
+use std::{collections::BTreeMap, fmt};
 
-use qubit_datatype::{
-    DataConversionTarget,
-    DataType,
-};
-use qubit_redact::{
-    Redact,
-    RedactedKeyedValueSession,
-    RedactionSession,
-};
-use qubit_value::{
-    Value,
-    ValueRef,
-    ValueWirePayloadV1,
-};
+use qubit_datatype::{DataConversionTarget, DataType};
+use qubit_redact::{Redact, RedactedKeyedValueSession, RedactionSession};
+use qubit_value::{Value, ValueRef, ValueWirePayloadV1};
 use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de::{
-        self,
-    },
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{self},
 };
 
 #[cfg(feature = "schema")]
 use crate::MetadataSchema;
-use crate::constants::{
-    STRICT_STRING_MAP_MAX_ENTRIES,
-    STRICT_STRING_MAP_MAX_KEY_BYTES,
-};
+use crate::constants::{STRICT_STRING_MAP_MAX_ENTRIES, STRICT_STRING_MAP_MAX_KEY_BYTES};
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 use crate::wire::{
-    METADATA_WIRE_VERSION_V1,
-    MetadataWireV1,
-    MetadataWireValuesRef,
-    StrictStringMap,
+    METADATA_WIRE_VERSION_V1, MetadataWireV1, MetadataWireValuesRef, StrictStringMap,
 };
 #[cfg(feature = "json")]
-use crate::wire::{
-    MetadataWireV1Seed,
-    StrictStringMapSeed,
-};
-use crate::{
-    MetadataError,
-    MetadataResult,
-};
+use crate::wire::{MetadataWireV1Seed, StrictStringMapSeed};
+use crate::{MetadataError, MetadataResult};
 #[cfg(feature = "json")]
-use qubit_budget::{
-    JsonDecodeSession,
-    JsonResource,
-    JsonSerdeError,
-    decode_slice_seed,
-};
+use qubit_budget::{JsonDecodeSession, JsonResource, JsonSerdeError, decode_slice_seed};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -120,9 +84,7 @@ impl Metadata {
     /// failures.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(
-        input: &[u8],
-    ) -> Result<Self, crate::MetadataWireDecodeError> {
+    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(input, MetadataLimits::default())
     }
 
@@ -150,7 +112,7 @@ impl Metadata {
         limits
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut session = JsonDecodeSession::new(limits.json_decode());
+        let mut session = JsonDecodeSession::owned(limits.json_decode());
         let wire = decode_slice_seed(
             MetadataWireV1Seed::new(StrictStringMapSeed::new(
                 limits.max_metadata_entries(),
@@ -311,9 +273,9 @@ impl Metadata {
                 data_type: value.data_type(),
             });
         }
-        value.to::<T>().map_err(|error| {
-            MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
-        })
+        value
+            .to::<T>()
+            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
@@ -631,21 +593,13 @@ impl Metadata {
 
 #[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the metadata decoding error.
-fn metadata_json_error(
-    error: JsonSerdeError<JsonResource>,
-) -> crate::MetadataWireDecodeError {
+fn metadata_json_error(error: JsonSerdeError<JsonResource>) -> crate::MetadataWireDecodeError {
     match error {
-        JsonSerdeError::Budget(error) => {
-            crate::MetadataWireDecodeError::Budget(error)
-        }
-        JsonSerdeError::Json(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(error)
-        }
-        JsonSerdeError::Io(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as serde::de::Error>::custom(error),
-            )
-        }
+        JsonSerdeError::Budget(error) => crate::MetadataWireDecodeError::Budget(error),
+        JsonSerdeError::Json(error) => crate::MetadataWireDecodeError::InvalidJson(error),
+        JsonSerdeError::Io(error) => crate::MetadataWireDecodeError::InvalidJson(
+            <serde_json::Error as serde::de::Error>::custom(error),
+        ),
     }
 }
 
@@ -658,10 +612,7 @@ impl Redact for Metadata {
     ) -> fmt::Result {
         let mut output = formatter.debug_map();
         for (key, value) in &self.0 {
-            output.entry(
-                key,
-                &RedactedKeyedValueSession::new(key, value, session),
-            );
+            output.entry(key, &RedactedKeyedValueSession::new(key, value, session));
         }
         output.finish()
     }
@@ -684,10 +635,7 @@ impl fmt::Display for Metadata {
     /// redaction policy before emitting untrusted metadata to logs.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(
-            &self.redacted().with_policy_output_limit(),
-            formatter,
-        )
+        fmt::Display::fmt(&self.redacted().with_policy_output_limit(), formatter)
     }
 }
 
@@ -697,18 +645,19 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        if self.0.len() > STRICT_STRING_MAP_MAX_ENTRIES {
+        if u64::try_from(self.0.len()).expect("metadata entry count must fit in u64")
+            > STRICT_STRING_MAP_MAX_ENTRIES
+        {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata map contains {} entries, maximum is {}",
                 self.0.len(),
                 STRICT_STRING_MAP_MAX_ENTRIES,
             )));
         }
-        if let Some(key) = self
-            .0
-            .keys()
-            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
-        {
+        if let Some(key) = self.0.keys().find(|key| {
+            u64::try_from(key.len()).expect("metadata key length must fit in u64")
+                > STRICT_STRING_MAP_MAX_KEY_BYTES
+        }) {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata key is {} bytes, maximum is {}",
                 key.len(),

@@ -7,10 +7,7 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::FilterLimitsBuilder`].
 
-use qubit_metadata::{
-    FilterLimits,
-    MetadataError,
-};
+use qubit_metadata::{FilterLimits, MetadataError};
 
 #[test]
 fn test_build_rejects_each_zero_limit() {

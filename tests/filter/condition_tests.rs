@@ -9,11 +9,7 @@
 
 use crate::support::test_support::sample;
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
 use qubit_value::Value;
 
 /// Builds a filter using default root configuration.
@@ -94,8 +90,7 @@ fn test_unset_value_is_absent_for_existence_and_unknown_for_comparison() {
         .not()
         .build()
         .expect("expression should build");
-    let metadata =
-        Metadata::new().with("value", Value::Unset(DataType::String));
+    let metadata = Metadata::new().with("value", Value::Unset(DataType::String));
 
     assert!(!filter(exists).matches(&metadata));
     assert!(filter(not_exists).matches(&metadata));
