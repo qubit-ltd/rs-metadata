@@ -7,7 +7,11 @@
 // =============================================================================
 //! Tests for fail-closed unknown outcomes.
 
-use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
+use qubit_metadata::{
+    FilterExpression,
+    Metadata,
+    MetadataFilter,
+};
 
 #[test]
 fn test_match_outcome_unknown_remains_non_matching_after_negation() {

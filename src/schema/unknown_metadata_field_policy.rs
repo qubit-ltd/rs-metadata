@@ -7,10 +7,15 @@
 // =============================================================================
 //! [`UnknownMetadataFieldPolicy`] — handling for undeclared metadata keys.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Policy for metadata fields that are not declared by a schema.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum UnknownMetadataFieldPolicy {
     /// Reject metadata keys that are not declared in the schema.

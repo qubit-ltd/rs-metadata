@@ -7,14 +7,19 @@
 // =============================================================================
 //! Metadata-filter serde tests.
 
-use qubit_metadata::{FilterExpression, FilterLimits, MetadataFilter};
+use qubit_metadata::{
+    FilterExpression,
+    FilterLimits,
+    MetadataFilter,
+};
 #[cfg(feature = "json")]
 use qubit_value::Value;
 
 #[test]
 fn test_all_and_none_serde_round_trip() {
     for filter in [MetadataFilter::all(), MetadataFilter::none()] {
-        let encoded = serde_json::to_string(&filter).expect("filter should serialize");
+        let encoded =
+            serde_json::to_string(&filter).expect("filter should serialize");
         let decoded: MetadataFilter =
             serde_json::from_str(&encoded).expect("filter should deserialize");
         assert_eq!(decoded, filter);
@@ -100,7 +105,8 @@ fn test_complex_metadata_filter_serde_preserves_wire_shape() {
         .build()
         .expect("complex filter should build");
 
-    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded =
+        serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(encoded["version"], serde_json::json!(1));
     assert_eq!(encoded["expression"]["kind"], "or");
     assert!(encoded["expression"]["children"].is_array());
