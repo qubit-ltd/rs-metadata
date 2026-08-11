@@ -12,7 +12,10 @@ use std::fmt;
 #[cfg(feature = "filter")]
 use crate::FilterLimitKind;
 use qubit_datatype::DataType;
-use qubit_value::{Value, ValueError};
+use qubit_value::{
+    Value,
+    ValueError,
+};
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -162,7 +165,11 @@ impl MetadataError {
     /// A structured [`MetadataError::TypeMismatch`] error.
     #[cfg(feature = "schema")]
     #[inline]
-    pub(crate) fn type_mismatch(key: &str, expected: DataType, actual: DataType) -> Self {
+    pub(crate) fn type_mismatch(
+        key: &str,
+        expected: DataType,
+        actual: DataType,
+    ) -> Self {
         Self::TypeMismatch {
             key: key.to_string(),
             expected,
@@ -201,7 +208,10 @@ impl fmt::Display for MetadataError {
             }
             #[cfg(feature = "schema")]
             Self::UnknownField { key } => {
-                write!(formatter, "Metadata key '{key}' is not defined in schema")
+                write!(
+                    formatter,
+                    "Metadata key '{key}' is not defined in schema"
+                )
             }
             #[cfg(feature = "schema")]
             Self::UnknownFilterField { key } => {

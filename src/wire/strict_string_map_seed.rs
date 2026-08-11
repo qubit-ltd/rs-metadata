@@ -10,7 +10,12 @@
 
 use std::fmt;
 
-use serde::de::{self, DeserializeSeed, MapAccess, Visitor};
+use serde::de::{
+    self,
+    DeserializeSeed,
+    MapAccess,
+    Visitor,
+};
 
 use super::strict_string_map::StrictStringMap;
 
@@ -45,9 +50,15 @@ where
     where
         D: serde::Deserializer<'de>,
     {
+        let max_entries = usize::try_from(self.max_entries).map_err(|_| {
+            de::Error::custom("strict map entry limit cannot be represented as a native length")
+        })?;
+        let max_key_bytes = usize::try_from(self.max_key_bytes).map_err(|_| {
+            de::Error::custom("strict map key limit cannot be represented as a native length")
+        })?;
         struct StrictStringMapVisitor<'a, V> {
-            max_entries: u64,
-            max_key_bytes: u64,
+            max_entries: usize,
+            max_key_bytes: usize,
             lifetime: std::marker::PhantomData<&'a ()>,
             marker: std::marker::PhantomData<fn() -> V>,
         }
@@ -59,7 +70,10 @@ where
             type Value = StrictStringMap<V>;
 
             /// Describes the expected input shape.
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn expecting(
+                &self,
+                formatter: &mut fmt::Formatter<'_>,
+            ) -> fmt::Result {
                 formatter.write_str("a map with unique string keys")
             }
 
@@ -70,18 +84,14 @@ where
             {
                 let mut values = std::collections::BTreeMap::new();
                 while let Some(key) = map.next_key::<String>()? {
-                    if u64::try_from(key.len()).expect("map key length must fit in u64")
-                        > self.max_key_bytes
-                    {
+                    if key.len() > self.max_key_bytes {
                         return Err(de::Error::custom(format!(
                             "map key has {} bytes, exceeding the limit of {} bytes",
                             key.len(),
                             self.max_key_bytes,
                         )));
                     }
-                    if u64::try_from(values.len()).expect("map entry count must fit in u64")
-                        >= self.max_entries
-                    {
+                    if values.len() >= self.max_entries {
                         return Err(de::Error::custom(format!(
                             "map has more than the limit of {} entries",
                             self.max_entries,
@@ -105,8 +115,8 @@ where
         }
 
         deserializer.deserialize_map(StrictStringMapVisitor {
-            max_entries: self.max_entries,
-            max_key_bytes: self.max_key_bytes,
+            max_entries,
+            max_key_bytes,
             lifetime: std::marker::PhantomData,
             marker: std::marker::PhantomData,
         })

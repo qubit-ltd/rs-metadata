@@ -7,11 +7,18 @@
 // =============================================================================
 //! Errors from bounded JSON metadata wire decoding.
 
-use std::{error::Error, fmt};
+use std::{
+    error::Error,
+    fmt,
+};
 
 #[cfg(feature = "filter")]
 use crate::MetadataError;
-use qubit_budget::{BudgetError, JsonResource};
+use qubit_budget::{
+    BudgetError,
+    JsonResource,
+    QuantityConversionError,
+};
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
@@ -19,6 +26,13 @@ use qubit_budget::{BudgetError, JsonResource};
 pub enum MetadataWireDecodeError {
     /// The JSON document exceeded one shared budget limit.
     Budget(BudgetError<JsonResource, u64>),
+    /// A native JSON measurement could not fit the configured budget quantity.
+    Quantity {
+        /// Resource whose native measurement could not be represented.
+        resource: JsonResource,
+        /// Exact failed native quantity conversion.
+        source: QuantityConversionError,
+    },
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
     Filter(MetadataError),
@@ -35,6 +49,10 @@ impl fmt::Display for MetadataWireDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Budget(error) => fmt::Display::fmt(error, formatter),
+            Self::Quantity { resource, source } => write!(
+                formatter,
+                "JSON resource quantity conversion failed for {resource:?}: {source}"
+            ),
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),
             Self::InvalidJson(error) => fmt::Display::fmt(error, formatter),
@@ -47,6 +65,7 @@ impl Error for MetadataWireDecodeError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Budget(error) => Some(error),
+            Self::Quantity { source, .. } => Some(source),
             #[cfg(feature = "filter")]
             Self::Filter(error) => Some(error),
             Self::InvalidJson(error) => Some(error),

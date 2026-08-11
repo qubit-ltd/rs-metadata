@@ -10,7 +10,10 @@
 use qubit_metadata::Metadata;
 
 #[cfg(feature = "filter")]
-use qubit_metadata::{FilterExpression, MetadataFilter};
+use qubit_metadata::{
+    FilterExpression,
+    MetadataFilter,
+};
 
 #[cfg(feature = "filter")]
 #[test]
