@@ -15,6 +15,12 @@ use serde::{
     Serializer,
     de,
 };
+#[cfg(feature = "json")]
+use std::cell::RefCell;
+#[cfg(feature = "json")]
+use std::io::Write;
+#[cfg(feature = "json")]
+use std::rc::Rc;
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
 #[cfg(feature = "json")]
@@ -39,9 +45,16 @@ use crate::{
 #[cfg(feature = "json")]
 use qubit_budget::{
     JsonDecodeSession,
+    JsonEncodeLimits,
+    JsonEncodeSession,
     JsonResource,
+};
+#[cfg(feature = "json")]
+use qubit_json::{
     JsonSerdeError,
     decode_slice_seed,
+    encode_to_vec,
+    encode_to_writer,
 };
 
 /// An expression, its matching policy, and its resource limits.
@@ -190,14 +203,92 @@ impl MetadataFilter {
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
+        let error_slot = Rc::new(RefCell::new(None));
         let wire = decode_slice_seed(
-            MetadataFilterWireV1Seed::new(receiver_filter_limits),
+            MetadataFilterWireV1Seed::new(
+                receiver_filter_limits,
+                Rc::clone(&error_slot),
+            ),
             input,
             &mut session,
         )
-        .map_err(filter_json_error)?;
+        .map_err(|error| {
+            error_slot.borrow_mut().take().map_or_else(
+                || filter_json_error(error),
+                crate::MetadataWireDecodeError::Filter,
+            )
+        })?;
         wire.into_filter(receiver_filter_limits)
             .map_err(crate::MetadataWireDecodeError::Filter)
+    }
+
+    /// Encodes this filter with the default JSON budget profile.
+    #[cfg(feature = "json")]
+    pub fn to_json_vec(
+        &self,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(
+            crate::metadata_limits::default_json_encode_limits(),
+        )
+    }
+
+    /// Encodes this filter with caller-provided JSON budgets.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// budget or the filter cannot be represented by the V1 wire format.
+    #[cfg(feature = "json")]
+    pub fn to_json_vec_with_limits(
+        &self,
+        limits: JsonEncodeLimits,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        let mut session = JsonEncodeSession::owned(limits);
+        encode_to_vec(self, &mut session).map_err(Into::into)
+    }
+
+    /// Encodes this filter to a writer with the default JSON budget profile.
+    #[cfg(feature = "json")]
+    pub fn to_json_writer<W>(
+        &self,
+        writer: W,
+    ) -> Result<(), crate::MetadataWireEncodeError>
+    where
+        W: Write,
+    {
+        self.to_json_writer_with_limits(
+            writer,
+            crate::metadata_limits::default_json_encode_limits(),
+        )
+    }
+
+    /// Encodes this filter to a writer with caller-provided JSON budgets.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination receiving the compact JSON document.
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// budget, the filter cannot be represented by the V1 wire format, or the
+    /// writer rejects the output.
+    #[cfg(feature = "json")]
+    pub fn to_json_writer_with_limits<W>(
+        &self,
+        writer: W,
+        limits: JsonEncodeLimits,
+    ) -> Result<(), crate::MetadataWireEncodeError>
+    where
+        W: Write,
+    {
+        let mut session = JsonEncodeSession::owned(limits);
+        encode_to_writer(writer, self, &mut session).map_err(Into::into)
     }
 
     /// Creates a filter from already validated parts.
@@ -296,6 +387,9 @@ fn filter_json_error(
         JsonSerdeError::Quantity { resource, source } => {
             crate::MetadataWireDecodeError::Quantity { resource, source }
         }
+        JsonSerdeError::Syntax(error) => {
+            crate::MetadataWireDecodeError::Syntax(error)
+        }
         JsonSerdeError::Json(error) => {
             crate::MetadataWireDecodeError::InvalidJson(error)
         }
@@ -304,5 +398,10 @@ fn filter_json_error(
                 <serde_json::Error as serde::de::Error>::custom(error),
             )
         }
+        _ => crate::MetadataWireDecodeError::InvalidJson(
+            <serde_json::Error as serde::de::Error>::custom(
+                "unsupported JSON adapter error",
+            ),
+        ),
     }
 }
