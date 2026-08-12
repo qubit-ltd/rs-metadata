@@ -79,6 +79,8 @@ mod metadata_validation_error;
 mod metadata_validation_result;
 #[cfg(feature = "json")]
 mod metadata_wire_decode_error;
+#[cfg(feature = "json")]
+mod metadata_wire_encode_error;
 #[cfg(feature = "schema")]
 mod schema;
 mod wire;
@@ -125,6 +127,8 @@ pub use metadata_validation_error::MetadataValidationError;
 pub use metadata_validation_result::MetadataValidationResult;
 #[cfg(feature = "json")]
 pub use metadata_wire_decode_error::MetadataWireDecodeError;
+#[cfg(feature = "json")]
+pub use metadata_wire_encode_error::MetadataWireEncodeError;
 #[cfg(feature = "schema")]
 pub use schema::MetadataField;
 #[cfg(feature = "schema")]

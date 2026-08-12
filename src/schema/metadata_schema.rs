@@ -9,6 +9,9 @@
 
 use std::collections::BTreeMap;
 
+#[cfg(feature = "json")]
+use std::io::Write;
+
 use qubit_datatype::DataType;
 use qubit_value::Value;
 use serde::{
@@ -53,9 +56,16 @@ use crate::{
 #[cfg(feature = "json")]
 use qubit_budget::{
     JsonDecodeSession,
+    JsonEncodeLimits,
+    JsonEncodeSession,
     JsonResource,
+};
+#[cfg(feature = "json")]
+use qubit_json::{
     JsonSerdeError,
     decode_slice_seed,
+    encode_to_vec,
+    encode_to_writer,
 };
 
 /// Schema for metadata fields.
@@ -154,6 +164,74 @@ impl MetadataSchema {
             wire.unknown_metadata_field_policy,
             wire.unknown_filter_field_policy,
         ))
+    }
+
+    /// Encodes this schema with the default JSON budget profile.
+    #[cfg(feature = "json")]
+    pub fn to_json_vec(
+        &self,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(
+            crate::metadata_limits::default_json_encode_limits(),
+        )
+    }
+
+    /// Encodes this schema with caller-provided JSON budgets.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// budget or serialization fails.
+    #[cfg(feature = "json")]
+    pub fn to_json_vec_with_limits(
+        &self,
+        limits: JsonEncodeLimits,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        let mut session = JsonEncodeSession::owned(limits);
+        encode_to_vec(self, &mut session).map_err(Into::into)
+    }
+
+    /// Encodes this schema to a writer with the default JSON budget profile.
+    #[cfg(feature = "json")]
+    pub fn to_json_writer<W>(
+        &self,
+        writer: W,
+    ) -> Result<(), crate::MetadataWireEncodeError>
+    where
+        W: Write,
+    {
+        self.to_json_writer_with_limits(
+            writer,
+            crate::metadata_limits::default_json_encode_limits(),
+        )
+    }
+
+    /// Encodes this schema to a writer with caller-provided JSON budgets.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination receiving the compact JSON document.
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// budget, serialization fails, or `writer` rejects the output.
+    #[cfg(feature = "json")]
+    pub fn to_json_writer_with_limits<W>(
+        &self,
+        writer: W,
+        limits: JsonEncodeLimits,
+    ) -> Result<(), crate::MetadataWireEncodeError>
+    where
+        W: Write,
+    {
+        let mut session = JsonEncodeSession::owned(limits);
+        encode_to_writer(writer, self, &mut session).map_err(Into::into)
     }
 
     /// Creates a schema from field definitions and unknown-field policies.
@@ -347,6 +425,9 @@ fn schema_json_error(
         JsonSerdeError::Quantity { resource, source } => {
             crate::MetadataWireDecodeError::Quantity { resource, source }
         }
+        JsonSerdeError::Syntax(error) => {
+            crate::MetadataWireDecodeError::Syntax(error)
+        }
         JsonSerdeError::Json(error) => {
             crate::MetadataWireDecodeError::InvalidJson(error)
         }
@@ -355,6 +436,11 @@ fn schema_json_error(
                 <serde_json::Error as serde::de::Error>::custom(error),
             )
         }
+        _ => crate::MetadataWireDecodeError::InvalidJson(
+            <serde_json::Error as serde::de::Error>::custom(
+                "unsupported JSON adapter error",
+            ),
+        ),
     }
 }
 
@@ -364,26 +450,17 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        let maximum_entries = usize::try_from(STRICT_STRING_MAP_MAX_ENTRIES).map_err(|_| {
-            <S::Error as serde::ser::Error>::custom(
-                "schema field limit cannot be represented as a native length",
-            )
-        })?;
-        if self.fields.len() > maximum_entries {
+        if self.fields.len() > STRICT_STRING_MAP_MAX_ENTRIES {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata schema contains {} fields, maximum is {}",
                 self.fields.len(),
                 STRICT_STRING_MAP_MAX_ENTRIES,
             )));
         }
-        let maximum_key_bytes =
-            usize::try_from(STRICT_STRING_MAP_MAX_KEY_BYTES).map_err(|_| {
-                <S::Error as serde::ser::Error>::custom(
-                    "schema key limit cannot be represented as a native length",
-                )
-            })?;
-        if let Some(key) =
-            self.fields.keys().find(|key| key.len() > maximum_key_bytes)
+        if let Some(key) = self
+            .fields
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
         {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata schema key is {} bytes, maximum is {}",

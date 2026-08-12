@@ -13,6 +13,9 @@ use std::{
     fmt,
 };
 
+#[cfg(feature = "json")]
+use std::io::Write;
+
 use qubit_datatype::{
     DataConversionTarget,
     DataType,
@@ -63,9 +66,16 @@ use crate::{
 #[cfg(feature = "json")]
 use qubit_budget::{
     JsonDecodeSession,
+    JsonEncodeLimits,
+    JsonEncodeSession,
     JsonResource,
+};
+#[cfg(feature = "json")]
+use qubit_json::{
     JsonSerdeError,
     decode_slice_seed,
+    encode_to_vec,
+    encode_to_writer,
 };
 
 /// A structured, ordered, typed key-value store for metadata fields.
@@ -166,6 +176,97 @@ impl Metadata {
             )
         })?);
         Ok(metadata)
+    }
+
+    /// Encodes this metadata object with the default JSON budget profile.
+    ///
+    /// # Returns
+    ///
+    /// Compact JSON bytes accepted by the strict metadata wire format.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when the JSON value or
+    /// output exceeds a configured budget, serialization fails, or the
+    /// destination writer rejects bytes.
+    #[cfg(feature = "json")]
+    pub fn to_json_vec(
+        &self,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(
+            crate::metadata_limits::default_json_encode_limits(),
+        )
+    }
+
+    /// Encodes this metadata object with caller-provided JSON budgets.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Returns
+    ///
+    /// Compact JSON bytes accepted by the strict metadata wire format.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when the JSON value or
+    /// output exceeds a configured budget, or serialization fails.
+    #[cfg(feature = "json")]
+    pub fn to_json_vec_with_limits(
+        &self,
+        limits: JsonEncodeLimits,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        let mut session = JsonEncodeSession::owned(limits);
+        encode_to_vec(self, &mut session).map_err(Into::into)
+    }
+
+    /// Encodes this metadata object to a writer with the default JSON budget.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination receiving the complete compact JSON document.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// budget, serialization fails, or `writer` rejects the output.
+    #[cfg(feature = "json")]
+    pub fn to_json_writer<W>(
+        &self,
+        writer: W,
+    ) -> Result<(), crate::MetadataWireEncodeError>
+    where
+        W: Write,
+    {
+        self.to_json_writer_with_limits(
+            writer,
+            crate::metadata_limits::default_json_encode_limits(),
+        )
+    }
+
+    /// Encodes this metadata object to a writer with caller-provided budgets.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination receiving the complete compact JSON document.
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// budget, serialization fails, or `writer` rejects the output.
+    #[cfg(feature = "json")]
+    pub fn to_json_writer_with_limits<W>(
+        &self,
+        writer: W,
+        limits: JsonEncodeLimits,
+    ) -> Result<(), crate::MetadataWireEncodeError>
+    where
+        W: Write,
+    {
+        let mut session = JsonEncodeSession::owned(limits);
+        encode_to_writer(writer, self, &mut session).map_err(Into::into)
     }
 
     /// Returns `true` if there are no entries.
@@ -641,6 +742,9 @@ fn metadata_json_error(
         JsonSerdeError::Quantity { resource, source } => {
             crate::MetadataWireDecodeError::Quantity { resource, source }
         }
+        JsonSerdeError::Syntax(error) => {
+            crate::MetadataWireDecodeError::Syntax(error)
+        }
         JsonSerdeError::Json(error) => {
             crate::MetadataWireDecodeError::InvalidJson(error)
         }
@@ -649,6 +753,11 @@ fn metadata_json_error(
                 <serde_json::Error as serde::de::Error>::custom(error),
             )
         }
+        _ => crate::MetadataWireDecodeError::InvalidJson(
+            <serde_json::Error as serde::de::Error>::custom(
+                "unsupported JSON adapter error",
+            ),
+        ),
     }
 }
 
@@ -700,28 +809,17 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        let maximum_entries = usize::try_from(STRICT_STRING_MAP_MAX_ENTRIES).map_err(|_| {
-            <S::Error as serde::ser::Error>::custom(
-                "metadata entry limit cannot be represented as a native length",
-            )
-        })?;
-        if self.0.len() > maximum_entries {
+        if self.0.len() > STRICT_STRING_MAP_MAX_ENTRIES {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata map contains {} entries, maximum is {}",
                 self.0.len(),
                 STRICT_STRING_MAP_MAX_ENTRIES,
             )));
         }
-        let maximum_key_bytes = usize::try_from(
-            STRICT_STRING_MAP_MAX_KEY_BYTES,
-        )
-        .map_err(|_| {
-            <S::Error as serde::ser::Error>::custom(
-                "metadata key limit cannot be represented as a native length",
-            )
-        })?;
-        if let Some(key) =
-            self.0.keys().find(|key| key.len() > maximum_key_bytes)
+        if let Some(key) = self
+            .0
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
         {
             return Err(<S::Error as serde::ser::Error>::custom(format!(
                 "metadata key is {} bytes, maximum is {}",
