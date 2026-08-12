@@ -17,9 +17,9 @@ use crate::MetadataError;
 use qubit_budget::{
     BudgetError,
     JsonResource,
-    JsonSyntaxError,
     QuantityConversionError,
 };
+use qubit_json::JsonSyntaxError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]

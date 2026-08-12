@@ -22,9 +22,11 @@ use std::fmt;
 use qubit_budget::{
     BudgetError,
     JsonResource,
+    QuantityConversionError,
+};
+use qubit_json::{
     JsonSerdeError,
     JsonSyntaxError,
-    QuantityConversionError,
 };
 use serde_json::Error as JsonError;
 
