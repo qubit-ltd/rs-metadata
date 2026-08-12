@@ -14,11 +14,8 @@ use std::{
 
 #[cfg(feature = "filter")]
 use crate::MetadataError;
-use qubit_budget::{
-    BudgetError,
-    JsonResource,
-    QuantityConversionError,
-};
+use qubit_budget::{BudgetError, QuantityConversionError};
+use qubit_json::JsonResource;
 use qubit_json::JsonSyntaxError;
 
 /// Failure returned by a bounded metadata JSON decoding API.

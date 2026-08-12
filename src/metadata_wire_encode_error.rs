@@ -19,11 +19,8 @@
 
 use std::fmt;
 
-use qubit_budget::{
-    BudgetError,
-    JsonResource,
-    QuantityConversionError,
-};
+use qubit_budget::{BudgetError, QuantityConversionError};
+use qubit_json::JsonResource;
 use qubit_json::{
     JsonSerdeError,
     JsonSyntaxError,

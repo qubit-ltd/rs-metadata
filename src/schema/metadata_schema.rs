@@ -54,14 +54,11 @@ use crate::{
     MetadataValidationResult,
 };
 #[cfg(feature = "json")]
-use qubit_budget::{
+use qubit_json::{
     JsonDecodeSession,
     JsonEncodeLimits,
     JsonEncodeSession,
     JsonResource,
-};
-#[cfg(feature = "json")]
-use qubit_json::{
     JsonSerdeError,
     decode_slice_seed,
     encode_to_vec,

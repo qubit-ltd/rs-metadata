@@ -10,9 +10,9 @@
 #![cfg(feature = "json")]
 
 use qubit_budget::{
-    JsonResource,
     ResourceLimit,
 };
+use qubit_json::JsonResource;
 use qubit_metadata::{
     MetadataLimits,
     default_json_decode_limits,
