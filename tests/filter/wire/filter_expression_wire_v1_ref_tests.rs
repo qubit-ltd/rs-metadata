@@ -8,7 +8,10 @@
 //! Borrowed filter-expression wire tests.
 
 #[cfg(feature = "json")]
-use qubit_metadata::{FilterExpression, MetadataFilter};
+use qubit_metadata::{
+    FilterExpression,
+    MetadataFilter,
+};
 #[cfg(feature = "json")]
 use qubit_value::Value;
 
@@ -30,7 +33,8 @@ fn test_expression_serialization_preserves_nested_borrowed_payloads() {
         .expression(expression)
         .build()
         .expect("filter should build");
-    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded =
+        serde_json::to_value(&filter).expect("filter should serialize");
     let encoded = &encoded["expression"];
 
     assert_eq!(encoded["kind"], "and");

@@ -8,7 +8,11 @@
 //! A downstream conversion target used by metadata tests.
 
 use qubit_datatype::{
-    ConversionSession, DataConversionError, DataConversionTarget, DataConverter, DataType,
+    ConversionSession,
+    DataConversionError,
+    DataConversionTarget,
+    DataConverter,
+    DataType,
     DataTypeOf,
 };
 

@@ -7,10 +7,17 @@
 // =============================================================================
 //! Borrowed V1 wire representation of [`crate::FilterExpression`].
 
-use qubit_value::{ValueWireEncodeError, ValueWirePayloadRefV1};
+use qubit_value::{
+    ValueWireEncodeError,
+    ValueWirePayloadRefV1,
+};
 use serde::Serialize;
 
-use crate::{Condition, FilterExpression, FilterExpressionView};
+use crate::{
+    Condition,
+    FilterExpression,
+    FilterExpressionView,
+};
 
 /// Borrowed V1 expression node used only for serialization.
 #[derive(Serialize)]
