@@ -42,13 +42,12 @@ fn test_invalid_json_preserves_source_chain() {
 
 #[test]
 fn test_quantity_error_preserves_source_chain() {
+    let source =
+        QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
     let error = MetadataWireDecodeError::Quantity {
         resource: JsonResource::InputBytes,
-        source: QuantityConversionError::new(
-            QuantityMeasurement::Usize(9),
-            "u8",
-        ),
+        source,
     };
-    assert!(error.to_string().contains("quantity conversion"));
+    assert!(error.to_string().contains("u8"));
     assert!(error.source().is_some());
 }

@@ -21,15 +21,15 @@ use super::strict_string_map::StrictStringMap;
 
 /// Deserializes a strict string map with caller-provided resource bounds.
 pub(crate) struct StrictStringMapSeed<'a, V> {
-    max_entries: u64,
-    max_key_bytes: u64,
+    max_entries: usize,
+    max_key_bytes: usize,
     lifetime: std::marker::PhantomData<&'a ()>,
     marker: std::marker::PhantomData<fn() -> V>,
 }
 
 impl<V> StrictStringMapSeed<'static, V> {
     /// Creates a bounded strict-map seed.
-    pub(crate) const fn new(max_entries: u64, max_key_bytes: u64) -> Self {
+    pub(crate) const fn new(max_entries: usize, max_key_bytes: usize) -> Self {
         Self {
             max_entries,
             max_key_bytes,

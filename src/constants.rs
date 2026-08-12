@@ -8,10 +8,10 @@
 //! Shared resource-limit constants for the metadata crate.
 
 /// Hard maximum number of entries accepted by strict metadata maps.
-pub(crate) const STRICT_STRING_MAP_MAX_ENTRIES: u64 = 4_096;
+pub(crate) const STRICT_STRING_MAP_MAX_ENTRIES: usize = 4_096;
 
 /// Hard maximum UTF-8 byte length accepted for strict metadata map keys.
-pub(crate) const STRICT_STRING_MAP_MAX_KEY_BYTES: u64 = 256;
+pub(crate) const STRICT_STRING_MAP_MAX_KEY_BYTES: usize = 256;
 
 /// Hard maximum filter-expression nesting depth.
 #[cfg(feature = "filter")]
