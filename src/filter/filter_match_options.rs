@@ -8,12 +8,17 @@
 //! [`FilterMatchOptions`] — policies for filter evaluation.
 
 use qubit_datatype::NumericComparisonPolicy;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use super::FilterMatchOptionsBuilder;
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct FilterMatchOptions {
