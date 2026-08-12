@@ -69,6 +69,9 @@ use qubit_budget::{
     JsonEncodeLimits,
     JsonEncodeSession,
     JsonResource,
+};
+#[cfg(feature = "json")]
+use qubit_json::{
     JsonSerdeError,
     decode_slice_seed,
     encode_to_vec,
