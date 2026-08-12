@@ -23,8 +23,8 @@ use std::error::Error;
 
 use qubit_budget::{
     BudgetError,
-    JsonResource,
 };
+use qubit_json::JsonResource;
 use qubit_metadata::MetadataWireEncodeError;
 
 #[test]

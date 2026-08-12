@@ -7,14 +7,8 @@
 // =============================================================================
 //! Default JSON and metadata-domain limits for metadata wire documents.
 
-use qubit_budget::{
-    JsonDecodeLimits,
-    JsonEncodeLimits,
-    JsonResource,
-    JsonValueLimits,
-    ResourceLimit,
-    StructureLimits,
-};
+use qubit_budget::{ResourceLimit, StructureLimits};
+use qubit_json::{JsonDecodeLimits, JsonEncodeLimits, JsonResource, JsonValueLimits};
 use serde::de::Error as _;
 
 /// Default maximum complete metadata JSON input or output length.

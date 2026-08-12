@@ -13,11 +13,11 @@ use std::error::Error;
 
 use qubit_budget::{
     BudgetError,
-    JsonResource,
     Observation,
     QuantityConversionError,
     QuantityMeasurement,
 };
+use qubit_json::JsonResource;
 use qubit_metadata::MetadataWireDecodeError;
 
 #[test]

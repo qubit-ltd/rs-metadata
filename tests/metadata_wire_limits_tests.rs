@@ -11,10 +11,10 @@
 
 use qubit_budget::{
     BudgetError,
-    JsonResource,
     ResourceBudget,
     ResourceLimit,
 };
+use qubit_json::JsonResource;
 use qubit_metadata::{
     FilterLimitKind,
     FilterLimits,
