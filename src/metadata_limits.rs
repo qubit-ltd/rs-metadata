@@ -18,16 +18,16 @@ use qubit_budget::{
 use serde::de::Error as _;
 
 /// Default maximum complete metadata JSON input or output length.
-pub const DEFAULT_MAX_JSON_BYTES: u64 = 1_048_576;
+pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
 
 /// Default maximum metadata map entries accepted by the JSON profile.
-pub const DEFAULT_MAX_METADATA_ENTRIES: u64 = 4_096;
+pub const DEFAULT_MAX_METADATA_ENTRIES: usize = 4_096;
 
 /// Default maximum schema fields accepted by the JSON profile.
-pub const DEFAULT_MAX_SCHEMA_FIELDS: u64 = 4_096;
+pub const DEFAULT_MAX_SCHEMA_FIELDS: usize = 4_096;
 
 /// Default maximum UTF-8 bytes in one metadata key.
-pub const DEFAULT_MAX_KEY_BYTES: u64 = 256;
+pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 
 /// Domain-specific metadata limits composed with a shared JSON profile.
 ///
@@ -40,15 +40,15 @@ pub const DEFAULT_MAX_KEY_BYTES: u64 = 256;
 pub struct MetadataLimits {
     json_decode: JsonDecodeLimits,
     json_encode: JsonEncodeLimits,
-    max_metadata_entries: u64,
-    max_schema_fields: u64,
-    max_key_bytes: u64,
+    max_metadata_entries: usize,
+    max_schema_fields: usize,
+    max_key_bytes: usize,
 }
 
 impl MetadataLimits {
     /// Creates metadata limits with the default JSON profile and the supplied
     /// input/output byte bound.
-    pub fn new(max_json_bytes: u64) -> Self {
+    pub fn new(max_json_bytes: usize) -> Self {
         Self {
             json_decode: default_json_decode_limits().with_input_bytes_limit(
                 ResourceLimit::new(
@@ -91,35 +91,35 @@ impl MetadataLimits {
     }
 
     /// Sets the metadata-entry domain limit.
-    pub const fn with_max_metadata_entries(mut self, maximum: u64) -> Self {
+    pub const fn with_max_metadata_entries(mut self, maximum: usize) -> Self {
         self.max_metadata_entries = maximum;
         self
     }
 
     /// Sets the schema-field domain limit.
-    pub const fn with_max_schema_fields(mut self, maximum: u64) -> Self {
+    pub const fn with_max_schema_fields(mut self, maximum: usize) -> Self {
         self.max_schema_fields = maximum;
         self
     }
 
     /// Sets the metadata/schema key-byte domain limit.
-    pub const fn with_max_key_bytes(mut self, maximum: u64) -> Self {
+    pub const fn with_max_key_bytes(mut self, maximum: usize) -> Self {
         self.max_key_bytes = maximum;
         self
     }
 
     /// Returns the metadata-entry domain limit.
-    pub const fn max_metadata_entries(&self) -> u64 {
+    pub const fn max_metadata_entries(&self) -> usize {
         self.max_metadata_entries
     }
 
     /// Returns the schema-field domain limit.
-    pub const fn max_schema_fields(&self) -> u64 {
+    pub const fn max_schema_fields(&self) -> usize {
         self.max_schema_fields
     }
 
     /// Returns the metadata/schema key-byte domain limit.
-    pub const fn max_key_bytes(&self) -> u64 {
+    pub const fn max_key_bytes(&self) -> usize {
         self.max_key_bytes
     }
 
@@ -188,7 +188,7 @@ pub fn default_json_value_limits() -> JsonValueLimits {
                 ))
                 .with_key_bytes_limit(ResourceLimit::new(
                     JsonResource::KeyBytes,
-                    json_quantity(DEFAULT_MAX_KEY_BYTES),
+                    256 * 1024_usize,
                 )),
         )
 }
@@ -214,6 +214,6 @@ pub fn default_json_encode_limits() -> JsonEncodeLimits {
 }
 
 /// Converts protocol JSON limits to the native quantity used by JSON parsing.
-fn json_quantity(value: u64) -> usize {
-    usize::try_from(value).expect("protocol JSON limit must fit in usize")
+fn json_quantity(value: usize) -> usize {
+    value
 }
