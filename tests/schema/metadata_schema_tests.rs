@@ -14,6 +14,7 @@ use qubit_metadata::{
     MetadataError,
     MetadataSchema,
     MetadataValidationError,
+    MetadataWireLimitKind,
     UnknownFilterFieldPolicy,
     UnknownMetadataFieldPolicy,
 };
@@ -49,6 +50,23 @@ fn test_schema_builder_defines_required_and_optional_fields() {
     );
     assert!(schema.field("id").unwrap().is_required());
     assert!(!schema.field("score").unwrap().is_required());
+}
+
+#[test]
+fn test_schema_validate_wire_contract_rejects_oversized_field_key() {
+    let schema = MetadataSchema::builder()
+        .required("x".repeat(257).as_str(), DataType::String)
+        .build()
+        .expect("schema should build before wire validation");
+
+    assert_eq!(
+        schema.validate_wire_contract(),
+        Err(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 257,
+            maximum: 256,
+        })
+    );
 }
 
 #[test]

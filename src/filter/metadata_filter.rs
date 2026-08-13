@@ -394,7 +394,9 @@ fn filter_json_error(
             crate::MetadataWireDecodeError::Syntax(error)
         }
         JsonDecodeError::Deserialize(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(error)
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
         }
     }
 }

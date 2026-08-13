@@ -17,6 +17,7 @@ use qubit_metadata::MetadataSchema;
 use qubit_metadata::{
     Metadata,
     MetadataError,
+    MetadataWireLimitKind,
 };
 use qubit_value::Value;
 
@@ -46,6 +47,27 @@ fn test_new_is_empty() {
     let meta = Metadata::new();
     assert!(meta.is_empty());
     assert_eq!(meta.len(), 0);
+}
+
+#[test]
+fn test_validate_wire_contract_accepts_metadata_within_limits() {
+    let metadata = Metadata::new().with("name", "alice");
+
+    assert_eq!(metadata.validate_wire_contract(), Ok(()));
+}
+
+#[test]
+fn test_validate_wire_contract_rejects_oversized_metadata_key() {
+    let metadata = Metadata::new().with("x".repeat(257).as_str(), "value");
+
+    assert_eq!(
+        metadata.validate_wire_contract(),
+        Err(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 257,
+            maximum: 256,
+        })
+    );
 }
 
 #[test]

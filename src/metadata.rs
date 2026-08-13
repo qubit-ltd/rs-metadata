@@ -728,6 +728,43 @@ impl Metadata {
     pub fn into_inner(self) -> BTreeMap<String, Value> {
         self.0
     }
+
+    /// Validates that this metadata object fits the strict V1 wire contract.
+    ///
+    /// This preflight checks the same entry-count and key-byte limits enforced
+    /// by [`Serialize::serialize`], allowing callers to reject invalid metadata
+    /// at the write boundary instead of discovering the error during encoding.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when every entry can satisfy the metadata map limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::WireLimitExceeded`] when the entry count or a
+    /// key exceeds the strict V1 limit.
+    #[inline]
+    pub fn validate_wire_contract(&self) -> MetadataResult<()> {
+        if self.0.len() > STRICT_STRING_MAP_MAX_ENTRIES {
+            return Err(MetadataError::WireLimitExceeded {
+                kind: crate::MetadataWireLimitKind::Entries,
+                value: self.0.len(),
+                maximum: STRICT_STRING_MAP_MAX_ENTRIES,
+            });
+        }
+        if let Some(key) = self
+            .0
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
+        {
+            return Err(MetadataError::WireLimitExceeded {
+                kind: crate::MetadataWireLimitKind::KeyBytes,
+                value: key.len(),
+                maximum: STRICT_STRING_MAP_MAX_KEY_BYTES,
+            });
+        }
+        Ok(())
+    }
 }
 
 #[cfg(feature = "json")]
@@ -749,7 +786,9 @@ fn metadata_json_error(
             crate::MetadataWireDecodeError::Syntax(error)
         }
         JsonDecodeError::Deserialize(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(error)
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
         }
     }
 }
@@ -802,24 +841,8 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        if self.0.len() > STRICT_STRING_MAP_MAX_ENTRIES {
-            return Err(<S::Error as serde::ser::Error>::custom(format!(
-                "metadata map contains {} entries, maximum is {}",
-                self.0.len(),
-                STRICT_STRING_MAP_MAX_ENTRIES,
-            )));
-        }
-        if let Some(key) = self
-            .0
-            .keys()
-            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
-        {
-            return Err(<S::Error as serde::ser::Error>::custom(format!(
-                "metadata key is {} bytes, maximum is {}",
-                key.len(),
-                STRICT_STRING_MAP_MAX_KEY_BYTES,
-            )));
-        }
+        self.validate_wire_contract()
+            .map_err(<S::Error as serde::ser::Error>::custom)?;
         MetadataWireV1 {
             version: METADATA_WIRE_VERSION_V1,
             values: MetadataWireValuesRef(&self.0),

@@ -11,6 +11,7 @@ use std::fmt;
 
 #[cfg(feature = "filter")]
 use crate::FilterLimitKind;
+use crate::MetadataWireLimitKind;
 use qubit_datatype::DataType;
 use qubit_value::{
     Value,
@@ -43,6 +44,15 @@ pub enum MetadataError {
         actual: DataType,
         /// Human-readable conversion or validation message.
         message: String,
+    },
+    /// A metadata or schema value exceeds a strict V1 wire limit.
+    WireLimitExceeded {
+        /// Wire resource category that exceeded its limit.
+        kind: MetadataWireLimitKind,
+        /// Observed resource value.
+        value: usize,
+        /// Largest value accepted by the V1 wire contract.
+        maximum: usize,
     },
     /// A required schema field is missing from a metadata object.
     #[cfg(feature = "schema")]
@@ -198,6 +208,14 @@ impl fmt::Display for MetadataError {
             } => write!(
                 formatter,
                 "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
+            ),
+            Self::WireLimitExceeded {
+                kind,
+                value,
+                maximum,
+            } => write!(
+                formatter,
+                "Metadata wire {kind:?} value {value} exceeds the maximum of {maximum}"
             ),
             #[cfg(feature = "schema")]
             Self::MissingRequiredField { key, expected } => {
