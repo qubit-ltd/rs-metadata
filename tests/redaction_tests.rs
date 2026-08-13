@@ -8,13 +8,7 @@
 //! Redaction tests for metadata diagnostics.
 
 use qubit_metadata::Metadata;
-use qubit_redact::{
-    InputOutputLimit,
-    MaskPolicy,
-    Redact as _,
-    RedactionPolicy,
-    Sensitivity,
-};
+use qubit_redact::{InputOutputLimit, MaskPolicy, Redact as _, RedactionPolicy, Sensitivity};
 
 #[test]
 fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {

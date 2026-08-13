@@ -19,12 +19,9 @@
 
 use std::fmt;
 
+use qubit_budget::json::JsonResource;
 use qubit_budget::{BudgetError, QuantityConversionError};
-use qubit_json::JsonResource;
-use qubit_json::{
-    JsonSerdeError,
-    JsonSyntaxError,
-};
+use qubit_json::text::{JsonEncodeError, JsonSyntaxError};
 use serde_json::Error as JsonError;
 
 /// Failure returned by bounded metadata JSON encoding APIs.
@@ -86,21 +83,21 @@ impl std::error::Error for MetadataWireEncodeError {
     }
 }
 
-impl From<JsonSerdeError<JsonResource>> for MetadataWireEncodeError {
+impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
     /// Converts a shared budget adapter error into the metadata encoding
     /// error.
-    fn from(error: JsonSerdeError<JsonResource>) -> Self {
+    fn from(error: JsonEncodeError<JsonResource>) -> Self {
         match error {
-            JsonSerdeError::Budget(error) => Self::Budget(error),
-            JsonSerdeError::Quantity { resource, source } => {
-                Self::Quantity { resource, source }
+            JsonEncodeError::Budget(error) => match error {
+                qubit_budget::MeasuredBudgetError::Budget(error) => Self::Budget(error),
+                qubit_budget::MeasuredBudgetError::Quantity { resource, source } => {
+                    Self::Quantity { resource, source }
+                }
+            },
+            JsonEncodeError::InvalidRawJson(error) | JsonEncodeError::Serialize(error) => {
+                Self::Json(error)
             }
-            JsonSerdeError::Syntax(error) => Self::Syntax(error),
-            JsonSerdeError::Json(error) => Self::Json(error),
-            JsonSerdeError::Io(error) => Self::Io(error),
-            _ => Self::Json(JsonError::io(std::io::Error::other(
-                "unsupported JSON adapter error",
-            ))),
+            JsonEncodeError::Write(error) => Self::Io(error),
         }
     }
 }

@@ -9,10 +9,7 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::{
-    MetadataError,
-    MetadataField,
-    MetadataSchemaBuilder,
-    UnknownFilterFieldPolicy,
+    MetadataError, MetadataField, MetadataSchemaBuilder, UnknownFilterFieldPolicy,
     UnknownMetadataFieldPolicy,
 };
 

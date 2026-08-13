@@ -12,10 +12,7 @@
 use std::fmt::Write;
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    MetadataError,
-    MetadataValidationError,
-};
+use qubit_metadata::{MetadataError, MetadataValidationError};
 
 mod support;
 
@@ -63,10 +60,9 @@ fn test_validation_error_can_wrap_single_issue() {
 
 #[test]
 fn test_validation_error_display_streams_formatter_writes() {
-    let error =
-        MetadataValidationError::from_issue(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        });
+    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
+        key: "extra".to_string(),
+    });
     let mut writer = CountingWriter::new(None);
 
     write!(&mut writer, "{error}").unwrap();
@@ -76,10 +72,9 @@ fn test_validation_error_display_streams_formatter_writes() {
 
 #[test]
 fn test_validation_error_display_propagates_formatter_errors() {
-    let error =
-        MetadataValidationError::from_issue(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        });
+    let error = MetadataValidationError::from_issue(MetadataError::UnknownField {
+        key: "extra".to_string(),
+    });
     let mut writer = CountingWriter::new(Some(2));
 
     assert!(write!(&mut writer, "{error}").is_err());

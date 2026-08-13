@@ -12,22 +12,10 @@ use std::fmt;
 use std::rc::Rc;
 
 use qubit_budget::ResourceBudget;
-use serde::de::{
-    self,
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
+use serde::de::{self, DeserializeSeed, MapAccess, Visitor};
 
-use super::{
-    FilterExpressionWireV1Seed,
-    MetadataFilterWireV1,
-};
-use crate::{
-    FilterLimitKind,
-    FilterLimits,
-    FilterMatchOptions,
-};
+use super::{FilterExpressionWireV1Seed, MetadataFilterWireV1};
+use crate::{FilterLimitKind, FilterLimits, FilterMatchOptions};
 
 /// Seed that decodes one strict metadata-filter envelope.
 pub(crate) struct MetadataFilterWireV1Seed {
@@ -85,10 +73,8 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
         let mut version = None;
         let mut expression = None;
         let mut options = None;
-        let mut node_budget = ResourceBudget::new(
-            FilterLimitKind::Nodes,
-            self.receiver_limits.max_nodes(),
-        );
+        let mut node_budget =
+            ResourceBudget::new(FilterLimitKind::Nodes, self.receiver_limits.max_nodes());
         while let Some(field) = map.next_key::<String>()? {
             match field.as_str() {
                 "version" => {
@@ -101,14 +87,12 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
                     if expression.is_some() {
                         return Err(de::Error::duplicate_field("expression"));
                     }
-                    expression = Some(map.next_value_seed(
-                        FilterExpressionWireV1Seed::new(
-                            self.receiver_limits,
-                            &mut node_budget,
-                            1,
-                            Rc::clone(&self.error_slot),
-                        ),
-                    )?);
+                    expression = Some(map.next_value_seed(FilterExpressionWireV1Seed::new(
+                        self.receiver_limits,
+                        &mut node_budget,
+                        1,
+                        Rc::clone(&self.error_slot),
+                    ))?);
                 }
                 "options" => {
                     if options.is_some() {
