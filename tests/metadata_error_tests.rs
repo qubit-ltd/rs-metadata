@@ -13,6 +13,7 @@ use qubit_datatype::DataType;
 use qubit_metadata::{
     FilterLimitKind,
     MetadataError,
+    MetadataWireLimitKind,
 };
 
 #[test]
@@ -105,6 +106,16 @@ fn test_display_formats_all_variants() {
         }
         .to_string(),
         "Metadata filter Depth value 65 exceeds the maximum of 64"
+    );
+
+    assert_eq!(
+        MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 257,
+            maximum: 256,
+        }
+        .to_string(),
+        "Metadata wire KeyBytes value 257 exceeds the maximum of 256"
     );
 
     assert_eq!(

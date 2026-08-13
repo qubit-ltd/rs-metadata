@@ -411,6 +411,43 @@ impl MetadataSchema {
             None => Ok(()),
         }
     }
+
+    /// Validates that this schema fits the strict V1 wire contract.
+    ///
+    /// This preflight checks the same field-count and key-byte limits enforced
+    /// by [`Serialize::serialize`], allowing callers to reject invalid schemas
+    /// before crossing a persistence or network boundary.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when every field can satisfy the schema map limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::WireLimitExceeded`] when the field count or a
+    /// field key exceeds the strict V1 limit.
+    #[inline]
+    pub fn validate_wire_contract(&self) -> MetadataResult<()> {
+        if self.fields.len() > STRICT_STRING_MAP_MAX_ENTRIES {
+            return Err(MetadataError::WireLimitExceeded {
+                kind: crate::MetadataWireLimitKind::Entries,
+                value: self.fields.len(),
+                maximum: STRICT_STRING_MAP_MAX_ENTRIES,
+            });
+        }
+        if let Some(key) = self
+            .fields
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
+        {
+            return Err(MetadataError::WireLimitExceeded {
+                kind: crate::MetadataWireLimitKind::KeyBytes,
+                value: key.len(),
+                maximum: STRICT_STRING_MAP_MAX_KEY_BYTES,
+            });
+        }
+        Ok(())
+    }
 }
 
 #[cfg(feature = "json")]
@@ -432,7 +469,9 @@ fn schema_json_error(
             crate::MetadataWireDecodeError::Syntax(error)
         }
         JsonDecodeError::Deserialize(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(error)
+            crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(error),
+            )
         }
     }
 }
@@ -443,24 +482,8 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        if self.fields.len() > STRICT_STRING_MAP_MAX_ENTRIES {
-            return Err(<S::Error as serde::ser::Error>::custom(format!(
-                "metadata schema contains {} fields, maximum is {}",
-                self.fields.len(),
-                STRICT_STRING_MAP_MAX_ENTRIES,
-            )));
-        }
-        if let Some(key) = self
-            .fields
-            .keys()
-            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
-        {
-            return Err(<S::Error as serde::ser::Error>::custom(format!(
-                "metadata schema key is {} bytes, maximum is {}",
-                key.len(),
-                STRICT_STRING_MAP_MAX_KEY_BYTES,
-            )));
-        }
+        self.validate_wire_contract()
+            .map_err(<S::Error as serde::ser::Error>::custom)?;
         MetadataSchemaWireV1 {
             version: METADATA_SCHEMA_WIRE_VERSION_V1,
             fields: &self.fields,

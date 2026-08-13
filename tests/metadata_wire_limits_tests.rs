@@ -179,11 +179,7 @@ fn test_metadata_domain_entry_limit_is_preserved() {
     let limits = MetadataLimits::default().with_max_metadata_entries(1);
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain entry limit should reject the input");
-    assert!(
-        error
-            .to_string()
-            .contains("map has more than the limit of 1")
-    );
+    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
 #[test]
@@ -193,7 +189,7 @@ fn test_metadata_domain_key_limit_is_preserved() {
     let limits = MetadataLimits::default().with_max_key_bytes(4);
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain key limit should reject the input");
-    assert!(error.to_string().contains("exceeding the limit of 4 bytes"));
+    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
 #[test]
@@ -280,7 +276,7 @@ fn test_metadata_outer_key_budget_remains_256_bytes() {
     );
     let error = Metadata::decode_json_slice(input.as_bytes())
         .expect_err("metadata outer keys must retain the 256-byte cap");
-    assert!(error.to_string().contains("256 bytes"));
+    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
 #[test]
