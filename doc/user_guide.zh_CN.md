@@ -41,7 +41,7 @@ Metadata -> MetadataSchema -> 已存值校验
 ```toml
 [dependencies]
 qubit-metadata = "0.10"
-qubit-datatype = "0.10"
+qubit-datatype = "0.11"
 ```
 
 使用可选能力时请显式启用对应 feature：
@@ -49,7 +49,7 @@ qubit-datatype = "0.10"
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", features = ["schema", "json"] }
-qubit-datatype = "0.10"
+qubit-datatype = "0.11"
 ```
 
 `schema` 会包含 `filter`；不需要 schema 校验时可使用

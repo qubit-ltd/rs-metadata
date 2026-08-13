@@ -45,7 +45,7 @@ For the core metadata API (the crate's default feature set is core-only):
 ```toml
 [dependencies]
 qubit-metadata = "0.10"
-qubit-datatype = "0.10"
+qubit-datatype = "0.11"
 ```
 
 Enable optional layers explicitly when they are used:
@@ -53,7 +53,7 @@ Enable optional layers explicitly when they are used:
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", features = ["schema", "json"] }
-qubit-datatype = "0.10"
+qubit-datatype = "0.11"
 ```
 
 The `schema` feature includes `filter`; use `features = ["filter"]` when
