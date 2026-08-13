@@ -8,34 +8,75 @@
 //! Provides the [`Metadata`] type — a structured, ordered, typed key-value
 //! store.
 
-use std::{collections::BTreeMap, fmt};
+use std::{
+    collections::BTreeMap,
+    fmt,
+};
 
 #[cfg(feature = "json")]
 use std::io::Write;
 
-use qubit_datatype::{DataConversionTarget, DataType};
-use qubit_redact::{Redact, RedactedKeyedValueSession, RedactionSession};
-use qubit_value::{Value, ValueRef, ValueWirePayloadV1};
+use qubit_datatype::{
+    DataConversionTarget,
+    DataType,
+};
+use qubit_redact::{
+    Redact,
+    RedactedKeyedValueSession,
+    RedactionSession,
+};
+use qubit_value::{
+    Value,
+    ValueRef,
+    ValueWirePayloadV1,
+};
 use serde::{
-    Deserialize, Deserializer, Serialize, Serializer,
-    de::{self},
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de::{
+        self,
+    },
 };
 
 #[cfg(feature = "schema")]
 use crate::MetadataSchema;
-use crate::constants::{STRICT_STRING_MAP_MAX_ENTRIES, STRICT_STRING_MAP_MAX_KEY_BYTES};
+use crate::constants::{
+    STRICT_STRING_MAP_MAX_ENTRIES,
+    STRICT_STRING_MAP_MAX_KEY_BYTES,
+};
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 use crate::wire::{
-    METADATA_WIRE_VERSION_V1, MetadataWireV1, MetadataWireValuesRef, StrictStringMap,
+    METADATA_WIRE_VERSION_V1,
+    MetadataWireV1,
+    MetadataWireValuesRef,
+    StrictStringMap,
 };
 #[cfg(feature = "json")]
-use crate::wire::{MetadataWireV1Seed, StrictStringMapSeed};
-use crate::{MetadataError, MetadataResult};
+use crate::wire::{
+    MetadataWireV1Seed,
+    StrictStringMapSeed,
+};
+use crate::{
+    MetadataError,
+    MetadataResult,
+};
 #[cfg(feature = "json")]
-use qubit_budget::json::{JsonDecodeSession, JsonEncodeLimits, JsonEncodeSession, JsonResource};
+use qubit_budget::json::{
+    JsonDecodeSession,
+    JsonEncodeLimits,
+    JsonEncodeSession,
+    JsonResource,
+};
 #[cfg(feature = "json")]
-use qubit_json::text::{JsonDecodeError, decode_slice_seed, encode_to_vec, encode_to_writer};
+use qubit_json::text::{
+    JsonDecodeError,
+    decode_slice_seed,
+    encode_to_vec,
+    encode_to_writer,
+};
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -89,7 +130,9 @@ impl Metadata {
     /// failures.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
+    pub fn decode_json_slice(
+        input: &[u8],
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(input, MetadataLimits::default())
     }
 
@@ -147,8 +190,12 @@ impl Metadata {
     /// output exceeds a configured budget, serialization fails, or the
     /// destination writer rejects bytes.
     #[cfg(feature = "json")]
-    pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
+    pub fn to_json_vec(
+        &self,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(
+            crate::metadata_limits::default_json_encode_limits(),
+        )
     }
 
     /// Encodes this metadata object with caller-provided JSON budgets.
@@ -185,7 +232,10 @@ impl Metadata {
     /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
     /// budget, serialization fails, or `writer` rejects the output.
     #[cfg(feature = "json")]
-    pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
+    pub fn to_json_writer<W>(
+        &self,
+        writer: W,
+    ) -> Result<(), crate::MetadataWireEncodeError>
     where
         W: Write,
     {
@@ -362,9 +412,9 @@ impl Metadata {
                 data_type: value.data_type(),
             });
         }
-        value
-            .to::<T>()
-            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
+        value.to::<T>().map_err(|error| {
+            MetadataError::conversion_error(key, T::DATA_TYPE, value, error)
+        })
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
@@ -682,18 +732,25 @@ impl Metadata {
 
 #[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the metadata decoding error.
-fn metadata_json_error(error: JsonDecodeError<JsonResource>) -> crate::MetadataWireDecodeError {
+fn metadata_json_error(
+    error: JsonDecodeError<JsonResource>,
+) -> crate::MetadataWireDecodeError {
     match error {
         JsonDecodeError::Budget(error) => match error {
             qubit_budget::MeasuredBudgetError::Budget(error) => {
                 crate::MetadataWireDecodeError::Budget(error)
             }
-            qubit_budget::MeasuredBudgetError::Quantity { resource, source } => {
-                crate::MetadataWireDecodeError::Quantity { resource, source }
-            }
+            qubit_budget::MeasuredBudgetError::Quantity {
+                resource,
+                source,
+            } => crate::MetadataWireDecodeError::Quantity { resource, source },
         },
-        JsonDecodeError::Syntax(error) => crate::MetadataWireDecodeError::Syntax(error),
-        JsonDecodeError::Deserialize(error) => crate::MetadataWireDecodeError::InvalidJson(error),
+        JsonDecodeError::Syntax(error) => {
+            crate::MetadataWireDecodeError::Syntax(error)
+        }
+        JsonDecodeError::Deserialize(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(error)
+        }
     }
 }
 
@@ -706,7 +763,10 @@ impl Redact for Metadata {
     ) -> fmt::Result {
         let mut output = formatter.debug_map();
         for (key, value) in &self.0 {
-            output.entry(key, &RedactedKeyedValueSession::new(key, value, session));
+            output.entry(
+                key,
+                &RedactedKeyedValueSession::new(key, value, session),
+            );
         }
         output.finish()
     }
@@ -729,7 +789,10 @@ impl fmt::Display for Metadata {
     /// redaction policy before emitting untrusted metadata to logs.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.redacted().with_policy_output_limit(), formatter)
+        fmt::Display::fmt(
+            &self.redacted().with_policy_output_limit(),
+            formatter,
+        )
     }
 }
 

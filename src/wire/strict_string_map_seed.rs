@@ -10,7 +10,12 @@
 
 use std::fmt;
 
-use serde::de::{self, DeserializeSeed, MapAccess, Visitor};
+use serde::de::{
+    self,
+    DeserializeSeed,
+    MapAccess,
+    Visitor,
+};
 
 use super::strict_string_map::StrictStringMap;
 
@@ -61,7 +66,10 @@ where
             type Value = StrictStringMap<V>;
 
             /// Describes the expected input shape.
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn expecting(
+                &self,
+                formatter: &mut fmt::Formatter<'_>,
+            ) -> fmt::Result {
                 formatter.write_str("a map with unique string keys")
             }
 

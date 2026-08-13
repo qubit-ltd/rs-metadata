@@ -10,10 +10,21 @@
 #![cfg(all(feature = "json", feature = "schema"))]
 
 use qubit_budget::json::JsonResource;
-use qubit_budget::{BudgetError, ResourceBudget, ResourceLimit};
+use qubit_budget::{
+    BudgetError,
+    ResourceBudget,
+    ResourceLimit,
+};
 use qubit_metadata::{
-    FilterLimitKind, FilterLimits, Metadata, MetadataError, MetadataFilter, MetadataLimits,
-    MetadataSchema, MetadataWireDecodeError, default_json_decode_limits,
+    FilterLimitKind,
+    FilterLimits,
+    Metadata,
+    MetadataError,
+    MetadataFilter,
+    MetadataLimits,
+    MetadataSchema,
+    MetadataWireDecodeError,
+    default_json_decode_limits,
 };
 
 fn filter_input(expression: &str) -> Vec<u8> {
@@ -25,14 +36,18 @@ fn filter_input(expression: &str) -> Vec<u8> {
 
 fn input_limit(maximum: usize) -> MetadataLimits {
     MetadataLimits::default().with_json_decode(
-        default_json_decode_limits()
-            .with_input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, maximum)),
+        default_json_decode_limits().with_input_bytes_limit(
+            ResourceLimit::new(JsonResource::InputBytes, maximum),
+        ),
     )
 }
 
 #[test]
 fn test_resource_budget_preserves_filter_limit_facts() {
-    let mut budget = ResourceBudget::<FilterLimitKind, usize>::new(FilterLimitKind::Nodes, 1);
+    let mut budget = ResourceBudget::<FilterLimitKind, usize>::new(
+        FilterLimitKind::Nodes,
+        1,
+    );
     budget.try_consume(1).expect("first node should fit");
     let error = budget.try_consume(1).expect_err("second node should fail");
     assert_eq!(
@@ -48,8 +63,9 @@ fn test_resource_budget_preserves_filter_limit_facts() {
 
 #[test]
 fn test_decode_rejects_input_before_json_parsing() {
-    let error = Metadata::decode_json_slice_with_limits(b"null!", input_limit(4))
-        .expect_err("input bytes should be checked before parsing");
+    let error =
+        Metadata::decode_json_slice_with_limits(b"null!", input_limit(4))
+            .expect_err("input bytes should be checked before parsing");
     assert!(
         matches!(
             error,
@@ -66,8 +82,9 @@ fn test_decode_rejects_input_before_json_parsing() {
 
 #[test]
 fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
-    let error = Metadata::decode_json_slice_with_limits(b"null", input_limit(4))
-        .expect_err("null is not a metadata envelope");
+    let error =
+        Metadata::decode_json_slice_with_limits(b"null", input_limit(4))
+            .expect_err("null is not a metadata envelope");
     assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
@@ -75,9 +92,12 @@ fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
 fn test_filter_domain_limits_remain_separate_from_json_budget() {
     let input = filter_input(r#"{"kind":"not","expression":{"kind":"all"}}"#);
     let limits = FilterLimits::builder().max_depth(1).build().unwrap();
-    let error =
-        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-            .expect_err("nested expression should exceed receiver depth");
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::default(),
+        limits,
+    )
+    .expect_err("nested expression should exceed receiver depth");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -92,9 +112,12 @@ fn test_filter_domain_limits_remain_separate_from_json_budget() {
 fn test_filter_key_limit_preserves_structured_error() {
     let input = filter_input(r#"{"kind":"exists","key":"status"}"#);
     let limits = FilterLimits::builder().max_key_bytes(5).build().unwrap();
-    let error =
-        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-            .expect_err("the filter key should exceed the receiver limit");
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::default(),
+        limits,
+    )
+    .expect_err("the filter key should exceed the receiver limit");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -107,11 +130,16 @@ fn test_filter_key_limit_preserves_structured_error() {
 
 #[test]
 fn test_filter_node_limit_preserves_structured_error() {
-    let input = filter_input(r#"{"kind":"or","children":[{"kind":"all"},{"kind":"all"}]}"#);
+    let input = filter_input(
+        r#"{"kind":"or","children":[{"kind":"all"},{"kind":"all"}]}"#,
+    );
     let limits = FilterLimits::builder().max_nodes(1).build().unwrap();
-    let error =
-        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-            .expect_err("the second node should exceed the receiver limit");
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::default(),
+        limits,
+    )
+    .expect_err("the second node should exceed the receiver limit");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -128,9 +156,12 @@ fn test_filter_set_values_limit_preserves_structured_error() {
         r#"{"kind":"in","key":"status","values":[{"scalar":{"string":"a"}},{"scalar":{"string":"b"}}]}"#,
     );
     let limits = FilterLimits::builder().max_set_values(1).build().unwrap();
-    let error =
-        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-            .expect_err("the second set value should exceed the receiver limit");
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::default(),
+        limits,
+    )
+    .expect_err("the second set value should exceed the receiver limit");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -174,7 +205,8 @@ fn test_json_budget_structural_limit_is_structured_source() {
     let structure = value
         .structure_limits()
         .with_nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1));
-    let limits = limits.with_value_limits(value.with_structure_limits(structure));
+    let limits =
+        limits.with_value_limits(value.with_structure_limits(structure));
     let error = Metadata::decode_json_slice_with_limits(
         &input,
         MetadataLimits::default().with_json_decode(limits),
@@ -243,8 +275,9 @@ fn test_default_json_key_budget_allows_large_nested_keys() {
 #[test]
 fn test_metadata_outer_key_budget_remains_256_bytes() {
     let outer_key = "k".repeat(257);
-    let input =
-        format!(r#"{{"version":1,"values":{{"{outer_key}":{{"scalar":{{"int64":1}}}}}}}}"#,);
+    let input = format!(
+        r#"{{"version":1,"values":{{"{outer_key}":{{"scalar":{{"int64":1}}}}}}}}"#,
+    );
     let error = Metadata::decode_json_slice(input.as_bytes())
         .expect_err("metadata outer keys must retain the 256-byte cap");
     assert!(error.to_string().contains("256 bytes"));
@@ -253,17 +286,21 @@ fn test_metadata_outer_key_budget_remains_256_bytes() {
 #[test]
 fn test_metadata_encode_uses_output_budget() {
     let metadata = Metadata::new().with("name", "alice");
-    let limits = qubit_metadata::default_json_encode_limits()
-        .with_output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1));
+    let limits =
+        qubit_metadata::default_json_encode_limits().with_output_bytes_limit(
+            ResourceLimit::new(JsonResource::OutputBytes, 1),
+        );
     let error = metadata
         .to_json_vec_with_limits(limits)
         .expect_err("one output byte cannot encode metadata");
     assert!(matches!(
         error,
-        qubit_metadata::MetadataWireEncodeError::Budget(BudgetError::Insufficient {
-            resource: JsonResource::OutputBytes,
-            ..
-        })
+        qubit_metadata::MetadataWireEncodeError::Budget(
+            BudgetError::Insufficient {
+                resource: JsonResource::OutputBytes,
+                ..
+            }
+        )
     ));
 }
 

@@ -111,9 +111,14 @@ pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
 #[cfg(feature = "json")]
 pub use metadata_limits::{
-    DEFAULT_MAX_JSON_BYTES, DEFAULT_MAX_KEY_BYTES, DEFAULT_MAX_METADATA_ENTRIES,
-    DEFAULT_MAX_SCHEMA_FIELDS, MetadataLimits, default_json_decode_limits,
-    default_json_encode_limits, default_json_value_limits,
+    DEFAULT_MAX_JSON_BYTES,
+    DEFAULT_MAX_KEY_BYTES,
+    DEFAULT_MAX_METADATA_ENTRIES,
+    DEFAULT_MAX_SCHEMA_FIELDS,
+    MetadataLimits,
+    default_json_decode_limits,
+    default_json_encode_limits,
+    default_json_value_limits,
 };
 pub use metadata_result::MetadataResult;
 #[cfg(feature = "schema")]

@@ -15,26 +15,58 @@ use std::io::Write;
 use qubit_datatype::DataType;
 use qubit_value::Value;
 use serde::{
-    Deserialize, Deserializer, Serialize, Serializer,
-    de::{self},
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de::{
+        self,
+    },
 };
 
-use crate::constants::{STRICT_STRING_MAP_MAX_ENTRIES, STRICT_STRING_MAP_MAX_KEY_BYTES};
+use crate::constants::{
+    STRICT_STRING_MAP_MAX_ENTRIES,
+    STRICT_STRING_MAP_MAX_KEY_BYTES,
+};
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 use crate::schema::{
-    MetadataField, MetadataSchemaBuilder, UnknownFilterFieldPolicy, UnknownMetadataFieldPolicy,
+    MetadataField,
+    MetadataSchemaBuilder,
+    UnknownFilterFieldPolicy,
+    UnknownMetadataFieldPolicy,
 };
-use crate::wire::{METADATA_SCHEMA_WIRE_VERSION_V1, MetadataSchemaWireV1, StrictStringMap};
+use crate::wire::{
+    METADATA_SCHEMA_WIRE_VERSION_V1,
+    MetadataSchemaWireV1,
+    StrictStringMap,
+};
 #[cfg(feature = "json")]
-use crate::wire::{MetadataSchemaWireV1Seed, StrictStringMapSeed};
+use crate::wire::{
+    MetadataSchemaWireV1Seed,
+    StrictStringMapSeed,
+};
 use crate::{
-    Metadata, MetadataError, MetadataResult, MetadataValidationError, MetadataValidationResult,
+    Metadata,
+    MetadataError,
+    MetadataResult,
+    MetadataValidationError,
+    MetadataValidationResult,
 };
 #[cfg(feature = "json")]
-use qubit_budget::json::{JsonDecodeSession, JsonEncodeLimits, JsonEncodeSession, JsonResource};
+use qubit_budget::json::{
+    JsonDecodeSession,
+    JsonEncodeLimits,
+    JsonEncodeSession,
+    JsonResource,
+};
 #[cfg(feature = "json")]
-use qubit_json::text::{JsonDecodeError, decode_slice_seed, encode_to_vec, encode_to_writer};
+use qubit_json::text::{
+    JsonDecodeError,
+    decode_slice_seed,
+    encode_to_vec,
+    encode_to_writer,
+};
 
 /// Schema for metadata fields.
 ///
@@ -80,7 +112,9 @@ impl MetadataSchema {
     /// schema input.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
+    pub fn decode_json_slice(
+        input: &[u8],
+    ) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(input, MetadataLimits::default())
     }
 
@@ -134,8 +168,12 @@ impl MetadataSchema {
 
     /// Encodes this schema with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
+    pub fn to_json_vec(
+        &self,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(
+            crate::metadata_limits::default_json_encode_limits(),
+        )
     }
 
     /// Encodes this schema with caller-provided JSON budgets.
@@ -159,7 +197,10 @@ impl MetadataSchema {
 
     /// Encodes this schema to a writer with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
+    pub fn to_json_writer<W>(
+        &self,
+        writer: W,
+    ) -> Result<(), crate::MetadataWireEncodeError>
     where
         W: Write,
     {
@@ -295,7 +336,9 @@ impl MetadataSchema {
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
-            if field.is_required() && meta.get_raw(key).is_none_or(Value::is_unset) {
+            if field.is_required()
+                && meta.get_raw(key).is_none_or(Value::is_unset)
+            {
                 issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),
@@ -336,7 +379,11 @@ impl MetadataSchema {
     ///
     /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
     /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
-    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(
+        &self,
+        key: &str,
+        value: &Value,
+    ) -> MetadataResult<()> {
         match self.field(key) {
             Some(field) if field.is_required() && value.is_unset() => {
                 Err(MetadataError::MissingRequiredField {
@@ -344,9 +391,13 @@ impl MetadataSchema {
                     expected: field.data_type(),
                 })
             }
-            Some(field) if field.data_type() != value.data_type() => Err(
-                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
-            ),
+            Some(field) if field.data_type() != value.data_type() => {
+                Err(MetadataError::type_mismatch(
+                    key,
+                    field.data_type(),
+                    value.data_type(),
+                ))
+            }
             Some(_) => Ok(()),
             None if matches!(
                 self.unknown_metadata_field_policy,
@@ -364,18 +415,25 @@ impl MetadataSchema {
 
 #[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the schema decoding error.
-fn schema_json_error(error: JsonDecodeError<JsonResource>) -> crate::MetadataWireDecodeError {
+fn schema_json_error(
+    error: JsonDecodeError<JsonResource>,
+) -> crate::MetadataWireDecodeError {
     match error {
         JsonDecodeError::Budget(error) => match error {
             qubit_budget::MeasuredBudgetError::Budget(error) => {
                 crate::MetadataWireDecodeError::Budget(error)
             }
-            qubit_budget::MeasuredBudgetError::Quantity { resource, source } => {
-                crate::MetadataWireDecodeError::Quantity { resource, source }
-            }
+            qubit_budget::MeasuredBudgetError::Quantity {
+                resource,
+                source,
+            } => crate::MetadataWireDecodeError::Quantity { resource, source },
         },
-        JsonDecodeError::Syntax(error) => crate::MetadataWireDecodeError::Syntax(error),
-        JsonDecodeError::Deserialize(error) => crate::MetadataWireDecodeError::InvalidJson(error),
+        JsonDecodeError::Syntax(error) => {
+            crate::MetadataWireDecodeError::Syntax(error)
+        }
+        JsonDecodeError::Deserialize(error) => {
+            crate::MetadataWireDecodeError::InvalidJson(error)
+        }
     }
 }
 

@@ -20,8 +20,14 @@
 use std::fmt;
 
 use qubit_budget::json::JsonResource;
-use qubit_budget::{BudgetError, QuantityConversionError};
-use qubit_json::text::{JsonEncodeError, JsonSyntaxError};
+use qubit_budget::{
+    BudgetError,
+    QuantityConversionError,
+};
+use qubit_json::text::{
+    JsonEncodeError,
+    JsonSyntaxError,
+};
 use serde_json::Error as JsonError;
 
 /// Failure returned by bounded metadata JSON encoding APIs.
@@ -89,14 +95,16 @@ impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
     fn from(error: JsonEncodeError<JsonResource>) -> Self {
         match error {
             JsonEncodeError::Budget(error) => match error {
-                qubit_budget::MeasuredBudgetError::Budget(error) => Self::Budget(error),
-                qubit_budget::MeasuredBudgetError::Quantity { resource, source } => {
-                    Self::Quantity { resource, source }
+                qubit_budget::MeasuredBudgetError::Budget(error) => {
+                    Self::Budget(error)
                 }
+                qubit_budget::MeasuredBudgetError::Quantity {
+                    resource,
+                    source,
+                } => Self::Quantity { resource, source },
             },
-            JsonEncodeError::InvalidRawJson(error) | JsonEncodeError::Serialize(error) => {
-                Self::Json(error)
-            }
+            JsonEncodeError::InvalidRawJson(error)
+            | JsonEncodeError::Serialize(error) => Self::Json(error),
             JsonEncodeError::Write(error) => Self::Io(error),
         }
     }

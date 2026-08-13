@@ -7,12 +7,18 @@
 // =============================================================================
 //! Errors from bounded JSON metadata wire decoding.
 
-use std::{error::Error, fmt};
+use std::{
+    error::Error,
+    fmt,
+};
 
 #[cfg(feature = "filter")]
 use crate::MetadataError;
 use qubit_budget::json::JsonResource;
-use qubit_budget::{BudgetError, QuantityConversionError};
+use qubit_budget::{
+    BudgetError,
+    QuantityConversionError,
+};
 use qubit_json::text::JsonSyntaxError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
@@ -48,7 +54,9 @@ impl fmt::Display for MetadataWireDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Budget(error) => fmt::Display::fmt(error, formatter),
-            Self::Quantity { source, .. } => fmt::Display::fmt(source, formatter),
+            Self::Quantity { source, .. } => {
+                fmt::Display::fmt(source, formatter)
+            }
             Self::Syntax(error) => fmt::Display::fmt(error, formatter),
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),

@@ -89,7 +89,7 @@ receiver can tighten input admission without accidentally changing its output
 allowance:
 
 ```rust
-use qubit_json::JsonResource;
+use qubit_budget::json::JsonResource;
 use qubit_budget::ResourceLimit;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;

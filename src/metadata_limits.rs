@@ -7,8 +7,16 @@
 // =============================================================================
 //! Default JSON and metadata-domain limits for metadata wire documents.
 
-use qubit_budget::json::{JsonDecodeLimits, JsonEncodeLimits, JsonResource, JsonValueLimits};
-use qubit_budget::{ResourceLimit, StructureLimits};
+use qubit_budget::json::{
+    JsonDecodeLimits,
+    JsonEncodeLimits,
+    JsonResource,
+    JsonValueLimits,
+};
+use qubit_budget::{
+    ResourceLimit,
+    StructureLimits,
+};
 use serde::de::Error as _;
 
 /// Default maximum complete metadata JSON input or output length.
@@ -44,14 +52,18 @@ impl MetadataLimits {
     /// input/output byte bound.
     pub fn new(max_json_bytes: usize) -> Self {
         Self {
-            json_decode: default_json_decode_limits().with_input_bytes_limit(ResourceLimit::new(
-                JsonResource::InputBytes,
-                json_quantity(max_json_bytes),
-            )),
-            json_encode: default_json_encode_limits().with_output_bytes_limit(ResourceLimit::new(
-                JsonResource::OutputBytes,
-                json_quantity(max_json_bytes),
-            )),
+            json_decode: default_json_decode_limits().with_input_bytes_limit(
+                ResourceLimit::new(
+                    JsonResource::InputBytes,
+                    json_quantity(max_json_bytes),
+                ),
+            ),
+            json_encode: default_json_encode_limits().with_output_bytes_limit(
+                ResourceLimit::new(
+                    JsonResource::OutputBytes,
+                    json_quantity(max_json_bytes),
+                ),
+            ),
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
             max_key_bytes: DEFAULT_MAX_KEY_BYTES,
@@ -150,15 +162,24 @@ pub fn default_json_value_limits() -> JsonValueLimits {
             JsonResource::StringBytes,
             256 * 1024_usize,
         ))
-        .with_number_bytes_limit(ResourceLimit::new(JsonResource::NumberBytes, 4_096_usize))
+        .with_number_bytes_limit(ResourceLimit::new(
+            JsonResource::NumberBytes,
+            4_096_usize,
+        ))
         .with_payload_bytes_limit(ResourceLimit::new(
             JsonResource::PayloadBytes,
             json_quantity(DEFAULT_MAX_JSON_BYTES),
         ))
         .with_structure_limits(
             StructureLimits::empty()
-                .with_depth_limit(ResourceLimit::new(JsonResource::Depth, 64_usize))
-                .with_nodes_limit(ResourceLimit::new(JsonResource::Nodes, 100_000_usize))
+                .with_depth_limit(ResourceLimit::new(
+                    JsonResource::Depth,
+                    64_usize,
+                ))
+                .with_nodes_limit(ResourceLimit::new(
+                    JsonResource::Nodes,
+                    100_000_usize,
+                ))
                 .with_sequence_items_limit(ResourceLimit::new(
                     JsonResource::SequenceItems,
                     4_096_usize,
@@ -167,7 +188,10 @@ pub fn default_json_value_limits() -> JsonValueLimits {
                     JsonResource::MapEntries,
                     json_quantity(DEFAULT_MAX_METADATA_ENTRIES),
                 ))
-                .with_key_bytes_limit(ResourceLimit::new(JsonResource::KeyBytes, 256 * 1024_usize)),
+                .with_key_bytes_limit(ResourceLimit::new(
+                    JsonResource::KeyBytes,
+                    256 * 1024_usize,
+                )),
         )
 }
 

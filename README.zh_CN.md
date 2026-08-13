@@ -75,7 +75,7 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 解码和编码策略刻意保持方向独立。例如，接收端可以收紧输入准入，而不意外改变输出额度：
 
 ```rust
-use qubit_json::JsonResource;
+use qubit_budget::json::JsonResource;
 use qubit_budget::ResourceLimit;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
