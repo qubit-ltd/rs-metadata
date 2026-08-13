@@ -11,7 +11,10 @@
 
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
-use qubit_metadata::{MetadataLimits, default_json_decode_limits};
+use qubit_metadata::{
+    MetadataLimits,
+    default_json_decode_limits,
+};
 
 #[test]
 fn test_metadata_limits_default_exposes_domain_profile() {
@@ -26,8 +29,9 @@ fn test_metadata_limits_default_exposes_domain_profile() {
 #[test]
 fn test_metadata_limits_replace_json_profile() {
     let limits = MetadataLimits::default().with_json_decode(
-        default_json_decode_limits()
-            .with_input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 8)),
+        default_json_decode_limits().with_input_bytes_limit(
+            ResourceLimit::new(JsonResource::InputBytes, 8),
+        ),
     );
     assert_eq!(limits.json_decode().max_input_bytes(), Some(8));
     assert_eq!(

@@ -24,6 +24,9 @@ fn test_unknown_metadata_field_policy_serde_uses_snake_case() {
         serde_json::json!("allow")
     );
     assert!(
-        serde_json::from_value::<UnknownMetadataFieldPolicy>(serde_json::json!("Allow")).is_err()
+        serde_json::from_value::<UnknownMetadataFieldPolicy>(
+            serde_json::json!("Allow")
+        )
+        .is_err()
     );
 }
