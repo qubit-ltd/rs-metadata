@@ -8,13 +8,7 @@
 //! [`MetadataFilter`].
 
 use qubit_utils::Transient;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de,
-};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 #[cfg(feature = "json")]
 use std::cell::RefCell;
 #[cfg(feature = "json")]
@@ -25,34 +19,16 @@ use std::rc::Rc;
 use super::metadata_filter_builder::MetadataFilterBuilder;
 #[cfg(feature = "json")]
 use super::wire::MetadataFilterWireV1Seed;
-use super::wire::{
-    MetadataFilterWireV1,
-    MetadataFilterWireV1Ref,
-};
+use super::wire::{MetadataFilterWireV1, MetadataFilterWireV1Ref};
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 #[cfg(feature = "schema")]
-use crate::{
-    Condition,
-    MetadataResult,
-};
-use crate::{
-    FilterExpression,
-    FilterLimits,
-    FilterMatchOptions,
-    Metadata,
-};
+use crate::{Condition, MetadataResult};
+use crate::{FilterExpression, FilterLimits, FilterMatchOptions, Metadata};
 #[cfg(feature = "json")]
-use qubit_json::{
-    JsonDecodeSession,
-    JsonEncodeLimits,
-    JsonEncodeSession,
-    JsonResource,
-    JsonSerdeError,
-    decode_slice_seed,
-    encode_to_vec,
-    encode_to_writer,
-};
+use qubit_budget::json::{JsonDecodeSession, JsonEncodeLimits, JsonEncodeSession, JsonResource};
+#[cfg(feature = "json")]
+use qubit_json::text::{JsonDecodeError, decode_slice_seed, encode_to_vec, encode_to_writer};
 
 /// An expression, its matching policy, and its resource limits.
 ///
@@ -158,14 +134,8 @@ impl MetadataFilter {
     /// incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(
-        input: &[u8],
-    ) -> Result<Self, crate::MetadataWireDecodeError> {
-        Self::decode_json_slice_with_limits(
-            input,
-            MetadataLimits::default(),
-            FilterLimits::MAX,
-        )
+    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(input, MetadataLimits::default(), FilterLimits::MAX)
     }
 
     /// Decodes a strict metadata-filter JSON envelope after validating both
@@ -202,10 +172,7 @@ impl MetadataFilter {
         let mut session = JsonDecodeSession::owned(limits.json_decode());
         let error_slot = Rc::new(RefCell::new(None));
         let wire = decode_slice_seed(
-            MetadataFilterWireV1Seed::new(
-                receiver_filter_limits,
-                Rc::clone(&error_slot),
-            ),
+            MetadataFilterWireV1Seed::new(receiver_filter_limits, Rc::clone(&error_slot)),
             input,
             &mut session,
         )
@@ -221,12 +188,8 @@ impl MetadataFilter {
 
     /// Encodes this filter with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_vec(
-        &self,
-    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.to_json_vec_with_limits(
-            crate::metadata_limits::default_json_encode_limits(),
-        )
+    pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
     }
 
     /// Encodes this filter with caller-provided JSON budgets.
@@ -250,10 +213,7 @@ impl MetadataFilter {
 
     /// Encodes this filter to a writer with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_writer<W>(
-        &self,
-        writer: W,
-    ) -> Result<(), crate::MetadataWireEncodeError>
+    pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
         W: Write,
     {
@@ -337,10 +297,7 @@ impl MetadataFilter {
     /// Returns the first error produced by `visitor`.
     #[cfg(feature = "schema")]
     #[inline(always)]
-    pub(crate) fn visit_conditions<F>(
-        &self,
-        mut visitor: F,
-    ) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {
@@ -374,31 +331,17 @@ impl<'de> Deserialize<'de> for MetadataFilter {
 
 #[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the filter decoding error.
-fn filter_json_error(
-    error: JsonSerdeError<JsonResource>,
-) -> crate::MetadataWireDecodeError {
+fn filter_json_error(error: JsonDecodeError<JsonResource>) -> crate::MetadataWireDecodeError {
     match error {
-        JsonSerdeError::Budget(error) => {
-            crate::MetadataWireDecodeError::Budget(error)
-        }
-        JsonSerdeError::Quantity { resource, source } => {
-            crate::MetadataWireDecodeError::Quantity { resource, source }
-        }
-        JsonSerdeError::Syntax(error) => {
-            crate::MetadataWireDecodeError::Syntax(error)
-        }
-        JsonSerdeError::Json(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(error)
-        }
-        JsonSerdeError::Io(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as serde::de::Error>::custom(error),
-            )
-        }
-        _ => crate::MetadataWireDecodeError::InvalidJson(
-            <serde_json::Error as serde::de::Error>::custom(
-                "unsupported JSON adapter error",
-            ),
-        ),
+        JsonDecodeError::Budget(error) => match error {
+            qubit_budget::MeasuredBudgetError::Budget(error) => {
+                crate::MetadataWireDecodeError::Budget(error)
+            }
+            qubit_budget::MeasuredBudgetError::Quantity { resource, source } => {
+                crate::MetadataWireDecodeError::Quantity { resource, source }
+            }
+        },
+        JsonDecodeError::Syntax(error) => crate::MetadataWireDecodeError::Syntax(error),
+        JsonDecodeError::Deserialize(error) => crate::MetadataWireDecodeError::InvalidJson(error),
     }
 }

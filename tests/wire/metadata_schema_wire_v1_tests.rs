@@ -13,11 +13,9 @@ use qubit_metadata::MetadataSchema;
 #[test]
 fn test_metadata_schema_rejects_unknown_field_and_unsupported_version() {
     let schema = MetadataSchema::default();
-    let mut unknown =
-        serde_json::to_value(&schema).expect("schema should serialize");
+    let mut unknown = serde_json::to_value(&schema).expect("schema should serialize");
     unknown["extra"] = serde_json::json!(true);
-    let mut version =
-        serde_json::to_value(&schema).expect("schema should serialize");
+    let mut version = serde_json::to_value(&schema).expect("schema should serialize");
     version["version"] = serde_json::json!(2);
 
     assert!(serde_json::from_value::<MetadataSchema>(unknown).is_err());
@@ -27,10 +25,8 @@ fn test_metadata_schema_rejects_unknown_field_and_unsupported_version() {
 #[test]
 fn test_metadata_schema_v1_round_trip() {
     let schema = MetadataSchema::default();
-    let encoded =
-        serde_json::to_string(&schema).expect("schema should serialize");
-    let decoded =
-        serde_json::from_str(&encoded).expect("schema should deserialize");
+    let encoded = serde_json::to_string(&schema).expect("schema should serialize");
+    let decoded = serde_json::from_str(&encoded).expect("schema should deserialize");
 
     assert_eq!(schema, decoded);
 }
@@ -90,9 +86,7 @@ fn test_metadata_schema_json_decoder_exercises_seed_error_paths() {
         "unknown_filter_field_policy": "reject",
         "unknown_filter_field_policy": "allow_unchecked"
     }"#;
-    assert!(
-        MetadataSchema::decode_json_slice(duplicate_filter_policy).is_err()
-    );
+    assert!(MetadataSchema::decode_json_slice(duplicate_filter_policy).is_err());
 
     let wrong_fields_type = br#"{
         "version": 1,

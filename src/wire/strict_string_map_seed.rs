@@ -10,12 +10,7 @@
 
 use std::fmt;
 
-use serde::de::{
-    self,
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
+use serde::de::{self, DeserializeSeed, MapAccess, Visitor};
 
 use super::strict_string_map::StrictStringMap;
 
@@ -50,12 +45,8 @@ where
     where
         D: serde::Deserializer<'de>,
     {
-        let max_entries = usize::try_from(self.max_entries).map_err(|_| {
-            de::Error::custom("strict map entry limit cannot be represented as a native length")
-        })?;
-        let max_key_bytes = usize::try_from(self.max_key_bytes).map_err(|_| {
-            de::Error::custom("strict map key limit cannot be represented as a native length")
-        })?;
+        let max_entries = self.max_entries;
+        let max_key_bytes = self.max_key_bytes;
         struct StrictStringMapVisitor<'a, V> {
             max_entries: usize,
             max_key_bytes: usize,
@@ -70,10 +61,7 @@ where
             type Value = StrictStringMap<V>;
 
             /// Describes the expected input shape.
-            fn expecting(
-                &self,
-                formatter: &mut fmt::Formatter<'_>,
-            ) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map with unique string keys")
             }
 

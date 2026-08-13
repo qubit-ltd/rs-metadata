@@ -11,27 +11,13 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-use qubit_budget::{
-    BudgetError,
-    ResourceBudget,
-};
+use qubit_budget::{BudgetError, ResourceBudget};
 use qubit_value::ValueWirePayloadV1;
 use serde::Deserialize;
-use serde::de::{
-    self,
-    DeserializeSeed,
-    Error as _,
-    MapAccess,
-    SeqAccess,
-    Visitor,
-};
+use serde::de::{self, DeserializeSeed, Error as _, MapAccess, SeqAccess, Visitor};
 
 use super::FilterExpressionWireV1;
-use crate::{
-    FilterLimitKind,
-    FilterLimits,
-    MetadataError,
-};
+use crate::{FilterLimitKind, FilterLimits, MetadataError};
 
 /// Expression variant tag in the V1 wire representation.
 #[derive(Clone, Copy, Deserialize)]
@@ -122,10 +108,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
     type Value = FilterExpressionWireV1;
 
     /// Decodes one expression map after charging its depth and node budget.
-    fn deserialize<D>(
-        mut self,
-        deserializer: D,
-    ) -> Result<Self::Value, D::Error>
+    fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
@@ -140,9 +123,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 }
 
 /// Converts shared budget facts to the established metadata filter error.
-fn filter_limit_error(
-    error: BudgetError<FilterLimitKind, usize>,
-) -> MetadataError {
+fn filter_limit_error(error: BudgetError<FilterLimitKind, usize>) -> MetadataError {
     match error {
         BudgetError::Insufficient {
             resource,
@@ -155,18 +136,13 @@ fn filter_limit_error(
             maximum: limit,
         },
         BudgetError::LimitExceeded { .. } => {
-            unreachable!(
-                "filter node budgets only report insufficient capacity"
-            )
+            unreachable!("filter node budgets only report insufficient capacity")
         }
     }
 }
 
 /// Stores the first receiver-limit error produced during one decode call.
-fn capture_filter_error(
-    error_slot: &Rc<RefCell<Option<MetadataError>>>,
-    error: MetadataError,
-) {
+fn capture_filter_error(error_slot: &Rc<RefCell<Option<MetadataError>>>, error: MetadataError) {
     let mut captured = error_slot.borrow_mut();
     if captured.is_none() {
         *captured = Some(error);
@@ -410,11 +386,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         return Err(de::Error::duplicate_field("key"));
                     }
                     let key = map.next_value::<String>()?;
-                    check_key::<A::Error>(
-                        &key,
-                        self.receiver_limits,
-                        &self.error_slot,
-                    )?;
+                    check_key::<A::Error>(&key, self.receiver_limits, &self.error_slot)?;
                     fields.key = Some(key);
                 }
                 "value" => {
@@ -428,24 +400,21 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     if fields.values.is_some() {
                         return Err(de::Error::duplicate_field("values"));
                     }
-                    fields.values =
-                        Some(map.next_value_seed(ValueSequenceSeed::new(
-                            self.receiver_limits,
-                            Rc::clone(&self.error_slot),
-                        ))?);
+                    fields.values = Some(map.next_value_seed(ValueSequenceSeed::new(
+                        self.receiver_limits,
+                        Rc::clone(&self.error_slot),
+                    ))?);
                 }
                 "children" => {
                     if fields.children.is_some() {
                         return Err(de::Error::duplicate_field("children"));
                     }
-                    fields.children = Some(map.next_value_seed(
-                        ExpressionSequenceSeed::new(
-                            self.receiver_limits,
-                            &mut *self.node_budget,
-                            self.depth.saturating_add(1),
-                            Rc::clone(&self.error_slot),
-                        ),
-                    )?);
+                    fields.children = Some(map.next_value_seed(ExpressionSequenceSeed::new(
+                        self.receiver_limits,
+                        &mut *self.node_budget,
+                        self.depth.saturating_add(1),
+                        Rc::clone(&self.error_slot),
+                    ))?);
                 }
                 "expression" => {
                     if fields.expression.is_some() {
@@ -463,14 +432,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                 _ => {
                     return Err(de::Error::unknown_field(
                         &field,
-                        &[
-                            "kind",
-                            "key",
-                            "value",
-                            "values",
-                            "children",
-                            "expression",
-                        ],
+                        &["kind", "key", "value", "values", "children", "expression"],
                     ));
                 }
             }
@@ -545,14 +507,12 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
         let maximum = self.receiver_limits.max_nodes();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut children = Vec::with_capacity(capacity);
-        while let Some(child) =
-            sequence.next_element_seed(ExpressionElementSeed {
-                receiver_limits: self.receiver_limits,
-                node_budget: &mut *self.node_budget,
-                depth: self.depth,
-                error_slot: Rc::clone(&self.error_slot),
-            })?
-        {
+        while let Some(child) = sequence.next_element_seed(ExpressionElementSeed {
+            receiver_limits: self.receiver_limits,
+            node_budget: &mut *self.node_budget,
+            depth: self.depth,
+            error_slot: Rc::clone(&self.error_slot),
+        })? {
             children.push(child);
         }
         Ok(children)
@@ -594,10 +554,7 @@ struct ValueSequenceSeed {
 
 impl ValueSequenceSeed {
     /// Creates a bounded membership-value sequence seed.
-    fn new(
-        receiver_limits: FilterLimits,
-        error_slot: Rc<RefCell<Option<MetadataError>>>,
-    ) -> Self {
+    fn new(receiver_limits: FilterLimits, error_slot: Rc<RefCell<Option<MetadataError>>>) -> Self {
         Self {
             receiver_limits,
             error_slot,
@@ -642,13 +599,11 @@ impl<'de> Visitor<'de> for ValueSequenceVisitor {
         let maximum = self.receiver_limits.max_set_values();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut values = Vec::with_capacity(capacity);
-        while let Some(value) =
-            sequence.next_element_seed(ValueElementSeed {
-                receiver_limits: self.receiver_limits,
-                next_len: values.len().saturating_add(1),
-                error_slot: Rc::clone(&self.error_slot),
-            })?
-        {
+        while let Some(value) = sequence.next_element_seed(ValueElementSeed {
+            receiver_limits: self.receiver_limits,
+            next_len: values.len().saturating_add(1),
+            error_slot: Rc::clone(&self.error_slot),
+        })? {
             values.push(value);
         }
         Ok(values)
