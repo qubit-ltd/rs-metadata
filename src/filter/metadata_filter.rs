@@ -38,6 +38,7 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use serde::de;
+#[cfg(feature = "json")]
 use serde::de::Error as DeError;
 use serde::ser::Error as SerError;
 

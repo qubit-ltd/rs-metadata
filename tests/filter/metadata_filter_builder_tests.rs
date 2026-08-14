@@ -6,6 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! Unit tests for [`qubit_metadata::MetadataFilterBuilder`] default behavior.
+#[cfg(feature = "schema")]
 use qubit_datatype::DataType;
 use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::FilterExpression;
