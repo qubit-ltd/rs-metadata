@@ -8,17 +8,17 @@
 //! Tests for metadata schema data types.
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataError,
-    MetadataSchema,
-    MetadataValidationError,
-    MetadataWireLimitKind,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataSchema;
+use qubit_metadata::MetadataValidationError;
+use qubit_metadata::MetadataWireLimitKind;
+use qubit_metadata::UnknownFilterFieldPolicy;
+use qubit_metadata::UnknownMetadataFieldPolicy;
 use qubit_value::Value;
+use serde_json::from_value;
 use serde_json::json;
 
 fn single_issue(error: MetadataValidationError) -> MetadataError {
@@ -224,7 +224,7 @@ fn test_schema_metadata_and_filter_unknown_field_policies_are_independent() {
         .exists("dynamic")
         .build()
         .expect("expression should build");
-    let filter = qubit_metadata::MetadataFilter::builder()
+    let filter = MetadataFilter::builder()
         .expression(expression)
         .build()
         .expect("filter should build");
@@ -238,7 +238,7 @@ fn test_schema_metadata_and_filter_unknown_field_policies_are_independent() {
 
 #[test]
 fn test_schema_deserialize_rejects_unknown_struct_fields() {
-    let error = serde_json::from_value::<MetadataSchema>(json!({
+    let error = from_value::<MetadataSchema>(json!({
         "fields": {},
         "unknown_metadata_field_policy": "reject",
         "unknown_filter_field_policy": "reject",

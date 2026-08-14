@@ -9,11 +9,9 @@
 
 #![cfg(feature = "schema")]
 
-use qubit_metadata::{
-    MetadataError,
-    MetadataValidationError,
-    MetadataValidationResult,
-};
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataValidationError;
+use qubit_metadata::MetadataValidationResult;
 
 #[test]
 fn test_metadata_validation_result_preserves_aggregate_error() {

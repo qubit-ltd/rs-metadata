@@ -7,20 +7,18 @@
 // =============================================================================
 //! Builder for [`crate::MetadataFilter`].
 
-use crate::{
-    FilterExpression,
-    FilterLimits,
-    FilterMatchOptions,
-    MetadataError,
-    MetadataFilter,
-    MetadataResult,
-};
+use crate::FilterExpression;
+use crate::FilterLimits;
+use crate::FilterMatchOptions;
+use crate::MetadataError;
+use crate::MetadataFilter;
+use crate::MetadataResult;
 #[cfg(feature = "schema")]
-use crate::{
-    MetadataSchema,
-    MetadataValidationError,
-    MetadataValidationResult,
-};
+use crate::MetadataSchema;
+#[cfg(feature = "schema")]
+use crate::MetadataValidationError;
+#[cfg(feature = "schema")]
+use crate::MetadataValidationResult;
 
 /// Builder for the non-logical configuration of a [`MetadataFilter`].
 ///

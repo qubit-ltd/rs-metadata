@@ -7,12 +7,15 @@
 // =============================================================================
 //! Metadata-filter wire tests.
 
-use qubit_metadata::{
-    FilterExpression,
-    FilterLimits,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterLimits;
+use qubit_metadata::MetadataFilter;
+use serde_json::Deserializer;
+use serde_json::Error;
+use serde_json::from_value;
 use serde_json::json;
+use serde_json::to_string;
+use serde_json::to_value;
 
 /// Builds a filter containing one existence condition.
 fn filter_for_existing_key(key: &str) -> MetadataFilter {
@@ -30,15 +33,14 @@ fn filter_for_existing_key(key: &str) -> MetadataFilter {
 fn deserialize_with_filter_limits(
     encoded: &str,
     limits: FilterLimits,
-) -> Result<MetadataFilter, serde_json::Error> {
-    let mut deserializer = serde_json::Deserializer::from_str(encoded);
+) -> Result<MetadataFilter, Error> {
+    let mut deserializer = Deserializer::from_str(encoded);
     MetadataFilter::deserialize_with_filter_limits(&mut deserializer, limits)
 }
 
 #[test]
 fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
-    let encoded =
-        serde_json::to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder()
         .max_depth(1)
         .max_nodes(1)
@@ -54,8 +56,7 @@ fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
 
 #[test]
 fn test_receiver_rejects_expression_exceeding_its_key_limit() {
-    let encoded =
-        serde_json::to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(5).build().unwrap();
 
     let error = deserialize_with_filter_limits(&encoded, receiver).unwrap_err();
@@ -75,13 +76,12 @@ fn test_receiver_rejects_expression_exceeding_sender_declaration() {
         "limits": {"max_key_bytes": 5}
     });
 
-    assert!(serde_json::from_value::<MetadataFilter>(encoded).is_err());
+    assert!(from_value::<MetadataFilter>(encoded).is_err());
 }
 
 #[test]
 fn test_receiver_accepts_expression_at_exact_boundary() {
-    let encoded =
-        serde_json::to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(6).build().unwrap();
 
     assert!(deserialize_with_filter_limits(&encoded, receiver).is_ok());
@@ -122,7 +122,7 @@ fn test_metadata_filter_wire_contains_expression() {
         .expression(expression)
         .build()
         .unwrap();
-    let encoded = serde_json::to_value(filter).unwrap();
+    let encoded = to_value(filter).unwrap();
 
     assert_eq!(encoded["version"], json!(1));
     assert_eq!(encoded["expression"]["kind"], json!("exists"));

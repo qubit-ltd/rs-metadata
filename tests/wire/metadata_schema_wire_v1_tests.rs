@@ -12,12 +12,11 @@ use qubit_budget::ResourceLimit;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
 use qubit_datatype::DataType;
+#[cfg(feature = "json")]
+use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
 #[cfg(feature = "json")]
-use qubit_metadata::{
-    MetadataLimits,
-    default_json_decode_limits,
-};
+use qubit_metadata::default_json_decode_limits;
 
 #[test]
 fn test_metadata_schema_rejects_unknown_field_and_unsupported_version() {

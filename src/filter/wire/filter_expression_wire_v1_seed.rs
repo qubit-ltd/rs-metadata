@@ -11,27 +11,22 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-use qubit_budget::{
-    BudgetError,
-    ResourceBudget,
-};
+use qubit_budget::BudgetError;
+use qubit_budget::ResourceBudget;
 use qubit_value::ValueWirePayloadV1;
 use serde::Deserialize;
-use serde::de::{
-    self,
-    DeserializeSeed,
-    Error as _,
-    MapAccess,
-    SeqAccess,
-    Visitor,
-};
+use serde::Deserializer;
+use serde::de;
+use serde::de::DeserializeSeed;
+use serde::de::Error as _;
+use serde::de::MapAccess;
+use serde::de::SeqAccess;
+use serde::de::Visitor;
 
 use super::FilterExpressionWireV1;
-use crate::{
-    FilterLimitKind,
-    FilterLimits,
-    MetadataError,
-};
+use crate::FilterLimitKind;
+use crate::FilterLimits;
+use crate::MetadataError;
 
 /// Expression variant tag in the V1 wire representation.
 #[derive(Clone, Copy, Deserialize)]
@@ -127,7 +122,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
         deserializer: D,
     ) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         self.enter_node()?;
         deserializer.deserialize_map(ExpressionVisitor {
@@ -510,7 +505,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
     /// Decodes child expressions with bounded growth.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_seq(ExpressionSequenceVisitor {
             receiver_limits: self.receiver_limits,
@@ -574,7 +569,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
     /// seed.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         FilterExpressionWireV1Seed::new(
             self.receiver_limits,
@@ -611,7 +606,7 @@ impl<'de> DeserializeSeed<'de> for ValueSequenceSeed {
     /// Decodes membership values with receiver-controlled bounds.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_seq(ValueSequenceVisitor {
             receiver_limits: self.receiver_limits,
@@ -668,7 +663,7 @@ impl<'de> DeserializeSeed<'de> for ValueElementSeed {
     /// Decodes one membership payload after charging its collection position.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         if self.next_len > self.receiver_limits.max_set_values() {
             let error = MetadataError::FilterLimitExceeded {

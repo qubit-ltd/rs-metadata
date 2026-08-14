@@ -7,23 +7,17 @@
 // =============================================================================
 //! V1 wire representation of [`crate::FilterExpression`].
 
-use qubit_value::{
-    Value,
-    ValueWirePayloadV1,
-};
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use qubit_value::Value;
+use qubit_value::ValueWirePayloadV1;
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::{
-    Condition,
-    FilterExpression,
-    FilterLimitKind,
-    FilterLimits,
-    MetadataError,
-    MetadataResult,
-};
+use crate::Condition;
+use crate::FilterExpression;
+use crate::FilterLimitKind;
+use crate::FilterLimits;
+use crate::MetadataError;
+use crate::MetadataResult;
 
 /// One V1 expression node.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -10,9 +10,12 @@
 use std::fmt;
 
 use qubit_metadata::Metadata;
-use qubit_redact::{
-    InputOutputLimit, MaskPolicy, Redact as _, RedactionPolicy, RedactionSession, Sensitivity,
-};
+use qubit_redact::InputOutputLimit;
+use qubit_redact::MaskPolicy;
+use qubit_redact::Redact;
+use qubit_redact::RedactionPolicy;
+use qubit_redact::RedactionSession;
+use qubit_redact::Sensitivity;
 
 #[test]
 fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
@@ -33,16 +36,13 @@ fn test_metadata_uses_mutable_redaction_session_signature() {
         &Metadata,
         &'session mut RedactionSession<'policy>,
         &'formatter mut fmt::Formatter<'formatter>,
-    ) -> fmt::Result = <Metadata as qubit_redact::Redact>::fmt_redacted;
+    ) -> fmt::Result = <Metadata as Redact>::fmt_redacted;
 }
 
 #[test]
 fn test_metadata_reports_finite_redaction_input_bytes() {
     let metadata = Metadata::new().with("field", "value");
-    assert_ne!(
-        qubit_redact::Redact::redaction_input_bytes(&metadata),
-        usize::MAX,
-    );
+    assert_ne!(Redact::redaction_input_bytes(&metadata), usize::MAX,);
 }
 
 #[test]

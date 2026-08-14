@@ -8,13 +8,11 @@
 //! Schema validation tests for expression-first filters.
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    MetadataError,
-    MetadataFilter,
-    MetadataSchema,
-    UnknownFilterFieldPolicy,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataSchema;
+use qubit_metadata::UnknownFilterFieldPolicy;
 
 /// Builds a root filter suitable for schema validation.
 fn filter(expression: FilterExpression) -> MetadataFilter {

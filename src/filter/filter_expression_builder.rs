@@ -9,13 +9,11 @@
 
 use qubit_value::Value;
 
-use crate::{
-    Condition,
-    FilterExpression,
-    FilterLimits,
-    MetadataError,
-    MetadataResult,
-};
+use crate::Condition;
+use crate::FilterExpression;
+use crate::FilterLimits;
+use crate::MetadataError;
+use crate::MetadataResult;
 
 /// Fluent builder for a non-empty [`FilterExpression`].
 ///

@@ -8,10 +8,8 @@
 //! [`FilterMatchOptions`] — policies for filter evaluation.
 
 use qubit_datatype::NumericComparisonPolicy;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
 use super::FilterMatchOptionsBuilder;
 

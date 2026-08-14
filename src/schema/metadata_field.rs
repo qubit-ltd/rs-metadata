@@ -8,10 +8,8 @@
 //! [`MetadataField`] — one field definition in a metadata schema.
 
 use qubit_datatype::DataType;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Definition of one metadata field in a [`crate::MetadataSchema`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

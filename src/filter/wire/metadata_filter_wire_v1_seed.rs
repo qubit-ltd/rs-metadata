@@ -12,22 +12,17 @@ use std::fmt;
 use std::rc::Rc;
 
 use qubit_budget::ResourceBudget;
-use serde::de::{
-    self,
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
+use serde::Deserializer;
+use serde::de;
+use serde::de::DeserializeSeed;
+use serde::de::MapAccess;
+use serde::de::Visitor;
 
-use super::{
-    FilterExpressionWireV1Seed,
-    MetadataFilterWireV1,
-};
-use crate::{
-    FilterLimitKind,
-    FilterLimits,
-    FilterMatchOptions,
-};
+use super::FilterExpressionWireV1Seed;
+use super::MetadataFilterWireV1;
+use crate::FilterLimitKind;
+use crate::FilterLimits;
+use crate::FilterMatchOptions;
 
 /// Seed that decodes one strict metadata-filter envelope.
 pub(crate) struct MetadataFilterWireV1Seed {
@@ -54,7 +49,7 @@ impl<'de> DeserializeSeed<'de> for MetadataFilterWireV1Seed {
     /// Decodes the strict envelope and delegates expression decoding to a seed.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_map(MetadataFilterWireVisitor {
             receiver_limits: self.receiver_limits,

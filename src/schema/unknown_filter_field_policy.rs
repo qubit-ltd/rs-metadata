@@ -7,10 +7,8 @@
 // =============================================================================
 //! [`UnknownFilterFieldPolicy`] — handling for undeclared filter keys.
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Policy for filter fields that are not declared by a schema.
 #[derive(

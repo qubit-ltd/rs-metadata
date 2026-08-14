@@ -7,12 +7,13 @@
 // =============================================================================
 //! Seed decoder for the strict metadata v1 wire envelope.
 
-use serde::de::{
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
 use std::fmt;
+
+use serde::Deserializer;
+use serde::de::DeserializeSeed;
+use serde::de::Error;
+use serde::de::MapAccess;
+use serde::de::Visitor;
 
 use super::metadata_wire_v1::MetadataWireV1;
 
@@ -37,7 +38,7 @@ where
     /// Deserializes the strict envelope and delegates values to its seed.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         struct MetadataWireVisitor<S> {
             values: Option<S>,
@@ -71,17 +72,13 @@ where
                     match key.as_str() {
                         "version" => {
                             if version.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
-                                    "version",
-                                ));
+                                return Err(Error::duplicate_field("version"));
                             }
                             version = Some(map.next_value::<u8>()?);
                         }
                         "values" => {
                             if values.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
-                                    "values",
-                                ));
+                                return Err(Error::duplicate_field("values"));
                             }
                             let seed = self.values.take().expect(
                                 "metadata values seed is consumed once",
@@ -89,7 +86,7 @@ where
                             values = Some(map.next_value_seed(seed)?);
                         }
                         _ => {
-                            return Err(serde::de::Error::unknown_field(
+                            return Err(Error::unknown_field(
                                 &key,
                                 &["version", "values"],
                             ));
@@ -97,12 +94,10 @@ where
                     }
                 }
                 Ok(MetadataWireV1 {
-                    version: version.ok_or_else(|| {
-                        serde::de::Error::missing_field("version")
-                    })?,
-                    values: values.ok_or_else(|| {
-                        serde::de::Error::missing_field("values")
-                    })?,
+                    version: version
+                        .ok_or_else(|| Error::missing_field("version"))?,
+                    values: values
+                        .ok_or_else(|| Error::missing_field("values"))?,
                 })
             }
         }

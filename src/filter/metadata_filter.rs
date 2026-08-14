@@ -7,14 +7,6 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
-use qubit_utils::Transient;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de,
-};
 #[cfg(feature = "json")]
 use std::cell::RefCell;
 #[cfg(feature = "json")]
@@ -22,40 +14,48 @@ use std::io::Write;
 #[cfg(feature = "json")]
 use std::rc::Rc;
 
+#[cfg(feature = "json")]
+use qubit_budget::MeasuredBudgetError;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonDecodeSession;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonEncodeLimits;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonEncodeSession;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonResource;
+#[cfg(feature = "json")]
+use qubit_json::text::JsonDecodeError;
+#[cfg(feature = "json")]
+use qubit_json::text::decode_slice_seed;
+#[cfg(feature = "json")]
+use qubit_json::text::encode_to_vec;
+#[cfg(feature = "json")]
+use qubit_json::text::encode_to_writer;
+use qubit_utils::Transient;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
+use serde::de;
+use serde::de::Error as DeError;
+use serde::ser::Error as SerError;
+
 use super::metadata_filter_builder::MetadataFilterBuilder;
+use super::wire::MetadataFilterWireV1;
+use super::wire::MetadataFilterWireV1Ref;
 #[cfg(feature = "json")]
 use super::wire::MetadataFilterWireV1Seed;
-use super::wire::{
-    MetadataFilterWireV1,
-    MetadataFilterWireV1Ref,
-};
+#[cfg(feature = "schema")]
+use crate::Condition;
+use crate::FilterExpression;
+use crate::FilterLimits;
+use crate::FilterMatchOptions;
+use crate::Metadata;
+#[cfg(feature = "schema")]
+use crate::MetadataResult;
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
-#[cfg(feature = "schema")]
-use crate::{
-    Condition,
-    MetadataResult,
-};
-use crate::{
-    FilterExpression,
-    FilterLimits,
-    FilterMatchOptions,
-    Metadata,
-};
-#[cfg(feature = "json")]
-use qubit_budget::json::{
-    JsonDecodeSession,
-    JsonEncodeLimits,
-    JsonEncodeSession,
-    JsonResource,
-};
-#[cfg(feature = "json")]
-use qubit_json::text::{
-    JsonDecodeError,
-    decode_slice_seed,
-    encode_to_vec,
-    encode_to_writer,
-};
 
 /// An expression, its matching policy, and its resource limits.
 ///
@@ -359,7 +359,7 @@ impl Serialize for MetadataFilter {
         S: Serializer,
     {
         MetadataFilterWireV1Ref::try_from(self)
-            .map_err(<S::Error as serde::ser::Error>::custom)?
+            .map_err(<S::Error as SerError>::custom)?
             .serialize(serializer)
     }
 }
@@ -375,27 +375,26 @@ impl<'de> Deserialize<'de> for MetadataFilter {
     }
 }
 
-#[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the filter decoding error.
+#[cfg(feature = "json")]
 fn filter_json_error(
     error: JsonDecodeError<JsonResource>,
 ) -> crate::MetadataWireDecodeError {
     match error {
         JsonDecodeError::Budget(error) => match error {
-            qubit_budget::MeasuredBudgetError::Budget(error) => {
+            MeasuredBudgetError::Budget(error) => {
                 crate::MetadataWireDecodeError::Budget(error)
             }
-            qubit_budget::MeasuredBudgetError::Quantity {
-                resource,
-                source,
-            } => crate::MetadataWireDecodeError::Quantity { resource, source },
+            MeasuredBudgetError::Quantity { resource, source } => {
+                crate::MetadataWireDecodeError::Quantity { resource, source }
+            }
         },
         JsonDecodeError::Syntax(error) => {
             crate::MetadataWireDecodeError::Syntax(error)
         }
         JsonDecodeError::Deserialize(error) => {
             crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as serde::de::Error>::custom(error),
+                <serde_json::Error as DeError>::custom(error),
             )
         }
     }

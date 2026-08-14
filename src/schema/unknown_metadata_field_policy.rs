@@ -7,10 +7,8 @@
 // =============================================================================
 //! [`UnknownMetadataFieldPolicy`] — handling for undeclared metadata keys.
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Policy for metadata fields that are not declared by a schema.
 #[derive(

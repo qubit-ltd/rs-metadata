@@ -7,9 +7,8 @@
 // =============================================================================
 //! Fluent construction of validated filter resource limits.
 
-use crate::MetadataResult;
-
 use super::FilterLimits;
+use crate::MetadataResult;
 
 /// Fluent builder for validated filter limits.
 #[must_use]

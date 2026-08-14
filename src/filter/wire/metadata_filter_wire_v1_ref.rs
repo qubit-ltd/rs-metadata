@@ -11,9 +11,8 @@ use qubit_value::ValueWireEncodeError;
 use serde::Serialize;
 
 use super::FilterExpressionWireV1Ref;
-use crate::MetadataFilter;
-
 use super::metadata_filter_wire_v1::METADATA_FILTER_WIRE_VERSION_V1;
+use crate::MetadataFilter;
 
 /// Borrowed V1 metadata-filter envelope used only for serialization.
 #[derive(Serialize)]

@@ -6,14 +6,18 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! Unit tests for [`qubit_metadata::MetadataFilterBuilder`] default behavior.
-use qubit_metadata::{
-    FilterExpression,
-    FilterExpressionView,
-    FilterLimits,
-    FilterMatchOptions,
-    MetadataError,
-    MetadataFilter,
-};
+use qubit_datatype::DataType;
+use qubit_datatype::NumericComparisonPolicy;
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterExpressionView;
+use qubit_metadata::FilterLimitKind;
+use qubit_metadata::FilterLimits;
+use qubit_metadata::FilterMatchOptions;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataFilterBuilder;
+#[cfg(feature = "schema")]
+use qubit_metadata::MetadataSchema;
 
 #[test]
 fn test_builder_requires_expression() {
@@ -32,9 +36,7 @@ fn test_builder_uses_last_option_and_limit_values() {
         .expect("expression should build");
     let first_options = FilterMatchOptions::builder().build();
     let final_options = FilterMatchOptions::builder()
-        .numeric_comparison_policy(
-            qubit_datatype::NumericComparisonPolicy::Approximate,
-        )
+        .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .build();
     let first_limits = FilterLimits::builder().max_nodes(2).build().unwrap();
     let final_limits = FilterLimits::builder().max_nodes(3).build().unwrap();
@@ -57,7 +59,7 @@ fn test_default_builder_builds_a_filter() {
         .exists("status")
         .build()
         .expect("expression should build");
-    let filter = qubit_metadata::MetadataFilterBuilder::default()
+    let filter = MetadataFilterBuilder::default()
         .expression(expression)
         .build()
         .expect("default builder should build a filter");
@@ -71,8 +73,8 @@ fn test_default_builder_builds_a_filter() {
 #[test]
 #[cfg(feature = "schema")]
 fn test_build_checked_accepts_a_schema_compatible_filter() {
-    let schema = qubit_metadata::MetadataSchema::builder()
-        .required("status", qubit_datatype::DataType::String)
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
         .build()
         .expect("schema should build");
     let expression = FilterExpression::builder()
@@ -80,7 +82,7 @@ fn test_build_checked_accepts_a_schema_compatible_filter() {
         .build()
         .expect("expression should build");
 
-    let filter = qubit_metadata::MetadataFilter::builder()
+    let filter = MetadataFilter::builder()
         .expression(expression)
         .build_checked(&schema)
         .expect("schema-compatible filter should build");
@@ -99,7 +101,7 @@ fn test_builder_rejects_expression_over_its_configured_limits() {
         })
         .build()
         .expect("expression should build");
-    let error = qubit_metadata::MetadataFilter::builder()
+    let error = MetadataFilter::builder()
         .expression(expression)
         .limits(FilterLimits::builder().max_nodes(1).build().unwrap())
         .build()
@@ -108,7 +110,7 @@ fn test_builder_rejects_expression_over_its_configured_limits() {
     assert_eq!(
         error,
         MetadataError::FilterLimitExceeded {
-            kind: qubit_metadata::FilterLimitKind::Nodes,
+            kind: FilterLimitKind::Nodes,
             value: 2,
             maximum: 1,
         }
@@ -118,8 +120,8 @@ fn test_builder_rejects_expression_over_its_configured_limits() {
 #[test]
 #[cfg(feature = "schema")]
 fn test_build_checked_rejects_schema_incompatible_filter() {
-    let schema = qubit_metadata::MetadataSchema::builder()
-        .required("status", qubit_datatype::DataType::Bool)
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::Bool)
         .build()
         .expect("schema should build");
     let expression = FilterExpression::builder()
@@ -127,7 +129,7 @@ fn test_build_checked_rejects_schema_incompatible_filter() {
         .build()
         .expect("expression should build");
 
-    let error = qubit_metadata::MetadataFilter::builder()
+    let error = MetadataFilter::builder()
         .expression(expression)
         .build_checked(&schema)
         .expect_err("schema-incompatible filter should be rejected");
@@ -138,11 +140,11 @@ fn test_build_checked_rejects_schema_incompatible_filter() {
 #[test]
 #[cfg(feature = "schema")]
 fn test_build_checked_propagates_missing_expression() {
-    let schema = qubit_metadata::MetadataSchema::builder()
+    let schema = MetadataSchema::builder()
         .build()
         .expect("schema should build");
 
-    let error = qubit_metadata::MetadataFilter::builder()
+    let error = MetadataFilter::builder()
         .build_checked(&schema)
         .expect_err("missing expression should be reported");
 

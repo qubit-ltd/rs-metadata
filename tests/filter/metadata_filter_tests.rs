@@ -7,15 +7,14 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::MetadataFilter`].
 
-use crate::support::test_support::sample;
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_metadata::{
-    FilterExpression,
-    FilterLimits,
-    FilterMatchOptions,
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterLimits;
+use qubit_metadata::FilterMatchOptions;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+
+use crate::support::test_support::sample;
 
 #[test]
 fn test_all_and_none_match_as_constants() {
