@@ -88,3 +88,29 @@ fn test_metadata_json_decoder_exercises_seed_error_paths() {
     let invalid_value = br#"{"version":1,"values":{"name":{"invalid":true}}}"#;
     assert!(Metadata::decode_json_slice(invalid_value).is_err());
 }
+
+#[test]
+#[cfg(feature = "json")]
+fn test_metadata_json_decoder_rejects_unsupported_version() {
+    let unsupported_version = br#"{"version":2,"values":{}}"#;
+
+    Metadata::decode_json_slice(unsupported_version).expect_err(
+        "the bounded JSON decoder must reject unsupported versions",
+    );
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn test_metadata_json_decoder_rejects_missing_and_unknown_fields() {
+    let missing_version = br#"{"values":{}}"#;
+    let missing_values = br#"{"version":1}"#;
+    let unknown_field = br#"{"version":1,"values":{},"extra":true}"#;
+
+    for input in [
+        missing_version.as_slice(),
+        missing_values.as_slice(),
+        unknown_field.as_slice(),
+    ] {
+        assert!(Metadata::decode_json_slice(input).is_err());
+    }
+}

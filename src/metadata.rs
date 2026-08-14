@@ -170,6 +170,13 @@ impl Metadata {
             &mut session,
         )
         .map_err(metadata_json_error)?;
+        if wire.version != METADATA_WIRE_VERSION_V1 {
+            return Err(crate::MetadataWireDecodeError::InvalidJson(
+                <serde_json::Error as serde::de::Error>::custom(
+                    "unsupported Metadata wire format version",
+                ),
+            ));
+        }
         let metadata = Self(Self::from_wire(wire).map_err(|error| {
             crate::MetadataWireDecodeError::InvalidJson(
                 <serde_json::Error as serde::de::Error>::custom(error),
