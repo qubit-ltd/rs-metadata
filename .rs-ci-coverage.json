@@ -11,8 +11,10 @@
       "src/filter/wire/metadata_filter_wire_v1_seed.rs",
       "src/metadata.rs",
       "src/metadata_wire_decode_error.rs",
-      "src/metadata_wire_limits.rs",
+      "src/schema/metadata_schema.rs",
       "src/schema/filter_validation.rs",
+      "src/wire/metadata_schema_wire_v1_seed.rs",
+      "src/wire/metadata_wire_v1_seed.rs",
       "src/wire/metadata_wire_values_ref.rs",
       "src/wire/strict_string_map_seed.rs"
     ]
