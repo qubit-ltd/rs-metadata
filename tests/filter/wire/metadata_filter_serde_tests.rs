@@ -7,10 +7,19 @@
 // =============================================================================
 //! Metadata-filter serde tests.
 
+#[cfg(feature = "json")]
+use qubit_budget::ResourceLimit;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonResource;
 use qubit_metadata::{
     FilterExpression,
     FilterLimits,
     MetadataFilter,
+};
+#[cfg(feature = "json")]
+use qubit_metadata::{
+    MetadataLimits,
+    default_json_decode_limits,
 };
 #[cfg(feature = "json")]
 use qubit_value::Value;
@@ -115,4 +124,77 @@ fn test_complex_metadata_filter_serde_preserves_wire_shape() {
     let decoded: MetadataFilter =
         serde_json::from_value(encoded).expect("filter should deserialize");
     assert_eq!(decoded, filter);
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_metadata_filter_json_round_trip_and_writer() {
+    let expression = FilterExpression::builder()
+        .exists("status")
+        .build()
+        .expect("expression should build");
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .expect("filter should build");
+
+    let encoded = filter.to_json_vec().expect("filter should encode");
+    let decoded = MetadataFilter::decode_json_slice(&encoded)
+        .expect("filter should decode");
+    assert_eq!(decoded, filter);
+
+    let mut output = Vec::new();
+    filter
+        .to_json_writer(&mut output)
+        .expect("filter should write");
+    assert_eq!(
+        MetadataFilter::decode_json_slice(&output)
+            .expect("written filter should decode"),
+        filter
+    );
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_metadata_filter_json_decoder_rejects_malformed_input() {
+    let error = MetadataFilter::decode_json_slice(b"null!")
+        .expect_err("malformed filter input must be rejected");
+    assert!(!error.to_string().is_empty());
+
+    let error = MetadataFilter::decode_json_slice(b"{}")
+        .expect_err("an incomplete filter envelope must be rejected");
+    assert!(!error.to_string().is_empty());
+
+    let limits = MetadataLimits::default().with_json_decode(
+        default_json_decode_limits().with_input_bytes_limit(
+            ResourceLimit::new(JsonResource::InputBytes, 1),
+        ),
+    );
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        b"{}",
+        limits,
+        FilterLimits::MAX,
+    )
+    .expect_err("the input budget must be enforced");
+    assert!(!error.to_string().is_empty());
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_metadata_filter_json_writer_propagates_io_error() {
+    struct FailingWriter;
+
+    impl std::io::Write for FailingWriter {
+        fn write(&mut self, _buffer: &[u8]) -> std::io::Result<usize> {
+            Err(std::io::Error::other("write failed"))
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    MetadataFilter::all()
+        .to_json_writer(FailingWriter)
+        .expect_err("writer errors must be returned");
 }
