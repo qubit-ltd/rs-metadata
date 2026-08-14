@@ -9,9 +9,9 @@
 
 use std::fmt;
 
-use serde::Deserializer;
 use serde::de::DeserializeSeed;
-use serde::de::Error;
+use serde::de::Deserializer;
+use serde::de::Error as DeError;
 use serde::de::MapAccess;
 use serde::de::Visitor;
 
@@ -77,13 +77,15 @@ where
                     match key.as_str() {
                         "version" => {
                             if version.is_some() {
-                                return Err(Error::duplicate_field("version"));
+                                return Err(DeError::duplicate_field(
+                                    "version",
+                                ));
                             }
                             version = Some(map.next_value::<u8>()?);
                         }
                         "fields" => {
                             if fields.is_some() {
-                                return Err(Error::duplicate_field("fields"));
+                                return Err(DeError::duplicate_field("fields"));
                             }
                             let seed = self.fields.take().expect(
                                 "metadata schema fields seed is consumed once",
@@ -92,7 +94,7 @@ where
                         }
                         "unknown_metadata_field_policy" => {
                             if unknown_metadata_field_policy.is_some() {
-                                return Err(Error::duplicate_field(
+                                return Err(DeError::duplicate_field(
                                     "unknown_metadata_field_policy",
                                 ));
                             }
@@ -102,7 +104,7 @@ where
                         }
                         "unknown_filter_field_policy" => {
                             if unknown_filter_field_policy.is_some() {
-                                return Err(Error::duplicate_field(
+                                return Err(DeError::duplicate_field(
                                     "unknown_filter_field_policy",
                                 ));
                             }
@@ -111,7 +113,7 @@ where
                             );
                         }
                         _ => {
-                            return Err(Error::unknown_field(
+                            return Err(DeError::unknown_field(
                                 &key,
                                 &[
                                     "version",
@@ -125,18 +127,20 @@ where
                 }
                 Ok(MetadataSchemaWireV1 {
                     version: version
-                        .ok_or_else(|| Error::missing_field("version"))?,
+                        .ok_or_else(|| DeError::missing_field("version"))?,
                     fields: fields
-                        .ok_or_else(|| Error::missing_field("fields"))?,
+                        .ok_or_else(|| DeError::missing_field("fields"))?,
                     unknown_metadata_field_policy:
                         unknown_metadata_field_policy.ok_or_else(|| {
-                            Error::missing_field(
+                            DeError::missing_field(
                                 "unknown_metadata_field_policy",
                             )
                         })?,
                     unknown_filter_field_policy: unknown_filter_field_policy
                         .ok_or_else(|| {
-                            Error::missing_field("unknown_filter_field_policy")
+                            DeError::missing_field(
+                                "unknown_filter_field_policy",
+                            )
                         })?,
                 })
             }
