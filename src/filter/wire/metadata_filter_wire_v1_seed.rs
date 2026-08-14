@@ -12,9 +12,9 @@ use std::fmt;
 use std::rc::Rc;
 
 use qubit_budget::ResourceBudget;
-use serde::Deserializer;
 use serde::de;
 use serde::de::DeserializeSeed;
+use serde::de::Deserializer;
 use serde::de::MapAccess;
 use serde::de::Visitor;
 
