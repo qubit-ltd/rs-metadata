@@ -7,8 +7,17 @@
 // =============================================================================
 //! Tests for the strict MetadataSchema v1 envelope.
 
+#[cfg(feature = "json")]
+use qubit_budget::ResourceLimit;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonResource;
 use qubit_datatype::DataType;
 use qubit_metadata::MetadataSchema;
+#[cfg(feature = "json")]
+use qubit_metadata::{
+    MetadataLimits,
+    default_json_decode_limits,
+};
 
 #[test]
 fn test_metadata_schema_rejects_unknown_field_and_unsupported_version() {
@@ -109,4 +118,61 @@ fn test_metadata_schema_json_decoder_exercises_seed_error_paths() {
         "unknown_filter_field_policy": "reject"
     }"#;
     assert!(MetadataSchema::decode_json_slice(invalid_field).is_err());
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn test_metadata_schema_json_decoder_rejects_missing_and_unknown_fields() {
+    let missing_version = br#"{
+        "fields": {},
+        "unknown_metadata_field_policy": "reject",
+        "unknown_filter_field_policy": "reject"
+    }"#;
+    let missing_fields = br#"{
+        "version": 1,
+        "unknown_metadata_field_policy": "reject",
+        "unknown_filter_field_policy": "reject"
+    }"#;
+    let missing_metadata_policy = br#"{
+        "version": 1,
+        "fields": {},
+        "unknown_filter_field_policy": "reject"
+    }"#;
+    let missing_filter_policy = br#"{
+        "version": 1,
+        "fields": {},
+        "unknown_metadata_field_policy": "reject"
+    }"#;
+    let unknown_field = br#"{
+        "version": 1,
+        "fields": {},
+        "unknown_metadata_field_policy": "reject",
+        "unknown_filter_field_policy": "reject",
+        "extra": true
+    }"#;
+
+    for input in [
+        missing_version.as_slice(),
+        missing_fields.as_slice(),
+        missing_metadata_policy.as_slice(),
+        missing_filter_policy.as_slice(),
+        unknown_field.as_slice(),
+    ] {
+        assert!(MetadataSchema::decode_json_slice(input).is_err());
+    }
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn test_metadata_schema_json_decoder_maps_syntax_and_budget_errors() {
+    assert!(MetadataSchema::decode_json_slice(b"!").is_err());
+
+    let limits = MetadataLimits::default().with_json_decode(
+        default_json_decode_limits().with_input_bytes_limit(
+            ResourceLimit::new(JsonResource::InputBytes, 1),
+        ),
+    );
+    assert!(
+        MetadataSchema::decode_json_slice_with_limits(b"{}", limits,).is_err()
+    );
 }

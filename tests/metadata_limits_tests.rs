@@ -38,6 +38,23 @@ fn test_metadata_limits_replace_json_profile() {
         limits.json_decode().input_bytes_limit().unwrap().resource(),
         &JsonResource::InputBytes
     );
+
+    let limits = MetadataLimits::default()
+        .with_json_encode(
+            qubit_metadata::default_json_encode_limits()
+                .with_output_bytes_limit(ResourceLimit::new(
+                    JsonResource::OutputBytes,
+                    8,
+                )),
+        )
+        .with_max_metadata_entries(4_096)
+        .with_max_schema_fields(4_096)
+        .with_max_key_bytes(256);
+    assert_eq!(limits.json_encode().max_output_bytes(), Some(8));
+    assert_eq!(limits.max_metadata_entries(), 4_096);
+    assert_eq!(limits.max_schema_fields(), 4_096);
+    assert_eq!(limits.max_key_bytes(), 256);
+    limits.validate().expect("hard-boundary values are valid");
 }
 
 #[test]
