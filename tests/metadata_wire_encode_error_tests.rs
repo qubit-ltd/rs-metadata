@@ -14,6 +14,7 @@ use std::error::Error;
 use qubit_budget::BudgetError;
 use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
+use qubit_budget::QuantityMeasurement;
 use qubit_budget::json::JsonResource;
 use qubit_json::text::JsonEncodeError;
 use qubit_json::text::JsonSyntaxError;
@@ -42,10 +43,8 @@ fn test_metadata_wire_encode_error_formats_all_variants() {
         3,
         JsonSyntaxErrorReason::UnexpectedByte { byte: b'!' },
     );
-    let quantity = QuantityConversionError::new(
-        qubit_budget::QuantityMeasurement::U64(9),
-        "u8",
-    );
+    let quantity =
+        QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
     let errors = [
         MetadataWireEncodeError::Budget(BudgetError::Insufficient {
             resource: JsonResource::OutputBytes,
@@ -94,7 +93,7 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
             MeasuredBudgetError::Quantity {
                 resource: JsonResource::OutputBytes,
                 source: QuantityConversionError::new(
-                    qubit_budget::QuantityMeasurement::U64(9),
+                    QuantityMeasurement::U64(9),
                     "u8",
                 ),
             },

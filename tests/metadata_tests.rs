@@ -12,13 +12,11 @@ use std::collections::BTreeMap;
 use qubit_datatype::DataType;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterLimitKind;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataError;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
-use qubit_metadata::{
-    Metadata,
-    MetadataError,
-    MetadataWireLimitKind,
-};
+use qubit_metadata::MetadataWireLimitKind;
 use qubit_value::Value;
 
 mod support;

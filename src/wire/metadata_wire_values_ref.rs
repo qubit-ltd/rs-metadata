@@ -9,15 +9,12 @@
 
 use std::collections::BTreeMap;
 
-use qubit_value::{
-    Value,
-    ValueWirePayloadRefV1,
-};
-use serde::{
-    Serialize,
-    Serializer,
-    ser::SerializeMap,
-};
+use qubit_value::Value;
+use qubit_value::ValueWirePayloadRefV1;
+use serde::Serialize;
+use serde::Serializer;
+use serde::ser::Error as SerError;
+use serde::ser::SerializeMap;
 
 /// Borrowed map adapter that validates and serializes V1 value payloads.
 pub(crate) struct MetadataWireValuesRef<'a>(
@@ -33,7 +30,7 @@ impl Serialize for MetadataWireValuesRef<'_> {
         let mut values = serializer.serialize_map(Some(self.0.len()))?;
         for (key, value) in self.0 {
             let payload = ValueWirePayloadRefV1::try_from(value)
-                .map_err(<S::Error as serde::ser::Error>::custom)?;
+                .map_err(<S::Error as SerError>::custom)?;
             values.serialize_entry(key, &payload)?;
         }
         values.end()

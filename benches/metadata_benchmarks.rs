@@ -9,20 +9,16 @@
 
 use std::hint::black_box;
 
-use criterion::{
-    Criterion,
-    criterion_group,
-    criterion_main,
-};
+use criterion::Criterion;
+use criterion::criterion_group;
+use criterion::criterion_main;
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
 #[cfg(feature = "json")]
 use qubit_metadata::MetadataLimits;
 #[cfg(all(feature = "json", feature = "schema"))]
 use qubit_metadata::MetadataSchema;
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataFilter,
-};
 
 /// Benchmarks constructing a small metadata object through the fluent API.
 fn benchmark_metadata_construction(criterion: &mut Criterion) {

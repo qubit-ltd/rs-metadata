@@ -14,11 +14,9 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use qubit_metadata::{
-    FilterLimits,
-    MetadataFilter,
-    MetadataLimits,
-};
+use qubit_metadata::FilterLimits;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataLimits;
 
 fuzz_target!(|data: &[u8]| {
     let receiver_limits = FilterLimits::builder()

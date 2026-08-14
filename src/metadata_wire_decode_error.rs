@@ -7,19 +7,16 @@
 // =============================================================================
 //! Errors from bounded JSON metadata wire decoding.
 
-use std::{
-    error::Error,
-    fmt,
-};
+use std::error::Error;
+use std::fmt;
+
+use qubit_budget::BudgetError;
+use qubit_budget::QuantityConversionError;
+use qubit_budget::json::JsonResource;
+use qubit_json::text::JsonSyntaxError;
 
 #[cfg(feature = "filter")]
 use crate::MetadataError;
-use qubit_budget::json::JsonResource;
-use qubit_budget::{
-    BudgetError,
-    QuantityConversionError,
-};
-use qubit_json::text::JsonSyntaxError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]

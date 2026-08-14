@@ -8,14 +8,17 @@
 //! Seed decoder for bounded strict string-keyed maps.
 // qubit-style: allow multiple-public-types
 
+use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
 use std::fmt;
+use std::marker::PhantomData;
 
-use serde::de::{
-    self,
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::de;
+use serde::de::DeserializeSeed;
+use serde::de::MapAccess;
+use serde::de::Visitor;
 
 use super::strict_string_map::StrictStringMap;
 
@@ -23,8 +26,8 @@ use super::strict_string_map::StrictStringMap;
 pub(crate) struct StrictStringMapSeed<'a, V> {
     max_entries: usize,
     max_key_bytes: usize,
-    lifetime: std::marker::PhantomData<&'a ()>,
-    marker: std::marker::PhantomData<fn() -> V>,
+    lifetime: PhantomData<&'a ()>,
+    marker: PhantomData<fn() -> V>,
 }
 
 impl<V> StrictStringMapSeed<'static, V> {
@@ -33,35 +36,35 @@ impl<V> StrictStringMapSeed<'static, V> {
         Self {
             max_entries,
             max_key_bytes,
-            lifetime: std::marker::PhantomData,
-            marker: std::marker::PhantomData,
+            lifetime: PhantomData,
+            marker: PhantomData,
         }
     }
 }
 
 impl<'de, 'a, V> DeserializeSeed<'de> for StrictStringMapSeed<'a, V>
 where
-    V: serde::Deserialize<'de>,
+    V: Deserialize<'de>,
 {
     type Value = StrictStringMap<V>;
 
     /// Deserializes a map while enforcing caller-provided bounds.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         let max_entries = self.max_entries;
         let max_key_bytes = self.max_key_bytes;
         struct StrictStringMapVisitor<'a, V> {
             max_entries: usize,
             max_key_bytes: usize,
-            lifetime: std::marker::PhantomData<&'a ()>,
-            marker: std::marker::PhantomData<fn() -> V>,
+            lifetime: PhantomData<&'a ()>,
+            marker: PhantomData<fn() -> V>,
         }
 
         impl<'de, 'a, V> Visitor<'de> for StrictStringMapVisitor<'a, V>
         where
-            V: serde::Deserialize<'de>,
+            V: Deserialize<'de>,
         {
             type Value = StrictStringMap<V>;
 
@@ -78,7 +81,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let mut values = std::collections::BTreeMap::new();
+                let mut values = BTreeMap::new();
                 while let Some(key) = map.next_key::<String>()? {
                     if key.len() > self.max_key_bytes {
                         return Err(de::Error::custom(format!(
@@ -94,13 +97,13 @@ where
                         )));
                     }
                     match values.entry(key) {
-                        std::collections::btree_map::Entry::Occupied(entry) => {
+                        Entry::Occupied(entry) => {
                             return Err(de::Error::custom(format!(
                                 "duplicate map key '{}'",
                                 entry.key()
                             )));
                         }
-                        std::collections::btree_map::Entry::Vacant(entry) => {
+                        Entry::Vacant(entry) => {
                             let value = map.next_value::<V>()?;
                             entry.insert(value);
                         }
@@ -113,8 +116,8 @@ where
         deserializer.deserialize_map(StrictStringMapVisitor {
             max_entries,
             max_key_bytes,
-            lifetime: std::marker::PhantomData,
-            marker: std::marker::PhantomData,
+            lifetime: PhantomData,
+            marker: PhantomData,
         })
     }
 }

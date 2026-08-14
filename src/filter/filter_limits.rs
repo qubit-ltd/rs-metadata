@@ -7,21 +7,14 @@
 // =============================================================================
 //! [`FilterLimits`] — resource bounds for metadata filters.
 
-use crate::constants::{
-    FILTER_MAX_DEPTH,
-    FILTER_MAX_KEY_BYTES,
-    FILTER_MAX_NODES,
-    FILTER_MAX_SET_VALUES,
-};
-use crate::{
-    MetadataError,
-    MetadataResult,
-};
-
-use super::{
-    FilterLimitKind,
-    FilterLimitsBuilder,
-};
+use super::FilterLimitKind;
+use super::FilterLimitsBuilder;
+use crate::MetadataError;
+use crate::MetadataResult;
+use crate::constants::FILTER_MAX_DEPTH;
+use crate::constants::FILTER_MAX_KEY_BYTES;
+use crate::constants::FILTER_MAX_NODES;
+use crate::constants::FILTER_MAX_SET_VALUES;
 
 /// Resource bounds enforced for every constructed or deserialized filter.
 ///

@@ -11,16 +11,13 @@
 use qubit_budget::ResourceLimit;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
-use qubit_metadata::{
-    FilterExpression,
-    FilterLimits,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterLimits;
+use qubit_metadata::MetadataFilter;
 #[cfg(feature = "json")]
-use qubit_metadata::{
-    MetadataLimits,
-    default_json_decode_limits,
-};
+use qubit_metadata::MetadataLimits;
+#[cfg(feature = "json")]
+use qubit_metadata::default_json_decode_limits;
 #[cfg(feature = "json")]
 use qubit_value::Value;
 

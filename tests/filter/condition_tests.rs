@@ -7,14 +7,13 @@
 // =============================================================================
 //! Predicate evaluation tests through the public expression API.
 
-use crate::support::test_support::sample;
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
 use qubit_value::Value;
+
+use crate::support::test_support::sample;
 
 /// Builds a filter using default root configuration.
 fn filter(expression: FilterExpression) -> MetadataFilter {

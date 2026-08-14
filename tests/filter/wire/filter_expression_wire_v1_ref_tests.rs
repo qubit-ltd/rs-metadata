@@ -8,10 +8,9 @@
 //! Borrowed filter-expression wire tests.
 
 #[cfg(feature = "json")]
-use qubit_metadata::{
-    FilterExpression,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+#[cfg(feature = "json")]
+use qubit_metadata::MetadataFilter;
 #[cfg(feature = "json")]
 use qubit_value::Value;
 

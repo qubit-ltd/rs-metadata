@@ -10,11 +10,9 @@
 #![cfg(feature = "schema")]
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterLimitKind,
-    MetadataError,
-    MetadataWireLimitKind,
-};
+use qubit_metadata::FilterLimitKind;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataWireLimitKind;
 
 #[test]
 fn test_display_formats_all_variants() {

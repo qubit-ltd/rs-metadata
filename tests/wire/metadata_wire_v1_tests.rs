@@ -8,24 +8,27 @@
 //! Tests for the strict Metadata v1 envelope.
 
 use qubit_metadata::Metadata;
+use serde_json::from_slice;
+use serde_json::from_str;
 use serde_json::json;
+use serde_json::to_string;
+use serde_json::to_value;
+use serde_json::to_vec;
 
 #[test]
 fn test_metadata_rejects_unknown_field_and_unsupported_version() {
     let unknown = r#"{"version":1,"values":{},"extra":true}"#;
     let version = r#"{"version":2,"values":{}}"#;
 
-    assert!(serde_json::from_str::<Metadata>(unknown).is_err());
-    assert!(serde_json::from_str::<Metadata>(version).is_err());
+    assert!(from_str::<Metadata>(unknown).is_err());
+    assert!(from_str::<Metadata>(version).is_err());
 }
 
 #[test]
 fn test_metadata_v1_round_trip() {
     let metadata = Metadata::new().with("name", "alice");
-    let encoded =
-        serde_json::to_string(&metadata).expect("metadata should serialize");
-    let decoded =
-        serde_json::from_str(&encoded).expect("metadata should deserialize");
+    let encoded = to_string(&metadata).expect("metadata should serialize");
+    let decoded = from_str(&encoded).expect("metadata should deserialize");
 
     assert_eq!(metadata, decoded);
 }
@@ -35,8 +38,7 @@ fn test_metadata_v1_round_trip() {
 #[test]
 fn test_metadata_v1_embeds_unversioned_value_payloads() {
     let metadata = Metadata::new().with("port", 8080_i32);
-    let encoded =
-        serde_json::to_value(metadata).expect("metadata should serialize");
+    let encoded = to_value(metadata).expect("metadata should serialize");
 
     assert_eq!(encoded["version"], json!(1));
     assert_eq!(
@@ -64,17 +66,16 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
         let key = format!("key-{index}");
         metadata.set(&key, index as i64);
     }
-    assert!(serde_json::to_vec(&metadata).is_err());
+    assert!(to_vec(&metadata).is_err());
 
     let long_key = "k".repeat(257);
     let metadata = Metadata::new().with(&long_key, 1_i64);
-    assert!(serde_json::to_vec(&metadata).is_err());
+    assert!(to_vec(&metadata).is_err());
 
     let malformed_after_limit =
         format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
-    let error =
-        serde_json::from_slice::<Metadata>(malformed_after_limit.as_bytes())
-            .expect_err("the hard entry limit should reject before the value");
+    let error = from_slice::<Metadata>(malformed_after_limit.as_bytes())
+        .expect_err("the hard entry limit should reject before the value");
     assert!(error.to_string().contains("256 bytes"));
 }
 

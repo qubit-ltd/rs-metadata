@@ -9,14 +9,13 @@
 
 use std::fmt;
 
+use qubit_datatype::DataType;
+use qubit_value::Value;
+use qubit_value::ValueError;
+
 #[cfg(feature = "filter")]
 use crate::FilterLimitKind;
 use crate::MetadataWireLimitKind;
-use qubit_datatype::DataType;
-use qubit_value::{
-    Value,
-    ValueError,
-};
 
 /// Errors produced by explicit metadata accessors and schema validation.
 #[derive(Debug, Clone, PartialEq, Eq)]

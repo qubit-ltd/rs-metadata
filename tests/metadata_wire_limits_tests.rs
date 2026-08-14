@@ -9,23 +9,23 @@
 
 #![cfg(all(feature = "json", feature = "schema"))]
 
+use qubit_budget::BudgetError;
+use qubit_budget::ResourceBudget;
+use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
-use qubit_budget::{
-    BudgetError,
-    ResourceBudget,
-    ResourceLimit,
-};
-use qubit_metadata::{
-    FilterLimitKind,
-    FilterLimits,
-    Metadata,
-    MetadataError,
-    MetadataFilter,
-    MetadataLimits,
-    MetadataSchema,
-    MetadataWireDecodeError,
-    default_json_decode_limits,
-};
+use qubit_datatype::DataType;
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterLimitKind;
+use qubit_metadata::FilterLimits;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataLimits;
+use qubit_metadata::MetadataSchema;
+use qubit_metadata::MetadataWireDecodeError;
+use qubit_metadata::MetadataWireEncodeError;
+use qubit_metadata::default_json_decode_limits;
+use qubit_metadata::default_json_encode_limits;
 
 fn filter_input(expression: &str) -> Vec<u8> {
     format!(
@@ -228,19 +228,14 @@ fn test_metadata_schema_and_filter_round_trip() {
     assert_eq!(Metadata::decode_json_slice(&input).unwrap(), metadata);
 
     let schema = MetadataSchema::builder()
-        .required("name", qubit_datatype::DataType::String)
+        .required("name", DataType::String)
         .build()
         .unwrap();
     let input = serde_json::to_vec(&schema).unwrap();
     assert_eq!(MetadataSchema::decode_json_slice(&input).unwrap(), schema);
 
     let filter = MetadataFilter::builder()
-        .expression(
-            qubit_metadata::FilterExpression::builder()
-                .exists("name")
-                .build()
-                .unwrap(),
-        )
+        .expression(FilterExpression::builder().exists("name").build().unwrap())
         .build()
         .unwrap();
     let input = serde_json::to_vec(&filter).unwrap();
@@ -282,28 +277,25 @@ fn test_metadata_outer_key_budget_remains_256_bytes() {
 #[test]
 fn test_metadata_encode_uses_output_budget() {
     let metadata = Metadata::new().with("name", "alice");
-    let limits =
-        qubit_metadata::default_json_encode_limits().with_output_bytes_limit(
-            ResourceLimit::new(JsonResource::OutputBytes, 1),
-        );
+    let limits = default_json_encode_limits().with_output_bytes_limit(
+        ResourceLimit::new(JsonResource::OutputBytes, 1),
+    );
     let error = metadata
         .to_json_vec_with_limits(limits)
         .expect_err("one output byte cannot encode metadata");
     assert!(matches!(
         error,
-        qubit_metadata::MetadataWireEncodeError::Budget(
-            BudgetError::Insufficient {
-                resource: JsonResource::OutputBytes,
-                ..
-            }
-        )
+        MetadataWireEncodeError::Budget(BudgetError::Insufficient {
+            resource: JsonResource::OutputBytes,
+            ..
+        })
     ));
 }
 
 #[test]
 fn test_metadata_schema_and_filter_encode_round_trip() {
     let schema = MetadataSchema::builder()
-        .required("name", qubit_datatype::DataType::String)
+        .required("name", DataType::String)
         .build()
         .unwrap();
     let schema_json = schema.to_json_vec().unwrap();
@@ -313,12 +305,7 @@ fn test_metadata_schema_and_filter_encode_round_trip() {
     );
 
     let filter = MetadataFilter::builder()
-        .expression(
-            qubit_metadata::FilterExpression::builder()
-                .exists("name")
-                .build()
-                .unwrap(),
-        )
+        .expression(FilterExpression::builder().exists("name").build().unwrap())
         .build()
         .unwrap();
     let filter_json = filter.to_json_vec().unwrap();

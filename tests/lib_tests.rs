@@ -7,13 +7,11 @@
 // =============================================================================
 //! Tests for the crate's public exports.
 
-use qubit_metadata::Metadata;
-
 #[cfg(feature = "filter")]
-use qubit_metadata::{
-    FilterExpression,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+#[cfg(feature = "filter")]
+use qubit_metadata::MetadataFilter;
 
 #[cfg(feature = "filter")]
 #[test]

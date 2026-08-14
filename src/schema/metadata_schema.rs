@@ -8,65 +8,58 @@
 //! [`MetadataSchema`] — schema validation for metadata and filters.
 
 use std::collections::BTreeMap;
-
 #[cfg(feature = "json")]
 use std::io::Write;
 
+#[cfg(feature = "json")]
+use qubit_budget::MeasuredBudgetError;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonDecodeSession;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonEncodeLimits;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonEncodeSession;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonResource;
 use qubit_datatype::DataType;
+#[cfg(feature = "json")]
+use qubit_json::text::JsonDecodeError;
+#[cfg(feature = "json")]
+use qubit_json::text::decode_slice_seed;
+#[cfg(feature = "json")]
+use qubit_json::text::encode_to_vec;
+#[cfg(feature = "json")]
+use qubit_json::text::encode_to_writer;
 use qubit_value::Value;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de::{
-        self,
-    },
-};
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
+use serde::de;
+#[cfg(feature = "json")]
+use serde::de::Error as DeError;
+use serde::ser::Error as SerError;
 
-use crate::constants::{
-    STRICT_STRING_MAP_MAX_ENTRIES,
-    STRICT_STRING_MAP_MAX_KEY_BYTES,
-};
+use crate::Metadata;
+use crate::MetadataError;
+use crate::MetadataResult;
+use crate::MetadataValidationError;
+use crate::MetadataValidationResult;
+use crate::constants::STRICT_STRING_MAP_MAX_ENTRIES;
+use crate::constants::STRICT_STRING_MAP_MAX_KEY_BYTES;
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
-use crate::schema::{
-    MetadataField,
-    MetadataSchemaBuilder,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
-};
-use crate::wire::{
-    METADATA_SCHEMA_WIRE_VERSION_V1,
-    MetadataSchemaWireV1,
-    StrictStringMap,
-};
+use crate::schema::MetadataField;
+use crate::schema::MetadataSchemaBuilder;
+use crate::schema::UnknownFilterFieldPolicy;
+use crate::schema::UnknownMetadataFieldPolicy;
+use crate::wire::METADATA_SCHEMA_WIRE_VERSION_V1;
+use crate::wire::MetadataSchemaWireV1;
 #[cfg(feature = "json")]
-use crate::wire::{
-    MetadataSchemaWireV1Seed,
-    StrictStringMapSeed,
-};
-use crate::{
-    Metadata,
-    MetadataError,
-    MetadataResult,
-    MetadataValidationError,
-    MetadataValidationResult,
-};
+use crate::wire::MetadataSchemaWireV1Seed;
+use crate::wire::StrictStringMap;
 #[cfg(feature = "json")]
-use qubit_budget::json::{
-    JsonDecodeSession,
-    JsonEncodeLimits,
-    JsonEncodeSession,
-    JsonResource,
-};
-#[cfg(feature = "json")]
-use qubit_json::text::{
-    JsonDecodeError,
-    decode_slice_seed,
-    encode_to_vec,
-    encode_to_writer,
-};
+use crate::wire::StrictStringMapSeed;
 
 /// Schema for metadata fields.
 ///
@@ -154,7 +147,7 @@ impl MetadataSchema {
         .map_err(schema_json_error)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
             return Err(crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as serde::de::Error>::custom(
+                <serde_json::Error as DeError>::custom(
                     "unsupported MetadataSchema wire format version",
                 ),
             ));
@@ -450,27 +443,26 @@ impl MetadataSchema {
     }
 }
 
-#[cfg(feature = "json")]
 /// Converts a shared JSON adapter error into the schema decoding error.
+#[cfg(feature = "json")]
 fn schema_json_error(
     error: JsonDecodeError<JsonResource>,
 ) -> crate::MetadataWireDecodeError {
     match error {
         JsonDecodeError::Budget(error) => match error {
-            qubit_budget::MeasuredBudgetError::Budget(error) => {
+            MeasuredBudgetError::Budget(error) => {
                 crate::MetadataWireDecodeError::Budget(error)
             }
-            qubit_budget::MeasuredBudgetError::Quantity {
-                resource,
-                source,
-            } => crate::MetadataWireDecodeError::Quantity { resource, source },
+            MeasuredBudgetError::Quantity { resource, source } => {
+                crate::MetadataWireDecodeError::Quantity { resource, source }
+            }
         },
         JsonDecodeError::Syntax(error) => {
             crate::MetadataWireDecodeError::Syntax(error)
         }
         JsonDecodeError::Deserialize(error) => {
             crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as serde::de::Error>::custom(error),
+                <serde_json::Error as DeError>::custom(error),
             )
         }
     }
@@ -483,7 +475,7 @@ impl Serialize for MetadataSchema {
         S: Serializer,
     {
         self.validate_wire_contract()
-            .map_err(<S::Error as serde::ser::Error>::custom)?;
+            .map_err(<S::Error as SerError>::custom)?;
         MetadataSchemaWireV1 {
             version: METADATA_SCHEMA_WIRE_VERSION_V1,
             fields: &self.fields,

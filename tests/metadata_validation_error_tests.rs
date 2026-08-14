@@ -12,10 +12,8 @@
 use std::fmt::Write;
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    MetadataError,
-    MetadataValidationError,
-};
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataValidationError;
 
 mod support;
 

@@ -7,17 +7,17 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::FilterExpressionBuilder`].
 
-use crate::support::test_support::sample;
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    FilterExpressionView,
-    FilterLimits,
-    Metadata,
-    MetadataError,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterExpressionView;
+use qubit_metadata::FilterLimitKind;
+use qubit_metadata::FilterLimits;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataFilter;
 use qubit_value::Value;
+
+use crate::support::test_support::sample;
 
 #[derive(Debug, Clone, Copy)]
 struct TenantId(u64);
@@ -162,7 +162,7 @@ fn test_not_propagates_node_limit_error() {
     assert_eq!(
         builder.not().build(),
         Err(MetadataError::FilterLimitExceeded {
-            kind: qubit_metadata::FilterLimitKind::Nodes,
+            kind: FilterLimitKind::Nodes,
             value: FilterLimits::MAX.max_nodes() + 1,
             maximum: FilterLimits::MAX.max_nodes(),
         })

@@ -10,6 +10,7 @@
 use std::fmt;
 
 use qubit_budget::BudgetError;
+use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::json::JsonResource;
 use qubit_json::text::JsonEncodeError;
@@ -81,13 +82,10 @@ impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
     fn from(error: JsonEncodeError<JsonResource>) -> Self {
         match error {
             JsonEncodeError::Budget(error) => match error {
-                qubit_budget::MeasuredBudgetError::Budget(error) => {
-                    Self::Budget(error)
+                MeasuredBudgetError::Budget(error) => Self::Budget(error),
+                MeasuredBudgetError::Quantity { resource, source } => {
+                    Self::Quantity { resource, source }
                 }
-                qubit_budget::MeasuredBudgetError::Quantity {
-                    resource,
-                    source,
-                } => Self::Quantity { resource, source },
             },
             JsonEncodeError::InvalidRawJson(error) => Self::Syntax(error),
             JsonEncodeError::Serialize(error) => Self::Json(error),

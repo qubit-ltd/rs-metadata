@@ -7,10 +7,8 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::FilterExpressionView`].
 
-use qubit_metadata::{
-    FilterExpression,
-    FilterExpressionView,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterExpressionView;
 
 #[test]
 fn test_expression_view_preserves_boolean_structure() {

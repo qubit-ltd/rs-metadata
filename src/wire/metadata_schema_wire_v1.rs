@@ -7,15 +7,11 @@
 // =============================================================================
 //! Strict v1 wire envelope for [`crate::MetadataSchema`].
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::{
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
-};
+use crate::UnknownFilterFieldPolicy;
+use crate::UnknownMetadataFieldPolicy;
 
 /// Current serialized metadata-schema format version.
 pub(crate) const METADATA_SCHEMA_WIRE_VERSION_V1: u8 = 1;

@@ -7,10 +7,8 @@
 // =============================================================================
 //! Borrowed metadata-filter wire tests.
 
-use qubit_metadata::{
-    FilterExpression,
-    MetadataFilter,
-};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::MetadataFilter;
 
 #[test]
 fn test_metadata_filter_serialization_keeps_wire_version_and_expression() {

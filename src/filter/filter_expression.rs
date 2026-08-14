@@ -7,21 +7,17 @@
 // =============================================================================
 //! Immutable filter expressions and their read-only views.
 
-use crate::filter::internal::{
-    FilterExpressionNode,
-    MatchOutcome,
-};
-use crate::{
-    Condition,
-    FilterExpressionBuilder,
-    FilterExpressionView,
-    FilterLimitKind,
-    FilterLimits,
-    FilterMatchOptions,
-    Metadata,
-    MetadataError,
-    MetadataResult,
-};
+use crate::Condition;
+use crate::FilterExpressionBuilder;
+use crate::FilterExpressionView;
+use crate::FilterLimitKind;
+use crate::FilterLimits;
+use crate::FilterMatchOptions;
+use crate::Metadata;
+use crate::MetadataError;
+use crate::MetadataResult;
+use crate::filter::internal::FilterExpressionNode;
+use crate::filter::internal::MatchOutcome;
 
 /// An immutable Boolean expression in a [`crate::MetadataFilter`].
 ///

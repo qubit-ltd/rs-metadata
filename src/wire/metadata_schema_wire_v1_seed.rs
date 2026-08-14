@@ -7,18 +7,17 @@
 // =============================================================================
 //! Seed decoder for the strict metadata-schema v1 wire envelope.
 
-use serde::de::{
-    DeserializeSeed,
-    MapAccess,
-    Visitor,
-};
 use std::fmt;
 
+use serde::Deserializer;
+use serde::de::DeserializeSeed;
+use serde::de::Error;
+use serde::de::MapAccess;
+use serde::de::Visitor;
+
 use super::metadata_schema_wire_v1::MetadataSchemaWireV1;
-use crate::{
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
-};
+use crate::UnknownFilterFieldPolicy;
+use crate::UnknownMetadataFieldPolicy;
 
 /// Deserializes a schema envelope with a bounded fields seed.
 pub(crate) struct MetadataSchemaWireV1Seed<S> {
@@ -42,7 +41,7 @@ where
     /// seed.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         struct MetadataSchemaWireVisitor<S> {
             fields: Option<S>,
@@ -78,17 +77,13 @@ where
                     match key.as_str() {
                         "version" => {
                             if version.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
-                                    "version",
-                                ));
+                                return Err(Error::duplicate_field("version"));
                             }
                             version = Some(map.next_value::<u8>()?);
                         }
                         "fields" => {
                             if fields.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
-                                    "fields",
-                                ));
+                                return Err(Error::duplicate_field("fields"));
                             }
                             let seed = self.fields.take().expect(
                                 "metadata schema fields seed is consumed once",
@@ -97,7 +92,7 @@ where
                         }
                         "unknown_metadata_field_policy" => {
                             if unknown_metadata_field_policy.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
+                                return Err(Error::duplicate_field(
                                     "unknown_metadata_field_policy",
                                 ));
                             }
@@ -107,7 +102,7 @@ where
                         }
                         "unknown_filter_field_policy" => {
                             if unknown_filter_field_policy.is_some() {
-                                return Err(serde::de::Error::duplicate_field(
+                                return Err(Error::duplicate_field(
                                     "unknown_filter_field_policy",
                                 ));
                             }
@@ -116,7 +111,7 @@ where
                             );
                         }
                         _ => {
-                            return Err(serde::de::Error::unknown_field(
+                            return Err(Error::unknown_field(
                                 &key,
                                 &[
                                     "version",
@@ -129,23 +124,19 @@ where
                     }
                 }
                 Ok(MetadataSchemaWireV1 {
-                    version: version.ok_or_else(|| {
-                        serde::de::Error::missing_field("version")
-                    })?,
-                    fields: fields.ok_or_else(|| {
-                        serde::de::Error::missing_field("fields")
-                    })?,
+                    version: version
+                        .ok_or_else(|| Error::missing_field("version"))?,
+                    fields: fields
+                        .ok_or_else(|| Error::missing_field("fields"))?,
                     unknown_metadata_field_policy:
                         unknown_metadata_field_policy.ok_or_else(|| {
-                            serde::de::Error::missing_field(
+                            Error::missing_field(
                                 "unknown_metadata_field_policy",
                             )
                         })?,
                     unknown_filter_field_policy: unknown_filter_field_policy
                         .ok_or_else(|| {
-                            serde::de::Error::missing_field(
-                                "unknown_filter_field_policy",
-                            )
+                            Error::missing_field("unknown_filter_field_policy")
                         })?,
                 })
             }

@@ -10,6 +10,7 @@
 use std::collections::BTreeMap;
 
 use serde::Deserialize;
+use serde::Deserializer;
 use serde::de::DeserializeSeed;
 
 /// A string-keyed map that rejects duplicate keys while deserializing.
@@ -33,7 +34,7 @@ where
     /// Deserializes a map while rejecting a repeated key.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         super::strict_string_map_seed::StrictStringMapSeed::new(
             crate::constants::STRICT_STRING_MAP_MAX_ENTRIES,

@@ -8,13 +8,11 @@
 //! Tests for [`qubit_metadata::MetadataSchemaBuilder`].
 
 use qubit_datatype::DataType;
-use qubit_metadata::{
-    MetadataError,
-    MetadataField,
-    MetadataSchemaBuilder,
-    UnknownFilterFieldPolicy,
-    UnknownMetadataFieldPolicy,
-};
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataField;
+use qubit_metadata::MetadataSchemaBuilder;
+use qubit_metadata::UnknownFilterFieldPolicy;
+use qubit_metadata::UnknownMetadataFieldPolicy;
 
 #[test]
 fn test_schema_builder_default_builds_empty_schema() {

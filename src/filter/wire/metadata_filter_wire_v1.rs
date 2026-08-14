@@ -7,18 +7,14 @@
 // =============================================================================
 //! V1 [`MetadataFilter`] envelope.
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
+use serde::Serialize;
 
 use super::FilterExpressionWireV1;
-use crate::{
-    FilterMatchOptions,
-    MetadataError,
-    MetadataFilter,
-    MetadataResult,
-};
+use crate::FilterMatchOptions;
+use crate::MetadataError;
+use crate::MetadataFilter;
+use crate::MetadataResult;
 
 /// Current serialized metadata-filter format version.
 pub(crate) const METADATA_FILTER_WIRE_VERSION_V1: u8 = 1;
