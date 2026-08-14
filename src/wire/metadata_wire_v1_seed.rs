@@ -9,9 +9,9 @@
 
 use std::fmt;
 
-use serde::Deserializer;
 use serde::de::DeserializeSeed;
-use serde::de::Error;
+use serde::de::Deserializer;
+use serde::de::Error as DeError;
 use serde::de::MapAccess;
 use serde::de::Visitor;
 
@@ -72,13 +72,15 @@ where
                     match key.as_str() {
                         "version" => {
                             if version.is_some() {
-                                return Err(Error::duplicate_field("version"));
+                                return Err(DeError::duplicate_field(
+                                    "version",
+                                ));
                             }
                             version = Some(map.next_value::<u8>()?);
                         }
                         "values" => {
                             if values.is_some() {
-                                return Err(Error::duplicate_field("values"));
+                                return Err(DeError::duplicate_field("values"));
                             }
                             let seed = self.values.take().expect(
                                 "metadata values seed is consumed once",
@@ -86,7 +88,7 @@ where
                             values = Some(map.next_value_seed(seed)?);
                         }
                         _ => {
-                            return Err(Error::unknown_field(
+                            return Err(DeError::unknown_field(
                                 &key,
                                 &["version", "values"],
                             ));
@@ -95,9 +97,9 @@ where
                 }
                 Ok(MetadataWireV1 {
                     version: version
-                        .ok_or_else(|| Error::missing_field("version"))?,
+                        .ok_or_else(|| DeError::missing_field("version"))?,
                     values: values
-                        .ok_or_else(|| Error::missing_field("values"))?,
+                        .ok_or_else(|| DeError::missing_field("values"))?,
                 })
             }
         }

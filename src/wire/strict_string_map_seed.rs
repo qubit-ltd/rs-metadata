@@ -8,15 +8,12 @@
 //! Seed decoder for bounded strict string-keyed maps.
 // qubit-style: allow multiple-public-types
 
-use std::collections::BTreeMap;
-use std::collections::btree_map::Entry;
 use std::fmt;
-use std::marker::PhantomData;
 
 use serde::Deserialize;
-use serde::Deserializer;
 use serde::de;
 use serde::de::DeserializeSeed;
+use serde::de::Deserializer;
 use serde::de::MapAccess;
 use serde::de::Visitor;
 
@@ -26,8 +23,8 @@ use super::strict_string_map::StrictStringMap;
 pub(crate) struct StrictStringMapSeed<'a, V> {
     max_entries: usize,
     max_key_bytes: usize,
-    lifetime: PhantomData<&'a ()>,
-    marker: PhantomData<fn() -> V>,
+    lifetime: std::marker::PhantomData<&'a ()>,
+    marker: std::marker::PhantomData<fn() -> V>,
 }
 
 impl<V> StrictStringMapSeed<'static, V> {
@@ -36,8 +33,8 @@ impl<V> StrictStringMapSeed<'static, V> {
         Self {
             max_entries,
             max_key_bytes,
-            lifetime: PhantomData,
-            marker: PhantomData,
+            lifetime: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         }
     }
 }
@@ -58,8 +55,8 @@ where
         struct StrictStringMapVisitor<'a, V> {
             max_entries: usize,
             max_key_bytes: usize,
-            lifetime: PhantomData<&'a ()>,
-            marker: PhantomData<fn() -> V>,
+            lifetime: std::marker::PhantomData<&'a ()>,
+            marker: std::marker::PhantomData<fn() -> V>,
         }
 
         impl<'de, 'a, V> Visitor<'de> for StrictStringMapVisitor<'a, V>
@@ -81,7 +78,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let mut values = BTreeMap::new();
+                let mut values = std::collections::BTreeMap::new();
                 while let Some(key) = map.next_key::<String>()? {
                     if key.len() > self.max_key_bytes {
                         return Err(de::Error::custom(format!(
@@ -97,13 +94,13 @@ where
                         )));
                     }
                     match values.entry(key) {
-                        Entry::Occupied(entry) => {
+                        std::collections::btree_map::Entry::Occupied(entry) => {
                             return Err(de::Error::custom(format!(
                                 "duplicate map key '{}'",
                                 entry.key()
                             )));
                         }
-                        Entry::Vacant(entry) => {
+                        std::collections::btree_map::Entry::Vacant(entry) => {
                             let value = map.next_value::<V>()?;
                             entry.insert(value);
                         }
@@ -116,8 +113,8 @@ where
         deserializer.deserialize_map(StrictStringMapVisitor {
             max_entries,
             max_key_bytes,
-            lifetime: PhantomData,
-            marker: PhantomData,
+            lifetime: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         })
     }
 }

@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::de::DeserializeSeed;
+use serde::de::Deserializer;
 
 /// A string-keyed map that rejects duplicate keys while deserializing.
 pub(crate) struct StrictStringMap<V>(pub(crate) BTreeMap<String, V>);
