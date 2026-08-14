@@ -7,13 +7,11 @@
 // =============================================================================
 //! Redaction tests for metadata diagnostics.
 
+use std::fmt;
+
 use qubit_metadata::Metadata;
 use qubit_redact::{
-    InputOutputLimit,
-    MaskPolicy,
-    Redact as _,
-    RedactionPolicy,
-    Sensitivity,
+    InputOutputLimit, MaskPolicy, Redact as _, RedactionPolicy, RedactionSession, Sensitivity,
 };
 
 #[test]
@@ -27,6 +25,24 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
     assert!(!debug.contains("correct-horse-battery-staple"));
     assert!(!explicit.contains("correct-horse-battery-staple"));
     assert!(debug.contains("Ada"));
+}
+
+#[test]
+fn test_metadata_uses_mutable_redaction_session_signature() {
+    let _: for<'session, 'policy, 'formatter> fn(
+        &Metadata,
+        &'session mut RedactionSession<'policy>,
+        &'formatter mut fmt::Formatter<'formatter>,
+    ) -> fmt::Result = <Metadata as qubit_redact::Redact>::fmt_redacted;
+}
+
+#[test]
+fn test_metadata_reports_finite_redaction_input_bytes() {
+    let metadata = Metadata::new().with("field", "value");
+    assert_ne!(
+        qubit_redact::Redact::redaction_input_bytes(&metadata),
+        usize::MAX,
+    );
 }
 
 #[test]
