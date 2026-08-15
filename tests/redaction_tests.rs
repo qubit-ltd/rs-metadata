@@ -9,13 +9,36 @@
 
 use std::fmt;
 
+#[cfg(feature = "filter")]
+use qubit_metadata::FilterExpression;
+#[cfg(feature = "filter")]
+use qubit_metadata::FilterExpressionView;
 use qubit_metadata::Metadata;
 use qubit_redact::InputOutputLimit;
 use qubit_redact::MaskPolicy;
-use qubit_redact::Redact;
 use qubit_redact::RedactionPolicy;
 use qubit_redact::RedactionSession;
 use qubit_redact::Sensitivity;
+use qubit_redact::domain::Redact;
+use qubit_redact::policy::DomainRedactionLimits;
+
+/// Builds a policy with explicit domain-structure limits.
+fn policy_with_domain_limits(
+    max_nodes: usize,
+    max_collection_items: usize,
+) -> RedactionPolicy {
+    let limits = DomainRedactionLimits::new(
+        max_nodes,
+        max_collection_items,
+        DomainRedactionLimits::DEFAULT_MAX_DEPTH,
+    )
+    .expect("the test domain limits should be valid");
+    let mut builder = RedactionPolicy::builder();
+    builder.limits().domain(limits);
+    builder
+        .build()
+        .expect("the test domain limits should build a policy")
+}
 
 #[test]
 fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
@@ -40,15 +63,106 @@ fn test_metadata_uses_mutable_redaction_session_signature() {
 }
 
 #[test]
-fn test_metadata_reports_finite_redaction_input_bytes() {
-    let metadata = Metadata::new().with("field", "value");
-    assert_ne!(Redact::redaction_input_bytes(&metadata), usize::MAX,);
+fn test_metadata_stops_before_unadmitted_collection_entries() {
+    let metadata = Metadata::new()
+        .with("a_visible", "visible")
+        .with("z_blocked", "must-not-be-formatted");
+    let policy = policy_with_domain_limits(64, 1);
+
+    let output = format!("{:?}", metadata.redacted_with(&policy));
+
+    assert!(output.contains("visible"), "{output}");
+    assert!(!output.contains("must-not-be-formatted"), "{output}");
+    assert!(output.contains("<truncated>"), "{output}");
+}
+
+#[test]
+fn test_metadata_exact_collection_limit_is_complete() {
+    let metadata = Metadata::new().with("field", "visible");
+    let policy = policy_with_domain_limits(64, 1);
+
+    let output = format!("{:?}", metadata.redacted_with(&policy));
+
+    assert!(output.contains("visible"), "{output}");
+    assert!(!output.contains("<truncated>"), "{output}");
+}
+
+#[test]
+fn test_metadata_exact_structural_node_budget_is_complete() {
+    let metadata = Metadata::new()
+        .with("first_secret", "first-value")
+        .with("second_secret", "second-value");
+    let limits = DomainRedactionLimits::new(
+        3,
+        2,
+        DomainRedactionLimits::DEFAULT_MAX_DEPTH,
+    )
+    .expect("the test domain limits should be valid");
+    let mut builder = RedactionPolicy::builder();
+    builder
+        .fields()
+        .raise("first_secret", Sensitivity::Secret)
+        .expect("the test field rule should be valid")
+        .raise("second_secret", Sensitivity::Secret)
+        .expect("the test field rule should be valid");
+    builder.limits().domain(limits);
+    let policy = builder.build().expect("policy should build");
+
+    let output = format!("{:?}", metadata.redacted_with(&policy));
+
+    assert!(!output.contains("first-value"), "{output}");
+    assert!(!output.contains("second-value"), "{output}");
+    assert!(!output.contains("<truncated>"), "{output}");
+}
+
+#[test]
+fn test_metadata_one_less_structural_node_truncates() {
+    let metadata = Metadata::new().with("secret", "secret-value");
+    let limits = DomainRedactionLimits::new(
+        2,
+        1,
+        DomainRedactionLimits::DEFAULT_MAX_DEPTH,
+    )
+    .expect("the test domain limits should be valid");
+    let mut builder = RedactionPolicy::builder();
+    builder
+        .fields()
+        .raise("secret", Sensitivity::Secret)
+        .expect("the test field rule should be valid");
+    builder.limits().domain(limits);
+    let policy = builder.build().expect("policy should build");
+
+    let output = format!("{:?}", metadata.redacted_with(&policy));
+
+    assert!(!output.contains("secret-value"), "{output}");
+    assert!(output.contains("<truncated>"), "{output}");
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_condition_stops_before_unadmitted_key_field() {
+    let expression = FilterExpression::builder()
+        .eq("must-not-be-formatted", 42_i32)
+        .build()
+        .expect("the test filter expression should build");
+    let FilterExpressionView::Condition(condition) = expression.view() else {
+        panic!("the builder should produce one condition")
+    };
+    let policy = policy_with_domain_limits(1, 8);
+
+    let output = format!("{:?}", condition.redacted_with(&policy));
+
+    assert!(output.contains("operator"), "{output}");
+    assert!(!output.contains("must-not-be-formatted"), "{output}");
+    assert!(output.contains("<truncated>"), "{output}");
 }
 
 #[test]
 fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let metadata = Metadata::new().with("secret_number", 12345_i32);
-    let policy = RedactionPolicy::builder()
+    let mut builder = RedactionPolicy::builder();
+    builder
+        .fields()
         .disable_floor()
         .raise("secret_number", Sensitivity::Low)
         .expect("field classification should be valid")
@@ -56,9 +170,8 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
             Sensitivity::Low,
             MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
         )
-        .expect("mask policy should be valid")
-        .build()
-        .expect("policy should build");
+        .expect("mask policy should be valid");
+    let policy = builder.build().expect("policy should build");
 
     let output = format!("{:?}", metadata.redacted_with(&policy));
 
@@ -75,14 +188,14 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
             serde_json::json!({"api_key": "nested-secret", "label": "Ada"}),
         )
         .with("token", "outer-secret");
-    let policy = RedactionPolicy::default()
-        .to_builder()
+    let mut builder = RedactionPolicy::default().to_builder();
+    builder
+        .fields()
         .raise("api_key", Sensitivity::Secret)
         .expect("field classification should be valid")
         .raise("token", Sensitivity::Secret)
-        .expect("field classification should be valid")
-        .build()
-        .expect("policy should build");
+        .expect("field classification should be valid");
+    let policy = builder.build().expect("policy should build");
 
     let debug = format!("{:#?}", metadata.redacted_with(&policy));
     let display = format!("{}", metadata.redacted_with(&policy));
