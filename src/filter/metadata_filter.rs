@@ -27,7 +27,7 @@ use qubit_budget::json::JsonResource;
 #[cfg(feature = "json")]
 use qubit_json::text::JsonDecodeError;
 #[cfg(feature = "json")]
-use qubit_json::text::decode_slice_seed;
+use qubit_json::text::decode_admitted_slice_seed;
 #[cfg(feature = "json")]
 use qubit_json::text::encode_to_vec;
 #[cfg(feature = "json")]
@@ -205,7 +205,7 @@ impl MetadataFilter {
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
         let error_slot = Rc::new(RefCell::new(None));
-        let wire = decode_slice_seed(
+        let wire = decode_admitted_slice_seed(
             MetadataFilterWireV1Seed::new(
                 receiver_filter_limits,
                 Rc::clone(&error_slot),
