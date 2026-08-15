@@ -10,6 +10,7 @@
 #![cfg(all(feature = "json", feature = "schema"))]
 
 use qubit_budget::BudgetError;
+use qubit_budget::InsufficientBudgetError;
 use qubit_budget::ResourceBudget;
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
@@ -52,7 +53,7 @@ fn test_resource_budget_preserves_filter_limit_facts() {
     let error = budget.try_consume(1).expect_err("second node should fail");
     assert_eq!(
         error,
-        BudgetError::Insufficient {
+        InsufficientBudgetError {
             resource: FilterLimitKind::Nodes,
             limit: 1,
             remaining: 0,

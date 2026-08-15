@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-use qubit_budget::BudgetError;
+use qubit_budget::InsufficientBudgetError;
 use qubit_budget::ResourceBudget;
 use qubit_value::ValueWirePayloadV1;
 use serde::Deserialize;
@@ -136,24 +136,18 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 
 /// Converts shared budget facts to the established metadata filter error.
 fn filter_limit_error(
-    error: BudgetError<FilterLimitKind, usize>,
+    error: InsufficientBudgetError<FilterLimitKind, usize>,
 ) -> MetadataError {
-    match error {
-        BudgetError::Insufficient {
-            resource,
-            limit,
-            remaining,
-            requested,
-        } => MetadataError::FilterLimitExceeded {
-            kind: resource,
-            value: limit.saturating_sub(remaining).saturating_add(requested),
-            maximum: limit,
-        },
-        BudgetError::LimitExceeded { .. } => {
-            unreachable!(
-                "filter node budgets only report insufficient capacity"
-            )
-        }
+    let InsufficientBudgetError {
+        resource,
+        limit,
+        remaining,
+        requested,
+    } = error;
+    MetadataError::FilterLimitExceeded {
+        kind: resource,
+        value: limit.saturating_sub(remaining).saturating_add(requested),
+        maximum: limit,
     }
 }
 
