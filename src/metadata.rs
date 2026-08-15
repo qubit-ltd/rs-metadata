@@ -25,9 +25,12 @@ use qubit_datatype::DataType;
 use qubit_json::text::JsonTextDecoder;
 #[cfg(feature = "json")]
 use qubit_json::text::JsonTextEncoder;
-use qubit_redact::Redact;
-use qubit_redact::RedactedKeyedResult;
-use qubit_redact::RedactionSession;
+use qubit_redact::domain::DomainTruncated;
+use qubit_redact::domain::Redact;
+use qubit_redact::domain::RedactedKeyedMapResult;
+use qubit_redact::policy::DomainTraversalAdmission;
+use qubit_redact::policy::DomainValueAdmission;
+use qubit_redact::policy::RedactionSession;
 use qubit_value::Value;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadV1;
@@ -758,25 +761,46 @@ impl Metadata {
 }
 
 impl Redact for Metadata {
-    fn redaction_input_bytes(&self) -> usize {
-        self.0.iter().fold(0, |total, (key, value)| {
-            total
-                .saturating_add(key.len())
-                .saturating_add(Redact::redaction_input_bytes(value))
-        })
-    }
-
     /// Writes a policy-redacted metadata representation.
+    ///
+    /// Metadata is pure domain structure, so this traversal consumes nodes,
+    /// collection items, and output bytes but no diagnostic input bytes. The
+    /// metadata node and its map field are admitted before the stored map is
+    /// accessed. [`RedactedKeyedMapResult`] then enters exactly one map node
+    /// and admits each exact remaining entry before iterator advancement. Its
+    /// admitted-item path classifies entries without charging duplicate keyed
+    /// root and field nodes; pass-through values still enter their legitimate
+    /// nested value scopes.
+    ///
+    /// # Parameters
+    ///
+    /// * `session` - Shared policy and cumulative diagnostic budgets.
+    /// * `formatter` - Destination formatting context.
+    ///
+    /// # Returns
+    ///
+    /// The formatter result for the admitted safe map representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`fmt::Error`] when the destination rejects safe output.
     fn fmt_redacted(
         &self,
         session: &mut RedactionSession<'_>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        let mut output = formatter.debug_map();
-        for (key, value) in &self.0 {
-            output.entry(key, &RedactedKeyedResult::new(key, value, session));
+        let DomainValueAdmission::Entered(mut scope) =
+            session.enter_domain_value()
+        else {
+            return fmt::Debug::fmt(&DomainTruncated, formatter);
+        };
+        if scope.admit_field() == DomainTraversalAdmission::LimitReached {
+            return fmt::Debug::fmt(&DomainTruncated, formatter);
         }
-        output.finish()
+        fmt::Debug::fmt(
+            &RedactedKeyedMapResult::new(&self.0, scope.session()),
+            formatter,
+        )
     }
 }
 

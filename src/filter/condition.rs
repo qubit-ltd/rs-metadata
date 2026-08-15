@@ -11,8 +11,11 @@ use std::cmp::Ordering;
 use std::fmt;
 
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_redact::Redact;
-use qubit_redact::RedactionSession;
+use qubit_redact::domain::DomainTruncated;
+use qubit_redact::domain::Redact;
+use qubit_redact::policy::DomainTraversalAdmission;
+use qubit_redact::policy::DomainValueAdmission;
+use qubit_redact::policy::RedactionSession;
 use qubit_value::Value;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadRefV1;
@@ -344,32 +347,39 @@ fn validate_operands(
 }
 
 impl Redact for Condition {
-    fn redaction_input_bytes(&self) -> usize {
-        let key_bytes = self.key().len().saturating_add(1);
-        match self {
-            Self::Equal { value, .. }
-            | Self::NotEqual { value, .. }
-            | Self::Less { value, .. }
-            | Self::LessEqual { value, .. }
-            | Self::Greater { value, .. }
-            | Self::GreaterEqual { value, .. } => {
-                key_bytes.saturating_add(Redact::redaction_input_bytes(value))
-            }
-            Self::In { values, .. } | Self::NotIn { values, .. } => {
-                values.iter().fold(key_bytes, |total, value| {
-                    total.saturating_add(Redact::redaction_input_bytes(value))
-                })
-            }
-            Self::Exists { .. } | Self::NotExists { .. } => key_bytes,
-        }
-    }
-
     /// Writes a diagnostic condition representation without exposing operands.
+    ///
+    /// The condition node is entered before its discriminant is inspected.
+    /// The synthetic operator label is derived from that discriminant and does
+    /// not consume a field node. The source key and optional operand fields are
+    /// admitted in source order. The key accessor is invoked only after key
+    /// admission, and operand values are never inspected because their
+    /// diagnostic representation is a fixed marker. A node-budget rejection
+    /// adds one structural truncation field and terminates the branch without
+    /// touching the rejected field.
+    ///
+    /// # Parameters
+    ///
+    /// * `session` - Shared policy and cumulative domain budgets.
+    /// * `formatter` - Destination formatting context.
+    ///
+    /// # Returns
+    ///
+    /// The formatter result for the admitted safe condition representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`fmt::Error`] when the destination rejects safe output.
     fn fmt_redacted(
         &self,
-        _session: &mut RedactionSession<'_>,
+        session: &mut RedactionSession<'_>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
+        let DomainValueAdmission::Entered(mut scope) =
+            session.enter_domain_value()
+        else {
+            return fmt::Debug::fmt(&DomainTruncated, formatter);
+        };
         let (operator, has_value) = match self {
             Self::Equal { .. } => ("equal", true),
             Self::NotEqual { .. } => ("not_equal", true),
@@ -382,19 +392,19 @@ impl Redact for Condition {
             Self::Exists { .. } => ("exists", false),
             Self::NotExists { .. } => ("not_exists", false),
         };
-        if has_value {
-            write!(
-                formatter,
-                "Condition {{ operator: \"{operator}\", key: {:?}, value: <redacted> }}",
-                self.key()
-            )
-        } else {
-            write!(
-                formatter,
-                "Condition {{ operator: \"{operator}\", key: {:?} }}",
-                self.key()
-            )
+        let mut output = formatter.debug_struct("Condition");
+        output.field("operator", &operator);
+        if scope.admit_field() == DomainTraversalAdmission::LimitReached {
+            return output.field("...", &DomainTruncated).finish();
         }
+        output.field("key", &self.key());
+        if has_value {
+            if scope.admit_field() == DomainTraversalAdmission::LimitReached {
+                return output.field("...", &DomainTruncated).finish();
+            }
+            output.field("value", &format_args!("<redacted>"));
+        }
+        output.finish()
     }
 }
 
