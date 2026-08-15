@@ -25,7 +25,7 @@ use qubit_datatype::DataType;
 #[cfg(feature = "json")]
 use qubit_json::text::JsonDecodeError;
 #[cfg(feature = "json")]
-use qubit_json::text::decode_slice_seed;
+use qubit_json::text::decode_admitted_slice_seed;
 #[cfg(feature = "json")]
 use qubit_json::text::encode_to_vec;
 #[cfg(feature = "json")]
@@ -136,7 +136,7 @@ impl MetadataSchema {
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
-        let wire = decode_slice_seed(
+        let wire = decode_admitted_slice_seed(
             MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
                 limits.max_schema_fields(),
                 limits.max_key_bytes(),
