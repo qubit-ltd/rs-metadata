@@ -14,25 +14,17 @@ use std::fmt;
 use std::io::Write;
 
 #[cfg(feature = "json")]
-use qubit_budget::MeasuredBudgetError;
-#[cfg(feature = "json")]
 use qubit_budget::json::JsonDecodeSession;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonEncodeLimits;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonEncodeSession;
-#[cfg(feature = "json")]
-use qubit_budget::json::JsonResource;
 use qubit_datatype::DataConversionTarget;
 use qubit_datatype::DataType;
 #[cfg(feature = "json")]
-use qubit_json::text::JsonDecodeError;
+use qubit_json::text::JsonTextDecoder;
 #[cfg(feature = "json")]
-use qubit_json::text::decode_admitted_slice_seed;
-#[cfg(feature = "json")]
-use qubit_json::text::encode_to_vec;
-#[cfg(feature = "json")]
-use qubit_json::text::encode_to_writer;
+use qubit_json::text::JsonTextEncoder;
 use qubit_redact::Redact;
 use qubit_redact::RedactedKeyedResult;
 use qubit_redact::RedactionSession;
@@ -148,15 +140,15 @@ impl Metadata {
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
-        let wire = decode_admitted_slice_seed(
-            MetadataWireV1Seed::new(StrictStringMapSeed::new(
-                limits.max_metadata_entries(),
-                limits.max_key_bytes(),
-            )),
-            input,
-            &mut session,
-        )
-        .map_err(metadata_json_error)?;
+        let wire = JsonTextDecoder::new(&mut session)
+            .decode_seed(
+                MetadataWireV1Seed::new(StrictStringMapSeed::new(
+                    limits.max_metadata_entries(),
+                    limits.max_key_bytes(),
+                )),
+                input,
+            )
+            .map_err(Into::<crate::MetadataWireDecodeError>::into)?;
         if wire.version != METADATA_WIRE_VERSION_V1 {
             return Err(crate::MetadataWireDecodeError::InvalidJson(
                 <serde_json::Error as DeError>::custom(
@@ -212,7 +204,9 @@ impl Metadata {
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let mut session = JsonEncodeSession::owned(limits);
-        encode_to_vec(self, &mut session).map_err(Into::into)
+        JsonTextEncoder::new(&mut session)
+            .to_vec(self)
+            .map_err(Into::into)
     }
 
     /// Encodes this metadata object to a writer with the default JSON budget.
@@ -260,7 +254,9 @@ impl Metadata {
         W: Write,
     {
         let mut session = JsonEncodeSession::owned(limits);
-        encode_to_writer(writer, self, &mut session).map_err(Into::into)
+        JsonTextEncoder::new(&mut session)
+            .write_buffered(writer, self)
+            .map_err(Into::into)
     }
 
     /// Returns `true` if there are no entries.
@@ -758,31 +754,6 @@ impl Metadata {
             });
         }
         Ok(())
-    }
-}
-
-/// Converts a shared JSON adapter error into the metadata decoding error.
-#[cfg(feature = "json")]
-fn metadata_json_error(
-    error: JsonDecodeError<JsonResource>,
-) -> crate::MetadataWireDecodeError {
-    match error {
-        JsonDecodeError::Budget(error) => match error {
-            MeasuredBudgetError::Budget(error) => {
-                crate::MetadataWireDecodeError::Budget(error)
-            }
-            MeasuredBudgetError::Quantity { resource, source } => {
-                crate::MetadataWireDecodeError::Quantity { resource, source }
-            }
-        },
-        JsonDecodeError::Syntax(error) => {
-            crate::MetadataWireDecodeError::Syntax(error)
-        }
-        JsonDecodeError::Deserialize(error) => {
-            crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as DeError>::custom(error),
-            )
-        }
     }
 }
 
