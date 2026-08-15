@@ -11,9 +11,12 @@ use std::error::Error;
 use std::fmt;
 
 use qubit_budget::BudgetError;
+use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::json::JsonResource;
+use qubit_json::text::JsonDecodeError;
 use qubit_json::text::JsonSyntaxError;
+use serde::de::Error as DeError;
 
 #[cfg(feature = "filter")]
 use crate::MetadataError;
@@ -72,6 +75,31 @@ impl Error for MetadataWireDecodeError {
             #[cfg(feature = "filter")]
             Self::Filter(error) => Some(error),
             Self::InvalidJson(error) => Some(error),
+        }
+    }
+}
+
+impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
+    /// Converts a shared JSON decoding error into a metadata wire error.
+    fn from(error: JsonDecodeError<JsonResource>) -> Self {
+        match error {
+            JsonDecodeError::Budget(MeasuredBudgetError::Budget(error)) => {
+                Self::Budget(error)
+            }
+            JsonDecodeError::Budget(MeasuredBudgetError::Quantity {
+                resource,
+                source,
+            }) => Self::Quantity { resource, source },
+            JsonDecodeError::Syntax(error) => Self::Syntax(error),
+            JsonDecodeError::Deserialize {
+                category,
+                line,
+                column,
+            } => Self::InvalidJson(<serde_json::Error as DeError>::custom(
+                format_args!(
+                    "JSON deserialization failed ({category:?}) at line {line}, column {column}"
+                ),
+            )),
         }
     }
 }
