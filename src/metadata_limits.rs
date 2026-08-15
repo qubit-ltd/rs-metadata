@@ -8,7 +8,6 @@
 //! Default JSON and metadata-domain limits for metadata wire documents.
 
 use qubit_budget::ResourceLimit;
-use qubit_budget::StructureLimits;
 use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
@@ -153,42 +152,15 @@ impl Default for MetadataLimits {
 
 /// Creates the default direction-independent metadata JSON value profile.
 pub fn default_json_value_limits() -> JsonValueLimits {
-    JsonValueLimits::default()
-        .with_string_bytes_limit(ResourceLimit::new(
-            JsonResource::StringBytes,
-            256 * 1024_usize,
-        ))
-        .with_number_bytes_limit(ResourceLimit::new(
-            JsonResource::NumberBytes,
-            4_096_usize,
-        ))
-        .with_payload_bytes_limit(ResourceLimit::new(
-            JsonResource::PayloadBytes,
-            json_quantity(DEFAULT_MAX_JSON_BYTES),
-        ))
-        .with_structure_limits(
-            StructureLimits::empty()
-                .with_depth_limit(ResourceLimit::new(
-                    JsonResource::Depth,
-                    64_usize,
-                ))
-                .with_nodes_limit(ResourceLimit::new(
-                    JsonResource::Nodes,
-                    100_000_usize,
-                ))
-                .with_sequence_items_limit(ResourceLimit::new(
-                    JsonResource::SequenceItems,
-                    4_096_usize,
-                ))
-                .with_map_entries_limit(ResourceLimit::new(
-                    JsonResource::MapEntries,
-                    json_quantity(DEFAULT_MAX_METADATA_ENTRIES),
-                ))
-                .with_key_bytes_limit(ResourceLimit::new(
-                    JsonResource::KeyBytes,
-                    256 * 1024_usize,
-                )),
-        )
+    JsonValueLimits::<JsonResource, usize>::unconfigured()
+        .with_max_depth(64_usize)
+        .with_max_nodes(100_000_usize)
+        .with_max_sequence_items(4_096_usize)
+        .with_max_map_entries(json_quantity(DEFAULT_MAX_METADATA_ENTRIES))
+        .with_max_key_bytes(256 * 1024_usize)
+        .with_max_string_bytes(256 * 1024_usize)
+        .with_max_number_bytes(4_096_usize)
+        .with_max_payload_bytes(json_quantity(DEFAULT_MAX_JSON_BYTES))
 }
 
 /// Creates the default metadata JSON decoding profile.
