@@ -72,6 +72,8 @@ mod metadata;
 mod metadata_error;
 #[cfg(feature = "json")]
 mod metadata_limits;
+#[cfg(feature = "json")]
+mod metadata_limits_builder;
 mod metadata_result;
 #[cfg(feature = "schema")]
 mod metadata_validation_error;
@@ -126,6 +128,8 @@ pub use metadata_limits::default_json_decode_limits;
 pub use metadata_limits::default_json_encode_limits;
 #[cfg(feature = "json")]
 pub use metadata_limits::default_json_value_limits;
+#[cfg(feature = "json")]
+pub use metadata_limits_builder::MetadataLimitsBuilder;
 pub use metadata_result::MetadataResult;
 #[cfg(feature = "schema")]
 pub use metadata_validation_error::MetadataValidationError;
