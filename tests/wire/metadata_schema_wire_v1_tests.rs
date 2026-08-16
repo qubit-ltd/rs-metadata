@@ -9,6 +9,7 @@
 
 #[cfg(feature = "json")]
 use qubit_budget::ResourceLimit;
+#[cfg(feature = "json")]
 use qubit_budget::json::JsonDecodeLimits;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
@@ -165,11 +166,16 @@ fn test_metadata_schema_json_decoder_rejects_missing_and_unknown_fields() {
 fn test_metadata_schema_json_decoder_maps_syntax_and_budget_errors() {
     assert!(MetadataSchema::decode_json_slice(b"!").is_err());
 
-    let limits = MetadataLimits::default().with_json_decode(
-        JsonDecodeLimits::builder()
-            .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 1))
-            .build(),
-    );
+    let limits = MetadataLimits::builder()
+        .json_decode(
+            JsonDecodeLimits::builder()
+                .input_bytes_limit(ResourceLimit::new(
+                    JsonResource::InputBytes,
+                    1,
+                ))
+                .build(),
+        )
+        .build();
     assert!(
         MetadataSchema::decode_json_slice_with_limits(b"{}", limits,).is_err()
     );
