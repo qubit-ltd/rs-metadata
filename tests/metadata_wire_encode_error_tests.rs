@@ -16,9 +16,9 @@ use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::QuantityMeasurement;
 use qubit_budget::json::JsonResource;
-use qubit_json::text::JsonEncodeError;
-use qubit_json::text::JsonSyntaxError;
-use qubit_json::text::JsonSyntaxErrorReason;
+use qubit_json::decode::JsonSyntaxError;
+use qubit_json::decode::JsonSyntaxErrorReason;
+use qubit_json::encode::JsonEncodeError;
 use qubit_metadata::MetadataWireEncodeError;
 
 #[test]

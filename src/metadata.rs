@@ -22,9 +22,9 @@ use qubit_budget::json::JsonEncodeSession;
 use qubit_datatype::DataConversionTarget;
 use qubit_datatype::DataType;
 #[cfg(feature = "json")]
-use qubit_json::text::JsonTextDecoder;
+use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
-use qubit_json::text::JsonTextEncoder;
+use qubit_json::encode::JsonEncoder;
 use qubit_redact::domain::DomainTruncated;
 use qubit_redact::domain::Redact;
 use qubit_redact::domain::RedactedKeyedMapResult;
@@ -143,7 +143,7 @@ impl Metadata {
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
-        let wire = JsonTextDecoder::new(&mut session)
+        let wire = JsonDecoder::new(&mut session)
             .decode_seed(
                 MetadataWireV1Seed::new(StrictStringMapSeed::new(
                     limits.max_metadata_entries(),
@@ -207,7 +207,7 @@ impl Metadata {
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonTextEncoder::new(&mut session)
+        JsonEncoder::new(&mut session)
             .to_vec(self)
             .map_err(Into::into)
     }
@@ -257,7 +257,7 @@ impl Metadata {
         W: Write,
     {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonTextEncoder::new(&mut session)
+        JsonEncoder::new(&mut session)
             .write_buffered(writer, self)
             .map_err(Into::into)
     }

@@ -14,8 +14,8 @@ use qubit_budget::BudgetError;
 use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::json::JsonResource;
-use qubit_json::text::JsonDecodeError;
-use qubit_json::text::JsonSyntaxError;
+use qubit_json::decode::JsonDecodeError;
+use qubit_json::decode::JsonSyntaxError;
 use serde::de::Error as DeError;
 
 #[cfg(feature = "filter")]
