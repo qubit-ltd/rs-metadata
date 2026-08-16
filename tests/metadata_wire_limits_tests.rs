@@ -38,14 +38,16 @@ fn filter_input(expression: &str) -> Vec<u8> {
 }
 
 fn input_limit(maximum: usize) -> MetadataLimits {
-    MetadataLimits::default().with_json_decode(
-        JsonDecodeLimits::builder()
-            .input_bytes_limit(ResourceLimit::new(
-                JsonResource::InputBytes,
-                maximum,
-            ))
-            .build(),
-    )
+    MetadataLimits::builder()
+        .json_decode(
+            JsonDecodeLimits::builder()
+                .input_bytes_limit(ResourceLimit::new(
+                    JsonResource::InputBytes,
+                    maximum,
+                ))
+                .build(),
+        )
+        .build()
 }
 
 #[test]
@@ -182,7 +184,7 @@ fn test_filter_set_values_limit_preserves_structured_error() {
 fn test_metadata_domain_entry_limit_is_preserved() {
     let metadata = Metadata::new().with("first", 1_i64).with("second", 2_i64);
     let input = serde_json::to_vec(&metadata).unwrap();
-    let limits = MetadataLimits::default().with_max_metadata_entries(1);
+    let limits = MetadataLimits::builder().max_metadata_entries(1).build();
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain entry limit should reject the input");
     assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
@@ -192,7 +194,7 @@ fn test_metadata_domain_entry_limit_is_preserved() {
 fn test_metadata_domain_key_limit_is_preserved() {
     let metadata = Metadata::new().with("first", 1_i64);
     let input = serde_json::to_vec(&metadata).unwrap();
-    let limits = MetadataLimits::default().with_max_key_bytes(4);
+    let limits = MetadataLimits::builder().max_key_bytes(4).build();
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain key limit should reject the input");
     assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
@@ -211,7 +213,7 @@ fn test_json_budget_structural_limit_is_structured_source() {
     let limits = JsonDecodeLimits::builder().value_limits(value).build();
     let error = Metadata::decode_json_slice_with_limits(
         &input,
-        MetadataLimits::default().with_json_decode(limits),
+        MetadataLimits::builder().json_decode(limits).build(),
     )
     .expect_err("metadata envelope needs more than one JSON node");
     assert!(

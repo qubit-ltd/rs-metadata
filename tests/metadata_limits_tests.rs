@@ -27,19 +27,24 @@ fn test_metadata_limits_default_exposes_domain_profile() {
 
 #[test]
 fn test_metadata_limits_replace_json_profile() {
-    let limits = MetadataLimits::default().with_json_decode(
-        JsonDecodeLimits::builder()
-            .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 8))
-            .build(),
-    );
+    let limits = MetadataLimits::builder()
+        .json_decode(
+            JsonDecodeLimits::builder()
+                .input_bytes_limit(ResourceLimit::new(
+                    JsonResource::InputBytes,
+                    8,
+                ))
+                .build(),
+        )
+        .build();
     assert_eq!(limits.json_decode().max_input_bytes(), Some(8));
     assert_eq!(
         limits.json_decode().input_bytes_limit().unwrap().resource(),
         &JsonResource::InputBytes
     );
 
-    let limits = MetadataLimits::default()
-        .with_json_encode(
+    let limits = MetadataLimits::builder()
+        .json_encode(
             JsonEncodeLimits::builder()
                 .output_bytes_limit(ResourceLimit::new(
                     JsonResource::OutputBytes,
@@ -47,9 +52,10 @@ fn test_metadata_limits_replace_json_profile() {
                 ))
                 .build(),
         )
-        .with_max_metadata_entries(4_096)
-        .with_max_schema_fields(4_096)
-        .with_max_key_bytes(256);
+        .max_metadata_entries(4_096)
+        .max_schema_fields(4_096)
+        .max_key_bytes(256)
+        .build();
     assert_eq!(limits.json_encode().max_output_bytes(), Some(8));
     assert_eq!(limits.max_metadata_entries(), 4_096);
     assert_eq!(limits.max_schema_fields(), 4_096);
@@ -60,20 +66,23 @@ fn test_metadata_limits_replace_json_profile() {
 #[test]
 fn test_metadata_limits_reject_domain_values_above_hard_maxima() {
     assert!(
-        MetadataLimits::default()
-            .with_max_metadata_entries(4_097)
+        MetadataLimits::builder()
+            .max_metadata_entries(4_097)
+            .build()
             .validate()
             .is_err()
     );
     assert!(
-        MetadataLimits::default()
-            .with_max_schema_fields(4_097)
+        MetadataLimits::builder()
+            .max_schema_fields(4_097)
+            .build()
             .validate()
             .is_err()
     );
     assert!(
-        MetadataLimits::default()
-            .with_max_key_bytes(257)
+        MetadataLimits::builder()
+            .max_key_bytes(257)
+            .build()
             .validate()
             .is_err()
     );

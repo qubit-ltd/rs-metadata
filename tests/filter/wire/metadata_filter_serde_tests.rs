@@ -162,11 +162,16 @@ fn test_metadata_filter_json_decoder_rejects_malformed_input() {
         .expect_err("an incomplete filter envelope must be rejected");
     assert!(!error.to_string().is_empty());
 
-    let limits = MetadataLimits::default().with_json_decode(
-        JsonDecodeLimits::builder()
-            .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 1))
-            .build(),
-    );
+    let limits = MetadataLimits::builder()
+        .json_decode(
+            JsonDecodeLimits::builder()
+                .input_bytes_limit(ResourceLimit::new(
+                    JsonResource::InputBytes,
+                    1,
+                ))
+                .build(),
+        )
+        .build();
     let error = MetadataFilter::decode_json_slice_with_limits(
         b"{}",
         limits,
