@@ -13,8 +13,8 @@ use qubit_budget::BudgetError;
 use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::json::JsonResource;
-use qubit_json::text::JsonEncodeError;
-use qubit_json::text::JsonSyntaxError;
+use qubit_json::decode::JsonSyntaxError;
+use qubit_json::encode::JsonEncodeError;
 use serde_json::Error as JsonError;
 
 /// Failure returned by bounded metadata JSON encoding APIs.

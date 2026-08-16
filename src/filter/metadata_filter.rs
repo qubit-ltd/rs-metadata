@@ -21,9 +21,9 @@ use qubit_budget::json::JsonEncodeLimits;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonEncodeSession;
 #[cfg(feature = "json")]
-use qubit_json::text::JsonTextDecoder;
+use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
-use qubit_json::text::JsonTextEncoder;
+use qubit_json::encode::JsonEncoder;
 use qubit_utils::Transient;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -195,7 +195,7 @@ impl MetadataFilter {
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
         let error_slot = Rc::new(RefCell::new(None));
-        let wire = JsonTextDecoder::new(&mut session)
+        let wire = JsonDecoder::new(&mut session)
             .decode_seed(
                 MetadataFilterWireV1Seed::new(
                     receiver_filter_limits,
@@ -239,7 +239,7 @@ impl MetadataFilter {
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonTextEncoder::new(&mut session)
+        JsonEncoder::new(&mut session)
             .to_vec(self)
             .map_err(Into::into)
     }
@@ -281,7 +281,7 @@ impl MetadataFilter {
         W: Write,
     {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonTextEncoder::new(&mut session)
+        JsonEncoder::new(&mut session)
             .write_buffered(writer, self)
             .map_err(Into::into)
     }
