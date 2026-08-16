@@ -47,18 +47,18 @@ impl MetadataLimits {
     /// input/output byte bound.
     pub fn new(max_json_bytes: usize) -> Self {
         Self {
-            json_decode: default_json_decode_limits().with_input_bytes_limit(
-                ResourceLimit::new(
+            json_decode: JsonDecodeLimits::builder()
+                .input_bytes_limit(ResourceLimit::new(
                     JsonResource::InputBytes,
                     json_quantity(max_json_bytes),
-                ),
-            ),
-            json_encode: default_json_encode_limits().with_output_bytes_limit(
-                ResourceLimit::new(
+                ))
+                .build(),
+            json_encode: JsonEncodeLimits::builder()
+                .output_bytes_limit(ResourceLimit::new(
                     JsonResource::OutputBytes,
                     json_quantity(max_json_bytes),
-                ),
-            ),
+                ))
+                .build(),
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
             max_key_bytes: DEFAULT_MAX_KEY_BYTES,
@@ -152,35 +152,38 @@ impl Default for MetadataLimits {
 
 /// Creates the default direction-independent metadata JSON value profile.
 pub fn default_json_value_limits() -> JsonValueLimits {
-    JsonValueLimits::<JsonResource, usize>::new()
-        .with_max_depth(64_usize)
-        .with_max_nodes(100_000_usize)
-        .with_max_sequence_items(4_096_usize)
-        .with_max_map_entries(json_quantity(DEFAULT_MAX_METADATA_ENTRIES))
-        .with_max_key_bytes(256 * 1024_usize)
-        .with_max_string_bytes(256 * 1024_usize)
-        .with_max_number_bytes(4_096_usize)
-        .with_max_payload_bytes(json_quantity(DEFAULT_MAX_JSON_BYTES))
+    JsonValueLimits::<JsonResource, usize>::builder()
+        .max_depth(64_usize)
+        .max_nodes(100_000_usize)
+        .max_sequence_items(4_096_usize)
+        .max_map_entries(json_quantity(DEFAULT_MAX_METADATA_ENTRIES))
+        .max_key_bytes(256 * 1024_usize)
+        .max_string_bytes(256 * 1024_usize)
+        .max_number_bytes(4_096_usize)
+        .max_payload_bytes(json_quantity(DEFAULT_MAX_JSON_BYTES))
+        .build()
 }
 
 /// Creates the default metadata JSON decoding profile.
 pub fn default_json_decode_limits() -> JsonDecodeLimits {
-    JsonDecodeLimits::default()
-        .with_input_bytes_limit(ResourceLimit::new(
+    JsonDecodeLimits::builder()
+        .input_bytes_limit(ResourceLimit::new(
             JsonResource::InputBytes,
             json_quantity(DEFAULT_MAX_JSON_BYTES),
         ))
-        .with_value_limits(default_json_value_limits())
+        .value_limits(default_json_value_limits())
+        .build()
 }
 
 /// Creates the default metadata JSON encoding profile.
 pub fn default_json_encode_limits() -> JsonEncodeLimits {
-    JsonEncodeLimits::default()
-        .with_output_bytes_limit(ResourceLimit::new(
+    JsonEncodeLimits::builder()
+        .output_bytes_limit(ResourceLimit::new(
             JsonResource::OutputBytes,
             json_quantity(DEFAULT_MAX_JSON_BYTES),
         ))
-        .with_value_limits(default_json_value_limits())
+        .value_limits(default_json_value_limits())
+        .build()
 }
 
 /// Converts protocol JSON limits to the native quantity used by JSON parsing.

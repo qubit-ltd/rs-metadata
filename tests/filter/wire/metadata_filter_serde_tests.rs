@@ -10,14 +10,14 @@
 #[cfg(feature = "json")]
 use qubit_budget::ResourceLimit;
 #[cfg(feature = "json")]
+use qubit_budget::json::JsonDecodeLimits;
+#[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::FilterLimits;
 use qubit_metadata::MetadataFilter;
 #[cfg(feature = "json")]
 use qubit_metadata::MetadataLimits;
-#[cfg(feature = "json")]
-use qubit_metadata::default_json_decode_limits;
 #[cfg(feature = "json")]
 use qubit_value::Value;
 
@@ -163,9 +163,9 @@ fn test_metadata_filter_json_decoder_rejects_malformed_input() {
     assert!(!error.to_string().is_empty());
 
     let limits = MetadataLimits::default().with_json_decode(
-        default_json_decode_limits().with_input_bytes_limit(
-            ResourceLimit::new(JsonResource::InputBytes, 1),
-        ),
+        JsonDecodeLimits::builder()
+            .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 1))
+            .build(),
     );
     let error = MetadataFilter::decode_json_slice_with_limits(
         b"{}",

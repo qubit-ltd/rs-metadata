@@ -13,7 +13,11 @@ use qubit_budget::BudgetError;
 use qubit_budget::InsufficientBudgetError;
 use qubit_budget::ResourceBudget;
 use qubit_budget::ResourceLimit;
+use qubit_budget::StructureLimits;
+use qubit_budget::json::JsonDecodeLimits;
+use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
+use qubit_budget::json::JsonValueLimits;
 use qubit_datatype::DataType;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::FilterLimitKind;
@@ -25,8 +29,6 @@ use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
 use qubit_metadata::MetadataWireEncodeError;
-use qubit_metadata::default_json_decode_limits;
-use qubit_metadata::default_json_encode_limits;
 
 fn filter_input(expression: &str) -> Vec<u8> {
     format!(
@@ -37,9 +39,12 @@ fn filter_input(expression: &str) -> Vec<u8> {
 
 fn input_limit(maximum: usize) -> MetadataLimits {
     MetadataLimits::default().with_json_decode(
-        default_json_decode_limits().with_input_bytes_limit(
-            ResourceLimit::new(JsonResource::InputBytes, maximum),
-        ),
+        JsonDecodeLimits::builder()
+            .input_bytes_limit(ResourceLimit::new(
+                JsonResource::InputBytes,
+                maximum,
+            ))
+            .build(),
     )
 }
 
@@ -197,13 +202,13 @@ fn test_metadata_domain_key_limit_is_preserved() {
 fn test_json_budget_structural_limit_is_structured_source() {
     let metadata = Metadata::new().with("name", "alice");
     let input = serde_json::to_vec(&metadata).unwrap();
-    let limits = default_json_decode_limits();
-    let value = limits.value_limits();
-    let structure = value
-        .structure_limits()
-        .with_nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1));
-    let limits =
-        limits.with_value_limits(value.with_structure_limits(structure));
+    let structure = StructureLimits::builder()
+        .nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1))
+        .build();
+    let value = JsonValueLimits::builder()
+        .structure_limits(structure)
+        .build();
+    let limits = JsonDecodeLimits::builder().value_limits(value).build();
     let error = Metadata::decode_json_slice_with_limits(
         &input,
         MetadataLimits::default().with_json_decode(limits),
@@ -278,9 +283,9 @@ fn test_metadata_outer_key_budget_remains_256_bytes() {
 #[test]
 fn test_metadata_encode_uses_output_budget() {
     let metadata = Metadata::new().with("name", "alice");
-    let limits = default_json_encode_limits().with_output_bytes_limit(
-        ResourceLimit::new(JsonResource::OutputBytes, 1),
-    );
+    let limits = JsonEncodeLimits::builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+        .build();
     let error = metadata
         .to_json_vec_with_limits(limits)
         .expect_err("one output byte cannot encode metadata");
