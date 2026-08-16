@@ -10,10 +10,10 @@
 #![cfg(feature = "json")]
 
 use qubit_budget::ResourceLimit;
+use qubit_budget::json::JsonDecodeLimits;
+use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 use qubit_metadata::MetadataLimits;
-use qubit_metadata::default_json_decode_limits;
-use qubit_metadata::default_json_encode_limits;
 
 #[test]
 fn test_metadata_limits_default_exposes_domain_profile() {
@@ -28,9 +28,9 @@ fn test_metadata_limits_default_exposes_domain_profile() {
 #[test]
 fn test_metadata_limits_replace_json_profile() {
     let limits = MetadataLimits::default().with_json_decode(
-        default_json_decode_limits().with_input_bytes_limit(
-            ResourceLimit::new(JsonResource::InputBytes, 8),
-        ),
+        JsonDecodeLimits::builder()
+            .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 8))
+            .build(),
     );
     assert_eq!(limits.json_decode().max_input_bytes(), Some(8));
     assert_eq!(
@@ -39,9 +39,14 @@ fn test_metadata_limits_replace_json_profile() {
     );
 
     let limits = MetadataLimits::default()
-        .with_json_encode(default_json_encode_limits().with_output_bytes_limit(
-            ResourceLimit::new(JsonResource::OutputBytes, 8),
-        ))
+        .with_json_encode(
+            JsonEncodeLimits::builder()
+                .output_bytes_limit(ResourceLimit::new(
+                    JsonResource::OutputBytes,
+                    8,
+                ))
+                .build(),
+        )
         .with_max_metadata_entries(4_096)
         .with_max_schema_fields(4_096)
         .with_max_key_bytes(256);
