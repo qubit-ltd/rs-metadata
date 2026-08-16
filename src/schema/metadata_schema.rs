@@ -128,13 +128,14 @@ impl MetadataSchema {
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut session = JsonDecodeSession::owned(limits.json_decode());
-        let wire = JsonDecoder::new(&mut session)
-            .decode_seed(
+        let wire = JsonDecoder::default()
+            .decode_seed_utf8(
                 MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
                     limits.max_schema_fields(),
                     limits.max_key_bytes(),
                 )),
                 input,
+                &mut session,
             )
             .map_err(Into::<crate::MetadataWireDecodeError>::into)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
