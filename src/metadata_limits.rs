@@ -14,6 +14,8 @@ use qubit_budget::json::JsonResource;
 use qubit_budget::json::JsonValueLimits;
 use serde::de::Error as _;
 
+use crate::metadata_limits_builder::MetadataLimitsBuilder;
+
 /// Default maximum complete metadata JSON input or output length.
 pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
 
@@ -43,38 +45,20 @@ pub struct MetadataLimits {
 }
 
 impl MetadataLimits {
-    /// Creates metadata limits with the default JSON profile and the supplied
-    /// input/output byte bound.
-    pub fn new(max_json_bytes: usize) -> Self {
+    /// Creates a builder with the default JSON profile and domain limits.
+    #[inline(always)]
+    pub fn builder() -> MetadataLimitsBuilder {
+        MetadataLimitsBuilder::default()
+    }
+
+    pub(crate) fn from_builder(builder: MetadataLimitsBuilder) -> Self {
         Self {
-            json_decode: JsonDecodeLimits::builder()
-                .input_bytes_limit(ResourceLimit::new(
-                    JsonResource::InputBytes,
-                    json_quantity(max_json_bytes),
-                ))
-                .build(),
-            json_encode: JsonEncodeLimits::builder()
-                .output_bytes_limit(ResourceLimit::new(
-                    JsonResource::OutputBytes,
-                    json_quantity(max_json_bytes),
-                ))
-                .build(),
-            max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
-            max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
-            max_key_bytes: DEFAULT_MAX_KEY_BYTES,
+            json_decode: builder.json_decode,
+            json_encode: builder.json_encode,
+            max_metadata_entries: builder.max_metadata_entries,
+            max_schema_fields: builder.max_schema_fields,
+            max_key_bytes: builder.max_key_bytes,
         }
-    }
-
-    /// Replaces the JSON decoding profile.
-    pub fn with_json_decode(mut self, limits: JsonDecodeLimits) -> Self {
-        self.json_decode = limits;
-        self
-    }
-
-    /// Replaces the JSON encoding profile.
-    pub fn with_json_encode(mut self, limits: JsonEncodeLimits) -> Self {
-        self.json_encode = limits;
-        self
     }
 
     /// Returns the JSON decoding profile.
@@ -85,24 +69,6 @@ impl MetadataLimits {
     /// Returns the JSON encoding profile.
     pub const fn json_encode(&self) -> JsonEncodeLimits {
         self.json_encode
-    }
-
-    /// Sets the metadata-entry domain limit.
-    pub const fn with_max_metadata_entries(mut self, maximum: usize) -> Self {
-        self.max_metadata_entries = maximum;
-        self
-    }
-
-    /// Sets the schema-field domain limit.
-    pub const fn with_max_schema_fields(mut self, maximum: usize) -> Self {
-        self.max_schema_fields = maximum;
-        self
-    }
-
-    /// Sets the metadata/schema key-byte domain limit.
-    pub const fn with_max_key_bytes(mut self, maximum: usize) -> Self {
-        self.max_key_bytes = maximum;
-        self
     }
 
     /// Returns the metadata-entry domain limit.
@@ -146,7 +112,7 @@ impl MetadataLimits {
 
 impl Default for MetadataLimits {
     fn default() -> Self {
-        Self::new(DEFAULT_MAX_JSON_BYTES)
+        Self::builder().build()
     }
 }
 
