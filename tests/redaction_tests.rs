@@ -27,12 +27,12 @@ fn policy_with_domain_limits(
     max_nodes: usize,
     max_collection_items: usize,
 ) -> RedactionPolicy {
-    let limits = DomainRedactionLimits::new(
-        max_nodes,
-        max_collection_items,
-        DomainRedactionLimits::DEFAULT_MAX_DEPTH,
-    )
-    .expect("the test domain limits should be valid");
+    let limits = DomainRedactionLimits::builder()
+        .max_nodes(max_nodes)
+        .max_collection_items(max_collection_items)
+        .max_depth(DomainRedactionLimits::DEFAULT_MAX_DEPTH)
+        .build()
+        .expect("the test domain limits should be valid");
     let mut builder = RedactionPolicy::builder();
     builder.limits().domain(limits);
     builder
@@ -92,12 +92,12 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
     let metadata = Metadata::new()
         .with("first_secret", "first-value")
         .with("second_secret", "second-value");
-    let limits = DomainRedactionLimits::new(
-        3,
-        2,
-        DomainRedactionLimits::DEFAULT_MAX_DEPTH,
-    )
-    .expect("the test domain limits should be valid");
+    let limits = DomainRedactionLimits::builder()
+        .max_nodes(3)
+        .max_collection_items(2)
+        .max_depth(DomainRedactionLimits::DEFAULT_MAX_DEPTH)
+        .build()
+        .expect("the test domain limits should be valid");
     let mut builder = RedactionPolicy::builder();
     builder
         .fields()
@@ -118,12 +118,12 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
 #[test]
 fn test_metadata_one_less_structural_node_truncates() {
     let metadata = Metadata::new().with("secret", "secret-value");
-    let limits = DomainRedactionLimits::new(
-        2,
-        1,
-        DomainRedactionLimits::DEFAULT_MAX_DEPTH,
-    )
-    .expect("the test domain limits should be valid");
+    let limits = DomainRedactionLimits::builder()
+        .max_nodes(2)
+        .max_collection_items(1)
+        .max_depth(DomainRedactionLimits::DEFAULT_MAX_DEPTH)
+        .build()
+        .expect("the test domain limits should be valid");
     let mut builder = RedactionPolicy::builder();
     builder
         .fields()
