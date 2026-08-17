@@ -100,7 +100,7 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
         .expect("the test domain limits should be valid");
     let mut builder = RedactionPolicy::builder();
     builder
-        .fields()
+        .legacy_fields()
         .raise("first_secret", Sensitivity::Secret)
         .expect("the test field rule should be valid")
         .raise("second_secret", Sensitivity::Secret)
@@ -126,7 +126,7 @@ fn test_metadata_one_less_structural_node_truncates() {
         .expect("the test domain limits should be valid");
     let mut builder = RedactionPolicy::builder();
     builder
-        .fields()
+        .legacy_fields()
         .raise("secret", Sensitivity::Secret)
         .expect("the test field rule should be valid");
     builder.limits().domain(limits);
@@ -162,7 +162,7 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let metadata = Metadata::new().with("secret_number", 12345_i32);
     let mut builder = RedactionPolicy::builder();
     builder
-        .fields()
+        .legacy_fields()
         .disable_floor()
         .raise("secret_number", Sensitivity::Low)
         .expect("field classification should be valid")
@@ -190,7 +190,7 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
         .with("token", "outer-secret");
     let mut builder = RedactionPolicy::default().to_builder();
     builder
-        .fields()
+        .legacy_fields()
         .raise("api_key", Sensitivity::Secret)
         .expect("field classification should be valid")
         .raise("token", Sensitivity::Secret)
