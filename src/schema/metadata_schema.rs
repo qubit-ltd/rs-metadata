@@ -127,8 +127,9 @@ impl MetadataSchema {
         limits
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut session = JsonDecodeSession::owned(limits.json_decode());
-        let wire = JsonDecoder::default()
+        let mut decoder =
+            JsonDecoder::new(JsonDecodeSession::owned(limits.json_decode()));
+        let wire = decoder
             .decode_seed_utf8(
                 MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
                     limits.max_schema_fields(),
@@ -176,10 +177,8 @@ impl MetadataSchema {
         &self,
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        let mut session = JsonEncodeSession::owned(limits);
-        JsonEncoder::new(session)
-            .to_vec(self)
-            .map_err(Into::into)
+        let session = JsonEncodeSession::owned(limits);
+        JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
     /// Encodes this schema to a writer with the default JSON budget profile.
@@ -217,7 +216,7 @@ impl MetadataSchema {
     where
         W: Write,
     {
-        let mut session = JsonEncodeSession::owned(limits);
+        let session = JsonEncodeSession::owned(limits);
         JsonEncoder::new(session)
             .write_buffered(writer, self)
             .map_err(Into::into)

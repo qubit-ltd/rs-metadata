@@ -179,7 +179,7 @@ fn test_condition_debug_identifies_operator_without_exposing_value() {
 
     assert_eq!(
         comparison_debug,
-        "FilterExpression { node: Condition(Condition { operator: \"greater\", key: \"score\", value: <redacted> }) }"
+        "FilterExpression { node: Condition(Condition { operator: \"greater\", key: \"score\", value: \"<redacted>\" }) }"
     );
     assert_eq!(
         existence_debug,
