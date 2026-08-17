@@ -11,11 +11,9 @@ use std::cmp::Ordering;
 use std::fmt;
 
 use qubit_datatype::NumericComparisonPolicy;
-use qubit_redact::domain::DomainTruncated;
+use qubit_redact::Sensitivity;
 use qubit_redact::domain::Redact;
-use qubit_redact::policy::DomainTraversalAdmission;
-use qubit_redact::policy::DomainValueAdmission;
-use qubit_redact::policy::RedactionSession;
+use qubit_redact::domain::RedactionWriter;
 use qubit_value::Value;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadRefV1;
@@ -370,16 +368,7 @@ impl Redact for Condition {
     /// # Errors
     ///
     /// Returns [`fmt::Error`] when the destination rejects safe output.
-    fn fmt_redacted(
-        &self,
-        session: &mut RedactionSession<'_>,
-        formatter: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        let DomainValueAdmission::Entered(mut scope) =
-            session.enter_domain_value()
-        else {
-            return fmt::Debug::fmt(&DomainTruncated, formatter);
-        };
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_, '_>) {
         let (operator, has_value) = match self {
             Self::Equal { .. } => ("equal", true),
             Self::NotEqual { .. } => ("not_equal", true),
@@ -392,19 +381,15 @@ impl Redact for Condition {
             Self::Exists { .. } => ("exists", false),
             Self::NotExists { .. } => ("not_exists", false),
         };
-        let mut output = formatter.debug_struct("Condition");
-        output.field("operator", &operator);
-        if scope.admit_field() == DomainTraversalAdmission::LimitReached {
-            return output.field("...", &DomainTruncated).finish();
-        }
-        output.field("key", &self.key());
-        if has_value {
-            if scope.admit_field() == DomainTraversalAdmission::LimitReached {
-                return output.field("...", &DomainTruncated).finish();
+        writer.record("Condition", |fields| {
+            let _ = fields.field("operator", || operator);
+            let _ = fields.field("key", || self.key());
+            if has_value {
+                let _ = fields.sensitive(Sensitivity::Secret, "value", || {
+                    panic!("condition operands must not be inspected")
+                });
             }
-            output.field("value", &format_args!("<redacted>"));
-        }
-        output.finish()
+        });
     }
 }
 

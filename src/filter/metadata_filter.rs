@@ -193,9 +193,10 @@ impl MetadataFilter {
         limits
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut session = JsonDecodeSession::owned(limits.json_decode());
+        let mut decoder =
+            JsonDecoder::new(JsonDecodeSession::owned(limits.json_decode()));
         let error_slot = Rc::new(RefCell::new(None));
-        let wire = JsonDecoder::default()
+        let wire = decoder
             .decode_seed_utf8(
                 MetadataFilterWireV1Seed::new(
                     receiver_filter_limits,
@@ -238,10 +239,8 @@ impl MetadataFilter {
         &self,
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        let mut session = JsonEncodeSession::owned(limits);
-        JsonEncoder::new(session)
-            .to_vec(self)
-            .map_err(Into::into)
+        let session = JsonEncodeSession::owned(limits);
+        JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
     /// Encodes this filter to a writer with the default JSON budget profile.
@@ -280,7 +279,7 @@ impl MetadataFilter {
     where
         W: Write,
     {
-        let mut session = JsonEncodeSession::owned(limits);
+        let session = JsonEncodeSession::owned(limits);
         JsonEncoder::new(session)
             .write_buffered(writer, self)
             .map_err(Into::into)
