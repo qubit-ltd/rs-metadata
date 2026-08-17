@@ -202,7 +202,6 @@ impl MetadataFilter {
                     Rc::clone(&error_slot),
                 ),
                 input,
-                &mut session,
             )
             .map_err(|error| {
                 error_slot.borrow_mut().take().map_or_else(
@@ -240,7 +239,7 @@ impl MetadataFilter {
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonEncoder::new(&mut session)
+        JsonEncoder::new(session)
             .to_vec(self)
             .map_err(Into::into)
     }
@@ -282,7 +281,7 @@ impl MetadataFilter {
         W: Write,
     {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonEncoder::new(&mut session)
+        JsonEncoder::new(session)
             .write_buffered(writer, self)
             .map_err(Into::into)
     }

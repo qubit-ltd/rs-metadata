@@ -135,7 +135,6 @@ impl MetadataSchema {
                     limits.max_key_bytes(),
                 )),
                 input,
-                &mut session,
             )
             .map_err(Into::<crate::MetadataWireDecodeError>::into)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
@@ -178,7 +177,7 @@ impl MetadataSchema {
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonEncoder::new(&mut session)
+        JsonEncoder::new(session)
             .to_vec(self)
             .map_err(Into::into)
     }
@@ -219,7 +218,7 @@ impl MetadataSchema {
         W: Write,
     {
         let mut session = JsonEncodeSession::owned(limits);
-        JsonEncoder::new(&mut session)
+        JsonEncoder::new(session)
             .write_buffered(writer, self)
             .map_err(Into::into)
     }
