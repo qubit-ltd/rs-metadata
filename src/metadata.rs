@@ -761,11 +761,11 @@ impl Redact for Metadata {
     /// Metadata is pure domain structure, so this traversal consumes nodes,
     /// collection items, and output bytes but no diagnostic input bytes. The
     /// metadata node and its map field are admitted before the stored map is
-    /// accessed. [`RedactedKeyedMapResult`] then enters exactly one map node
-    /// and admits each exact remaining entry before iterator advancement. Its
-    /// admitted-item path classifies entries without charging duplicate keyed
-    /// root and field nodes; pass-through values still enter their legitimate
-    /// nested value scopes.
+    /// accessed. [`qubit_redact::domain::RedactedKeyedMapResult`] then enters
+    /// exactly one map node and admits each exact remaining entry before
+    /// iterator advancement. Its admitted-item path classifies entries
+    /// without charging duplicate keyed root and field nodes; pass-through
+    /// values still enter their legitimate nested value scopes.
     ///
     /// # Parameters
     ///
