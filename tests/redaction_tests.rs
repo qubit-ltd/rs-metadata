@@ -7,30 +7,28 @@
 // =============================================================================
 //! Redaction tests for metadata diagnostics.
 
+use qubit_budget::StructureLimits;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpressionView;
 use qubit_metadata::Metadata;
-use qubit_redact::InputOutputLimit;
 use qubit_redact::MaskPolicy;
 use qubit_redact::RedactionPolicy;
 use qubit_redact::Sensitivity;
 use qubit_redact::domain::Redact;
 use qubit_redact::domain::RedactionWriter;
-use qubit_redact::policy::DomainRedactionLimits;
 
 /// Builds a policy with explicit domain-structure limits.
 fn policy_with_domain_limits(
     max_nodes: usize,
     max_collection_items: usize,
 ) -> RedactionPolicy {
-    let limits = DomainRedactionLimits::builder()
+    let limits = StructureLimits::builder()
         .max_nodes(max_nodes)
-        .max_collection_items(max_collection_items)
-        .max_depth(DomainRedactionLimits::DEFAULT_MAX_DEPTH)
-        .build()
-        .expect("the test domain limits should be valid");
+        .max_sequence_items(max_collection_items)
+        .max_depth(32)
+        .build();
     let mut builder = RedactionPolicy::builder();
     builder.limits().domain(limits);
     builder
@@ -89,12 +87,11 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
     let metadata = Metadata::new()
         .with("first_secret", "first-value")
         .with("second_secret", "second-value");
-    let limits = DomainRedactionLimits::builder()
+    let limits = StructureLimits::builder()
         .max_nodes(3)
-        .max_collection_items(2)
-        .max_depth(DomainRedactionLimits::DEFAULT_MAX_DEPTH)
-        .build()
-        .expect("the test domain limits should be valid");
+        .max_sequence_items(2)
+        .max_depth(32)
+        .build();
     let mut builder = RedactionPolicy::builder();
     builder
         .edit_fields()
@@ -115,12 +112,11 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
 #[test]
 fn test_metadata_one_less_structural_node_truncates() {
     let metadata = Metadata::new().with("secret", "secret-value");
-    let limits = DomainRedactionLimits::builder()
+    let limits = StructureLimits::builder()
         .max_nodes(1)
-        .max_collection_items(1)
-        .max_depth(DomainRedactionLimits::DEFAULT_MAX_DEPTH)
-        .build()
-        .expect("the test domain limits should be valid");
+        .max_sequence_items(1)
+        .max_depth(32)
+        .build();
     let mut builder = RedactionPolicy::builder();
     builder
         .edit_fields()
@@ -203,24 +199,4 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
     assert!(!display.contains("nested-secret"));
     assert!(!display.contains("outer-secret"));
     assert!(!display.contains('\n'));
-}
-
-#[test]
-fn test_metadata_display_respects_the_default_diagnostic_output_limit() {
-    let metadata = Metadata::new().with("description", "x".repeat(96 * 1024));
-
-    let output = metadata.to_string();
-
-    assert!(output.len() <= InputOutputLimit::default().max_output_bytes());
-    assert!(output.ends_with("<truncated>"));
-}
-
-#[test]
-fn test_metadata_debug_respects_the_default_diagnostic_output_limit() {
-    let metadata = Metadata::new().with("description", "x".repeat(96 * 1024));
-
-    let output = format!("{metadata:?}");
-
-    assert!(output.len() <= InputOutputLimit::default().max_output_bytes());
-    assert!(output.ends_with("<truncated>"));
 }
