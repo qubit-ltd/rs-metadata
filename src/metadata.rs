@@ -26,7 +26,6 @@ use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
 use qubit_json::encode::JsonEncoder;
 use qubit_redact::domain::Redact;
-use qubit_redact::domain::RedactedKeyedMapResult;
 use qubit_redact::domain::RedactionWriter;
 use qubit_value::Value;
 use qubit_value::ValueRef;
