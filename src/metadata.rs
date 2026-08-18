@@ -781,7 +781,7 @@ impl Redact for Metadata {
     ///
     /// Returns [`fmt::Error`] when the destination rejects safe output.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_, '_>) {
-        writer.render(|session| RedactedKeyedMapResult::new(&self.0, session));
+        writer.render(|writer| writer.redacted_keyed_map(&self.0));
     }
 }
 
@@ -789,7 +789,7 @@ impl fmt::Debug for Metadata {
     /// Writes the default-policy redacted representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.redacted().with_policy_output_limit(), formatter)
+        fmt::Debug::fmt(&self.redacted(), formatter)
     }
 }
 
@@ -802,10 +802,7 @@ impl fmt::Display for Metadata {
     /// redaction policy before emitting untrusted metadata to logs.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(
-            &self.redacted().with_policy_output_limit(),
-            formatter,
-        )
+        fmt::Display::fmt(&self.redacted(), formatter)
     }
 }
 
