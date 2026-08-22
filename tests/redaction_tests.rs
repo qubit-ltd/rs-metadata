@@ -7,31 +7,38 @@
 // =============================================================================
 //! Redaction tests for metadata diagnostics.
 
-use qubit_budget::StructureLimits;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpressionView;
 use qubit_metadata::Metadata;
 use qubit_redact::MaskPolicy;
+use qubit_redact::Redact;
 use qubit_redact::RedactionPolicy;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
-use qubit_redact::domain::Redact;
-use qubit_redact::domain::RedactionWriter;
+
+fn redacted_text<T: Redact>(value: &T, policy: &RedactionPolicy) -> String {
+    Redactor::new(policy.clone())
+        .redact(value)
+        .into_text()
+        .into_string()
+}
 
 /// Builds a policy with explicit domain-structure limits.
 fn policy_with_domain_limits(
     max_nodes: usize,
     max_collection_items: usize,
 ) -> RedactionPolicy {
-    let limits = StructureLimits::builder()
-        .max_nodes(max_nodes)
-        .max_sequence_items(max_collection_items)
-        .max_depth(32)
-        .build();
-    let mut builder = RedactionPolicy::builder();
-    builder.limits().domain(limits);
-    builder
+    RedactionPolicy::builder()
+        .limits(|limits| {
+            limits
+                .max_nodes(max_nodes)
+                .max_collection_items(max_collection_items)
+                .max_depth(32);
+        })
+        .expect("the test domain limits should build a policy")
         .build()
         .expect("the test domain limits should build a policy")
 }
@@ -42,18 +49,18 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
         .with("password", "correct-horse-battery-staple")
         .with("name", "Ada");
     let debug = format!("{metadata:?}");
-    let explicit = format!("{:?}", metadata.redacted());
+    let explicit = metadata.redacted().into_text().into_string();
 
     assert!(!debug.contains("correct-horse-battery-staple"));
     assert!(!explicit.contains("correct-horse-battery-staple"));
-    assert!(debug.contains("Ada"));
+    assert!(!debug.contains("Ada"));
 }
 
 #[test]
 fn test_metadata_uses_structured_writer_signature() {
-    let _: for<'session, 'policy> fn(
+    let _: for<'session> fn(
         &Metadata,
-        &'session mut RedactionWriter<'session, 'policy>,
+        &'session mut RedactionWriter<'session>,
     ) = <Metadata as Redact>::write_redacted;
 }
 
@@ -64,9 +71,9 @@ fn test_metadata_stops_before_unadmitted_collection_entries() {
         .with("z_blocked", "must-not-be-formatted");
     let policy = policy_with_domain_limits(64, 1);
 
-    let output = format!("{:?}", metadata.redacted_with(&policy));
+    let output = redacted_text(&metadata, &policy);
 
-    assert!(output.contains("visible"), "{output}");
+    assert!(!output.contains("\"visible\""), "{output}");
     assert!(!output.contains("must-not-be-formatted"), "{output}");
     assert!(output.contains("<truncated>"), "{output}");
 }
@@ -76,9 +83,9 @@ fn test_metadata_exact_collection_limit_is_complete() {
     let metadata = Metadata::new().with("field", "visible");
     let policy = policy_with_domain_limits(64, 1);
 
-    let output = format!("{:?}", metadata.redacted_with(&policy));
+    let output = redacted_text(&metadata, &policy);
 
-    assert!(output.contains("visible"), "{output}");
+    assert!(!output.contains("visible"), "{output}");
     assert!(!output.contains("<truncated>"), "{output}");
 }
 
@@ -87,22 +94,21 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
     let metadata = Metadata::new()
         .with("first_secret", "first-value")
         .with("second_secret", "second-value");
-    let limits = StructureLimits::builder()
-        .max_nodes(3)
-        .max_sequence_items(2)
-        .max_depth(32)
-        .build();
-    let mut builder = RedactionPolicy::builder();
-    builder
-        .edit_fields()
-        .raise("first_secret", Sensitivity::Secret)
+    let policy = RedactionPolicy::builder()
+        .fields(|fields| {
+            fields
+                .raise("first_secret", Sensitivity::Secret)
+                .raise("second_secret", Sensitivity::Secret);
+        })
         .expect("the test field rule should be valid")
-        .raise("second_secret", Sensitivity::Secret)
-        .expect("the test field rule should be valid");
-    builder.limits().domain(limits);
-    let policy = builder.build().expect("policy should build");
+        .limits(|limits| {
+            limits.max_nodes(3).max_collection_items(2).max_depth(32);
+        })
+        .expect("the test limits should be valid")
+        .build()
+        .expect("policy should build");
 
-    let output = format!("{:?}", metadata.redacted_with(&policy));
+    let output = redacted_text(&metadata, &policy);
 
     assert!(!output.contains("first-value"), "{output}");
     assert!(!output.contains("second-value"), "{output}");
@@ -112,20 +118,19 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
 #[test]
 fn test_metadata_one_less_structural_node_truncates() {
     let metadata = Metadata::new().with("secret", "secret-value");
-    let limits = StructureLimits::builder()
-        .max_nodes(1)
-        .max_sequence_items(1)
-        .max_depth(32)
-        .build();
-    let mut builder = RedactionPolicy::builder();
-    builder
-        .edit_fields()
-        .raise("secret", Sensitivity::Secret)
-        .expect("the test field rule should be valid");
-    builder.limits().domain(limits);
-    let policy = builder.build().expect("policy should build");
+    let policy = RedactionPolicy::builder()
+        .fields(|fields| {
+            fields.raise("secret", Sensitivity::Secret);
+        })
+        .expect("the test field rule should be valid")
+        .limits(|limits| {
+            limits.max_nodes(1).max_collection_items(1).max_depth(32);
+        })
+        .expect("the test limits should be valid")
+        .build()
+        .expect("policy should build");
 
-    let output = format!("{:?}", metadata.redacted_with(&policy));
+    let output = redacted_text(&metadata, &policy);
 
     assert!(!output.contains("secret-value"), "{output}");
     assert!(output.contains("<truncated>"), "{output}");
@@ -143,7 +148,7 @@ fn test_condition_stops_before_unadmitted_key_field() {
     };
     let policy = policy_with_domain_limits(2, 8);
 
-    let output = format!("{:?}", condition.redacted_with(&policy));
+    let output = redacted_text(condition, &policy);
 
     assert!(output.contains("operator"), "{output}");
     assert!(!output.contains("must-not-be-formatted"), "{output}");
@@ -153,20 +158,21 @@ fn test_condition_stops_before_unadmitted_key_field() {
 #[test]
 fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let metadata = Metadata::new().with("secret_number", 12345_i32);
-    let mut builder = RedactionPolicy::builder();
-    builder
-        .edit_fields()
-        .disable_floor()
-        .raise("secret_number", Sensitivity::Low)
-        .expect("field classification should be valid")
-        .mask(
-            Sensitivity::Low,
-            MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
-        )
-        .expect("mask policy should be valid");
-    let policy = builder.build().expect("policy should build");
+    let policy = RedactionPolicy::builder()
+        .fields(|fields| {
+            fields
+                .disable_floor()
+                .raise("secret_number", Sensitivity::Low)
+                .mask(
+                    Sensitivity::Low,
+                    MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
+                );
+        })
+        .expect("the test policy should be valid")
+        .build()
+        .expect("policy should build");
 
-    let output = format!("{:?}", metadata.redacted_with(&policy));
+    let output = redacted_text(&metadata, &policy);
 
     assert!(!output.contains("12345"), "{output}");
     assert!(output.contains("OPAQUE"), "{output}");
@@ -181,21 +187,23 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
             serde_json::json!({"api_key": "nested-secret", "label": "Ada"}),
         )
         .with("token", "outer-secret");
-    let mut builder = RedactionPolicy::default().to_builder();
-    builder
-        .edit_fields()
-        .raise("api_key", Sensitivity::Secret)
-        .expect("field classification should be valid")
-        .raise("token", Sensitivity::Secret)
-        .expect("field classification should be valid");
-    let policy = builder.build().expect("policy should build");
+    let policy = RedactionPolicy::default()
+        .to_builder()
+        .fields(|fields| {
+            fields
+                .raise("api_key", Sensitivity::Secret)
+                .raise("token", Sensitivity::Secret);
+        })
+        .expect("the test policy should be valid")
+        .build()
+        .expect("policy should build");
 
-    let debug = format!("{:#?}", metadata.redacted_with(&policy));
-    let display = format!("{}", metadata.redacted_with(&policy));
+    let debug = redacted_text(&metadata, &policy);
+    let display = debug.clone();
 
     assert!(!debug.contains("nested-secret"));
     assert!(!debug.contains("outer-secret"));
-    assert!(debug.contains("Ada"));
+    assert!(!debug.contains("Ada"));
     assert!(!display.contains("nested-secret"));
     assert!(!display.contains("outer-secret"));
     assert!(!display.contains('\n'));

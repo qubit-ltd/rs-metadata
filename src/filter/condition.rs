@@ -11,9 +11,9 @@ use std::cmp::Ordering;
 use std::fmt;
 
 use qubit_datatype::NumericComparisonPolicy;
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
 use qubit_redact::Sensitivity;
-use qubit_redact::domain::Redact;
-use qubit_redact::domain::RedactionWriter;
 use qubit_value::Value;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadRefV1;
@@ -368,7 +368,7 @@ impl Redact for Condition {
     /// # Errors
     ///
     /// Returns [`fmt::Error`] when the destination rejects safe output.
-    fn write_redacted(&self, writer: &mut RedactionWriter<'_, '_>) {
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         let (operator, has_value) = match self {
             Self::Equal { .. } => ("equal", true),
             Self::NotEqual { .. } => ("not_equal", true),
@@ -382,10 +382,10 @@ impl Redact for Condition {
             Self::NotExists { .. } => ("not_exists", false),
         };
         writer.record("Condition", |fields| {
-            let _ = fields.field("operator", || operator);
-            let _ = fields.field("key", || self.key());
+            fields.unredacted("operator", || operator);
+            fields.unredacted("key", || self.key());
             if has_value {
-                let _ = fields.sensitive(Sensitivity::Secret, "value", || {
+                fields.sensitive(Sensitivity::Secret, "value", || {
                     panic!("condition operands must not be inspected")
                 });
             }
@@ -397,7 +397,7 @@ impl fmt::Debug for Condition {
     /// Writes the default-policy diagnostic representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.redacted(), formatter)
+        formatter.write_str(self.redacted().text().as_str())
     }
 }
 
