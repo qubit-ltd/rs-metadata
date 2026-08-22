@@ -25,8 +25,9 @@ use qubit_datatype::DataType;
 use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
 use qubit_json::encode::JsonEncoder;
-use qubit_redact::domain::Redact;
-use qubit_redact::domain::RedactionWriter;
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Sensitivity;
 use qubit_value::Value;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadV1;
@@ -761,11 +762,11 @@ impl Redact for Metadata {
     /// Metadata is pure domain structure, so this traversal consumes nodes,
     /// collection items, and output bytes but no diagnostic input bytes. The
     /// metadata node and its map field are admitted before the stored map is
-    /// accessed. [`qubit_redact::domain::RedactedKeyedMapResult`] then enters
-    /// exactly one map node and admits each exact remaining entry before
-    /// iterator advancement. Its admitted-item path classifies entries
-    /// without charging duplicate keyed root and field nodes; pass-through
-    /// values still enter their legitimate nested value scopes.
+    /// accessed. The map writer then enters exactly one map node and admits
+    /// each exact remaining entry before iterator advancement. Its admitted-
+    /// item path classifies entries without charging duplicate keyed root and
+    /// field nodes; pass-through values still enter their legitimate nested
+    /// value scopes.
     ///
     /// # Parameters
     ///
@@ -779,8 +780,22 @@ impl Redact for Metadata {
     /// # Errors
     ///
     /// Returns [`fmt::Error`] when the destination rejects safe output.
-    fn write_redacted(&self, writer: &mut RedactionWriter<'_, '_>) {
-        writer.render(|writer| writer.redacted_keyed_map(&self.0));
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.record("Metadata", |fields| {
+            fields.nested("values", &MetadataValues(&self.0));
+        });
+    }
+}
+
+struct MetadataValues<'a>(&'a BTreeMap<String, Value>);
+
+impl Redact for MetadataValues<'_> {
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.map(|entries| {
+            for (name, value) in self.0 {
+                entries.sensitive_entry(Sensitivity::Low, name, || value);
+            }
+        });
     }
 }
 
@@ -788,7 +803,7 @@ impl fmt::Debug for Metadata {
     /// Writes the default-policy redacted representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.redacted(), formatter)
+        formatter.write_str(self.redacted().text().as_str())
     }
 }
 
@@ -801,7 +816,7 @@ impl fmt::Display for Metadata {
     /// redaction policy before emitting untrusted metadata to logs.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.redacted(), formatter)
+        fmt::Display::fmt(self.redacted().text(), formatter)
     }
 }
 
