@@ -13,6 +13,7 @@ use std::fmt;
 use qubit_datatype::NumericComparisonPolicy;
 use qubit_redact::Redact;
 use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
 use qubit_value::Value;
 use qubit_value::ValueRef;
@@ -397,7 +398,9 @@ impl fmt::Debug for Condition {
     /// Writes the default-policy diagnostic representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.redacted().text().as_str())
+        let output = Redactor::application_default().redact(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
     }
 }
 

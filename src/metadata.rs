@@ -27,6 +27,7 @@ use qubit_json::decode::JsonDecoder;
 use qubit_json::encode::JsonEncoder;
 use qubit_redact::Redact;
 use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
 use qubit_value::Value;
 use qubit_value::ValueRef;
@@ -803,7 +804,9 @@ impl fmt::Debug for Metadata {
     /// Writes the default-policy redacted representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.redacted().text().as_str())
+        let output = Redactor::application_default().redact(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
     }
 }
 
@@ -816,7 +819,9 @@ impl fmt::Display for Metadata {
     /// redaction policy before emitting untrusted metadata to logs.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self.redacted().text(), formatter)
+        let output = Redactor::application_default().redact(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
     }
 }
 
