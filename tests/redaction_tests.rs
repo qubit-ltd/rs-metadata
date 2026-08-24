@@ -15,14 +15,25 @@ use qubit_metadata::Metadata;
 use qubit_redact::MaskPolicy;
 use qubit_redact::Redact;
 use qubit_redact::RedactionPolicy;
+use qubit_redact::RedactionTextOutput;
 use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
 
-fn redacted_text<T: Redact>(value: &T, policy: &RedactionPolicy) -> String {
-    Redactor::new(policy.clone())
-        .redact(value)
-        .into_text()
+fn redacted_output<T: Redact>(
+    value: &T,
+    policy: &RedactionPolicy,
+) -> RedactionTextOutput {
+    Redactor::new(policy.clone()).redact(value)
+}
+
+fn complete_redacted_text<T: Redact>(
+    value: &T,
+    policy: &RedactionPolicy,
+) -> String {
+    redacted_output(value, policy)
+        .into_complete_text()
+        .expect("the redaction output should be complete")
         .into_string()
 }
 
@@ -49,7 +60,11 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
         .with("password", "correct-horse-battery-staple")
         .with("name", "Ada");
     let debug = format!("{metadata:?}");
-    let explicit = metadata.redacted().into_text().into_string();
+    let explicit = Redactor::application_default()
+        .redact(&metadata)
+        .into_complete_text()
+        .expect("default metadata redaction should be complete")
+        .into_string();
 
     assert!(!debug.contains("correct-horse-battery-staple"));
     assert!(!explicit.contains("correct-horse-battery-staple"));
@@ -71,11 +86,16 @@ fn test_metadata_stops_before_unadmitted_collection_entries() {
         .with("z_blocked", "must-not-be-formatted");
     let policy = policy_with_domain_limits(64, 1);
 
-    let output = redacted_text(&metadata, &policy);
+    let output = redacted_output(&metadata, &policy);
+    let text = output.text().as_str();
 
-    assert!(!output.contains("\"visible\""), "{output}");
-    assert!(!output.contains("must-not-be-formatted"), "{output}");
-    assert!(output.contains("<truncated>"), "{output}");
+    assert_eq!(
+        output.text_or_marker("<redaction incomplete>"),
+        "<redaction incomplete>"
+    );
+    assert!(!text.contains("\"visible\""), "{text}");
+    assert!(!text.contains("must-not-be-formatted"), "{text}");
+    assert!(text.contains("<truncated>"), "{text}");
 }
 
 #[test]
@@ -83,7 +103,7 @@ fn test_metadata_exact_collection_limit_is_complete() {
     let metadata = Metadata::new().with("field", "visible");
     let policy = policy_with_domain_limits(64, 1);
 
-    let output = redacted_text(&metadata, &policy);
+    let output = complete_redacted_text(&metadata, &policy);
 
     assert!(!output.contains("visible"), "{output}");
     assert!(!output.contains("<truncated>"), "{output}");
@@ -108,7 +128,7 @@ fn test_metadata_exact_structural_node_budget_is_complete() {
         .build()
         .expect("policy should build");
 
-    let output = redacted_text(&metadata, &policy);
+    let output = complete_redacted_text(&metadata, &policy);
 
     assert!(!output.contains("first-value"), "{output}");
     assert!(!output.contains("second-value"), "{output}");
@@ -130,10 +150,15 @@ fn test_metadata_one_less_structural_node_truncates() {
         .build()
         .expect("policy should build");
 
-    let output = redacted_text(&metadata, &policy);
+    let output = redacted_output(&metadata, &policy);
+    let text = output.text().as_str();
 
-    assert!(!output.contains("secret-value"), "{output}");
-    assert!(output.contains("<truncated>"), "{output}");
+    assert_eq!(
+        output.text_or_marker("<redaction incomplete>"),
+        "<redaction incomplete>"
+    );
+    assert!(!text.contains("secret-value"), "{text}");
+    assert!(text.contains("<truncated>"), "{text}");
 }
 
 #[cfg(feature = "filter")]
@@ -148,11 +173,16 @@ fn test_condition_stops_before_unadmitted_key_field() {
     };
     let policy = policy_with_domain_limits(2, 8);
 
-    let output = redacted_text(condition, &policy);
+    let output = redacted_output(condition, &policy);
+    let text = output.text().as_str();
 
-    assert!(output.contains("operator"), "{output}");
-    assert!(!output.contains("must-not-be-formatted"), "{output}");
-    assert!(output.contains("<truncated>"), "{output}");
+    assert_eq!(
+        output.text_or_marker("<redaction incomplete>"),
+        "<redaction incomplete>"
+    );
+    assert!(text.contains("operator"), "{text}");
+    assert!(!text.contains("must-not-be-formatted"), "{text}");
+    assert!(text.contains("<truncated>"), "{text}");
 }
 
 #[test]
@@ -172,7 +202,7 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
         .build()
         .expect("policy should build");
 
-    let output = redacted_text(&metadata, &policy);
+    let output = complete_redacted_text(&metadata, &policy);
 
     assert!(!output.contains("12345"), "{output}");
     assert!(output.contains("OPAQUE"), "{output}");
@@ -198,7 +228,7 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
         .build()
         .expect("policy should build");
 
-    let debug = redacted_text(&metadata, &policy);
+    let debug = complete_redacted_text(&metadata, &policy);
     let display = debug.clone();
 
     assert!(!debug.contains("nested-secret"));
