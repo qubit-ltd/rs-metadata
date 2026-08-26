@@ -82,24 +82,22 @@ impl Error for MetadataWireDecodeError {
 impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
     /// Converts a shared JSON decoding error into a metadata wire error.
     fn from(error: JsonDecodeError<JsonResource>) -> Self {
-        match error {
-            JsonDecodeError::Budget(MeasuredBudgetError::Budget(error)) => {
-                Self::Budget(error)
-            }
-            JsonDecodeError::Budget(MeasuredBudgetError::Quantity {
-                resource,
-                source,
-            }) => Self::Quantity { resource, source },
-            JsonDecodeError::Syntax(error) => Self::Syntax(error),
-            JsonDecodeError::Deserialize {
-                category,
-                line,
-                column,
-            } => Self::InvalidJson(<serde_json::Error as DeError>::custom(
-                format_args!(
-                    "JSON deserialization failed ({category:?}) at line {line}, column {column}"
-                ),
-            )),
+        if let Some(error) = error.budget_error().cloned() {
+            return match error {
+                MeasuredBudgetError::Budget(error) => Self::Budget(error),
+                MeasuredBudgetError::Quantity { resource, source } => {
+                    Self::Quantity { resource, source }
+                }
+            };
         }
+        if let Some(error) = error.syntax_error() {
+            return Self::Syntax(*error);
+        }
+        Self::InvalidJson(<serde_json::Error as DeError>::custom(format_args!(
+            "JSON decoding failed ({:?}) at line {}, column {}",
+            error.kind(),
+            error.line().unwrap_or(0),
+            error.column().unwrap_or(0),
+        )))
     }
 }
