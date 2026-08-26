@@ -346,49 +346,39 @@ fn validate_operands(
 }
 
 impl Redact for Condition {
-    /// Writes a diagnostic condition representation without exposing operands.
+    /// Writes a diagnostic condition representation under the active policy.
     ///
-    /// The condition node is entered before its discriminant is inspected.
-    /// The synthetic operator label is derived from that discriminant and does
-    /// not consume a field node. The source key and optional operand fields are
-    /// admitted in source order. The key accessor is invoked only after key
-    /// admission, and operand values are never inspected because their
-    /// diagnostic representation is a fixed marker. A node-budget rejection
-    /// adds one structural truncation field and terminates the branch without
-    /// touching the rejected field.
+    /// The condition node is entered before its discriminant is inspected. The
+    /// synthetic operator label is derived from that discriminant and does not
+    /// consume a field node. The source key and optional operand fields are
+    /// admitted in source order. Accessors are invoked only after admission;
+    /// operand access is skipped for opaque masking but remains available to a
+    /// disabled policy that intentionally restores source values. A node-budget
+    /// rejection adds one structural truncation field and terminates the branch
+    /// without touching the rejected field.
     ///
     /// # Parameters
     ///
-    /// * `session` - Shared policy and cumulative domain budgets.
-    /// * `formatter` - Destination formatting context.
-    ///
-    /// # Returns
-    ///
-    /// The formatter result for the admitted safe condition representation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`fmt::Error`] when the destination rejects safe output.
+    /// * `writer` - Structured destination carrying the active policy and
+    ///   cumulative domain budgets.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
-        let (operator, has_value) = match self {
-            Self::Equal { .. } => ("equal", true),
-            Self::NotEqual { .. } => ("not_equal", true),
-            Self::Less { .. } => ("less", true),
-            Self::LessEqual { .. } => ("less_equal", true),
-            Self::Greater { .. } => ("greater", true),
-            Self::GreaterEqual { .. } => ("greater_equal", true),
-            Self::In { .. } => ("in", true),
-            Self::NotIn { .. } => ("not_in", true),
-            Self::Exists { .. } => ("exists", false),
-            Self::NotExists { .. } => ("not_exists", false),
+        let (operator, operand): (&str, Option<&dyn fmt::Debug>) = match self {
+            Self::Equal { value, .. } => ("equal", Some(value)),
+            Self::NotEqual { value, .. } => ("not_equal", Some(value)),
+            Self::Less { value, .. } => ("less", Some(value)),
+            Self::LessEqual { value, .. } => ("less_equal", Some(value)),
+            Self::Greater { value, .. } => ("greater", Some(value)),
+            Self::GreaterEqual { value, .. } => ("greater_equal", Some(value)),
+            Self::In { values, .. } => ("in", Some(values)),
+            Self::NotIn { values, .. } => ("not_in", Some(values)),
+            Self::Exists { .. } => ("exists", None),
+            Self::NotExists { .. } => ("not_exists", None),
         };
         writer.record("Condition", |fields| {
             fields.unredacted("operator", || operator);
             fields.unredacted("key", || self.key());
-            if has_value {
-                fields.sensitive(Sensitivity::Secret, "value", || {
-                    panic!("condition operands must not be inspected")
-                });
+            if let Some(operand) = operand {
+                fields.sensitive(Sensitivity::Secret, "value", || operand);
             }
         });
     }

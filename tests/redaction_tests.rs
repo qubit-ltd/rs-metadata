@@ -8,6 +8,8 @@
 //! Redaction tests for metadata diagnostics.
 
 #[cfg(feature = "filter")]
+use qubit_metadata::Condition;
+#[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpressionView;
@@ -19,6 +21,8 @@ use qubit_redact::RedactionTextOutput;
 use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
+#[cfg(feature = "filter")]
+use qubit_value::Value;
 
 fn redacted_output<T: Redact>(
     value: &T,
@@ -183,6 +187,28 @@ fn test_condition_stops_before_unadmitted_key_field() {
     assert!(text.contains("operator"), "{text}");
     assert!(!text.contains("must-not-be-formatted"), "{text}");
     assert!(text.contains("<truncated>"), "{text}");
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_condition_disabled_redaction_restores_comparison_operands() {
+    let conditions = [
+        Condition::Equal {
+            key: "scalar".to_owned(),
+            value: Value::from("raw-scalar-operand"),
+        },
+        Condition::In {
+            key: "set".to_owned(),
+            values: vec![Value::from("raw-set-operand")],
+        },
+    ];
+    let policy = RedactionPolicy::disabled();
+
+    let scalar = complete_redacted_text(&conditions[0], &policy);
+    let set = complete_redacted_text(&conditions[1], &policy);
+
+    assert!(scalar.contains("raw-scalar-operand"), "{scalar}");
+    assert!(set.contains("raw-set-operand"), "{set}");
 }
 
 #[test]
