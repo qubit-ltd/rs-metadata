@@ -141,7 +141,7 @@ impl Metadata {
             .validate()
             .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut decoder =
-            JsonDecoder::new(JsonDecodeSession::owned(limits.json_decode()));
+            JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let wire = decoder
             .decode_seed_utf8(
                 MetadataWireV1Seed::new(StrictStringMapSeed::new(
@@ -205,7 +205,7 @@ impl Metadata {
         &self,
         limits: JsonEncodeLimits,
     ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        let session = JsonEncodeSession::owned(limits);
+        let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
@@ -253,7 +253,7 @@ impl Metadata {
     where
         W: Write,
     {
-        let session = JsonEncodeSession::owned(limits);
+        let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session)
             .write_buffered(writer, self)
             .map_err(Into::into)
