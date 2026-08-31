@@ -38,10 +38,7 @@ impl MetadataSchema {
     /// validation pass. Unknown filter fields are accepted when the
     /// schema's [`UnknownFilterFieldPolicy`] is
     /// [`UnknownFilterFieldPolicy::AllowUnchecked`].
-    pub fn validate_filter(
-        &self,
-        filter: &MetadataFilter,
-    ) -> MetadataValidationResult<()> {
+    pub fn validate_filter(&self, filter: &MetadataFilter) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         if let Err(error) = filter.visit_conditions(|condition| {
             self.collect_condition_issues(condition, &mut issues);
@@ -62,48 +59,25 @@ impl MetadataSchema {
     ///
     /// * `condition` - Condition to validate.
     /// * `issues` - Destination for discovered issues.
-    fn collect_condition_issues(
-        &self,
-        condition: &Condition,
-        issues: &mut Vec<MetadataError>,
-    ) {
+    fn collect_condition_issues(&self, condition: &Condition, issues: &mut Vec<MetadataError>) {
         match condition {
-            Condition::Equal { key, value } => collect_issue(
-                issues,
-                self.validate_value_condition(key, "eq", value),
-            ),
-            Condition::NotEqual { key, value } => collect_issue(
-                issues,
-                self.validate_value_condition(key, "ne", value),
-            ),
-            Condition::Less { key, value } => collect_issue(
-                issues,
-                self.validate_range_condition(key, "lt", value),
-            ),
-            Condition::LessEqual { key, value } => collect_issue(
-                issues,
-                self.validate_range_condition(key, "le", value),
-            ),
-            Condition::Greater { key, value } => collect_issue(
-                issues,
-                self.validate_range_condition(key, "gt", value),
-            ),
-            Condition::GreaterEqual { key, value } => collect_issue(
-                issues,
-                self.validate_range_condition(key, "ge", value),
-            ),
+            Condition::Equal { key, value } => collect_issue(issues, self.validate_value_condition(key, "eq", value)),
+            Condition::NotEqual { key, value } => {
+                collect_issue(issues, self.validate_value_condition(key, "ne", value))
+            }
+            Condition::Less { key, value } => collect_issue(issues, self.validate_range_condition(key, "lt", value)),
+            Condition::LessEqual { key, value } => {
+                collect_issue(issues, self.validate_range_condition(key, "le", value))
+            }
+            Condition::Greater { key, value } => collect_issue(issues, self.validate_range_condition(key, "gt", value)),
+            Condition::GreaterEqual { key, value } => {
+                collect_issue(issues, self.validate_range_condition(key, "ge", value))
+            }
             Condition::In { key, values } => {
-                self.collect_set_value_condition_issues(
-                    key, "in_set", values, issues,
-                );
+                self.collect_set_value_condition_issues(key, "in_set", values, issues);
             }
             Condition::NotIn { key, values } => {
-                self.collect_set_value_condition_issues(
-                    key,
-                    "not_in_set",
-                    values,
-                    issues,
-                );
+                self.collect_set_value_condition_issues(key, "not_in_set", values, issues);
             }
             Condition::Exists { key } | Condition::NotExists { key } => {
                 collect_issue(issues, self.filter_field(key).map(|_| ()));
@@ -168,12 +142,7 @@ impl MetadataSchema {
     /// # Errors
     ///
     /// Returns an unknown-field or incompatible-value error.
-    fn validate_value_condition(
-        &self,
-        key: &str,
-        operator: &'static str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    fn validate_value_condition(&self, key: &str, operator: &'static str, value: &Value) -> MetadataResult<()> {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
         };
@@ -208,12 +177,7 @@ impl MetadataSchema {
     ///
     /// Returns an unknown-field, invalid-operator, or incompatible-value
     /// error.
-    fn validate_range_condition(
-        &self,
-        key: &str,
-        operator: &'static str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    fn validate_range_condition(&self, key: &str, operator: &'static str, value: &Value) -> MetadataResult<()> {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
         };
@@ -222,8 +186,7 @@ impl MetadataSchema {
                 key: key.to_string(),
                 operator,
                 data_type: field.data_type(),
-                message: "range operators require a numeric or string field"
-                    .to_string(),
+                message: "range operators require a numeric or string field".to_string(),
             });
         }
         if value_matches_field_type(value, field.data_type()) {
@@ -257,10 +220,7 @@ impl MetadataSchema {
     ///
     /// Returns [`MetadataError::UnknownFilterField`] when the key is unknown
     /// and rejected.
-    fn filter_field(
-        &self,
-        key: &str,
-    ) -> MetadataResult<Option<&MetadataField>> {
+    fn filter_field(&self, key: &str) -> MetadataResult<Option<&MetadataField>> {
         match self.field(key) {
             Some(field) => Ok(Some(field)),
             None if matches!(
@@ -270,9 +230,7 @@ impl MetadataSchema {
             {
                 Ok(None)
             }
-            None => Err(MetadataError::UnknownFilterField {
-                key: key.to_string(),
-            }),
+            None => Err(MetadataError::UnknownFilterField { key: key.to_string() }),
         }
     }
 }

@@ -35,9 +35,7 @@ impl MetadataValidationError {
     #[inline]
     #[must_use]
     pub fn from_issue(issue: MetadataError) -> Self {
-        Self {
-            issues: vec![issue],
-        }
+        Self { issues: vec![issue] }
     }
 
     /// Creates an aggregate validation error from a non-empty issue list.
@@ -95,11 +93,7 @@ impl MetadataValidationError {
 impl fmt::Display for MetadataValidationError {
     /// Formats the validation summary and every collected issue.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            formatter,
-            "{} metadata validation issue(s)",
-            self.issues.len()
-        )?;
+        write!(formatter, "{} metadata validation issue(s)", self.issues.len())?;
         for (index, issue) in self.issues.iter().enumerate() {
             write!(formatter, "; {}: {issue}", index + 1)?;
         }

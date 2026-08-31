@@ -54,9 +54,7 @@ impl fmt::Display for MetadataWireDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Budget(error) => fmt::Display::fmt(error, formatter),
-            Self::Quantity { source, .. } => {
-                fmt::Display::fmt(source, formatter)
-            }
+            Self::Quantity { source, .. } => fmt::Display::fmt(source, formatter),
             Self::Syntax(error) => fmt::Display::fmt(error, formatter),
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),
@@ -85,9 +83,7 @@ impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
         if let Some(error) = error.budget_error().cloned() {
             return match error {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
-                MeasuredBudgetError::Quantity { resource, source } => {
-                    Self::Quantity { resource, source }
-                }
+                MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
             };
         }
         if let Some(error) = error.syntax_error() {

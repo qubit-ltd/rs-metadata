@@ -78,9 +78,7 @@ impl MetadataFilterBuilder {
     /// configured limits.
     #[inline]
     pub fn build(self) -> MetadataResult<MetadataFilter> {
-        let expression = self
-            .expression
-            .ok_or(MetadataError::MissingFilterExpression)?;
+        let expression = self.expression.ok_or(MetadataError::MissingFilterExpression)?;
         expression.validate_limits(self.limits)?;
         Ok(MetadataFilter::new(expression, self.options, self.limits))
     }
@@ -92,12 +90,8 @@ impl MetadataFilterBuilder {
     /// Returns construction errors or aggregate schema-validation errors.
     #[cfg(feature = "schema")]
     #[inline]
-    pub fn build_checked(
-        self,
-        schema: &MetadataSchema,
-    ) -> MetadataValidationResult<MetadataFilter> {
-        let filter =
-            self.build().map_err(MetadataValidationError::from_issue)?;
+    pub fn build_checked(self, schema: &MetadataSchema) -> MetadataValidationResult<MetadataFilter> {
+        let filter = self.build().map_err(MetadataValidationError::from_issue)?;
         schema.validate_filter(&filter)?;
         Ok(filter)
     }

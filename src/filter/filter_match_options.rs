@@ -14,9 +14,7 @@ use serde::Serialize;
 use super::FilterMatchOptionsBuilder;
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct FilterMatchOptions {
@@ -45,9 +43,7 @@ impl FilterMatchOptions {
     ///
     /// Options containing the supplied policy.
     #[inline(always)]
-    pub(crate) const fn from_numeric_comparison_policy(
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> Self {
+    pub(crate) const fn from_numeric_comparison_policy(numeric_comparison_policy: NumericComparisonPolicy) -> Self {
         Self {
             numeric_comparison_policy,
         }
