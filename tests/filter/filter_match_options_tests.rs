@@ -13,10 +13,7 @@ use qubit_metadata::FilterMatchOptions;
 #[test]
 fn test_default_options_use_exact_numeric_comparison() {
     let options = FilterMatchOptions::default();
-    assert_eq!(
-        options.numeric_comparison_policy(),
-        NumericComparisonPolicy::Exact
-    );
+    assert_eq!(options.numeric_comparison_policy(), NumericComparisonPolicy::Exact);
 }
 
 #[test]

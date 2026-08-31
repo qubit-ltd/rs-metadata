@@ -14,8 +14,7 @@ use serde_json::to_value;
 #[test]
 fn test_metadata_serializes_values_as_v1_payloads() {
     let metadata = Metadata::new().with("count", 7_i32);
-    let encoded = to_value(metadata)
-        .expect("metadata should serialize through the borrowed adapter");
+    let encoded = to_value(metadata).expect("metadata should serialize through the borrowed adapter");
 
     assert_eq!(encoded["values"]["count"], json!({"scalar": {"int32": 7}}));
 }

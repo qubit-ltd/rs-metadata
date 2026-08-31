@@ -93,10 +93,7 @@ impl MetadataSchemaBuilder {
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn unknown_metadata_field_policy(
-        mut self,
-        policy: UnknownMetadataFieldPolicy,
-    ) -> Self {
+    pub fn unknown_metadata_field_policy(mut self, policy: UnknownMetadataFieldPolicy) -> Self {
         self.unknown_metadata_field_policy = policy;
         self
     }
@@ -112,10 +109,7 @@ impl MetadataSchemaBuilder {
     /// The updated builder.
     #[inline(always)]
     #[must_use]
-    pub fn unknown_filter_field_policy(
-        mut self,
-        policy: UnknownFilterFieldPolicy,
-    ) -> Self {
+    pub fn unknown_filter_field_policy(mut self, policy: UnknownFilterFieldPolicy) -> Self {
         self.unknown_filter_field_policy = policy;
         self
     }
@@ -146,9 +140,7 @@ impl MetadataSchemaBuilder {
     fn declare_field(mut self, key: &str, field: MetadataField) -> Self {
         if self.fields.contains_key(key) {
             if self.error.is_none() {
-                self.error = Some(MetadataError::DuplicateSchemaField {
-                    key: key.to_string(),
-                });
+                self.error = Some(MetadataError::DuplicateSchemaField { key: key.to_string() });
             }
             return self;
         }

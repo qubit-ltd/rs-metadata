@@ -33,12 +33,7 @@ fn test_schema_builder_rejects_duplicate_field_declarations() {
         .build()
         .expect_err("duplicate schema declarations must be rejected");
 
-    assert_eq!(
-        error,
-        MetadataError::DuplicateSchemaField {
-            key: "id".to_string(),
-        }
-    );
+    assert_eq!(error, MetadataError::DuplicateSchemaField { key: "id".to_string() });
 }
 
 #[test]

@@ -26,19 +26,11 @@ fuzz_target!(|data: &[u8]| {
         .max_key_bytes(32)
         .build()
         .expect("fixed fuzz limits should be valid");
-    if let Ok(value) = MetadataFilter::decode_json_slice_with_limits(
-        data,
-        MetadataLimits::default(),
-        receiver_limits,
-    ) {
-        let encoded =
-            serde_json::to_vec(&value).expect("filter should serialize");
-        let decoded = MetadataFilter::decode_json_slice_with_limits(
-            &encoded,
-            MetadataLimits::default(),
-            receiver_limits,
-        )
-        .expect("filter should round trip");
+    if let Ok(value) = MetadataFilter::decode_json_slice_with_limits(data, MetadataLimits::default(), receiver_limits) {
+        let encoded = serde_json::to_vec(&value).expect("filter should serialize");
+        let decoded =
+            MetadataFilter::decode_json_slice_with_limits(&encoded, MetadataLimits::default(), receiver_limits)
+                .expect("filter should round trip");
         assert_eq!(decoded, value);
     }
 });

@@ -113,10 +113,8 @@ impl FilterLimitsBuilder {
         FilterLimits::try_new(
             self.max_depth.unwrap_or(FilterLimits::MAX.max_depth()),
             self.max_nodes.unwrap_or(FilterLimits::MAX.max_nodes()),
-            self.max_set_values
-                .unwrap_or(FilterLimits::MAX.max_set_values()),
-            self.max_key_bytes
-                .unwrap_or(FilterLimits::MAX.max_key_bytes()),
+            self.max_set_values.unwrap_or(FilterLimits::MAX.max_set_values()),
+            self.max_key_bytes.unwrap_or(FilterLimits::MAX.max_key_bytes()),
         )
     }
 }

@@ -91,16 +91,10 @@ impl Default for MetadataLimitsBuilder {
     fn default() -> Self {
         Self {
             json_decode: JsonDecodeLimits::builder()
-                .input_bytes_limit(ResourceLimit::new(
-                    JsonResource::InputBytes,
-                    DEFAULT_MAX_JSON_BYTES,
-                ))
+                .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, DEFAULT_MAX_JSON_BYTES))
                 .build(),
             json_encode: JsonEncodeLimits::builder()
-                .output_bytes_limit(ResourceLimit::new(
-                    JsonResource::OutputBytes,
-                    DEFAULT_MAX_JSON_BYTES,
-                ))
+                .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, DEFAULT_MAX_JSON_BYTES))
                 .build(),
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,

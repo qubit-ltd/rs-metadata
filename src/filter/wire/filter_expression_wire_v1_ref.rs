@@ -157,16 +157,10 @@ impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
                 Condition::NotExists { key } => Self::NotExists { key },
             },
             FilterExpressionView::And(children) => Self::And {
-                children: children
-                    .iter()
-                    .map(Self::try_from)
-                    .collect::<Result<_, _>>()?,
+                children: children.iter().map(Self::try_from).collect::<Result<_, _>>()?,
             },
             FilterExpressionView::Or(children) => Self::Or {
-                children: children
-                    .iter()
-                    .map(Self::try_from)
-                    .collect::<Result<_, _>>()?,
+                children: children.iter().map(Self::try_from).collect::<Result<_, _>>()?,
             },
             FilterExpressionView::Not(expression) => Self::Not {
                 expression: Box::new(Self::try_from(expression)?),

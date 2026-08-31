@@ -32,16 +32,14 @@ fn test_budget_error_preserves_source_chain() {
 #[test]
 fn test_invalid_json_preserves_source_chain() {
     let error = MetadataWireDecodeError::InvalidJson(
-        serde_json::from_str::<serde_json::Value>("{")
-            .expect_err("input should be malformed"),
+        serde_json::from_str::<serde_json::Value>("{").expect_err("input should be malformed"),
     );
     assert!(error.source().is_some());
 }
 
 #[test]
 fn test_quantity_error_preserves_source_chain() {
-    let source =
-        QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
+    let source = QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
     let error = MetadataWireDecodeError::Quantity {
         resource: JsonResource::InputBytes,
         source,

@@ -75,26 +75,10 @@ impl FilterLimits {
         max_set_values: usize,
         max_key_bytes: usize,
     ) -> MetadataResult<Self> {
-        Self::validate_limit(
-            FilterLimitKind::Depth,
-            max_depth,
-            Self::MAX.max_depth,
-        )?;
-        Self::validate_limit(
-            FilterLimitKind::Nodes,
-            max_nodes,
-            Self::MAX.max_nodes,
-        )?;
-        Self::validate_limit(
-            FilterLimitKind::SetValues,
-            max_set_values,
-            Self::MAX.max_set_values,
-        )?;
-        Self::validate_limit(
-            FilterLimitKind::KeyBytes,
-            max_key_bytes,
-            Self::MAX.max_key_length,
-        )?;
+        Self::validate_limit(FilterLimitKind::Depth, max_depth, Self::MAX.max_depth)?;
+        Self::validate_limit(FilterLimitKind::Nodes, max_nodes, Self::MAX.max_nodes)?;
+        Self::validate_limit(FilterLimitKind::SetValues, max_set_values, Self::MAX.max_set_values)?;
+        Self::validate_limit(FilterLimitKind::KeyBytes, max_key_bytes, Self::MAX.max_key_length)?;
         Ok(Self {
             max_depth,
             max_nodes,
@@ -147,17 +131,9 @@ impl FilterLimits {
     ///
     /// Returns [`MetadataError::InvalidFilterLimit`] when `value` is zero or
     /// greater than `maximum`.
-    fn validate_limit(
-        kind: FilterLimitKind,
-        value: usize,
-        maximum: usize,
-    ) -> MetadataResult<()> {
+    fn validate_limit(kind: FilterLimitKind, value: usize, maximum: usize) -> MetadataResult<()> {
         if value == 0 || value > maximum {
-            return Err(MetadataError::InvalidFilterLimit {
-                kind,
-                value,
-                maximum,
-            });
+            return Err(MetadataError::InvalidFilterLimit { kind, value, maximum });
         }
         Ok(())
     }

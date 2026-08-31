@@ -52,10 +52,7 @@ fn test_display_formats_all_variants() {
     let unknown = MetadataError::UnknownField {
         key: "extra".to_string(),
     };
-    assert_eq!(
-        unknown.to_string(),
-        "Metadata key 'extra' is not defined in schema"
-    );
+    assert_eq!(unknown.to_string(), "Metadata key 'extra' is not defined in schema");
 
     let unknown_filter = MetadataError::UnknownFilterField {
         key: "extra".to_string(),
@@ -69,8 +66,7 @@ fn test_display_formats_all_variants() {
         key: "active".to_string(),
         operator: "gt",
         data_type: DataType::Bool,
-        message: "range operators require a numeric or string field"
-            .to_string(),
+        message: "range operators require a numeric or string field".to_string(),
     };
     assert_eq!(
         invalid_operator.to_string(),
@@ -88,8 +84,7 @@ fn test_display_formats_all_variants() {
     let invalid_operand = MetadataError::InvalidFilterOperand {
         operator: "eq",
         data_type: DataType::Float64,
-        message: "filter operands must be representable by the V1 wire format"
-            .to_string(),
+        message: "filter operands must be representable by the V1 wire format".to_string(),
     };
     assert_eq!(
         invalid_operand.to_string(),
@@ -117,10 +112,7 @@ fn test_display_formats_all_variants() {
     );
 
     assert_eq!(
-        MetadataError::DuplicateSchemaField {
-            key: "id".to_string(),
-        }
-        .to_string(),
+        MetadataError::DuplicateSchemaField { key: "id".to_string() }.to_string(),
         "Metadata schema declares field 'id' more than once"
     );
 }

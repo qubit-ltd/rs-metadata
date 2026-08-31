@@ -30,10 +30,7 @@ fn test_metadata_limits_replace_json_profile() {
     let limits = MetadataLimits::builder()
         .json_decode(
             JsonDecodeLimits::builder()
-                .input_bytes_limit(ResourceLimit::new(
-                    JsonResource::InputBytes,
-                    8,
-                ))
+                .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 8))
                 .build(),
         )
         .build();
@@ -46,10 +43,7 @@ fn test_metadata_limits_replace_json_profile() {
     let limits = MetadataLimits::builder()
         .json_encode(
             JsonEncodeLimits::builder()
-                .output_bytes_limit(ResourceLimit::new(
-                    JsonResource::OutputBytes,
-                    8,
-                ))
+                .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 8))
                 .build(),
         )
         .max_metadata_entries(4_096)
@@ -79,11 +73,5 @@ fn test_metadata_limits_reject_domain_values_above_hard_maxima() {
             .validate()
             .is_err()
     );
-    assert!(
-        MetadataLimits::builder()
-            .max_key_bytes(257)
-            .build()
-            .validate()
-            .is_err()
-    );
+    assert!(MetadataLimits::builder().max_key_bytes(257).build().validate().is_err());
 }

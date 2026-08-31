@@ -35,8 +35,7 @@ impl From<TenantId> for Value {
 
 #[test]
 fn test_typed_reads_accept_downstream_conversion_targets() {
-    let metadata =
-        Metadata::new().with("port", Value::String("8080".to_owned()));
+    let metadata = Metadata::new().with("port", Value::String("8080".to_owned()));
     assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
 }
 
@@ -92,10 +91,7 @@ fn test_with_accepts_value_and_domain_newtype() {
         .with("raw", Value::String("stored".to_owned()))
         .with("tenant_id", TenantId(42));
 
-    assert_eq!(
-        metadata.get_raw("raw"),
-        Some(&Value::String("stored".to_owned()))
-    );
+    assert_eq!(metadata.get_raw("raw"), Some(&Value::String("stored".to_owned())));
     assert_eq!(metadata.get::<u64>("tenant_id"), Some(42));
 }
 
@@ -110,10 +106,7 @@ fn test_set_and_get_scalar_values() {
     assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
     assert_eq!(meta.get::<i64>("priority"), Some(42));
     assert_eq!(meta.get::<bool>("reviewed"), Some(true));
-    assert!(
-        (meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs()
-            < 1e-10
-    );
+    assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
 }
 
 #[test]
@@ -279,10 +272,7 @@ fn test_set_checked_rejects_type_mismatch() {
 
     match error {
         MetadataError::TypeMismatch {
-            key,
-            expected,
-            actual,
-            ..
+            key, expected, actual, ..
         } => {
             assert_eq!(key, "key");
             assert_eq!(expected, DataType::String);
@@ -322,9 +312,7 @@ fn test_with_checked_rejects_unknown_field() {
         .required("known", DataType::String)
         .build()
         .expect("schema should build");
-    let error = Metadata::new()
-        .with_checked(&schema, "unknown", "value")
-        .unwrap_err();
+    let error = Metadata::new().with_checked(&schema, "unknown", "value").unwrap_err();
 
     assert_eq!(
         error,
@@ -354,10 +342,7 @@ fn test_get_raw_and_set_value_support_mutable_chaining() {
     meta.set("raw", Value::String("stored".to_string()))
         .set("count", Value::Int64(7));
 
-    assert_eq!(
-        meta.get_raw("raw"),
-        Some(&Value::String("stored".to_string()))
-    );
+    assert_eq!(meta.get_raw("raw"), Some(&Value::String("stored".to_string())));
     assert_eq!(meta.get::<String>("raw").as_deref(), Some("stored"));
     assert_eq!(meta.get::<i64>("count"), Some(7));
 }
@@ -376,10 +361,7 @@ fn test_insert_value_returns_previous_value() {
 fn test_with_value_builds_metadata_fluently() {
     let meta = Metadata::new().with("raw", Value::String("stored".to_string()));
 
-    assert_eq!(
-        meta.get_raw("raw"),
-        Some(&Value::String("stored".to_string()))
-    );
+    assert_eq!(meta.get_raw("raw"), Some(&Value::String("stored".to_string())));
 }
 
 #[test]
@@ -479,11 +461,7 @@ fn test_iterators_return_sorted_entries() {
     let values: Vec<&Value> = meta.values().collect();
     assert_eq!(
         values,
-        vec![
-            &Value::Int64(1),
-            &Value::Bool(true),
-            &Value::String("last".to_string())
-        ]
+        vec![&Value::Int64(1), &Value::Bool(true), &Value::String("last".to_string())]
     );
 }
 
@@ -567,10 +545,7 @@ fn test_into_inner_returns_underlying_map() {
 
 #[test]
 fn test_from_iterator_and_extend_work() {
-    let pairs = vec![
-        ("a".to_string(), Value::Int64(1)),
-        ("b".to_string(), Value::Int64(2)),
-    ];
+    let pairs = vec![("a".to_string(), Value::Int64(1)), ("b".to_string(), Value::Int64(2))];
     let mut meta: Metadata = pairs.into_iter().collect();
 
     meta.extend(vec![("c".to_string(), Value::Int64(3))]);

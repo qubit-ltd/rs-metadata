@@ -66,10 +66,7 @@ where
             type Value = StrictStringMap<V>;
 
             /// Describes the expected input shape.
-            fn expecting(
-                &self,
-                formatter: &mut fmt::Formatter<'_>,
-            ) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map with unique string keys")
             }
 
@@ -95,10 +92,7 @@ where
                     }
                     match values.entry(key) {
                         std::collections::btree_map::Entry::Occupied(entry) => {
-                            return Err(de::Error::custom(format!(
-                                "duplicate map key '{}'",
-                                entry.key()
-                            )));
+                            return Err(de::Error::custom(format!("duplicate map key '{}'", entry.key())));
                         }
                         std::collections::btree_map::Entry::Vacant(entry) => {
                             let value = map.next_value::<V>()?;

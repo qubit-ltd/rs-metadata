@@ -18,10 +18,7 @@ use qubit_metadata::MetadataFilter;
 fn test_public_exports_are_usable() {
     let meta = Metadata::new().with("k", "v");
     let expression = FilterExpression::builder().eq("k", "v").build().unwrap();
-    let filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
     assert!(filter.matches(&meta));
 }
 
