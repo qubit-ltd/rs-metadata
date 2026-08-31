@@ -17,7 +17,5 @@ fn test_filter_expression_node_flattens_chained_and_children() {
     let third = FilterExpression::builder().exists("c").build().unwrap();
     let expression = first.try_and(second).unwrap().try_and(third).unwrap();
 
-    assert!(
-        matches!(expression.view(), FilterExpressionView::And(children) if children.len() == 3)
-    );
+    assert!(matches!(expression.view(), FilterExpressionView::And(children) if children.len() == 3));
 }

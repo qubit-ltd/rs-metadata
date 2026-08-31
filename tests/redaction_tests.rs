@@ -24,17 +24,11 @@ use qubit_redact::Sensitivity;
 #[cfg(feature = "filter")]
 use qubit_value::Value;
 
-fn redacted_output<T: Redact>(
-    value: &T,
-    policy: &RedactionPolicy,
-) -> RedactionTextOutput {
+fn redacted_output<T: Redact>(value: &T, policy: &RedactionPolicy) -> RedactionTextOutput {
     Redactor::new(policy.clone()).redact(value)
 }
 
-fn complete_redacted_text<T: Redact>(
-    value: &T,
-    policy: &RedactionPolicy,
-) -> String {
+fn complete_redacted_text<T: Redact>(value: &T, policy: &RedactionPolicy) -> String {
     redacted_output(value, policy)
         .into_complete_text()
         .expect("the redaction output should be complete")
@@ -42,10 +36,7 @@ fn complete_redacted_text<T: Redact>(
 }
 
 /// Builds a policy with explicit domain-structure limits.
-fn policy_with_domain_limits(
-    max_nodes: usize,
-    max_collection_items: usize,
-) -> RedactionPolicy {
+fn policy_with_domain_limits(max_nodes: usize, max_collection_items: usize) -> RedactionPolicy {
     RedactionPolicy::builder()
         .limits(|limits| {
             limits
@@ -77,10 +68,7 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
 
 #[test]
 fn test_metadata_uses_structured_writer_signature() {
-    let _: for<'session> fn(
-        &Metadata,
-        &'session mut RedactionWriter<'session>,
-    ) = <Metadata as Redact>::write_redacted;
+    let _: for<'session> fn(&Metadata, &'session mut RedactionWriter<'session>) = <Metadata as Redact>::write_redacted;
 }
 
 #[test]
@@ -219,10 +207,7 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
             fields
                 .disable_floor()
                 .raise("secret_number", Sensitivity::Low)
-                .mask(
-                    Sensitivity::Low,
-                    MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
-                );
+                .mask(Sensitivity::Low, MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0));
         })
         .expect("the test policy should be valid")
         .build()

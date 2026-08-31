@@ -30,10 +30,7 @@ fn test_nested_expression_round_trips_through_filter_wire() {
         .or_group(|group| group.exists("tag").not())
         .build()
         .unwrap();
-    let filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
     let encoded = serde_json::to_string(&filter).unwrap();
     let decoded: MetadataFilter = serde_json::from_str(&encoded).unwrap();
 

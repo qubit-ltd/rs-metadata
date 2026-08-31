@@ -18,10 +18,7 @@ fn test_match_outcome_unknown_remains_non_matching_after_negation() {
         .not()
         .build()
         .unwrap();
-    let filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
 
     assert!(!filter.matches(&Metadata::new()));
 }

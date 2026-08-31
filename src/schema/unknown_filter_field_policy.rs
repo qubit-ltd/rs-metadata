@@ -11,9 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 /// Policy for filter fields that are not declared by a schema.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum UnknownFilterFieldPolicy {
     /// Reject filter keys that are not declared in the schema.

@@ -126,9 +126,7 @@ impl Condition {
             Self::Greater { value, .. } => validate_operand("gt", value),
             Self::GreaterEqual { value, .. } => validate_operand("ge", value),
             Self::In { values, .. } => validate_operands("in_set", values),
-            Self::NotIn { values, .. } => {
-                validate_operands("not_in_set", values)
-            }
+            Self::NotIn { values, .. } => validate_operands("not_in_set", values),
             Self::Exists { .. } | Self::NotExists { .. } => Ok(()),
         }
     }
@@ -147,10 +145,7 @@ impl Condition {
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when a key or membership
     /// condition exceeds its configured bound.
-    pub(crate) fn validate_limits(
-        &self,
-        limits: FilterLimits,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
         let key = self.key();
         if key.len() > limits.max_key_bytes() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -185,92 +180,44 @@ impl Condition {
     /// A definite outcome for concrete comparisons and existence predicates,
     /// or [`MatchOutcome::Unknown`] when a comparison depends on an absent or
     /// unset value.
-    pub(crate) fn evaluate(
-        &self,
-        meta: &Metadata,
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> MatchOutcome {
+    pub(crate) fn evaluate(&self, meta: &Metadata, numeric_comparison_policy: NumericComparisonPolicy) -> MatchOutcome {
         match self {
-            Condition::Equal { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    values_equal(stored, value, numeric_comparison_policy)
-                        .map_or(MatchOutcome::Unknown, MatchOutcome::from_bool)
+            Condition::Equal { key, value } => evaluate_concrete(meta, key, |stored| {
+                values_equal(stored, value, numeric_comparison_policy)
+                    .map_or(MatchOutcome::Unknown, MatchOutcome::from_bool)
+            }),
+            Condition::NotEqual { key, value } => evaluate_concrete(meta, key, |stored| {
+                values_equal(stored, value, numeric_comparison_policy)
+                    .map_or(MatchOutcome::Unknown, |equal| MatchOutcome::from_bool(!equal))
+            }),
+            Condition::Less { key, value } => evaluate_concrete(meta, key, |stored| {
+                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
+                    MatchOutcome::from_bool(ordering == Ordering::Less)
                 })
-            }
-            Condition::NotEqual { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    values_equal(stored, value, numeric_comparison_policy)
-                        .map_or(MatchOutcome::Unknown, |equal| {
-                            MatchOutcome::from_bool(!equal)
-                        })
+            }),
+            Condition::LessEqual { key, value } => evaluate_concrete(meta, key, |stored| {
+                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
+                    MatchOutcome::from_bool(matches!(ordering, Ordering::Less | Ordering::Equal))
                 })
-            }
-            Condition::Less { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    compare_values(stored, value, numeric_comparison_policy)
-                        .map_or(MatchOutcome::Unknown, |ordering| {
-                            MatchOutcome::from_bool(ordering == Ordering::Less)
-                        })
+            }),
+            Condition::Greater { key, value } => evaluate_concrete(meta, key, |stored| {
+                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
+                    MatchOutcome::from_bool(ordering == Ordering::Greater)
                 })
-            }
-            Condition::LessEqual { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    compare_values(stored, value, numeric_comparison_policy)
-                        .map_or(MatchOutcome::Unknown, |ordering| {
-                            MatchOutcome::from_bool(matches!(
-                                ordering,
-                                Ordering::Less | Ordering::Equal
-                            ))
-                        })
+            }),
+            Condition::GreaterEqual { key, value } => evaluate_concrete(meta, key, |stored| {
+                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
+                    MatchOutcome::from_bool(matches!(ordering, Ordering::Greater | Ordering::Equal))
                 })
-            }
-            Condition::Greater { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    compare_values(stored, value, numeric_comparison_policy)
-                        .map_or(MatchOutcome::Unknown, |ordering| {
-                            MatchOutcome::from_bool(
-                                ordering == Ordering::Greater,
-                            )
-                        })
-                })
-            }
-            Condition::GreaterEqual { key, value } => {
-                evaluate_concrete(meta, key, |stored| {
-                    compare_values(stored, value, numeric_comparison_policy)
-                        .map_or(MatchOutcome::Unknown, |ordering| {
-                            MatchOutcome::from_bool(matches!(
-                                ordering,
-                                Ordering::Greater | Ordering::Equal
-                            ))
-                        })
-                })
-            }
-            Condition::In { key, values } => {
-                evaluate_concrete(meta, key, |stored| {
-                    evaluate_membership(
-                        stored,
-                        values,
-                        numeric_comparison_policy,
-                        false,
-                    )
-                })
-            }
-            Condition::NotIn { key, values } => {
-                evaluate_concrete(meta, key, |stored| {
-                    evaluate_membership(
-                        stored,
-                        values,
-                        numeric_comparison_policy,
-                        true,
-                    )
-                })
-            }
-            Condition::Exists { key } => {
-                MatchOutcome::from_bool(concrete_value(meta, key).is_some())
-            }
-            Condition::NotExists { key } => {
-                MatchOutcome::from_bool(concrete_value(meta, key).is_none())
-            }
+            }),
+            Condition::In { key, values } => evaluate_concrete(meta, key, |stored| {
+                evaluate_membership(stored, values, numeric_comparison_policy, false)
+            }),
+            Condition::NotIn { key, values } => evaluate_concrete(meta, key, |stored| {
+                evaluate_membership(stored, values, numeric_comparison_policy, true)
+            }),
+            Condition::Exists { key } => MatchOutcome::from_bool(concrete_value(meta, key).is_some()),
+            Condition::NotExists { key } => MatchOutcome::from_bool(concrete_value(meta, key).is_none()),
         }
     }
 
@@ -303,10 +250,7 @@ impl Condition {
 ///
 /// Returns [`MetadataError::InvalidFilterOperand`] when `value` is unset or
 /// cannot be represented by the V1 wire format.
-fn validate_operand(
-    operator: &'static str,
-    value: &Value,
-) -> MetadataResult<()> {
+fn validate_operand(operator: &'static str, value: &Value) -> MetadataResult<()> {
     if value.is_unset() {
         return Err(MetadataError::InvalidFilterOperand {
             operator,
@@ -318,9 +262,7 @@ fn validate_operand(
         return Err(MetadataError::InvalidFilterOperand {
             operator,
             data_type: value.data_type(),
-            message:
-                "filter operands must be representable by the V1 wire format"
-                    .to_owned(),
+            message: "filter operands must be representable by the V1 wire format".to_owned(),
         });
     }
     Ok(())
@@ -336,13 +278,8 @@ fn validate_operand(
 /// # Errors
 ///
 /// Returns the first invalid operand error.
-fn validate_operands(
-    operator: &'static str,
-    values: &[Value],
-) -> MetadataResult<()> {
-    values
-        .iter()
-        .try_for_each(|value| validate_operand(operator, value))
+fn validate_operands(operator: &'static str, values: &[Value]) -> MetadataResult<()> {
+    values.iter().try_for_each(|value| validate_operand(operator, value))
 }
 
 impl Redact for Condition {
@@ -407,11 +344,7 @@ impl fmt::Debug for Condition {
 /// The predicate result, or [`MatchOutcome::Unknown`] when the key is absent
 /// or stores [`Value::Unset`].
 #[inline]
-fn evaluate_concrete<F>(
-    meta: &Metadata,
-    key: &str,
-    predicate: F,
-) -> MatchOutcome
+fn evaluate_concrete<F>(meta: &Metadata, key: &str, predicate: F) -> MatchOutcome
 where
     F: FnOnce(&Value) -> MatchOutcome,
 {
@@ -481,11 +414,7 @@ fn concrete_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a Value> {
 ///
 /// `true` when both values compare equal under the supplied policy.
 #[inline]
-fn values_equal(
-    left: &Value,
-    right: &Value,
-    numeric_comparison_policy: NumericComparisonPolicy,
-) -> Option<bool> {
+fn values_equal(left: &Value, right: &Value, numeric_comparison_policy: NumericComparisonPolicy) -> Option<bool> {
     if left.is_numeric() && right.is_numeric() {
         return left
             .numeric_cmp(right, numeric_comparison_policy)
@@ -510,18 +439,12 @@ fn values_equal(
 ///
 /// The relative ordering, or `None` when the values cannot be compared.
 #[inline]
-fn compare_values(
-    left: &Value,
-    right: &Value,
-    numeric_comparison_policy: NumericComparisonPolicy,
-) -> Option<Ordering> {
+fn compare_values(left: &Value, right: &Value, numeric_comparison_policy: NumericComparisonPolicy) -> Option<Ordering> {
     if left.is_numeric() && right.is_numeric() {
         return left.numeric_cmp(right, numeric_comparison_policy).ok();
     }
     match (left.view(), right.view()) {
-        (ValueRef::String(left), ValueRef::String(right)) => {
-            left.partial_cmp(right)
-        }
+        (ValueRef::String(left), ValueRef::String(right)) => left.partial_cmp(right),
         _ => None,
     }
 }

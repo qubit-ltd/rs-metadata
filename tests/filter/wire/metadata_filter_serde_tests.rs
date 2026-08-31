@@ -24,24 +24,16 @@ use qubit_value::Value;
 #[test]
 fn test_all_and_none_serde_round_trip() {
     for filter in [MetadataFilter::all(), MetadataFilter::none()] {
-        let encoded =
-            serde_json::to_string(&filter).expect("filter should serialize");
-        let decoded: MetadataFilter =
-            serde_json::from_str(&encoded).expect("filter should deserialize");
+        let encoded = serde_json::to_string(&filter).expect("filter should serialize");
+        let decoded: MetadataFilter = serde_json::from_str(&encoded).expect("filter should deserialize");
         assert_eq!(decoded, filter);
     }
 }
 
 #[test]
 fn test_metadata_filter_serde_round_trip() {
-    let expression = FilterExpression::builder()
-        .exists("status")
-        .build()
-        .unwrap();
-    let filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().exists("status").build().unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
     let encoded = serde_json::to_string(&filter).unwrap();
     let decoded: MetadataFilter = serde_json::from_str(&encoded).unwrap();
 
@@ -68,19 +60,13 @@ fn test_metadata_filter_rejects_unknown_fields_and_versions() {
 
 #[test]
 fn test_metadata_filter_serialization_excludes_transient_limits() {
-    let expression = FilterExpression::builder()
-        .exists("status")
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().exists("status").build().unwrap();
     let filter = MetadataFilter::builder()
         .expression(expression.clone())
         .limits(FilterLimits::builder().max_key_bytes(6).build().unwrap())
         .build()
         .unwrap();
-    let default_limits_filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let default_limits_filter = MetadataFilter::builder().expression(expression).build().unwrap();
     assert_eq!(filter, default_limits_filter);
 
     let encoded = serde_json::to_value(&filter).unwrap();
@@ -98,10 +84,7 @@ fn test_complex_metadata_filter_serde_preserves_wire_shape() {
         .in_set("priority", [1_i64, 2_i64])
         .or_group(|group| {
             group
-                .eq(
-                    "payload",
-                    Value::Json(serde_json::json!({"z": {"b": 2, "a": 1}})),
-                )
+                .eq("payload", Value::Json(serde_json::json!({"z": {"b": 2, "a": 1}})))
                 .exists("owner")
         })
         .build()
@@ -111,15 +94,13 @@ fn test_complex_metadata_filter_serde_preserves_wire_shape() {
         .build()
         .expect("complex filter should build");
 
-    let encoded =
-        serde_json::to_value(&filter).expect("filter should serialize");
+    let encoded = serde_json::to_value(&filter).expect("filter should serialize");
     assert_eq!(encoded["version"], serde_json::json!(1));
     assert_eq!(encoded["expression"]["kind"], "or");
     assert!(encoded["expression"]["children"].is_array());
     assert!(encoded.to_string().contains("\"payload\""));
 
-    let decoded: MetadataFilter =
-        serde_json::from_value(encoded).expect("filter should deserialize");
+    let decoded: MetadataFilter = serde_json::from_value(encoded).expect("filter should deserialize");
     assert_eq!(decoded, filter);
 }
 
@@ -136,17 +117,13 @@ fn test_metadata_filter_json_round_trip_and_writer() {
         .expect("filter should build");
 
     let encoded = filter.to_json_vec().expect("filter should encode");
-    let decoded = MetadataFilter::decode_json_slice(&encoded)
-        .expect("filter should decode");
+    let decoded = MetadataFilter::decode_json_slice(&encoded).expect("filter should decode");
     assert_eq!(decoded, filter);
 
     let mut output = Vec::new();
-    filter
-        .to_json_writer(&mut output)
-        .expect("filter should write");
+    filter.to_json_writer(&mut output).expect("filter should write");
     assert_eq!(
-        MetadataFilter::decode_json_slice(&output)
-            .expect("written filter should decode"),
+        MetadataFilter::decode_json_slice(&output).expect("written filter should decode"),
         filter
     );
 }
@@ -154,30 +131,21 @@ fn test_metadata_filter_json_round_trip_and_writer() {
 #[cfg(feature = "json")]
 #[test]
 fn test_metadata_filter_json_decoder_rejects_malformed_input() {
-    let error = MetadataFilter::decode_json_slice(b"null!")
-        .expect_err("malformed filter input must be rejected");
+    let error = MetadataFilter::decode_json_slice(b"null!").expect_err("malformed filter input must be rejected");
     assert!(!error.to_string().is_empty());
 
-    let error = MetadataFilter::decode_json_slice(b"{}")
-        .expect_err("an incomplete filter envelope must be rejected");
+    let error = MetadataFilter::decode_json_slice(b"{}").expect_err("an incomplete filter envelope must be rejected");
     assert!(!error.to_string().is_empty());
 
     let limits = MetadataLimits::builder()
         .json_decode(
             JsonDecodeLimits::builder()
-                .input_bytes_limit(ResourceLimit::new(
-                    JsonResource::InputBytes,
-                    1,
-                ))
+                .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 1))
                 .build(),
         )
         .build();
-    let error = MetadataFilter::decode_json_slice_with_limits(
-        b"{}",
-        limits,
-        FilterLimits::MAX,
-    )
-    .expect_err("the input budget must be enforced");
+    let error = MetadataFilter::decode_json_slice_with_limits(b"{}", limits, FilterLimits::MAX)
+        .expect_err("the input budget must be enforced");
     assert!(!error.to_string().is_empty());
 }
 

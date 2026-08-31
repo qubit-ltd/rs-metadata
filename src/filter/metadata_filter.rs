@@ -152,14 +152,8 @@ impl MetadataFilter {
     /// incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(
-        input: &[u8],
-    ) -> Result<Self, crate::MetadataWireDecodeError> {
-        Self::decode_json_slice_with_limits(
-            input,
-            MetadataLimits::default(),
-            FilterLimits::MAX,
-        )
+    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
+        Self::decode_json_slice_with_limits(input, MetadataLimits::default(), FilterLimits::MAX)
     }
 
     /// Decodes a strict metadata-filter JSON envelope after validating both
@@ -190,18 +184,12 @@ impl MetadataFilter {
         limits: MetadataLimits,
         receiver_filter_limits: FilterLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        limits
-            .validate()
-            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut decoder =
-            JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
+        limits.validate().map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let error_slot = Rc::new(RefCell::new(None));
         let wire = decoder
             .decode_seed_utf8(
-                MetadataFilterWireV1Seed::new(
-                    receiver_filter_limits,
-                    Rc::clone(&error_slot),
-                ),
+                MetadataFilterWireV1Seed::new(receiver_filter_limits, Rc::clone(&error_slot)),
                 input,
             )
             .map_err(|error| {
@@ -216,12 +204,8 @@ impl MetadataFilter {
 
     /// Encodes this filter with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_vec(
-        &self,
-    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.to_json_vec_with_limits(
-            crate::metadata_limits::default_json_encode_limits(),
-        )
+    pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
     }
 
     /// Encodes this filter with caller-provided JSON budgets.
@@ -235,27 +219,18 @@ impl MetadataFilter {
     /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
     /// budget or the filter cannot be represented by the V1 wire format.
     #[cfg(feature = "json")]
-    pub fn to_json_vec_with_limits(
-        &self,
-        limits: JsonEncodeLimits,
-    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+    pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
     /// Encodes this filter to a writer with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_writer<W>(
-        &self,
-        writer: W,
-    ) -> Result<(), crate::MetadataWireEncodeError>
+    pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
         W: Write,
     {
-        self.to_json_writer_with_limits(
-            writer,
-            crate::metadata_limits::default_json_encode_limits(),
-        )
+        self.to_json_writer_with_limits(writer, crate::metadata_limits::default_json_encode_limits())
     }
 
     /// Encodes this filter to a writer with caller-provided JSON budgets.
@@ -287,11 +262,7 @@ impl MetadataFilter {
 
     /// Creates a filter from already validated parts.
     #[inline(always)]
-    pub(crate) const fn new(
-        expression: FilterExpression,
-        options: FilterMatchOptions,
-        limits: FilterLimits,
-    ) -> Self {
+    pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
         Self {
             expression,
             options,
@@ -334,10 +305,7 @@ impl MetadataFilter {
     /// Returns the first error produced by `visitor`.
     #[cfg(feature = "schema")]
     #[inline(always)]
-    pub(crate) fn visit_conditions<F>(
-        &self,
-        mut visitor: F,
-    ) -> MetadataResult<()>
+    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
     {

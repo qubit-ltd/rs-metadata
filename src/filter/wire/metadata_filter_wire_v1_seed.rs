@@ -32,10 +32,7 @@ pub(crate) struct MetadataFilterWireV1Seed {
 
 impl MetadataFilterWireV1Seed {
     /// Creates a bounded filter-envelope seed.
-    pub(crate) fn new(
-        receiver_limits: FilterLimits,
-        error_slot: Rc<RefCell<Option<crate::MetadataError>>>,
-    ) -> Self {
+    pub(crate) fn new(receiver_limits: FilterLimits, error_slot: Rc<RefCell<Option<crate::MetadataError>>>) -> Self {
         Self {
             receiver_limits,
             error_slot,
@@ -80,10 +77,7 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
         let mut version = None;
         let mut expression = None;
         let mut options = None;
-        let mut node_budget = ResourceBudget::new(
-            FilterLimitKind::Nodes,
-            self.receiver_limits.max_nodes(),
-        );
+        let mut node_budget = ResourceBudget::new(FilterLimitKind::Nodes, self.receiver_limits.max_nodes());
         while let Some(field) = map.next_key::<String>()? {
             match field.as_str() {
                 "version" => {
@@ -96,14 +90,12 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
                     if expression.is_some() {
                         return Err(de::Error::duplicate_field("expression"));
                     }
-                    expression = Some(map.next_value_seed(
-                        FilterExpressionWireV1Seed::new(
-                            self.receiver_limits,
-                            &mut node_budget,
-                            1,
-                            Rc::clone(&self.error_slot),
-                        ),
-                    )?);
+                    expression = Some(map.next_value_seed(FilterExpressionWireV1Seed::new(
+                        self.receiver_limits,
+                        &mut node_budget,
+                        1,
+                        Rc::clone(&self.error_slot),
+                    ))?);
                 }
                 "options" => {
                     if options.is_some() {
@@ -112,10 +104,7 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
                     options = Some(map.next_value::<FilterMatchOptions>()?);
                 }
                 _ => {
-                    return Err(de::Error::unknown_field(
-                        &field,
-                        &["version", "expression", "options"],
-                    ));
+                    return Err(de::Error::unknown_field(&field, &["version", "expression", "options"]));
                 }
             }
         }

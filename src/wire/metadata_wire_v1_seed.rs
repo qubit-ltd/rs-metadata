@@ -51,18 +51,12 @@ where
             type Value = MetadataWireV1<S::Value>;
 
             /// Describes the strict metadata envelope.
-            fn expecting(
-                &self,
-                formatter: &mut fmt::Formatter<'_>,
-            ) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a strict metadata V1 envelope")
             }
 
             /// Decodes each envelope field and rejects duplicates or unknowns.
-            fn visit_map<A>(
-                mut self,
-                mut map: A,
-            ) -> Result<Self::Value, A::Error>
+            fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
             {
@@ -72,9 +66,7 @@ where
                     match key.as_str() {
                         "version" => {
                             if version.is_some() {
-                                return Err(DeError::duplicate_field(
-                                    "version",
-                                ));
+                                return Err(DeError::duplicate_field("version"));
                             }
                             version = Some(map.next_value::<u8>()?);
                         }
@@ -82,24 +74,17 @@ where
                             if values.is_some() {
                                 return Err(DeError::duplicate_field("values"));
                             }
-                            let seed = self.values.take().expect(
-                                "metadata values seed is consumed once",
-                            );
+                            let seed = self.values.take().expect("metadata values seed is consumed once");
                             values = Some(map.next_value_seed(seed)?);
                         }
                         _ => {
-                            return Err(DeError::unknown_field(
-                                &key,
-                                &["version", "values"],
-                            ));
+                            return Err(DeError::unknown_field(&key, &["version", "values"]));
                         }
                     }
                 }
                 Ok(MetadataWireV1 {
-                    version: version
-                        .ok_or_else(|| DeError::missing_field("version"))?,
-                    values: values
-                        .ok_or_else(|| DeError::missing_field("values"))?,
+                    version: version.ok_or_else(|| DeError::missing_field("version"))?,
+                    values: values.ok_or_else(|| DeError::missing_field("values"))?,
                 })
             }
         }

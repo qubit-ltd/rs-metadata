@@ -16,10 +16,7 @@ use qubit_metadata::UnknownFilterFieldPolicy;
 
 /// Builds a root filter suitable for schema validation.
 fn filter(expression: FilterExpression) -> MetadataFilter {
-    MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap()
+    MetadataFilter::builder().expression(expression).build().unwrap()
 }
 
 #[test]
@@ -28,10 +25,7 @@ fn test_schema_accepts_compatible_filter_expression() {
         .required("score", DataType::Int64)
         .build()
         .unwrap();
-    let expression = FilterExpression::builder()
-        .ge("score", 10_i64)
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().ge("score", 10_i64).build().unwrap();
 
     assert!(schema.validate_filter(&filter(expression)).is_ok());
 }
@@ -42,10 +36,7 @@ fn test_schema_rejects_incompatible_filter_value() {
         .required("score", DataType::Int64)
         .build()
         .unwrap();
-    let expression = FilterExpression::builder()
-        .eq("score", "ten")
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().eq("score", "ten").build().unwrap();
     let error = schema.validate_filter(&filter(expression)).unwrap_err();
 
     assert!(matches!(
@@ -56,10 +47,7 @@ fn test_schema_rejects_incompatible_filter_value() {
 
 #[test]
 fn test_filter_builder_rejects_nan_numeric_filter_value() {
-    let error = FilterExpression::builder()
-        .eq("score", f64::NAN)
-        .build()
-        .unwrap_err();
+    let error = FilterExpression::builder().eq("score", f64::NAN).build().unwrap_err();
 
     assert!(matches!(
         error,
@@ -92,10 +80,7 @@ fn test_schema_rejects_range_filter_for_non_range_field() {
         .required("enabled", DataType::Bool)
         .build()
         .unwrap();
-    let expression = FilterExpression::builder()
-        .gt("enabled", false)
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().gt("enabled", false).build().unwrap();
     let error = schema.validate_filter(&filter(expression)).unwrap_err();
 
     assert!(matches!(
@@ -106,10 +91,7 @@ fn test_schema_rejects_range_filter_for_non_range_field() {
 
 #[test]
 fn test_schema_honors_unknown_filter_field_policy() {
-    let expression = FilterExpression::builder()
-        .exists("dynamic")
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().exists("dynamic").build().unwrap();
     let strict = MetadataSchema::builder().build().unwrap();
     let permissive = MetadataSchema::builder()
         .unknown_filter_field_policy(UnknownFilterFieldPolicy::AllowUnchecked)

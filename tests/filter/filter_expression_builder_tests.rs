@@ -62,18 +62,8 @@ fn test_builder_rejects_unset_and_non_finite_filter_operands() {
             message: "filter operands must be concrete values".to_owned(),
         })
     );
-    assert!(
-        FilterExpression::builder()
-            .eq("score", f64::NAN)
-            .build()
-            .is_err()
-    );
-    assert!(
-        FilterExpression::builder()
-            .eq("score", f64::INFINITY)
-            .build()
-            .is_err()
-    );
+    assert!(FilterExpression::builder().eq("score", f64::NAN).build().is_err());
+    assert!(FilterExpression::builder().eq("score", f64::INFINITY).build().is_err());
 }
 
 #[test]
@@ -90,10 +80,7 @@ fn test_builder_creates_nested_boolean_expression() {
         .expect("filter should build");
 
     assert!(filter.matches(&sample()));
-    assert!(matches!(
-        filter.expression().view(),
-        FilterExpressionView::Or(_)
-    ));
+    assert!(matches!(filter.expression().view(), FilterExpressionView::Or(_)));
 }
 
 #[test]
@@ -111,9 +98,7 @@ fn test_or_group_matches_either_explicit_branch_within_group() {
         .expression(expression)
         .build()
         .expect("filter should build");
-    let metadata = Metadata::new()
-        .with("tenant", "other")
-        .with("priority", 2_i64);
+    let metadata = Metadata::new().with("tenant", "other").with("priority", 2_i64);
 
     assert!(filter.matches(&metadata));
 }
@@ -172,9 +157,7 @@ fn test_not_propagates_node_limit_error() {
 #[test]
 fn test_and_group_preserves_nested_error() {
     assert_eq!(
-        FilterExpression::builder()
-            .and_group(|group| group.not())
-            .build(),
+        FilterExpression::builder().and_group(|group| group.not()).build(),
         Err(MetadataError::InvalidFilterExpression {
             message: "cannot negate an empty filter expression".to_owned(),
         })

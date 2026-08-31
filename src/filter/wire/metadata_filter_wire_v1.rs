@@ -34,11 +34,7 @@ pub(crate) struct MetadataFilterWireV1 {
 impl MetadataFilterWireV1 {
     /// Creates a decoded V1 envelope from strict visitor output.
     #[cfg(feature = "json")]
-    pub(crate) const fn new(
-        version: u8,
-        expression: FilterExpressionWireV1,
-        options: FilterMatchOptions,
-    ) -> Self {
+    pub(crate) const fn new(version: u8, expression: FilterExpressionWireV1, options: FilterMatchOptions) -> Self {
         Self {
             version,
             expression,
@@ -52,10 +48,7 @@ impl MetadataFilterWireV1 {
     ///
     /// Returns an invalid-expression error for unsupported versions or an
     /// expression-limit error when the expression exceeds receiver limits.
-    pub(crate) fn into_filter(
-        self,
-        receiver_limits: crate::FilterLimits,
-    ) -> MetadataResult<MetadataFilter> {
+    pub(crate) fn into_filter(self, receiver_limits: crate::FilterLimits) -> MetadataResult<MetadataFilter> {
         if self.version != METADATA_FILTER_WIRE_VERSION_V1 {
             return Err(MetadataError::InvalidFilterExpression {
                 message: format!(
@@ -66,10 +59,6 @@ impl MetadataFilterWireV1 {
         }
         self.expression.validate_limits(receiver_limits)?;
         let expression = self.expression.into_expression()?;
-        Ok(MetadataFilter::new(
-            expression,
-            self.options,
-            receiver_limits,
-        ))
+        Ok(MetadataFilter::new(expression, self.options, receiver_limits))
     }
 }

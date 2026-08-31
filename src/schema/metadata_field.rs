@@ -35,10 +35,7 @@ impl MetadataField {
     #[inline]
     #[must_use = "the constructed metadata field should be used"]
     pub fn new(data_type: DataType, required: bool) -> Self {
-        Self {
-            data_type,
-            required,
-        }
+        Self { data_type, required }
     }
 
     /// Returns the runtime data type of this field.

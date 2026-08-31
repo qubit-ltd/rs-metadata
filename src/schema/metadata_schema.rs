@@ -97,9 +97,7 @@ impl MetadataSchema {
     /// schema input.
     #[cfg(feature = "json")]
     #[inline]
-    pub fn decode_json_slice(
-        input: &[u8],
-    ) -> Result<Self, crate::MetadataWireDecodeError> {
+    pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(input, MetadataLimits::default())
     }
 
@@ -124,11 +122,8 @@ impl MetadataSchema {
         input: &[u8],
         limits: MetadataLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        limits
-            .validate()
-            .map_err(crate::MetadataWireDecodeError::InvalidJson)?;
-        let mut decoder =
-            JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
+        limits.validate().map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let wire = decoder
             .decode_seed_utf8(
                 MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
@@ -140,9 +135,7 @@ impl MetadataSchema {
             .map_err(Into::<crate::MetadataWireDecodeError>::into)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
             return Err(crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as DeError>::custom(
-                    "unsupported MetadataSchema wire format version",
-                ),
+                <serde_json::Error as DeError>::custom("unsupported MetadataSchema wire format version"),
             ));
         }
         Ok(Self::new(
@@ -154,12 +147,8 @@ impl MetadataSchema {
 
     /// Encodes this schema with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_vec(
-        &self,
-    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.to_json_vec_with_limits(
-            crate::metadata_limits::default_json_encode_limits(),
-        )
+    pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
     }
 
     /// Encodes this schema with caller-provided JSON budgets.
@@ -173,27 +162,18 @@ impl MetadataSchema {
     /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
     /// budget or serialization fails.
     #[cfg(feature = "json")]
-    pub fn to_json_vec_with_limits(
-        &self,
-        limits: JsonEncodeLimits,
-    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+    pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
     /// Encodes this schema to a writer with the default JSON budget profile.
     #[cfg(feature = "json")]
-    pub fn to_json_writer<W>(
-        &self,
-        writer: W,
-    ) -> Result<(), crate::MetadataWireEncodeError>
+    pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
         W: Write,
     {
-        self.to_json_writer_with_limits(
-            writer,
-            crate::metadata_limits::default_json_encode_limits(),
-        )
+        self.to_json_writer_with_limits(writer, crate::metadata_limits::default_json_encode_limits())
     }
 
     /// Encodes this schema to a writer with caller-provided JSON budgets.
@@ -324,9 +304,7 @@ impl MetadataSchema {
     pub fn validate(&self, meta: &Metadata) -> MetadataValidationResult<()> {
         let mut issues = Vec::new();
         for (key, field) in &self.fields {
-            if field.is_required()
-                && meta.get_raw(key).is_none_or(Value::is_unset)
-            {
+            if field.is_required() && meta.get_raw(key).is_none_or(Value::is_unset) {
                 issues.push(MetadataError::MissingRequiredField {
                     key: key.clone(),
                     expected: field.data_type(),
@@ -367,34 +345,18 @@ impl MetadataSchema {
     ///
     /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
     /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
-    pub(crate) fn validate_entry(
-        &self,
-        key: &str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
-            Some(field) if field.is_required() && value.is_unset() => {
-                Err(MetadataError::MissingRequiredField {
-                    key: key.to_string(),
-                    expected: field.data_type(),
-                })
-            }
+            Some(field) if field.is_required() && value.is_unset() => Err(MetadataError::MissingRequiredField {
+                key: key.to_string(),
+                expected: field.data_type(),
+            }),
             Some(field) if field.data_type() != value.data_type() => {
-                Err(MetadataError::type_mismatch(
-                    key,
-                    field.data_type(),
-                    value.data_type(),
-                ))
+                Err(MetadataError::type_mismatch(key, field.data_type(), value.data_type()))
             }
             Some(_) => Ok(()),
-            None if matches!(
-                self.unknown_metadata_field_policy,
-                UnknownMetadataFieldPolicy::Reject
-            ) =>
-            {
-                Err(MetadataError::UnknownField {
-                    key: key.to_string(),
-                })
+            None if matches!(self.unknown_metadata_field_policy, UnknownMetadataFieldPolicy::Reject) => {
+                Err(MetadataError::UnknownField { key: key.to_string() })
             }
             None => Ok(()),
         }
@@ -444,8 +406,7 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        self.validate_wire_contract()
-            .map_err(<S::Error as SerError>::custom)?;
+        self.validate_wire_contract().map_err(<S::Error as SerError>::custom)?;
         MetadataSchemaWireV1 {
             version: METADATA_SCHEMA_WIRE_VERSION_V1,
             fields: &self.fields,
@@ -465,9 +426,7 @@ impl<'de> Deserialize<'de> for MetadataSchema {
         let wire: MetadataSchemaWireV1<StrictStringMap<MetadataField>> =
             MetadataSchemaWireV1::deserialize(deserializer)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
-            return Err(de::Error::custom(
-                "unsupported MetadataSchema wire format version",
-            ));
+            return Err(de::Error::custom("unsupported MetadataSchema wire format version"));
         }
         Ok(Self::new(
             wire.fields.into_inner(),

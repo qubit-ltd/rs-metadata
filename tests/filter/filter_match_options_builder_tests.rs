@@ -16,8 +16,5 @@ fn test_numeric_comparison_policy_uses_last_value() {
         .numeric_comparison_policy(NumericComparisonPolicy::Approximate)
         .numeric_comparison_policy(NumericComparisonPolicy::Exact)
         .build();
-    assert_eq!(
-        options.numeric_comparison_policy(),
-        NumericComparisonPolicy::Exact
-    );
+    assert_eq!(options.numeric_comparison_policy(), NumericComparisonPolicy::Exact);
 }
