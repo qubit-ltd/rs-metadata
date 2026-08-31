@@ -30,10 +30,7 @@ fn filter_for_existing_key(key: &str) -> MetadataFilter {
 }
 
 /// Deserializes a filter under explicit receiver limits.
-fn deserialize_with_filter_limits(
-    encoded: &str,
-    limits: FilterLimits,
-) -> Result<MetadataFilter, Error> {
+fn deserialize_with_filter_limits(encoded: &str, limits: FilterLimits) -> Result<MetadataFilter, Error> {
     let mut deserializer = Deserializer::from_str(encoded);
     MetadataFilter::deserialize_with_filter_limits(&mut deserializer, limits)
 }
@@ -49,8 +46,8 @@ fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
         .build()
         .unwrap();
 
-    let decoded = deserialize_with_filter_limits(&encoded, receiver)
-        .expect("actual expression should fit receiver limits");
+    let decoded =
+        deserialize_with_filter_limits(&encoded, receiver).expect("actual expression should fit receiver limits");
     assert_eq!(decoded.limits(), receiver);
 }
 
@@ -60,11 +57,7 @@ fn test_receiver_rejects_expression_exceeding_its_key_limit() {
     let receiver = FilterLimits::builder().max_key_bytes(5).build().unwrap();
 
     let error = deserialize_with_filter_limits(&encoded, receiver).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("KeyBytes value 6 exceeds the maximum of 5")
-    );
+    assert!(error.to_string().contains("KeyBytes value 6 exceeds the maximum of 5"));
 }
 
 #[test]
@@ -105,23 +98,13 @@ fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
     let receiver = FilterLimits::builder().max_nodes(1).build().unwrap();
 
     let error = deserialize_with_filter_limits(encoded, receiver).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("Nodes value 2 exceeds the maximum of 1")
-    );
+    assert!(error.to_string().contains("Nodes value 2 exceeds the maximum of 1"));
 }
 
 #[test]
 fn test_metadata_filter_wire_contains_expression() {
-    let expression = FilterExpression::builder()
-        .exists("status")
-        .build()
-        .unwrap();
-    let filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let expression = FilterExpression::builder().exists("status").build().unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
     let encoded = to_value(filter).unwrap();
 
     assert_eq!(encoded["version"], json!(1));

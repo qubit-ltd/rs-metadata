@@ -65,10 +65,7 @@ fn test_default_builder_builds_a_filter() {
         .build()
         .expect("default builder should build a filter");
 
-    assert!(matches!(
-        filter.expression().view(),
-        FilterExpressionView::Condition(_)
-    ));
+    assert!(matches!(filter.expression().view(), FilterExpressionView::Condition(_)));
 }
 
 #[test]
@@ -88,10 +85,7 @@ fn test_build_checked_accepts_a_schema_compatible_filter() {
         .build_checked(&schema)
         .expect("schema-compatible filter should build");
 
-    assert!(matches!(
-        filter.expression().view(),
-        FilterExpressionView::Condition(_)
-    ));
+    assert!(matches!(filter.expression().view(), FilterExpressionView::Condition(_)));
 }
 
 #[test]
@@ -141,16 +135,11 @@ fn test_build_checked_rejects_schema_incompatible_filter() {
 #[test]
 #[cfg(feature = "schema")]
 fn test_build_checked_propagates_missing_expression() {
-    let schema = MetadataSchema::builder()
-        .build()
-        .expect("schema should build");
+    let schema = MetadataSchema::builder().build().expect("schema should build");
 
     let error = MetadataFilter::builder()
         .build_checked(&schema)
         .expect_err("missing expression should be reported");
 
-    assert!(matches!(
-        error.issues(),
-        [MetadataError::MissingFilterExpression]
-    ));
+    assert!(matches!(error.issues(), [MetadataError::MissingFilterExpression]));
 }

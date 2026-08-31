@@ -117,10 +117,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
     type Value = FilterExpressionWireV1;
 
     /// Decodes one expression map after charging its depth and node budget.
-    fn deserialize<D>(
-        mut self,
-        deserializer: D,
-    ) -> Result<Self::Value, D::Error>
+    fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -135,9 +132,7 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
 }
 
 /// Converts shared budget facts to the established metadata filter error.
-fn filter_limit_error(
-    error: InsufficientBudgetError<FilterLimitKind, usize>,
-) -> MetadataError {
+fn filter_limit_error(error: InsufficientBudgetError<FilterLimitKind, usize>) -> MetadataError {
     let InsufficientBudgetError {
         resource,
         limit,
@@ -152,10 +147,7 @@ fn filter_limit_error(
 }
 
 /// Stores the first receiver-limit error produced during one decode call.
-fn capture_filter_error(
-    error_slot: &Rc<RefCell<Option<MetadataError>>>,
-    error: MetadataError,
-) {
+fn capture_filter_error(error_slot: &Rc<RefCell<Option<MetadataError>>>, error: MetadataError) {
     let mut captured = error_slot.borrow_mut();
     if captured.is_none() {
         *captured = Some(error);
@@ -399,11 +391,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         return Err(de::Error::duplicate_field("key"));
                     }
                     let key = map.next_value::<String>()?;
-                    check_key::<A::Error>(
-                        &key,
-                        self.receiver_limits,
-                        &self.error_slot,
-                    )?;
+                    check_key::<A::Error>(&key, self.receiver_limits, &self.error_slot)?;
                     fields.key = Some(key);
                 }
                 "value" => {
@@ -417,49 +405,37 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     if fields.values.is_some() {
                         return Err(de::Error::duplicate_field("values"));
                     }
-                    fields.values =
-                        Some(map.next_value_seed(ValueSequenceSeed::new(
-                            self.receiver_limits,
-                            Rc::clone(&self.error_slot),
-                        ))?);
+                    fields.values = Some(map.next_value_seed(ValueSequenceSeed::new(
+                        self.receiver_limits,
+                        Rc::clone(&self.error_slot),
+                    ))?);
                 }
                 "children" => {
                     if fields.children.is_some() {
                         return Err(de::Error::duplicate_field("children"));
                     }
-                    fields.children = Some(map.next_value_seed(
-                        ExpressionSequenceSeed::new(
-                            self.receiver_limits,
-                            &mut *self.node_budget,
-                            self.depth.saturating_add(1),
-                            Rc::clone(&self.error_slot),
-                        ),
-                    )?);
+                    fields.children = Some(map.next_value_seed(ExpressionSequenceSeed::new(
+                        self.receiver_limits,
+                        &mut *self.node_budget,
+                        self.depth.saturating_add(1),
+                        Rc::clone(&self.error_slot),
+                    ))?);
                 }
                 "expression" => {
                     if fields.expression.is_some() {
                         return Err(de::Error::duplicate_field("expression"));
                     }
-                    fields.expression = Some(Box::new(map.next_value_seed(
-                        FilterExpressionWireV1Seed::new(
-                            self.receiver_limits,
-                            &mut *self.node_budget,
-                            self.depth.saturating_add(1),
-                            Rc::clone(&self.error_slot),
-                        ),
-                    )?));
+                    fields.expression = Some(Box::new(map.next_value_seed(FilterExpressionWireV1Seed::new(
+                        self.receiver_limits,
+                        &mut *self.node_budget,
+                        self.depth.saturating_add(1),
+                        Rc::clone(&self.error_slot),
+                    ))?));
                 }
                 _ => {
                     return Err(de::Error::unknown_field(
                         &field,
-                        &[
-                            "kind",
-                            "key",
-                            "value",
-                            "values",
-                            "children",
-                            "expression",
-                        ],
+                        &["kind", "key", "value", "values", "children", "expression"],
                     ));
                 }
             }
@@ -534,14 +510,12 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
         let maximum = self.receiver_limits.max_nodes();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut children = Vec::with_capacity(capacity);
-        while let Some(child) =
-            sequence.next_element_seed(ExpressionElementSeed {
-                receiver_limits: self.receiver_limits,
-                node_budget: &mut *self.node_budget,
-                depth: self.depth,
-                error_slot: Rc::clone(&self.error_slot),
-            })?
-        {
+        while let Some(child) = sequence.next_element_seed(ExpressionElementSeed {
+            receiver_limits: self.receiver_limits,
+            node_budget: &mut *self.node_budget,
+            depth: self.depth,
+            error_slot: Rc::clone(&self.error_slot),
+        })? {
             children.push(child);
         }
         Ok(children)
@@ -565,13 +539,8 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
     where
         D: Deserializer<'de>,
     {
-        FilterExpressionWireV1Seed::new(
-            self.receiver_limits,
-            self.node_budget,
-            self.depth,
-            self.error_slot,
-        )
-        .deserialize(deserializer)
+        FilterExpressionWireV1Seed::new(self.receiver_limits, self.node_budget, self.depth, self.error_slot)
+            .deserialize(deserializer)
     }
 }
 
@@ -583,10 +552,7 @@ struct ValueSequenceSeed {
 
 impl ValueSequenceSeed {
     /// Creates a bounded membership-value sequence seed.
-    fn new(
-        receiver_limits: FilterLimits,
-        error_slot: Rc<RefCell<Option<MetadataError>>>,
-    ) -> Self {
+    fn new(receiver_limits: FilterLimits, error_slot: Rc<RefCell<Option<MetadataError>>>) -> Self {
         Self {
             receiver_limits,
             error_slot,
@@ -631,13 +597,11 @@ impl<'de> Visitor<'de> for ValueSequenceVisitor {
         let maximum = self.receiver_limits.max_set_values();
         let capacity = sequence.size_hint().unwrap_or(0).min(maximum);
         let mut values = Vec::with_capacity(capacity);
-        while let Some(value) =
-            sequence.next_element_seed(ValueElementSeed {
-                receiver_limits: self.receiver_limits,
-                next_len: values.len().saturating_add(1),
-                error_slot: Rc::clone(&self.error_slot),
-            })?
-        {
+        while let Some(value) = sequence.next_element_seed(ValueElementSeed {
+            receiver_limits: self.receiver_limits,
+            next_len: values.len().saturating_add(1),
+            error_slot: Rc::clone(&self.error_slot),
+        })? {
             values.push(value);
         }
         Ok(values)

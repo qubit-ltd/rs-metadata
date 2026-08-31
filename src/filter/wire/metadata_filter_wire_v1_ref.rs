@@ -33,9 +33,7 @@ impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
     fn try_from(filter: &'a MetadataFilter) -> Result<Self, Self::Error> {
         Ok(Self {
             version: METADATA_FILTER_WIRE_VERSION_V1,
-            expression: FilterExpressionWireV1Ref::try_from(
-                filter.expression(),
-            )?,
+            expression: FilterExpressionWireV1Ref::try_from(filter.expression())?,
             options: filter.options(),
         })
     }

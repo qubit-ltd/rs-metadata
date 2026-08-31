@@ -41,20 +41,15 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
     let encoded = to_value(metadata).expect("metadata should serialize");
 
     assert_eq!(encoded["version"], json!(1));
-    assert_eq!(
-        encoded["values"]["port"],
-        json!({"scalar": {"int32": 8080}})
-    );
+    assert_eq!(encoded["values"]["port"], json!({"scalar": {"int32": 8080}}));
 }
 
 #[test]
 #[cfg(feature = "json")]
 fn test_metadata_v1_user_guide_example_decodes() {
-    const INPUT: &[u8] =
-        br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#;
+    const INPUT: &[u8] = br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#;
 
-    let metadata = Metadata::decode_json_slice(INPUT)
-        .expect("the user-guide V1 example should decode");
+    let metadata = Metadata::decode_json_slice(INPUT).expect("the user-guide V1 example should decode");
 
     assert_eq!(metadata.get_str("tenant_id"), Some("acme"));
 }
@@ -72,8 +67,7 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
     let metadata = Metadata::new().with(&long_key, 1_i64);
     assert!(to_vec(&metadata).is_err());
 
-    let malformed_after_limit =
-        format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
+    let malformed_after_limit = format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
     let error = from_slice::<Metadata>(malformed_after_limit.as_bytes())
         .expect_err("the hard entry limit should reject before the value");
     assert!(error.to_string().contains("256 bytes"));
@@ -95,9 +89,8 @@ fn test_metadata_json_decoder_exercises_seed_error_paths() {
 fn test_metadata_json_decoder_rejects_unsupported_version() {
     let unsupported_version = br#"{"version":2,"values":{}}"#;
 
-    Metadata::decode_json_slice(unsupported_version).expect_err(
-        "the bounded JSON decoder must reject unsupported versions",
-    );
+    Metadata::decode_json_slice(unsupported_version)
+        .expect_err("the bounded JSON decoder must reject unsupported versions");
 }
 
 #[test]
