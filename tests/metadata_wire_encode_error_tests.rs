@@ -19,6 +19,8 @@ use qubit_budget::json::JsonResource;
 use qubit_json::decode::JsonSyntaxError;
 use qubit_json::decode::JsonSyntaxErrorReason;
 use qubit_json::encode::JsonEncodeError;
+use qubit_json::encode::JsonSerializationError;
+use qubit_json::encode::JsonSerializationErrorKind;
 use qubit_metadata::MetadataWireEncodeError;
 
 #[test]
@@ -37,14 +39,8 @@ fn test_budget_error_preserves_source_chain() {
 
 #[test]
 fn test_metadata_wire_encode_error_formats_all_variants() {
-    let syntax = JsonSyntaxError::new(
-        2,
-        1,
-        3,
-        JsonSyntaxErrorReason::UnexpectedByte { byte: b'!' },
-    );
-    let quantity =
-        QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
+    let syntax = JsonSyntaxError::new(2, 1, 3, JsonSyntaxErrorReason::UnexpectedByte { byte: b'!' });
+    let quantity = QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
     let errors = [
         MetadataWireEncodeError::Budget(BudgetError::Insufficient {
             resource: JsonResource::OutputBytes,
@@ -57,8 +53,8 @@ fn test_metadata_wire_encode_error_formats_all_variants() {
             source: quantity,
         },
         MetadataWireEncodeError::Syntax(syntax),
-        MetadataWireEncodeError::Json(serde_json::Error::io(
-            std::io::Error::other("serialize"),
+        MetadataWireEncodeError::Json(JsonSerializationError::new(
+            JsonSerializationErrorKind::CustomSerialization,
         )),
         MetadataWireEncodeError::Io(std::io::Error::other("write")),
     ];
@@ -71,41 +67,30 @@ fn test_metadata_wire_encode_error_formats_all_variants() {
 
 #[test]
 fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
-    let syntax =
-        JsonSyntaxError::new(0, 1, 1, JsonSyntaxErrorReason::UnexpectedEnd);
+    let syntax = JsonSyntaxError::new(0, 1, 1, JsonSyntaxErrorReason::UnexpectedEnd);
     let errors = [
         MetadataWireEncodeError::from(JsonEncodeError::InvalidRawJson(syntax)),
-        MetadataWireEncodeError::from(JsonEncodeError::Serialize(
-            serde_json::Error::io(std::io::Error::other("serialize")),
-        )),
-        MetadataWireEncodeError::from(JsonEncodeError::Write(
-            std::io::Error::other("write"),
-        )),
-        MetadataWireEncodeError::from(JsonEncodeError::Budget(
-            MeasuredBudgetError::Budget(BudgetError::Insufficient {
+        MetadataWireEncodeError::from(JsonEncodeError::Serialize(JsonSerializationError::new(
+            JsonSerializationErrorKind::CustomSerialization,
+        ))),
+        MetadataWireEncodeError::from(JsonEncodeError::Write(std::io::Error::other("write"))),
+        MetadataWireEncodeError::from(JsonEncodeError::Budget(MeasuredBudgetError::Budget(
+            BudgetError::Insufficient {
                 resource: JsonResource::OutputBytes,
                 limit: 4,
                 remaining: 0,
                 requested: 1,
-            }),
-        )),
-        MetadataWireEncodeError::from(JsonEncodeError::Budget(
-            MeasuredBudgetError::Quantity {
-                resource: JsonResource::OutputBytes,
-                source: QuantityConversionError::new(
-                    QuantityMeasurement::U64(9),
-                    "u8",
-                ),
             },
-        )),
+        ))),
+        MetadataWireEncodeError::from(JsonEncodeError::Budget(MeasuredBudgetError::Quantity {
+            resource: JsonResource::OutputBytes,
+            source: QuantityConversionError::new(QuantityMeasurement::U64(9), "u8"),
+        })),
     ];
 
     assert!(matches!(errors[0], MetadataWireEncodeError::Syntax(_)));
     assert!(matches!(errors[1], MetadataWireEncodeError::Json(_)));
     assert!(matches!(errors[2], MetadataWireEncodeError::Io(_)));
     assert!(matches!(errors[3], MetadataWireEncodeError::Budget(_)));
-    assert!(matches!(
-        errors[4],
-        MetadataWireEncodeError::Quantity { .. }
-    ));
+    assert!(matches!(errors[4], MetadataWireEncodeError::Quantity { .. }));
 }
