@@ -15,7 +15,7 @@ use qubit_budget::QuantityConversionError;
 use qubit_budget::json::JsonResource;
 use qubit_json::decode::JsonSyntaxError;
 use qubit_json::encode::JsonEncodeError;
-use serde_json::Error as JsonError;
+use qubit_json::encode::JsonSerializationError;
 
 /// Failure returned by bounded metadata JSON encoding APIs.
 #[derive(Debug)]
@@ -33,8 +33,8 @@ pub enum MetadataWireEncodeError {
     },
     /// The encoded value contains invalid JSON syntax.
     Syntax(JsonSyntaxError),
-    /// Serde JSON rejected the value during bounded encoding.
-    Json(JsonError),
+    /// Bounded JSON serialization rejected the value.
+    Json(JsonSerializationError),
     /// The destination writer rejected bounded JSON output.
     Io(std::io::Error),
 }

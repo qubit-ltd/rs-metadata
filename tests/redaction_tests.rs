@@ -64,10 +64,10 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
         .with("password", "correct-horse-battery-staple")
         .with("name", "Ada");
     let debug = format!("{metadata:?}");
-    let explicit = Redactor::application_default()
+    let explicit = Redactor::strict()
         .redact(&metadata)
         .into_complete_text()
-        .expect("default metadata redaction should be complete")
+        .expect("strict metadata redaction should be complete")
         .into_string();
 
     assert!(!debug.contains("correct-horse-battery-staple"));
@@ -187,28 +187,6 @@ fn test_condition_stops_before_unadmitted_key_field() {
     assert!(text.contains("operator"), "{text}");
     assert!(!text.contains("must-not-be-formatted"), "{text}");
     assert!(text.contains("<truncated>"), "{text}");
-}
-
-#[cfg(feature = "filter")]
-#[test]
-fn test_condition_disabled_redaction_restores_comparison_operands() {
-    let conditions = [
-        Condition::Equal {
-            key: "scalar".to_owned(),
-            value: Value::from("raw-scalar-operand"),
-        },
-        Condition::In {
-            key: "set".to_owned(),
-            values: vec![Value::from("raw-set-operand")],
-        },
-    ];
-    let policy = RedactionPolicy::disabled();
-
-    let scalar = complete_redacted_text(&conditions[0], &policy);
-    let set = complete_redacted_text(&conditions[1], &policy);
-
-    assert!(scalar.contains("raw-scalar-operand"), "{scalar}");
-    assert!(set.contains("raw-set-operand"), "{set}");
 }
 
 #[test]

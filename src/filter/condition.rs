@@ -385,10 +385,10 @@ impl Redact for Condition {
 }
 
 impl fmt::Debug for Condition {
-    /// Writes the default-policy diagnostic representation.
+    /// Writes the strict-policy diagnostic representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = Redactor::application_default().redact(self);
+        let output = Redactor::strict().redact(self);
         let text = output.text_or_marker("<redaction incomplete>");
         formatter.write_str(text.as_ref())
     }
