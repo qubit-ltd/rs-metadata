@@ -801,25 +801,24 @@ impl Redact for MetadataValues<'_> {
 }
 
 impl fmt::Debug for Metadata {
-    /// Writes the default-policy redacted representation.
+    /// Writes the strict-policy redacted representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = Redactor::application_default().redact(self);
+        let output = Redactor::strict().redact(self);
         let text = output.text_or_marker("<redaction incomplete>");
         formatter.write_str(text.as_ref())
     }
 }
 
 impl fmt::Display for Metadata {
-    /// Writes a bounded, default-policy redacted representation as
+    /// Writes a bounded, strict-policy redacted representation as
     /// single-line diagnostic text.
     ///
-    /// The default policy is not a confidentiality boundary for arbitrary
-    /// user-defined keys or error text; callers should apply an explicit
-    /// redaction policy before emitting untrusted metadata to logs.
+    /// The strict policy protects arbitrary user-defined keys and error text
+    /// at this diagnostic boundary.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = Redactor::application_default().redact(self);
+        let output = Redactor::strict().redact(self);
         let text = output.text_or_marker("<redaction incomplete>");
         formatter.write_str(text.as_ref())
     }
