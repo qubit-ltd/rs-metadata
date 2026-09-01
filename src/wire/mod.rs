@@ -12,7 +12,6 @@ mod metadata_schema_wire_v1;
 #[cfg(all(feature = "json", feature = "schema"))]
 mod metadata_schema_wire_v1_seed;
 mod metadata_wire_v1;
-#[cfg(feature = "json")]
 mod metadata_wire_v1_seed;
 mod metadata_wire_values_ref;
 mod strict_string_map;
@@ -26,9 +25,9 @@ pub(crate) use metadata_schema_wire_v1::MetadataSchemaWireV1;
 pub(crate) use metadata_schema_wire_v1_seed::MetadataSchemaWireV1Seed;
 pub(crate) use metadata_wire_v1::METADATA_WIRE_VERSION_V1;
 pub(crate) use metadata_wire_v1::MetadataWireV1;
-#[cfg(feature = "json")]
 pub(crate) use metadata_wire_v1_seed::MetadataWireV1Seed;
 pub(crate) use metadata_wire_values_ref::MetadataWireValuesRef;
 pub(crate) use strict_string_map::StrictStringMap;
 #[cfg(feature = "json")]
 pub(crate) use strict_string_map_seed::StrictStringMapSeed;
+pub(crate) use strict_string_map_seed::StrictStringMapValueSeed;

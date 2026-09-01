@@ -32,11 +32,13 @@ use qubit_redact::Sensitivity;
 use qubit_value::Value;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadV1;
+use qubit_value::ValueWirePayloadV1Seed;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use serde::de;
+use serde::de::DeserializeSeed;
 #[cfg(feature = "json")]
 use serde::de::Error as DeError;
 use serde::ser::Error as SerError;
@@ -51,12 +53,11 @@ use crate::constants::STRICT_STRING_MAP_MAX_KEY_BYTES;
 use crate::metadata_limits::MetadataLimits;
 use crate::wire::METADATA_WIRE_VERSION_V1;
 use crate::wire::MetadataWireV1;
-#[cfg(feature = "json")]
 use crate::wire::MetadataWireV1Seed;
 use crate::wire::MetadataWireValuesRef;
 use crate::wire::StrictStringMap;
 #[cfg(feature = "json")]
-use crate::wire::StrictStringMapSeed;
+use crate::wire::StrictStringMapValueSeed;
 
 /// A structured, ordered, typed key-value store for metadata fields.
 ///
@@ -139,9 +140,10 @@ impl Metadata {
         let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let wire = decoder
             .decode_seed_utf8(
-                MetadataWireV1Seed::new(StrictStringMapSeed::new(
+                MetadataWireV1Seed::new(StrictStringMapValueSeed::new(
                     limits.max_metadata_entries(),
                     limits.max_key_bytes(),
+                    ValueWirePayloadV1Seed::new(),
                 )),
                 input,
             )
@@ -805,7 +807,14 @@ impl<'de> Deserialize<'de> for Metadata {
     where
         D: Deserializer<'de>,
     {
-        let wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>> = MetadataWireV1::deserialize(deserializer)?;
+        let wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>> = MetadataWireV1Seed::new(
+            StrictStringMapValueSeed::new(
+                STRICT_STRING_MAP_MAX_ENTRIES,
+                STRICT_STRING_MAP_MAX_KEY_BYTES,
+                ValueWirePayloadV1Seed::new(),
+            ),
+        )
+        .deserialize(deserializer)?;
         if wire.version != METADATA_WIRE_VERSION_V1 {
             return Err(de::Error::custom("unsupported Metadata wire format version"));
         }

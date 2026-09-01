@@ -9,7 +9,6 @@
 
 use qubit_value::Value;
 use qubit_value::ValueWirePayloadV1;
-use serde::Deserialize;
 use serde::Serialize;
 
 use crate::Condition;
@@ -20,7 +19,7 @@ use crate::MetadataError;
 use crate::MetadataResult;
 
 /// One V1 expression node.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum FilterExpressionWireV1 {
     /// Constant true.
