@@ -7,17 +7,9 @@
 // =============================================================================
 //! V1 [`MetadataFilter`] envelope.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use qubit_budget::ResourceBudget;
-use serde::Deserialize;
-use serde::Deserializer;
-use serde::de::DeserializeSeed;
 use serde::Serialize;
 
 use super::FilterExpressionWireV1;
-use super::FilterExpressionWireV1Seed;
 use crate::FilterMatchOptions;
 use crate::MetadataError;
 use crate::MetadataFilter;
@@ -26,28 +18,12 @@ use crate::MetadataResult;
 /// Current serialized metadata-filter format version.
 pub(crate) const METADATA_FILTER_WIRE_VERSION_V1: u8 = 1;
 
-fn deserialize_filter_expression<'de, D>(deserializer: D) -> Result<FilterExpressionWireV1, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let mut node_budget = ResourceBudget::new(crate::FilterLimitKind::Nodes, crate::FilterLimits::MAX.max_nodes());
-    FilterExpressionWireV1Seed::new(
-        crate::FilterLimits::MAX,
-        &mut node_budget,
-        1,
-        Rc::new(RefCell::new(None)),
-    )
-    .deserialize(deserializer)
-}
-
 /// Strict V1 serialized envelope for a metadata filter.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub(crate) struct MetadataFilterWireV1 {
     /// Wire-format version.
     version: u8,
     /// Root Boolean expression.
-    #[serde(deserialize_with = "deserialize_filter_expression")]
     expression: FilterExpressionWireV1,
     /// Evaluation options.
     options: FilterMatchOptions,
@@ -55,7 +31,6 @@ pub(crate) struct MetadataFilterWireV1 {
 
 impl MetadataFilterWireV1 {
     /// Creates a decoded V1 envelope from strict visitor output.
-    #[cfg(feature = "json")]
     pub(crate) const fn new(version: u8, expression: FilterExpressionWireV1, options: FilterMatchOptions) -> Self {
         Self {
             version,
