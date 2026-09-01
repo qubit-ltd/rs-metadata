@@ -28,6 +28,6 @@ pub(crate) use metadata_wire_v1::MetadataWireV1;
 pub(crate) use metadata_wire_v1_seed::MetadataWireV1Seed;
 pub(crate) use metadata_wire_values_ref::MetadataWireValuesRef;
 pub(crate) use strict_string_map::StrictStringMap;
-#[cfg(feature = "json")]
+#[cfg(all(feature = "json", feature = "schema"))]
 pub(crate) use strict_string_map_seed::StrictStringMapSeed;
 pub(crate) use strict_string_map_seed::StrictStringMapValueSeed;

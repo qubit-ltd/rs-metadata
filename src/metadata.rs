@@ -56,7 +56,6 @@ use crate::wire::MetadataWireV1;
 use crate::wire::MetadataWireV1Seed;
 use crate::wire::MetadataWireValuesRef;
 use crate::wire::StrictStringMap;
-#[cfg(feature = "json")]
 use crate::wire::StrictStringMapValueSeed;
 
 /// A structured, ordered, typed key-value store for metadata fields.
@@ -807,14 +806,13 @@ impl<'de> Deserialize<'de> for Metadata {
     where
         D: Deserializer<'de>,
     {
-        let wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>> = MetadataWireV1Seed::new(
-            StrictStringMapValueSeed::new(
+        let wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>> =
+            MetadataWireV1Seed::new(StrictStringMapValueSeed::new(
                 STRICT_STRING_MAP_MAX_ENTRIES,
                 STRICT_STRING_MAP_MAX_KEY_BYTES,
                 ValueWirePayloadV1Seed::new(),
-            ),
-        )
-        .deserialize(deserializer)?;
+            ))
+            .deserialize(deserializer)?;
         if wire.version != METADATA_WIRE_VERSION_V1 {
             return Err(de::Error::custom("unsupported Metadata wire format version"));
         }
