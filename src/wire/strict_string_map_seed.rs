@@ -27,6 +27,93 @@ pub(crate) struct StrictStringMapSeed<'a, V> {
     marker: std::marker::PhantomData<fn() -> V>,
 }
 
+/// Deserializes a strict string map with a caller-provided value seed.
+pub(crate) struct StrictStringMapValueSeed<S> {
+    max_entries: usize,
+    max_key_bytes: usize,
+    value_seed: S,
+}
+
+impl<S> StrictStringMapValueSeed<S> {
+    /// Creates a bounded strict-map seed with explicit value construction.
+    pub(crate) const fn new(max_entries: usize, max_key_bytes: usize, value_seed: S) -> Self {
+        Self {
+            max_entries,
+            max_key_bytes,
+            value_seed,
+        }
+    }
+}
+
+impl<'de, S> DeserializeSeed<'de> for StrictStringMapValueSeed<S>
+where
+    S: DeserializeSeed<'de> + Clone,
+{
+    type Value = StrictStringMap<S::Value>;
+
+    /// Deserializes a map while applying the supplied seed to every value.
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct StrictStringMapValueVisitor<S> {
+            max_entries: usize,
+            max_key_bytes: usize,
+            value_seed: S,
+        }
+
+        impl<'de, S> Visitor<'de> for StrictStringMapValueVisitor<S>
+        where
+            S: DeserializeSeed<'de> + Clone,
+        {
+            type Value = StrictStringMap<S::Value>;
+
+            /// Describes the expected input shape.
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a map with unique string keys")
+            }
+
+            /// Decodes entries while enforcing key, count, and value bounds.
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut values = std::collections::BTreeMap::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    if key.len() > self.max_key_bytes {
+                        return Err(de::Error::custom(format!(
+                            "map key has {} bytes, exceeding the limit of {} bytes",
+                            key.len(),
+                            self.max_key_bytes,
+                        )));
+                    }
+                    if values.len() >= self.max_entries {
+                        return Err(de::Error::custom(format!(
+                            "map has more than the limit of {} entries",
+                            self.max_entries,
+                        )));
+                    }
+                    match values.entry(key) {
+                        std::collections::btree_map::Entry::Occupied(entry) => {
+                            return Err(de::Error::custom(format!("duplicate map key '{}'", entry.key())));
+                        }
+                        std::collections::btree_map::Entry::Vacant(entry) => {
+                            entry.insert(map.next_value_seed(self.value_seed.clone())?);
+                        }
+                    }
+                }
+                Ok(StrictStringMap(values))
+            }
+        }
+
+        deserializer.deserialize_map(StrictStringMapValueVisitor {
+            max_entries: self.max_entries,
+            max_key_bytes: self.max_key_bytes,
+            value_seed: self.value_seed,
+        })
+    }
+}
+
 impl<V> StrictStringMapSeed<'static, V> {
     /// Creates a bounded strict-map seed.
     pub(crate) const fn new(max_entries: usize, max_key_bytes: usize) -> Self {
