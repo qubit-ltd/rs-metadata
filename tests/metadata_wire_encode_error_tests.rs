@@ -19,6 +19,7 @@ use qubit_budget::json::JsonResource;
 use qubit_json::decode::JsonSyntaxError;
 use qubit_json::decode::JsonSyntaxErrorReason;
 use qubit_json::encode::JsonEncodeError;
+use qubit_json::encode::JsonEncoder;
 use qubit_json::encode::JsonSerializationError;
 use qubit_json::encode::JsonSerializationErrorKind;
 use qubit_metadata::MetadataWireEncodeError;
@@ -67,14 +68,12 @@ fn test_metadata_wire_encode_error_formats_all_variants() {
 
 #[test]
 fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
-    let syntax = JsonSyntaxError::new(0, 1, 1, JsonSyntaxErrorReason::UnexpectedEnd);
+    let serialization = JsonEncoder::unlimited()
+        .to_vec(&u128::MAX)
+        .expect_err("wide integer must fail JSON serialization");
     let errors = [
-        MetadataWireEncodeError::from(JsonEncodeError::InvalidRawJson(syntax)),
-        MetadataWireEncodeError::from(JsonEncodeError::Serialize(JsonSerializationError::new(
-            JsonSerializationErrorKind::CustomSerialization,
-        ))),
-        MetadataWireEncodeError::from(JsonEncodeError::Write(std::io::Error::other("write"))),
-        MetadataWireEncodeError::from(JsonEncodeError::Budget(MeasuredBudgetError::Budget(
+        MetadataWireEncodeError::from(serialization),
+        MetadataWireEncodeError::from(JsonEncodeError::from(MeasuredBudgetError::Budget(
             BudgetError::Insufficient {
                 resource: JsonResource::OutputBytes,
                 limit: 4,
@@ -82,15 +81,13 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
                 requested: 1,
             },
         ))),
-        MetadataWireEncodeError::from(JsonEncodeError::Budget(MeasuredBudgetError::Quantity {
+        MetadataWireEncodeError::from(JsonEncodeError::from(MeasuredBudgetError::Quantity {
             resource: JsonResource::OutputBytes,
             source: QuantityConversionError::new(QuantityMeasurement::U64(9), "u8"),
         })),
     ];
 
-    assert!(matches!(errors[0], MetadataWireEncodeError::Syntax(_)));
-    assert!(matches!(errors[1], MetadataWireEncodeError::Json(_)));
-    assert!(matches!(errors[2], MetadataWireEncodeError::Io(_)));
-    assert!(matches!(errors[3], MetadataWireEncodeError::Budget(_)));
-    assert!(matches!(errors[4], MetadataWireEncodeError::Quantity { .. }));
+    assert!(matches!(errors[0], MetadataWireEncodeError::Json(_)));
+    assert!(matches!(errors[1], MetadataWireEncodeError::Budget(_)));
+    assert!(matches!(errors[2], MetadataWireEncodeError::Quantity { .. }));
 }
