@@ -7,7 +7,6 @@
 // =============================================================================
 //! V1 [`MetadataFilter`] envelope.
 
-use serde::Deserialize;
 use serde::Serialize;
 
 use super::FilterExpressionWireV1;
@@ -20,8 +19,7 @@ use crate::MetadataResult;
 pub(crate) const METADATA_FILTER_WIRE_VERSION_V1: u8 = 1;
 
 /// Strict V1 serialized envelope for a metadata filter.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub(crate) struct MetadataFilterWireV1 {
     /// Wire-format version.
     version: u8,
@@ -33,7 +31,6 @@ pub(crate) struct MetadataFilterWireV1 {
 
 impl MetadataFilterWireV1 {
     /// Creates a decoded V1 envelope from strict visitor output.
-    #[cfg(feature = "json")]
     pub(crate) const fn new(version: u8, expression: FilterExpressionWireV1, options: FilterMatchOptions) -> Self {
         Self {
             version,

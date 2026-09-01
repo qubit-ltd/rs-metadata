@@ -7,11 +7,9 @@
 // =============================================================================
 //! [`MetadataFilter`].
 
-#[cfg(feature = "json")]
 use std::cell::RefCell;
 #[cfg(feature = "json")]
 use std::io::Write;
-#[cfg(feature = "json")]
 use std::rc::Rc;
 
 #[cfg(feature = "json")]
@@ -30,12 +28,11 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use serde::de;
+use serde::de::DeserializeSeed;
 use serde::ser::Error as SerError;
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
-use super::wire::MetadataFilterWireV1;
 use super::wire::MetadataFilterWireV1Ref;
-#[cfg(feature = "json")]
 use super::wire::MetadataFilterWireV1Seed;
 #[cfg(feature = "schema")]
 use crate::Condition;
@@ -104,10 +101,9 @@ impl MetadataFilter {
 
     /// Deserializes a filter and validates a receiver-controlled AST bound.
     ///
-    /// The AST is materialized by the underlying deserializer before the
-    /// receiver bound is checked. Callers must separately bound raw input
-    /// bytes and any deserializer-specific resources before accepting
-    /// untrusted data.
+    /// The receiver bound is charged while the AST is being decoded. Callers
+    /// must separately bound raw input bytes and any deserializer-specific
+    /// resources before accepting untrusted data.
     ///
     /// # Parameters
     ///
@@ -128,9 +124,16 @@ impl MetadataFilter {
     where
         D: Deserializer<'de>,
     {
-        MetadataFilterWireV1::deserialize(deserializer)?
-            .into_filter(receiver_limits)
-            .map_err(de::Error::custom)
+        let error_slot = Rc::new(RefCell::new(None));
+        let wire = MetadataFilterWireV1Seed::new(receiver_limits, Rc::clone(&error_slot))
+            .deserialize(deserializer)
+            .map_err(|error| {
+                error_slot
+                    .borrow_mut()
+                    .take()
+                    .map_or_else(|| de::Error::custom(error), de::Error::custom)
+            })?;
+        wire.into_filter(receiver_limits).map_err(de::Error::custom)
     }
 
     /// Decodes a strict metadata-filter JSON envelope using the default wire

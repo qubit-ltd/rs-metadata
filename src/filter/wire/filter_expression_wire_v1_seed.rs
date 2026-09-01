@@ -14,6 +14,7 @@ use std::rc::Rc;
 use qubit_budget::InsufficientBudgetError;
 use qubit_budget::ResourceBudget;
 use qubit_value::ValueWirePayloadV1;
+use qubit_value::ValueWirePayloadV1Seed;
 use serde::Deserialize;
 use serde::de;
 use serde::de::DeserializeSeed;
@@ -398,7 +399,7 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     if fields.value.is_some() {
                         return Err(de::Error::duplicate_field("value"));
                     }
-                    let value = map.next_value::<ValueWirePayloadV1>()?;
+                    let value = map.next_value_seed(ValueWirePayloadV1Seed::new())?;
                     fields.value = Some(value);
                 }
                 "values" => {
@@ -632,6 +633,6 @@ impl<'de> DeserializeSeed<'de> for ValueElementSeed {
             capture_filter_error(&self.error_slot, error.clone());
             return Err(D::Error::custom(error));
         }
-        ValueWirePayloadV1::deserialize(deserializer)
+        ValueWirePayloadV1Seed::new().deserialize(deserializer)
     }
 }
