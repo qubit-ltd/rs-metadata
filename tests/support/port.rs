@@ -7,7 +7,7 @@
 // =============================================================================
 //! A downstream conversion target used by metadata tests.
 
-use qubit_datatype::ConversionSession;
+use qubit_datatype::ConversionContext;
 use qubit_datatype::DataConversionError;
 use qubit_datatype::DataConversionTarget;
 use qubit_datatype::DataConverter;
@@ -28,8 +28,8 @@ impl DataTypeOf for Port {
 impl DataConversionTarget for Port {
     fn convert_from(
         source: &DataConverter<'_>,
-        session: &mut ConversionSession<'_>,
+        context: &mut ConversionContext<'_, '_>,
     ) -> Result<Self, DataConversionError> {
-        session.delegate::<u16>(source).map(Self)
+        context.delegate::<u16>(source).map(Self)
     }
 }
