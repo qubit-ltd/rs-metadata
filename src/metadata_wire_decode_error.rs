@@ -15,6 +15,7 @@ use qubit_budget::MeasuredBudgetError;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::json::JsonResource;
 use qubit_json::decode::JsonDecodeError;
+use qubit_json::decode::JsonDecodeErrorSource;
 use qubit_json::decode::JsonSyntaxError;
 use serde::de::Error as DeError;
 
@@ -80,20 +81,21 @@ impl Error for MetadataWireDecodeError {
 impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
     /// Converts a shared JSON decoding error into a metadata wire error.
     fn from(error: JsonDecodeError<JsonResource>) -> Self {
-        if let Some(error) = error.budget_error().cloned() {
-            return match error {
+        let kind = error.kind();
+        let line = error.line().unwrap_or(0);
+        let column = error.column().unwrap_or(0);
+        match error.into_source() {
+            JsonDecodeErrorSource::Budget { source, .. } => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
                 MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
-            };
+            },
+            JsonDecodeErrorSource::InvalidJson { syntax, .. } => Self::Syntax(syntax),
+            JsonDecodeErrorSource::EmptyInput { .. }
+            | JsonDecodeErrorSource::InvalidUtf8 { .. }
+            | JsonDecodeErrorSource::UnexpectedTopLevel { .. }
+            | JsonDecodeErrorSource::Deserialize { .. } => Self::InvalidJson(<serde_json::Error as DeError>::custom(
+                format_args!("JSON decoding failed ({kind:?}) at line {line}, column {column}",),
+            )),
         }
-        if let Some(error) = error.syntax_error() {
-            return Self::Syntax(*error);
-        }
-        Self::InvalidJson(<serde_json::Error as DeError>::custom(format_args!(
-            "JSON decoding failed ({:?}) at line {}, column {}",
-            error.kind(),
-            error.line().unwrap_or(0),
-            error.column().unwrap_or(0),
-        )))
     }
 }
