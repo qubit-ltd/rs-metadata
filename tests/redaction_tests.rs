@@ -8,8 +8,6 @@
 //! Redaction tests for metadata diagnostics.
 
 #[cfg(feature = "filter")]
-use qubit_metadata::Condition;
-#[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpressionView;
@@ -21,8 +19,6 @@ use qubit_redact::RedactionTextOutput;
 use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
-#[cfg(feature = "filter")]
-use qubit_value::Value;
 
 fn redacted_output<T: Redact>(value: &T, policy: &RedactionPolicy) -> RedactionTextOutput {
     Redactor::new(policy.clone()).redact(value)
