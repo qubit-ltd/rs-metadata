@@ -71,7 +71,7 @@ fn test_budget_error_preserves_source_chain() {
 
 #[test]
 fn test_metadata_wire_encode_error_formats_all_variants() {
-    let syntax = JsonSyntaxError::new(2, 1, 3, JsonSyntaxErrorReason::UnexpectedByte { byte: b'!' });
+    let syntax = JsonSyntaxError::new(2, 1, 3, JsonSyntaxErrorReason::UnexpectedByte);
     let quantity = QuantityConversionError::new(QuantityMeasurement::U64(9), "u8");
     let errors = [
         MetadataWireEncodeError::Budget(BudgetError::Insufficient {
