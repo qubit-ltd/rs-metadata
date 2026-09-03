@@ -30,6 +30,7 @@ impl DataConversionTarget for Port {
         source: &DataConverter<'_>,
         context: &mut ConversionContext<'_, '_>,
     ) -> Result<Self, DataConversionError> {
-        context.delegate::<u16>(source).map(Self)
+        // SAFETY: `source` is the value admitted by the outer conversion.
+        unsafe { context.delegate::<u16>(source) }.map(Self)
     }
 }
