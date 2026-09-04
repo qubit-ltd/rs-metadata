@@ -7,10 +7,9 @@
 // =============================================================================
 //! A downstream conversion target used by metadata tests.
 
-use qubit_datatype::ConversionContext;
+use qubit_datatype::AdmittedConversion;
 use qubit_datatype::DataConversionError;
 use qubit_datatype::DataConversionTarget;
-use qubit_datatype::DataConverter;
 use qubit_datatype::DataType;
 use qubit_datatype::DataTypeOf;
 
@@ -26,11 +25,7 @@ impl DataTypeOf for Port {
 }
 
 impl DataConversionTarget for Port {
-    fn convert_from(
-        source: &DataConverter<'_>,
-        context: &mut ConversionContext<'_, '_>,
-    ) -> Result<Self, DataConversionError> {
-        // SAFETY: `source` is the value admitted by the outer conversion.
-        unsafe { context.delegate::<u16>(source) }.map(Self)
+    fn convert(input: AdmittedConversion<'_, '_, '_>) -> Result<Self, DataConversionError> {
+        input.convert::<u16>().map(Self)
     }
 }
