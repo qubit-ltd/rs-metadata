@@ -19,13 +19,22 @@ use qubit_json::decode::JsonDecodeErrorSource;
 use qubit_json::decode::JsonSyntaxError;
 use serde::de::Error as DeError;
 
-#[cfg(feature = "filter")]
 use crate::MetadataError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum MetadataWireDecodeError {
+    /// A metadata map or schema exceeded a domain limit without exposing
+    /// values.
+    Domain(MetadataError),
+    /// The envelope requests a wire version this decoder does not support.
+    UnsupportedVersion {
+        /// Version supported by this decoder.
+        expected: u8,
+        /// Version present in the envelope.
+        actual: u8,
+    },
     /// The JSON document exceeded one shared budget limit.
     Budget(BudgetError<JsonResource, usize>),
     /// A native JSON measurement could not be represented by the budget
@@ -54,6 +63,11 @@ impl fmt::Display for MetadataWireDecodeError {
     /// Formats a bounded JSON decoding failure.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Domain(error) => fmt::Display::fmt(error, formatter),
+            Self::UnsupportedVersion { expected, actual } => write!(
+                formatter,
+                "Unsupported metadata wire version {actual}; expected {expected}"
+            ),
             Self::Budget(error) => fmt::Display::fmt(error, formatter),
             Self::Quantity { source, .. } => fmt::Display::fmt(source, formatter),
             Self::Syntax(error) => fmt::Display::fmt(error, formatter),
@@ -68,6 +82,8 @@ impl Error for MetadataWireDecodeError {
     /// Returns the budget, filter, or Serde source associated with the error.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Domain(error) => Some(error),
+            Self::UnsupportedVersion { .. } => None,
             Self::Budget(error) => Some(error),
             Self::Quantity { source, .. } => Some(source),
             Self::Syntax(error) => Some(error),

@@ -21,6 +21,13 @@ use crate::MetadataWireLimitKind;
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum MetadataError {
+    /// A strict read or explicit conversion failed without losing its source.
+    ValueAccess {
+        /// Metadata key being read.
+        key: String,
+        /// Original structured value error.
+        source: Box<ValueError>,
+    },
     /// The requested key does not exist.
     MissingKey(
         /// Missing metadata key.
@@ -183,6 +190,7 @@ impl fmt::Display for MetadataError {
     /// Formats this metadata operation error for display.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::ValueAccess { key, source } => write!(formatter, "Metadata key '{key}': {source}"),
             Self::MissingKey(key) => {
                 write!(formatter, "Metadata key not found: {key}")
             }
@@ -266,4 +274,13 @@ impl fmt::Display for MetadataError {
     }
 }
 
-impl std::error::Error for MetadataError {}
+impl std::error::Error for MetadataError {
+    /// Returns the original value error for strict and explicit conversion
+    /// reads.
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::ValueAccess { source, .. } => Some(source.as_ref()),
+            _ => None,
+        }
+    }
+}

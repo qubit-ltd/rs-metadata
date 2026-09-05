@@ -8,7 +8,9 @@
 //! Seed decoder for bounded strict string-keyed maps.
 // qubit-style: allow multiple-public-types
 
+use std::cell::RefCell;
 use std::fmt;
+use std::rc::Rc;
 
 use serde::Deserialize;
 use serde::de;
@@ -18,11 +20,14 @@ use serde::de::MapAccess;
 use serde::de::Visitor;
 
 use super::strict_string_map::StrictStringMap;
+use crate::MetadataError;
+use crate::MetadataWireLimitKind;
 
 /// Deserializes a strict string map with caller-provided resource bounds.
 pub(crate) struct StrictStringMapSeed<'a, V> {
     max_entries: usize,
     max_key_bytes: usize,
+    error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
     lifetime: std::marker::PhantomData<&'a ()>,
     marker: std::marker::PhantomData<fn() -> V>,
 }
@@ -31,15 +36,24 @@ pub(crate) struct StrictStringMapSeed<'a, V> {
 pub(crate) struct StrictStringMapValueSeed<S> {
     max_entries: usize,
     max_key_bytes: usize,
+    error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
     value_seed: S,
 }
 
 impl<S> StrictStringMapValueSeed<S> {
+    /// Attaches a request-local slot retaining value-free domain failures.
+    #[cfg(feature = "json")]
+    pub(crate) fn with_error_slot(mut self, slot: Rc<RefCell<Option<MetadataError>>>) -> Self {
+        self.error_slot = Some(slot);
+        self
+    }
+
     /// Creates a bounded strict-map seed with explicit value construction.
     pub(crate) const fn new(max_entries: usize, max_key_bytes: usize, value_seed: S) -> Self {
         Self {
             max_entries,
             max_key_bytes,
+            error_slot: None,
             value_seed,
         }
     }
@@ -59,6 +73,7 @@ where
         struct StrictStringMapValueVisitor<S> {
             max_entries: usize,
             max_key_bytes: usize,
+            error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
             value_seed: S,
         }
 
@@ -81,6 +96,13 @@ where
                 let mut values = std::collections::BTreeMap::new();
                 while let Some(key) = map.next_key::<String>()? {
                     if key.len() > self.max_key_bytes {
+                        if let Some(slot) = &self.error_slot {
+                            *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
+                                kind: MetadataWireLimitKind::KeyBytes,
+                                value: key.len(),
+                                maximum: self.max_key_bytes,
+                            });
+                        }
                         return Err(de::Error::custom(format!(
                             "map key has {} bytes, exceeding the limit of {} bytes",
                             key.len(),
@@ -88,6 +110,13 @@ where
                         )));
                     }
                     if values.len() >= self.max_entries {
+                        if let Some(slot) = &self.error_slot {
+                            *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
+                                kind: MetadataWireLimitKind::Entries,
+                                value: values.len() + 1,
+                                maximum: self.max_entries,
+                            });
+                        }
                         return Err(de::Error::custom(format!(
                             "map has more than the limit of {} entries",
                             self.max_entries,
@@ -109,17 +138,26 @@ where
         deserializer.deserialize_map(StrictStringMapValueVisitor {
             max_entries: self.max_entries,
             max_key_bytes: self.max_key_bytes,
+            error_slot: self.error_slot,
             value_seed: self.value_seed,
         })
     }
 }
 
 impl<V> StrictStringMapSeed<'static, V> {
+    /// Attaches a request-local slot retaining value-free domain failures.
+    #[cfg(all(feature = "json", feature = "schema"))]
+    pub(crate) fn with_error_slot(mut self, slot: Rc<RefCell<Option<MetadataError>>>) -> Self {
+        self.error_slot = Some(slot);
+        self
+    }
+
     /// Creates a bounded strict-map seed.
     pub(crate) const fn new(max_entries: usize, max_key_bytes: usize) -> Self {
         Self {
             max_entries,
             max_key_bytes,
+            error_slot: None,
             lifetime: std::marker::PhantomData,
             marker: std::marker::PhantomData,
         }
@@ -142,6 +180,7 @@ where
         struct StrictStringMapVisitor<'a, V> {
             max_entries: usize,
             max_key_bytes: usize,
+            error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
             lifetime: std::marker::PhantomData<&'a ()>,
             marker: std::marker::PhantomData<fn() -> V>,
         }
@@ -165,6 +204,13 @@ where
                 let mut values = std::collections::BTreeMap::new();
                 while let Some(key) = map.next_key::<String>()? {
                     if key.len() > self.max_key_bytes {
+                        if let Some(slot) = &self.error_slot {
+                            *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
+                                kind: MetadataWireLimitKind::KeyBytes,
+                                value: key.len(),
+                                maximum: self.max_key_bytes,
+                            });
+                        }
                         return Err(de::Error::custom(format!(
                             "map key has {} bytes, exceeding the limit of {} bytes",
                             key.len(),
@@ -172,6 +218,13 @@ where
                         )));
                     }
                     if values.len() >= self.max_entries {
+                        if let Some(slot) = &self.error_slot {
+                            *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
+                                kind: MetadataWireLimitKind::Entries,
+                                value: values.len() + 1,
+                                maximum: self.max_entries,
+                            });
+                        }
                         return Err(de::Error::custom(format!(
                             "map has more than the limit of {} entries",
                             self.max_entries,
@@ -194,6 +247,7 @@ where
         deserializer.deserialize_map(StrictStringMapVisitor {
             max_entries,
             max_key_bytes,
+            error_slot: self.error_slot,
             lifetime: std::marker::PhantomData,
             marker: std::marker::PhantomData,
         })

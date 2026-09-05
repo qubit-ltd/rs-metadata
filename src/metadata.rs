@@ -8,10 +8,14 @@
 //! Provides the [`Metadata`] type — a structured, ordered, typed key-value
 //! store.
 
+#[cfg(feature = "json")]
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
 #[cfg(feature = "json")]
 use std::io::Write;
+#[cfg(feature = "json")]
+use std::rc::Rc;
 
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonDecodeSession;
@@ -19,6 +23,8 @@ use qubit_budget::json::JsonDecodeSession;
 use qubit_budget::json::JsonEncodeLimits;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonEncodeSession;
+use qubit_datatype::ConversionLimits;
+use qubit_datatype::ConversionPolicy;
 use qubit_datatype::DataConversionTarget;
 use qubit_datatype::DataType;
 #[cfg(feature = "json")]
@@ -30,6 +36,7 @@ use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
 use qubit_value::Value;
+use qubit_value::ValueError;
 use qubit_value::ValueRef;
 use qubit_value::ValueWirePayloadV1;
 use qubit_value::ValueWirePayloadV1Seed;
@@ -107,7 +114,8 @@ impl Metadata {
     ///
     /// Returns [`crate::MetadataWireDecodeError::Budget`] when the document
     /// exceeds a shared JSON limit, or `InvalidJson` for syntax and envelope
-    /// failures.
+    /// failures. Domain limits return `Domain`; unsupported versions return
+    /// `UnsupportedVersion`.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -127,9 +135,9 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns a structured budget error before or during decoding, or
-    /// `InvalidJson` for syntax, strict-envelope, strict-map, or scalar
-    /// wire-value failures.
+    /// Returns a structured budget error before or during decoding, `Domain`
+    /// for entry/key limits, `UnsupportedVersion` for a version mismatch, or
+    /// redacted JSON errors for syntax, envelope, and scalar wire failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -137,20 +145,30 @@ impl Metadata {
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         limits.validate().map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
+        let error_slot = Rc::new(RefCell::new(None));
         let wire = decoder
             .decode_seed_utf8(
-                MetadataWireV1Seed::new(StrictStringMapValueSeed::new(
-                    limits.max_metadata_entries(),
-                    limits.max_key_bytes(),
-                    ValueWirePayloadV1Seed::new(),
-                )),
+                MetadataWireV1Seed::new(
+                    StrictStringMapValueSeed::new(
+                        limits.max_metadata_entries(),
+                        limits.max_key_bytes(),
+                        ValueWirePayloadV1Seed::new(),
+                    )
+                    .with_error_slot(Rc::clone(&error_slot)),
+                ),
                 input,
             )
-            .map_err(Into::<crate::MetadataWireDecodeError>::into)?;
+            .map_err(|error| {
+                error_slot.borrow_mut().take().map_or_else(
+                    || Into::<crate::MetadataWireDecodeError>::into(error),
+                    crate::MetadataWireDecodeError::Domain,
+                )
+            })?;
         if wire.version != METADATA_WIRE_VERSION_V1 {
-            return Err(crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as DeError>::custom("unsupported Metadata wire format version"),
-            ));
+            return Err(crate::MetadataWireDecodeError::UnsupportedVersion {
+                expected: METADATA_WIRE_VERSION_V1,
+                actual: wire.version,
+            });
         }
         let metadata = Self(Self::from_wire(wire).map_err(|error| {
             crate::MetadataWireDecodeError::InvalidJson(<serde_json::Error as DeError>::custom(error))
@@ -384,6 +402,71 @@ impl Metadata {
         value
             .to::<T>()
             .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
+    }
+
+    /// Strictly reads the concrete value under `key` without conversion.
+    ///
+    /// `T` follows `TryFrom<&Value>`. Numeric widths must match the stored
+    /// runtime type. For borrowed strings, use the existing `try_get_str`.
+    ///
+    /// # Errors
+    /// Returns `MissingKey`, `MissingValue`, or `ValueAccess` retaining the
+    /// original strict-read error. Use `try_convert` for coercing reads.
+    pub fn try_get_strict<'a, T>(&'a self, key: &str) -> MetadataResult<T>
+    where
+        T: TryFrom<&'a Value, Error = ValueError>,
+    {
+        T::try_from(self.concrete_entry(key)?).map_err(|source| MetadataError::ValueAccess {
+            key: key.to_owned(),
+            source: Box::new(source),
+        })
+    }
+
+    /// Converts the value under `key` using the default conversion policy.
+    ///
+    /// # Errors
+    /// Returns `MissingKey`, `MissingValue`, or `ValueAccess` with the original
+    /// conversion reason and source chain. Unlike legacy `try_get`, errors are
+    /// not flattened to text.
+    pub fn try_convert<T: DataConversionTarget>(&self, key: &str) -> MetadataResult<T> {
+        self.try_convert_with(key, ConversionPolicy::default_ref(), ConversionLimits::default_ref())
+    }
+
+    /// Converts the value under `key` using explicit `policy` and `limits`.
+    ///
+    /// Each call starts its own conversion budget. `T` may be a downstream
+    /// conversion target. This method does not modify the stored value.
+    ///
+    /// # Errors
+    /// Returns `MissingKey`, `MissingValue`, or `ValueAccess` preserving
+    /// unsupported, invalid, inexact, overflow, and budget conversion failures.
+    pub fn try_convert_with<T: DataConversionTarget>(
+        &self,
+        key: &str,
+        policy: &ConversionPolicy,
+        limits: &ConversionLimits,
+    ) -> MetadataResult<T> {
+        self.concrete_entry(key)?
+            .to_with(policy, limits)
+            .map_err(|source| MetadataError::ValueAccess {
+                key: key.to_owned(),
+                source: Box::new(source),
+            })
+    }
+
+    /// Looks up `key`, distinguishing an absent entry from an unset value.
+    fn concrete_entry(&self, key: &str) -> MetadataResult<&Value> {
+        let value = self
+            .0
+            .get(key)
+            .ok_or_else(|| MetadataError::MissingKey(key.to_owned()))?;
+        if value.is_unset() {
+            return Err(MetadataError::MissingValue {
+                key: key.to_owned(),
+                data_type: value.data_type(),
+            });
+        }
+        Ok(value)
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
