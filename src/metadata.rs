@@ -753,9 +753,9 @@ struct MetadataValues<'a>(&'a BTreeMap<String, Value>);
 impl Redact for MetadataValues<'_> {
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.map(|entries| {
-            for (name, value) in self.0 {
+            entries.for_each(self.0, |entries, (name, value)| {
                 entries.sensitive_entry(Sensitivity::Low, name, || value);
-            }
+            });
         });
     }
 }
