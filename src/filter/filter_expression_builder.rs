@@ -11,6 +11,7 @@ use qubit_value::Value;
 
 use crate::Condition;
 use crate::FilterExpression;
+use crate::FilterLimitKind;
 use crate::FilterLimits;
 use crate::MetadataError;
 use crate::MetadataResult;
@@ -18,6 +19,10 @@ use crate::MetadataResult;
 /// Fluent builder for a non-empty [`FilterExpression`].
 ///
 /// Predicates without an explicit connector are joined by logical AND.
+/// Construction stops at the first invalid operand or resource limit. Later
+/// operands are not converted, iterators are not consumed, and group callbacks
+/// are not invoked. Argument expressions themselves are still evaluated by
+/// Rust.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FilterExpressionBuilder {
     expression: Option<FilterExpression>,
@@ -60,7 +65,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
-            Condition::Equal {
+            || Condition::Equal {
                 key: key.to_string(),
                 value: to_value(value),
             },
@@ -76,7 +81,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
-            Condition::NotEqual {
+            || Condition::NotEqual {
                 key: key.to_string(),
                 value: to_value(value),
             },
@@ -92,7 +97,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
-            Condition::Less {
+            || Condition::Less {
                 key: key.to_string(),
                 value: to_value(value),
             },
@@ -108,7 +113,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
-            Condition::LessEqual {
+            || Condition::LessEqual {
                 key: key.to_string(),
                 value: to_value(value),
             },
@@ -124,7 +129,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
-            Condition::Greater {
+            || Condition::Greater {
                 key: key.to_string(),
                 value: to_value(value),
             },
@@ -140,7 +145,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
-            Condition::GreaterEqual {
+            || Condition::GreaterEqual {
                 key: key.to_string(),
                 value: to_value(value),
             },
@@ -151,15 +156,33 @@ impl FilterExpressionBuilder {
     /// Appends a membership predicate with logical AND.
     #[inline]
     #[must_use]
-    pub fn in_set<I, T>(self, key: &str, values: I) -> Self
+    pub fn in_set<I, T>(mut self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
         T: Into<Value>,
     {
+        if self.error.is_some() {
+            return self;
+        }
+        if key.len() > FilterLimits::MAX.max_key_bytes() {
+            self.error = Some(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
+                maximum: FilterLimits::MAX.max_key_bytes(),
+            });
+            return self;
+        }
+        let values = match collect_values(values) {
+            Ok(values) => values,
+            Err(error) => {
+                self.error = Some(error);
+                return self;
+            }
+        };
         self.append(
-            Condition::In {
+            || Condition::In {
                 key: key.to_string(),
-                values: collect_values(values),
+                values,
             },
             FilterExpression::and_unchecked,
         )
@@ -168,15 +191,33 @@ impl FilterExpressionBuilder {
     /// Appends a non-membership predicate with logical AND.
     #[inline]
     #[must_use]
-    pub fn not_in_set<I, T>(self, key: &str, values: I) -> Self
+    pub fn not_in_set<I, T>(mut self, key: &str, values: I) -> Self
     where
         I: IntoIterator<Item = T>,
         T: Into<Value>,
     {
+        if self.error.is_some() {
+            return self;
+        }
+        if key.len() > FilterLimits::MAX.max_key_bytes() {
+            self.error = Some(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
+                maximum: FilterLimits::MAX.max_key_bytes(),
+            });
+            return self;
+        }
+        let values = match collect_values(values) {
+            Ok(values) => values,
+            Err(error) => {
+                self.error = Some(error);
+                return self;
+            }
+        };
         self.append(
-            Condition::NotIn {
+            || Condition::NotIn {
                 key: key.to_string(),
-                values: collect_values(values),
+                values,
             },
             FilterExpression::and_unchecked,
         )
@@ -187,7 +228,7 @@ impl FilterExpressionBuilder {
     #[must_use]
     pub fn exists(self, key: &str) -> Self {
         self.append(
-            Condition::Exists { key: key.to_string() },
+            || Condition::Exists { key: key.to_string() },
             FilterExpression::and_unchecked,
         )
     }
@@ -197,7 +238,7 @@ impl FilterExpressionBuilder {
     #[must_use]
     pub fn not_exists(self, key: &str) -> Self {
         self.append(
-            Condition::NotExists { key: key.to_string() },
+            || Condition::NotExists { key: key.to_string() },
             FilterExpression::and_unchecked,
         )
     }
@@ -221,6 +262,9 @@ impl FilterExpressionBuilder {
     where
         F: FnOnce(Self) -> Self,
     {
+        if self.error.is_some() {
+            return self;
+        }
         self.combine_group("AND", build(Self::new()), FilterExpression::and_unchecked)
     }
 
@@ -259,6 +303,9 @@ impl FilterExpressionBuilder {
     where
         F: FnOnce(Self) -> Self,
     {
+        if self.error.is_some() {
+            return self;
+        }
         self.combine_group("OR", build(Self::new()), FilterExpression::or_unchecked)
     }
 
@@ -295,13 +342,19 @@ impl FilterExpressionBuilder {
         self
     }
 
-    /// Adds one condition, deferring hard-limit validation to [`Self::build`].
+    /// Adds a lazily constructed condition and enforces hard limits
+    /// immediately.
     fn append(
         mut self,
-        condition: Condition,
+        condition: impl FnOnce() -> Condition,
         combine: fn(FilterExpression, FilterExpression) -> FilterExpression,
     ) -> Self {
         if self.error.is_some() {
+            return self;
+        }
+        let condition = condition();
+        if let Err(error) = condition.validate_limits(FilterLimits::MAX) {
+            self.error = Some(error);
             return self;
         }
         let next = match FilterExpression::condition(condition) {
@@ -315,12 +368,14 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, next),
             None => next,
         };
-        self.expression = Some(expression);
+        match expression.validate_limits(FilterLimits::MAX) {
+            Ok(()) => self.expression = Some(expression),
+            Err(error) => self.error = Some(error),
+        }
         self
     }
 
-    /// Combines a non-empty nested group and defers hard-limit validation to
-    /// [`Self::build`].
+    /// Combines a non-empty nested group and immediately enforces hard limits.
     fn combine_group(
         mut self,
         operator: &'static str,
@@ -345,7 +400,10 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, group),
             None => group,
         };
-        self.expression = Some(expression);
+        match expression.validate_limits(FilterLimits::MAX) {
+            Ok(()) => self.expression = Some(expression),
+            Err(error) => self.error = Some(error),
+        }
         self
     }
 }
@@ -374,11 +432,26 @@ where
     value.into()
 }
 
-/// Converts typed values into stored representations.
-fn collect_values<I, T>(values: I) -> Vec<Value>
+/// Collects at most the hard maximum, consuming one extra item to detect
+/// overflow.
+///
+/// Returns a set-limit error without converting the rejected item.
+fn collect_values<I, T>(values: I) -> MetadataResult<Vec<Value>>
 where
     I: IntoIterator<Item = T>,
     T: Into<Value>,
 {
-    values.into_iter().map(to_value).collect()
+    let maximum = FilterLimits::MAX.max_set_values();
+    let mut result = Vec::new();
+    for value in values {
+        if result.len() == maximum {
+            return Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::SetValues,
+                value: maximum + 1,
+                maximum,
+            });
+        }
+        result.push(value.into());
+    }
+    Ok(result)
 }
