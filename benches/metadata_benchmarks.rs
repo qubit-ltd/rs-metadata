@@ -9,6 +9,7 @@
 
 use std::hint::black_box;
 
+use criterion::BatchSize;
 use criterion::Criterion;
 use criterion::criterion_group;
 use criterion::criterion_main;
@@ -150,9 +151,62 @@ fn benchmark_schema_json_decode(criterion: &mut Criterion) {
 #[cfg(not(all(feature = "json", feature = "schema")))]
 fn benchmark_schema_json_decode(_criterion: &mut Criterion) {}
 
+/// Measures request cloning, merging, and borrowed versus converting reads.
+fn benchmark_downstream_metadata_paths(criterion: &mut Criterion) {
+    for count in [8, 64, 256] {
+        let mut metadata = Metadata::new();
+        for index in 0..count {
+            metadata.set(&format!("field_{index:03}"), "representative request metadata value");
+        }
+        criterion.bench_function(&format!("metadata/clone_{count}_fields"), |bencher| {
+            bencher.iter(|| black_box(black_box(&metadata).clone()));
+        });
+        criterion.bench_function(&format!("metadata/merge_{count}_fields"), |bencher| {
+            bencher.iter_batched(
+                || (metadata.clone(), metadata.clone()),
+                |(mut left, right)| {
+                    left.merge(right);
+                    black_box(left)
+                },
+                BatchSize::SmallInput,
+            );
+        });
+    }
+    let metadata = Metadata::new().with("model", "embedding-model");
+    criterion.bench_function("metadata/borrowed_string", |bencher| {
+        bencher.iter(|| black_box(metadata.get_str(black_box("model"))));
+    });
+    criterion.bench_function("metadata/converted_string", |bencher| {
+        bencher.iter(|| black_box(metadata.try_convert::<String>(black_box("model"))));
+    });
+    let records: Vec<_> = (0..1000_i64)
+        .map(|score| Metadata::new().with("score", score))
+        .collect();
+    let filter = MetadataFilter::builder()
+        .expression(
+            FilterExpression::builder()
+                .ge("score", 500_i64)
+                .build()
+                .expect("benchmark expression"),
+        )
+        .build()
+        .expect("benchmark filter");
+    criterion.bench_function("metadata/filter_1000_records", |bencher| {
+        bencher.iter(|| {
+            black_box(
+                records
+                    .iter()
+                    .filter(|metadata| filter.matches(black_box(metadata)))
+                    .count(),
+            )
+        });
+    });
+}
+
 criterion_group!(
     benches,
     benchmark_metadata_construction,
+    benchmark_downstream_metadata_paths,
     benchmark_metadata_typed_get,
     benchmark_metadata_json_decode,
     benchmark_filter_match,
