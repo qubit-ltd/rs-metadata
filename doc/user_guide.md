@@ -372,7 +372,7 @@ the caller must distinguish absence from a type mismatch or unset value.
   this crate does not provide a storage-provider indexing strategy.
 - Validate at the boundary where metadata enters a trusted domain, and apply
   explicit JSON and domain limits before parsing untrusted JSON.
-- Use `MetadataFilter::build_checked` when a schema is available. Use the
+- Use `MetadataFilterBuilder::build_checked` when a schema is available. Use the
   unchecked builder only when the target backend owns field validation.
 - Treat diagnostic formatting as bounded and redacted output, not a complete
   security policy for arbitrary user-defined keys or error messages.
@@ -390,3 +390,44 @@ the caller must distinguish absence from a type mismatch or unset value.
 - Run `cargo test --all-features` before changing feature-gated behavior.
 - See the [Chinese user guide](user_guide.zh_CN.md) for the same workflow in
   Simplified Chinese.
+
+## Explicit reads and boundary diagnostics
+
+For an indexing pipeline, preserve the stored type when validating an identifier,
+and request conversion explicitly when accepting external text:
+
+```rust
+use qubit_metadata::Metadata;
+let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
+assert_eq!(metadata.try_get_strict::<i64>("count").unwrap(), 3);
+assert!(metadata.try_get_strict::<i64>("port").is_err());
+assert_eq!(metadata.try_convert::<u16>("port").unwrap(), 8080);
+assert_eq!(metadata.try_get_str("port").unwrap(), "8080");
+```
+
+`try_get_strict` follows the strict `TryFrom<&Value>` contract; use `try_get_str`
+for borrowed strings. `try_convert_with` accepts `ConversionPolicy` and
+`ConversionLimits`, with a fresh budget per call. Both new read paths retain
+`ValueError` under `MetadataError::ValueAccess` and expose it through `Error::source`.
+Missing keys and unset values remain separate errors. Legacy `get`, `try_get`,
+and `get_or` keep their existing conversion and fallback semantics.
+
+Bounded metadata/schema JSON decoding reports domain entry/key limits as
+`MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded { .. })` and
+unsupported versions as `UnsupportedVersion { expected, actual }`. These facts
+contain counts and version numbers, not metadata values. Syntax and other
+strict-envelope failures retain the default redacted JSON diagnostic policy.
+The V1 representation has not changed.
+
+Filter builders reject oversized inputs while constructing the expression.
+Membership iterators are consumed at most 129 times (128 allowed values plus
+one overflow probe); the probe is not converted. After the first failure,
+later operands are not converted, membership iterators are not consumed, and
+group callbacks are skipped. Rust still evaluates the arguments to each call.
+Node/depth checks apply after each composition, including nested groups.
+
+At downstream boundaries, document each shared key's concrete type, units, and
+absence rule. A storage schema adapter must reject constraints it cannot express;
+passing a logical schema check alone does not prove backend operator support.
+`merge` still overwrites matching keys: batch aggregators must retain per-batch
+fields explicitly when request identifiers or other values may conflict.

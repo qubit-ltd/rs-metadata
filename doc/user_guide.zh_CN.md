@@ -332,7 +332,7 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
   的索引策略。
 - 在 metadata 进入可信领域边界时执行 schema 校验，并在解析不可信 JSON 前应用显式 wire
   限制。
-- 有 schema 时使用 `MetadataFilter::build_checked`；只有在目标后端负责字段校验时才使用
+- 有 schema 时使用 `MetadataFilterBuilder::build_checked`；只有在目标后端负责字段校验时才使用
   unchecked builder。
 - 将诊断格式化视为有界、脱敏的输出，不要把它当成任意用户 key 或错误消息的完整安全策略。
 - 序列化 metadata 和 schema map 时遵守 4,096 个条目及 256 字节 key 的 wire 限制。
@@ -344,3 +344,36 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 - 浏览 [API 文档](https://docs.rs/qubit-metadata) 查看完整公共 API。
 - 修改 feature-gated 行为前运行 `cargo test --all-features`。
 - 查看[英文用户手册](user_guide.md)获取相同流程的英文版本。
+
+## 明确读取方式和边界诊断
+
+索引流程中，校验标识字段时通常需要保持原有类型；接收外部文本时，才显式请求转换：
+
+```rust
+use qubit_metadata::Metadata;
+let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
+assert_eq!(metadata.try_get_strict::<i64>("count").unwrap(), 3);
+assert!(metadata.try_get_strict::<i64>("port").is_err());
+assert_eq!(metadata.try_convert::<u16>("port").unwrap(), 8080);
+assert_eq!(metadata.try_get_str("port").unwrap(), "8080");
+```
+
+`try_get_strict` 遵循严格的 `TryFrom<&Value>` 契约；借用字符串继续使用
+`try_get_str`。需要控制转换时，向 `try_convert_with` 传入 `ConversionPolicy`
+和 `ConversionLimits`，每次调用使用独立预算。两类新读取接口把原始 `ValueError`
+保存在 `MetadataError::ValueAccess` 中，可通过 `Error::source` 访问。
+键不存在与值为 Unset 仍分别报错。原有 `get`、`try_get` 和 `get_or` 的转换及回退语义不变。
+
+有界 metadata/schema JSON 解码遇到条目数或键长超限时，返回
+`MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded { .. })`；
+不支持的版本返回 `UnsupportedVersion { expected, actual }`。
+这些结构只包含数量和版本号，不包含元数据值。语法及其他严格信封错误继续使用默认脱敏诊断。
+V1 序列化格式保持不变。
+
+过滤器 builder 在构造阶段拒绝超限输入。集合迭代器最多被消费 129 次：128 项有效容量加
+1 项超限检测，检测项不会执行值转换。首次失败后，后续操作不再转换值、不再消费集合，
+也不再调用分组闭包；Rust 仍会正常求值调用参数。每次组合（包括嵌套分组）都会检查节点数和深度。
+
+跨模块字段应明确具体类型、单位和缺失规则。存储 schema 适配器必须拒绝无法表达的约束；
+通过逻辑 schema 校验并不意味着后端支持所有运算符。
+`merge` 仍会覆盖同名键；若批次中的请求标识等字段可能冲突，聚合层应单独保留逐批元数据。
