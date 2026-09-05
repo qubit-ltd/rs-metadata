@@ -7,9 +7,13 @@
 // =============================================================================
 //! [`MetadataSchema`] — schema validation for metadata and filters.
 
+#[cfg(feature = "json")]
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 #[cfg(feature = "json")]
 use std::io::Write;
+#[cfg(feature = "json")]
+use std::rc::Rc;
 
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonDecodeSession;
@@ -28,8 +32,6 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use serde::de;
-#[cfg(feature = "json")]
-use serde::de::Error as DeError;
 use serde::ser::Error as SerError;
 
 use crate::Metadata;
@@ -115,8 +117,9 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns a structured budget error or `InvalidJson` for syntax and strict
-    /// schema-envelope failures.
+    /// Returns a structured budget error, `Domain` for field/key limits,
+    /// `UnsupportedVersion` for version mismatches, or redacted JSON errors for
+    /// syntax and other strict schema-envelope failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -124,19 +127,26 @@ impl MetadataSchema {
     ) -> Result<Self, crate::MetadataWireDecodeError> {
         limits.validate().map_err(crate::MetadataWireDecodeError::InvalidJson)?;
         let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
+        let error_slot = Rc::new(RefCell::new(None));
         let wire = decoder
             .decode_seed_utf8(
-                MetadataSchemaWireV1Seed::new(StrictStringMapSeed::new(
-                    limits.max_schema_fields(),
-                    limits.max_key_bytes(),
-                )),
+                MetadataSchemaWireV1Seed::new(
+                    StrictStringMapSeed::new(limits.max_schema_fields(), limits.max_key_bytes())
+                        .with_error_slot(Rc::clone(&error_slot)),
+                ),
                 input,
             )
-            .map_err(Into::<crate::MetadataWireDecodeError>::into)?;
+            .map_err(|error| {
+                error_slot.borrow_mut().take().map_or_else(
+                    || Into::<crate::MetadataWireDecodeError>::into(error),
+                    crate::MetadataWireDecodeError::Domain,
+                )
+            })?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
-            return Err(crate::MetadataWireDecodeError::InvalidJson(
-                <serde_json::Error as DeError>::custom("unsupported MetadataSchema wire format version"),
-            ));
+            return Err(crate::MetadataWireDecodeError::UnsupportedVersion {
+                expected: METADATA_SCHEMA_WIRE_VERSION_V1,
+                actual: wire.version,
+            });
         }
         Ok(Self::new(
             wire.fields.into_inner(),

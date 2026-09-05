@@ -29,6 +29,7 @@ use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
 use qubit_metadata::MetadataWireEncodeError;
+use qubit_metadata::MetadataWireLimitKind;
 
 fn filter_input(expression: &str) -> Vec<u8> {
     format!(r#"{{"version":1,"expression":{expression},"options":{{"numeric_comparison_policy":"exact"}}}}"#,)
@@ -158,7 +159,14 @@ fn test_metadata_domain_entry_limit_is_preserved() {
     let limits = MetadataLimits::builder().max_metadata_entries(1).build();
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain entry limit should reject the input");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::Entries,
+            value: 2,
+            maximum: 1,
+        })
+    ));
 }
 
 #[test]
@@ -168,7 +176,14 @@ fn test_metadata_domain_key_limit_is_preserved() {
     let limits = MetadataLimits::builder().max_key_bytes(4).build();
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain key limit should reject the input");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 5,
+            maximum: 4,
+        })
+    ));
 }
 
 #[test]
@@ -240,7 +255,14 @@ fn test_metadata_outer_key_budget_remains_256_bytes() {
     let input = format!(r#"{{"version":1,"values":{{"{outer_key}":{{"scalar":{{"int64":1}}}}}}}}"#,);
     let error =
         Metadata::decode_json_slice(input.as_bytes()).expect_err("metadata outer keys must retain the 256-byte cap");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 257,
+            maximum: 256
+        })
+    ));
 }
 
 #[test]
@@ -276,4 +298,41 @@ fn test_metadata_schema_and_filter_encode_round_trip() {
         .unwrap();
     let filter_json = filter.to_json_vec().unwrap();
     assert_eq!(MetadataFilter::decode_json_slice(&filter_json).unwrap(), filter);
+}
+
+#[test]
+fn test_schema_limits_and_wire_version_are_structured() {
+    let schema = MetadataSchema::builder()
+        .required("one", DataType::Int64)
+        .optional("two", DataType::String)
+        .build()
+        .expect("schema");
+    let input = serde_json::to_vec(&schema).expect("wire");
+    let error =
+        MetadataSchema::decode_json_slice_with_limits(&input, MetadataLimits::builder().max_schema_fields(1).build())
+            .expect_err("field count");
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::Entries,
+            value: 2,
+            maximum: 1,
+        })
+    ));
+    let error =
+        MetadataSchema::decode_json_slice_with_limits(&input, MetadataLimits::builder().max_key_bytes(2).build())
+            .expect_err("key length");
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 3,
+            maximum: 2,
+        })
+    ));
+    let error = Metadata::decode_json_slice(br#"{"version":2,"values":{}}"#).expect_err("version");
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::UnsupportedVersion { expected: 1, actual: 2 }
+    ));
 }

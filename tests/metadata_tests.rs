@@ -18,6 +18,7 @@ use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireLimitKind;
 use qubit_value::Value;
+use qubit_value::ValueError;
 
 mod support;
 
@@ -586,4 +587,91 @@ fn test_partial_eq_compares_values() {
 
     b.set("x", 2_i64);
     assert_ne!(a, b);
+}
+
+#[test]
+fn test_strict_read_preserves_type_and_borrows_string() {
+    let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
+    assert_eq!(metadata.try_get_strict::<i64>("count").expect("i64"), 3);
+    let borrowed: &str = metadata.try_get_str("port").expect("borrowed string");
+    assert!(std::ptr::eq(
+        borrowed.as_ptr(),
+        metadata.get_str("port").expect("string").as_ptr()
+    ));
+    let error = metadata.try_get_strict::<i64>("port").expect_err("no implicit parsing");
+    assert!(matches!(error, MetadataError::ValueAccess { source, .. }
+        if matches!(*source, ValueError::TypeMismatch { .. })));
+    assert_eq!(metadata.try_get::<i64>("port").expect("legacy conversion"), 8080);
+}
+
+#[test]
+fn test_explicit_conversion_preserves_source_and_policy() {
+    use std::error::Error;
+
+    use qubit_datatype::ConversionLimits;
+    use qubit_datatype::ConversionPolicy;
+    use qubit_datatype::NumericConversionPolicy;
+    let metadata = Metadata::new().with("score", 1.5_f64);
+    let error = metadata.try_convert::<i32>("score").expect_err("exact conversion");
+    assert!(error.source().expect("value source").is::<ValueError>());
+    assert!(matches!(error, MetadataError::ValueAccess { source, .. }
+        if matches!(*source, ValueError::Conversion(_))));
+    let policy = ConversionPolicy::builder()
+        .numeric_policy(NumericConversionPolicy::lossy())
+        .build();
+    assert_eq!(
+        metadata
+            .try_convert_with::<i32>("score", &policy, ConversionLimits::default_ref())
+            .expect("lossy"),
+        1
+    );
+}
+
+#[test]
+fn test_explicit_reads_distinguish_absent_and_unset() {
+    let metadata = Metadata::new().with("unset", Value::Unset(DataType::Int64));
+    assert_eq!(
+        metadata.try_get_strict::<i64>("missing"),
+        Err(MetadataError::MissingKey("missing".into()))
+    );
+    assert_eq!(
+        metadata.try_convert::<i64>("unset"),
+        Err(MetadataError::MissingValue {
+            key: "unset".into(),
+            data_type: DataType::Int64
+        })
+    );
+    assert_eq!(
+        metadata.try_get_strict::<i64>("unset"),
+        Err(MetadataError::MissingValue {
+            key: "unset".into(),
+            data_type: DataType::Int64
+        })
+    );
+}
+
+#[test]
+fn test_explicit_conversion_retains_budget_failure() {
+    use qubit_datatype::ConversionLimits;
+    use qubit_datatype::ConversionPolicy;
+    use qubit_datatype::NumericConversionLimits;
+    let limits = ConversionLimits::builder()
+        .numeric_limits(NumericConversionLimits::builder().max_text_bytes(2).build())
+        .build();
+    let metadata = Metadata::new().with("number", "12345");
+    let expected = metadata
+        .get_raw("number")
+        .expect("value")
+        .to_with::<i64>(ConversionPolicy::default_ref(), &limits)
+        .expect_err("numeric text limit");
+    let actual = metadata
+        .try_convert_with::<i64>("number", ConversionPolicy::default_ref(), &limits)
+        .expect_err("same numeric text limit");
+    assert_eq!(
+        actual,
+        MetadataError::ValueAccess {
+            key: "number".into(),
+            source: Box::new(expected)
+        }
+    );
 }
