@@ -179,3 +179,51 @@ fn test_empty_groups_report_operator_specific_errors() {
         })
     );
 }
+
+#[test]
+fn test_membership_stops_consuming_at_detection_item() {
+    let consumed = std::cell::Cell::new(0);
+    let values = (0..10_000_i64).inspect(|_| consumed.set(consumed.get() + 1));
+    let result = FilterExpression::builder().in_set("id", values).build();
+    assert_eq!(consumed.get(), FilterLimits::MAX.max_set_values() + 1);
+    assert_eq!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::SetValues,
+            value: 129,
+            maximum: 128,
+        })
+    );
+}
+
+#[test]
+fn test_failed_builder_does_not_consume_membership_or_run_groups() {
+    let consumed = std::cell::Cell::new(0);
+    let values = (0..10_i64).inspect(|_| consumed.set(consumed.get() + 1));
+    let result = FilterExpression::builder()
+        .not()
+        .not_in_set("id", values)
+        .and_group(|_| panic!("failed builder must skip group callback"))
+        .build();
+    assert_eq!(consumed.get(), 0);
+    assert!(matches!(result, Err(MetadataError::InvalidFilterExpression { .. })));
+}
+
+#[test]
+fn test_node_limit_stops_further_operand_conversion() {
+    let mut builder = FilterExpression::builder();
+    for _ in 0..FilterLimits::MAX.max_nodes() {
+        builder = builder.exists("id");
+    }
+    let consumed = std::cell::Cell::new(0);
+    let values = (0..10_i64).inspect(|_| consumed.set(consumed.get() + 1));
+    let result = builder.in_set("id", values).build();
+    assert_eq!(consumed.get(), 0);
+    assert!(matches!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::Nodes,
+            ..
+        })
+    ));
+}
