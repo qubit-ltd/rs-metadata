@@ -23,6 +23,8 @@ use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
 use qubit_json::encode::JsonEncoder;
 use qubit_utils::Transient;
+#[cfg(feature = "json")]
+use qubit_value::ValueWireEncodePreflight;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -37,6 +39,8 @@ use super::wire::MetadataFilterWireV1Seed;
 #[cfg(feature = "schema")]
 use crate::Condition;
 use crate::FilterExpression;
+#[cfg(feature = "json")]
+use crate::FilterExpressionView;
 use crate::FilterLimits;
 use crate::FilterMatchOptions;
 use crate::Metadata;
@@ -223,6 +227,7 @@ impl MetadataFilter {
     /// budget or the filter cannot be represented by the V1 wire format.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.preflight_wire_values(limits)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
@@ -257,6 +262,7 @@ impl MetadataFilter {
     where
         W: Write,
     {
+        self.preflight_wire_values(limits)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session)
             .write_buffered(writer, self)
@@ -292,6 +298,30 @@ impl MetadataFilter {
     #[must_use = "the filter limits should be inspected"]
     pub const fn limits(&self) -> FilterLimits {
         *self.limits.get()
+    }
+
+    #[cfg(feature = "json")]
+    fn preflight_wire_values(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
+        fn visit(
+            expression: &FilterExpression,
+            checker: &mut ValueWireEncodePreflight,
+        ) -> Result<(), crate::MetadataWireEncodeError> {
+            match expression.view() {
+                FilterExpressionView::Condition(condition) => condition.visit_operands(&mut |value| {
+                    checker.check_value(value).map_err(crate::MetadataWireEncodeError::from)
+                }),
+                FilterExpressionView::And(children) | FilterExpressionView::Or(children) => {
+                    for child in children {
+                        visit(child, checker)?;
+                    }
+                    Ok(())
+                }
+                FilterExpressionView::Not(inner) => visit(inner, checker),
+                FilterExpressionView::True | FilterExpressionView::False => Ok(()),
+            }
+        }
+        let mut checker = ValueWireEncodePreflight::new(limits);
+        visit(&self.expression, &mut checker)
     }
 
     /// Returns whether `metadata` satisfies this filter.

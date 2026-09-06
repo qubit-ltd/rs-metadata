@@ -92,3 +92,12 @@ impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
         }
     }
 }
+
+impl From<MeasuredBudgetError<JsonResource, usize>> for MetadataWireEncodeError {
+    fn from(error: MeasuredBudgetError<JsonResource, usize>) -> Self {
+        match error {
+            MeasuredBudgetError::Budget(error) => Self::Budget(error),
+            MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
+        }
+    }
+}
