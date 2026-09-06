@@ -21,7 +21,7 @@ use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
 
 fn redacted_output<T: Redact>(value: &T, policy: &RedactionPolicy) -> RedactionTextOutput {
-    Redactor::new(policy.clone()).redact(value)
+    Redactor::new(policy.clone()).redact_text(value)
 }
 
 fn complete_redacted_text<T: Redact>(value: &T, policy: &RedactionPolicy) -> String {
@@ -52,7 +52,7 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
         .with("name", "Ada");
     let debug = format!("{metadata:?}");
     let explicit = Redactor::strict()
-        .redact(&metadata)
+        .redact_text(&metadata)
         .into_complete_text()
         .expect("strict metadata redaction should be complete")
         .into_string();
