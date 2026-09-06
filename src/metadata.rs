@@ -37,7 +37,8 @@ use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
 use qubit_value::Value;
 use qubit_value::ValueError;
-use qubit_value::ValueRef;
+#[cfg(feature = "json")]
+use qubit_value::ValueWireEncodePreflight;
 use qubit_value::ValueWirePayloadV1;
 use qubit_value::ValueWirePayloadV1Seed;
 use serde::Deserialize;
@@ -208,6 +209,12 @@ impl Metadata {
     /// output exceeds a configured budget, or serialization fails.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
+        for value in self.0.values() {
+            preflight
+                .check_value(value)
+                .map_err(crate::MetadataWireEncodeError::from)?;
+        }
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
@@ -250,6 +257,12 @@ impl Metadata {
     where
         W: Write,
     {
+        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
+        for value in self.0.values() {
+            preflight
+                .check_value(value)
+                .map_err(crate::MetadataWireEncodeError::from)?;
+        }
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session)
             .write_buffered(writer, self)
@@ -350,17 +363,10 @@ impl Metadata {
     /// [`MetadataError::TypeMismatch`] when the stored value is not a string.
     #[inline(always)]
     pub fn try_get_str(&self, key: &str) -> MetadataResult<&str> {
-        let value = self
-            .0
-            .get(key)
-            .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        match value.view() {
-            ValueRef::String(string) => Ok(string),
-            ValueRef::Unset(data_type) => Err(MetadataError::MissingValue {
-                key: key.to_string(),
-                data_type,
-            }),
-            _ => Err(MetadataError::TypeMismatch {
+        let value = self.concrete_entry(key)?;
+        match value.get_ref::<str>() {
+            Ok(string) => Ok(string),
+            Err(_) => Err(MetadataError::TypeMismatch {
                 key: key.to_string(),
                 expected: DataType::String,
                 actual: value.data_type(),
