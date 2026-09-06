@@ -49,6 +49,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -500,6 +501,7 @@ dependencies = [
 name = "qubit-redact"
 version = "0.6.0"
 dependencies = [
+ "bigdecimal",
  "qubit-budget",
  "qubit-json",
  "serde",
