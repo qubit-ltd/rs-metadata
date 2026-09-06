@@ -325,7 +325,7 @@ impl fmt::Debug for Condition {
     /// Writes the strict-policy diagnostic representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = Redactor::strict().redact(self);
+        let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
         formatter.write_str(text.as_ref())
     }

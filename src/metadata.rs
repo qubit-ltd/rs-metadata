@@ -847,7 +847,7 @@ impl fmt::Debug for Metadata {
     /// Writes the strict-policy redacted representation.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = Redactor::strict().redact(self);
+        let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
         formatter.write_str(text.as_ref())
     }
@@ -861,7 +861,7 @@ impl fmt::Display for Metadata {
     /// at this diagnostic boundary.
     #[inline(always)]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let output = Redactor::strict().redact(self);
+        let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
         formatter.write_str(text.as_ref())
     }
