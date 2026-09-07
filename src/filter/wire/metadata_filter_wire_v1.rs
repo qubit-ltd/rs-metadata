@@ -39,6 +39,13 @@ impl MetadataFilterWireV1 {
         }
     }
 
+    /// Returns the decoded wire-format version.
+    #[cfg(feature = "json")]
+    #[inline(always)]
+    pub(crate) const fn version(&self) -> u8 {
+        self.version
+    }
+
     /// Converts this envelope while enforcing `receiver_limits`.
     ///
     /// # Errors

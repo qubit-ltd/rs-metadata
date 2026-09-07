@@ -34,6 +34,8 @@ use serde::de::DeserializeSeed;
 use serde::ser::Error as SerError;
 
 use super::metadata_filter_builder::MetadataFilterBuilder;
+#[cfg(feature = "json")]
+use super::wire::METADATA_FILTER_WIRE_VERSION_V1;
 use super::wire::MetadataFilterWireV1Ref;
 use super::wire::MetadataFilterWireV1Seed;
 #[cfg(feature = "schema")]
@@ -154,9 +156,9 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns an input-size error before parsing, a nested-value limit error,
-    /// a structured filter-contract error, or `InvalidJson` for malformed
-    /// strict filter input and receiver-limit failures found during
-    /// incremental decoding.
+    /// `UnsupportedVersion` for a version mismatch, a structured
+    /// filter-contract error, or `InvalidJson` for malformed strict filter
+    /// input and receiver-limit failures found during incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -178,11 +180,12 @@ impl MetadataFilter {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a structured filter-contract
-    /// error in `Filter`, or `InvalidJson` for syntax, strict-envelope, nested
-    /// value, and receiver-limit failures. Receiver AST limits are charged
-    /// while the expression tree is read; generic JSON traversal is handled by
-    /// the shared budget adapter. Individual
+    /// Returns an input-size error before parsing, `UnsupportedVersion` for a
+    /// version mismatch, a structured filter-contract error in `Filter`, or
+    /// `InvalidJson` for syntax, strict-envelope, nested value, and
+    /// receiver-limit failures. Receiver AST limits are charged while the
+    /// expression tree is read; generic JSON traversal is handled by the
+    /// shared budget adapter. Individual
     /// JSON strings and embedded value payloads remain bounded by the outer
     /// input-byte limit.
     #[cfg(feature = "json")]
@@ -205,6 +208,12 @@ impl MetadataFilter {
                     crate::MetadataWireDecodeError::Filter,
                 )
             })?;
+        if wire.version() != METADATA_FILTER_WIRE_VERSION_V1 {
+            return Err(crate::MetadataWireDecodeError::UnsupportedVersion {
+                expected: METADATA_FILTER_WIRE_VERSION_V1,
+                actual: wire.version(),
+            });
+        }
         wire.into_filter(receiver_filter_limits)
             .map_err(crate::MetadataWireDecodeError::Filter)
     }
