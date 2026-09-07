@@ -33,24 +33,30 @@ all-features = true
 
 [features]
 default = []
-filter = []
+filter = ["dep:qubit-budget", "dep:qubit-utils"]
 schema = ["filter"]
 chrono = ["qubit-value/chrono"]
 big-integer = ["qubit-value/big-integer"]
 big-decimal = ["qubit-value/big-decimal"]
 big-number = ["big-integer", "big-decimal"]
 url = ["qubit-value/url"]
-json = ["dep:serde_json", "qubit-value/json", "dep:qubit-json"]
+json = [
+    "dep:serde_json",
+    "dep:qubit-budget",
+    "qubit-budget/json",
+    "qubit-value/json",
+    "dep:qubit-json",
+]
 all = ["schema", "chrono", "big-number", "url", "json"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 qubit-datatype = { version = "0.12", default-features = false, features = ["converter"] }
-qubit-budget = { version = "0.5", features = ["json"] }
+qubit-budget = { version = "0.5", optional = true }
 qubit-json = { version = "0.9", optional = true }
-qubit-redact = { version = "0.6", path = "../rs-redact", default-features = false }
-qubit-utils = { version = "0.3" }
+qubit-redact = { version = "0.7", path = "../rs-redact", default-features = false }
+qubit-utils = { version = "0.3", optional = true }
 qubit-value = { version = "0.11", path = "../rs-value", default-features = false, features = ["converter", "redact"] }
 
 [dev-dependencies]
