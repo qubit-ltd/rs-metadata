@@ -18,11 +18,22 @@ use qubit_metadata::MetadataLimits;
 #[test]
 fn test_metadata_limits_default_exposes_domain_profile() {
     let limits = MetadataLimits::default();
+    let decode = limits.json_decode();
+    let encode = limits.json_encode();
     assert_eq!(limits.max_metadata_entries(), 4_096);
     assert_eq!(limits.max_schema_fields(), 4_096);
     assert_eq!(limits.max_key_bytes(), 256);
-    assert_eq!(limits.json_decode().max_input_bytes(), Some(1_048_576));
-    assert_eq!(limits.json_encode().max_output_bytes(), Some(1_048_576));
+    assert_eq!(decode.max_input_bytes(), Some(1_048_576));
+    assert_eq!(encode.max_output_bytes(), Some(1_048_576));
+    assert_eq!(decode.value_limits().max_depth(), Some(64));
+    assert_eq!(decode.value_limits().max_nodes(), Some(100_000));
+    assert_eq!(decode.value_limits().max_sequence_items(), Some(4_096));
+    assert_eq!(decode.value_limits().max_map_entries(), Some(4_096));
+    assert_eq!(decode.value_limits().max_key_bytes(), Some(256 * 1024));
+    assert_eq!(decode.value_limits().max_string_bytes(), Some(256 * 1024));
+    assert_eq!(decode.value_limits().max_number_bytes(), Some(4_096));
+    assert_eq!(decode.value_limits().max_payload_bytes(), Some(1_048_576));
+    assert_eq!(encode.value_limits(), decode.value_limits());
 }
 
 #[test]
