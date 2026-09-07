@@ -17,6 +17,8 @@ mod metadata_filter_wire_v1_seed;
 pub(crate) use filter_expression_wire_v1::FilterExpressionWireV1;
 pub(crate) use filter_expression_wire_v1_ref::FilterExpressionWireV1Ref;
 pub(crate) use filter_expression_wire_v1_seed::FilterExpressionWireV1Seed;
+#[cfg(feature = "json")]
+pub(crate) use metadata_filter_wire_v1::METADATA_FILTER_WIRE_VERSION_V1;
 pub(crate) use metadata_filter_wire_v1::MetadataFilterWireV1;
 pub(crate) use metadata_filter_wire_v1_ref::MetadataFilterWireV1Ref;
 pub(crate) use metadata_filter_wire_v1_seed::MetadataFilterWireV1Seed;

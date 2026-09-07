@@ -111,3 +111,19 @@ fn test_metadata_filter_wire_contains_expression() {
     assert_eq!(encoded["expression"]["kind"], json!("exists"));
     assert!(encoded.get("limits").is_none());
 }
+
+#[test]
+fn test_generic_deserializer_reports_unsupported_version_as_serde_error() {
+    let encoded = json!({
+        "version": 7,
+        "expression": {"kind": "all"},
+        "options": {"numeric_comparison_policy": "exact"}
+    });
+
+    let error = from_value::<MetadataFilter>(encoded).expect_err("unsupported version");
+    assert!(
+        error
+            .to_string()
+            .contains("unsupported MetadataFilter wire format version 7; expected 1")
+    );
+}

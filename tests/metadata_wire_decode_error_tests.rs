@@ -23,6 +23,28 @@ use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
 
+#[cfg(feature = "filter")]
+#[test]
+fn test_filter_unsupported_version_retains_version_number() {
+    use qubit_metadata::FilterLimits;
+    use qubit_metadata::MetadataFilter;
+
+    let input = br#"{"version":7,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"}}"#;
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        input,
+        MetadataLimits::default(),
+        FilterLimits::MAX,
+    )
+    .expect_err("filter version");
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::UnsupportedVersion {
+            expected: 1,
+            actual: 7
+        }
+    ));
+}
+
 #[test]
 fn test_budget_error_preserves_source_chain() {
     let error = MetadataWireDecodeError::Budget(BudgetError::LimitExceeded {
