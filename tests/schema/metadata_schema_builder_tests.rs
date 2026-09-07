@@ -71,3 +71,21 @@ fn test_schema_builder_clone_debug_and_equality_are_stable() {
     assert_eq!(builder, clone);
     assert!(format!("{builder:?}").contains("id"));
 }
+
+#[test]
+fn test_schema_builder_exercises_each_constructor_and_error_path() {
+    let builder = MetadataSchemaBuilder::default()
+        .required("required", DataType::Int64)
+        .optional("optional", DataType::String)
+        .replace_field("optional", MetadataField::new(DataType::Bool, true));
+    let schema = std::hint::black_box(builder).build().expect("schema should build");
+    assert_eq!(schema.field_type("required"), Some(DataType::Int64));
+    assert_eq!(schema.field_type("optional"), Some(DataType::Bool));
+
+    let duplicate = std::hint::black_box(
+        MetadataSchemaBuilder::default().required("id", DataType::String).optional("id", DataType::String),
+    )
+    .build()
+    .expect_err("duplicate declaration should fail");
+    assert!(matches!(duplicate, MetadataError::DuplicateSchemaField { .. }));
+}
