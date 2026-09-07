@@ -374,9 +374,16 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, next),
             None => next,
         };
-        match expression.validate_structure_limits(FilterLimits::MAX) {
-            Ok(()) => self.expression = Some(expression),
-            Err(error) => self.error = Some(error),
+        if expression
+            .validate_structure_limits(FilterLimits::MAX)
+            .is_ok()
+        {
+            self.expression = Some(expression);
+        } else {
+            match expression.validate_limits(FilterLimits::MAX) {
+                Ok(()) => self.expression = Some(expression),
+                Err(error) => self.error = Some(error),
+            }
         }
         self
     }
@@ -406,9 +413,16 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, group),
             None => group,
         };
-        match expression.validate_structure_limits(FilterLimits::MAX) {
-            Ok(()) => self.expression = Some(expression),
-            Err(error) => self.error = Some(error),
+        if expression
+            .validate_structure_limits(FilterLimits::MAX)
+            .is_ok()
+        {
+            self.expression = Some(expression);
+        } else {
+            match expression.validate_limits(FilterLimits::MAX) {
+                Ok(()) => self.expression = Some(expression),
+                Err(error) => self.error = Some(error),
+            }
         }
         self
     }

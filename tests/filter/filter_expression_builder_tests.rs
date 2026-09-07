@@ -9,6 +9,7 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterExpressionBuilder;
 use qubit_metadata::FilterExpressionView;
 use qubit_metadata::FilterLimitKind;
 use qubit_metadata::FilterLimits;
@@ -26,6 +27,23 @@ impl From<TenantId> for Value {
     /// Converts a tenant identifier into its filter operand representation.
     fn from(value: TenantId) -> Self {
         Self::UInt64(value.0)
+    }
+}
+
+/// Builds an expression with `depth` alternating AND/OR levels.
+fn build_alternating_group(
+    builder: FilterExpressionBuilder,
+    depth: usize,
+    use_or: bool,
+) -> FilterExpressionBuilder {
+    let builder = builder.exists("nested");
+    if depth == 1 {
+        return builder;
+    }
+    if use_or {
+        builder.or_group(|group| build_alternating_group(group, depth - 1, false))
+    } else {
+        builder.and_group(|group| build_alternating_group(group, depth - 1, true))
     }
 }
 
@@ -265,6 +283,26 @@ fn test_incremental_builder_rejects_first_node_beyond_limit() {
         .fold(FilterExpression::builder(), |builder, index| {
             builder.exists(&format!("key_{index}"))
         })
+        .build();
+
+    assert_eq!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::Nodes,
+            value: FilterLimits::MAX.max_nodes() + 1,
+            maximum: FilterLimits::MAX.max_nodes(),
+        })
+    );
+}
+
+#[test]
+fn test_incremental_builder_preserves_dfs_priority_when_nodes_and_depth_exceed() {
+    let builder = (0..254).fold(FilterExpression::builder(), |builder, index| {
+        builder.exists(&format!("left_{index}"))
+    });
+
+    let result = builder
+        .and_group(|group| build_alternating_group(group, FilterLimits::MAX.max_depth(), true))
         .build();
 
     assert_eq!(
