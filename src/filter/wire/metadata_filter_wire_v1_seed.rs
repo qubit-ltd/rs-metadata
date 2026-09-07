@@ -7,6 +7,8 @@
 // =============================================================================
 //! Incremental V1 metadata-filter envelope decoding.
 
+// qubit-style: allow multiple-public-types
+
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;

@@ -11,7 +11,6 @@
 //! and separate unknown-field policies) that are closely related and often
 //! used together.
 
-mod filter_validation;
 mod metadata_field;
 mod metadata_schema;
 mod metadata_schema_builder;

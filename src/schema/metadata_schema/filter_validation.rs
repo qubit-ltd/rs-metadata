@@ -10,15 +10,15 @@
 use qubit_datatype::DataType;
 use qubit_value::Value;
 
-use super::metadata_field::MetadataField;
-use super::metadata_schema::MetadataSchema;
-use super::unknown_filter_field_policy::UnknownFilterFieldPolicy;
+use super::MetadataSchema;
 use crate::Condition;
+use crate::MetadataField;
 use crate::MetadataError;
 use crate::MetadataFilter;
 use crate::MetadataResult;
 use crate::MetadataValidationError;
 use crate::MetadataValidationResult;
+use crate::UnknownFilterFieldPolicy;
 
 impl MetadataSchema {
     /// Validates a metadata filter against this schema.
