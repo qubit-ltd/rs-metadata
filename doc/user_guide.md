@@ -292,8 +292,8 @@ let metadata = Metadata::decode_json_slice_with_limits(
 The default limits are 1,048,576 input bytes, 4,096 metadata entries, 4,096
 schema fields, and 256 UTF-8 bytes per key. `MetadataLimits` keeps these
 metadata-domain limits separate from its `JsonDecodeLimits` and
-`JsonEncodeLimits` profiles; use `with_json_decode` or `with_json_encode` to
-replace the relevant generic traversal and directional byte limits. Domain limits cannot
+`JsonEncodeLimits` profiles; use the `json_decode` or `json_encode` methods on
+`MetadataLimitsBuilder` to replace the relevant generic traversal and directional byte limits. Domain limits cannot
 exceed the canonical V1 serialization limits. The input byte limit is checked
 before JSON parsing.
 
