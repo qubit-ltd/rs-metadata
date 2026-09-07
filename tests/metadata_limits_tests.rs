@@ -86,3 +86,57 @@ fn test_metadata_limits_reject_domain_values_above_hard_maxima() {
     );
     assert!(MetadataLimits::builder().max_key_bytes(257).build().validate().is_err());
 }
+
+#[test]
+fn test_metadata_limits_builder_applies_every_profile_and_domain_override() {
+    let decode = JsonDecodeLimits::builder()
+        .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 9))
+        .build();
+    let encode = JsonEncodeLimits::builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 11))
+        .build();
+    let limits = MetadataLimits::builder()
+        .json_decode(decode)
+        .json_encode(encode)
+        .max_metadata_entries(12)
+        .max_schema_fields(13)
+        .max_key_bytes(14)
+        .build();
+
+    assert_eq!(limits.json_decode().max_input_bytes(), Some(9));
+    assert_eq!(limits.json_encode().max_output_bytes(), Some(11));
+    assert_eq!(limits.max_metadata_entries(), 12);
+    assert_eq!(limits.max_schema_fields(), 13);
+    assert_eq!(limits.max_key_bytes(), 14);
+}
+
+#[test]
+fn test_metadata_limit_validation_accepts_hard_boundaries() {
+    MetadataLimits::builder()
+        .max_metadata_entries(4_096)
+        .max_schema_fields(4_096)
+        .max_key_bytes(256)
+        .build()
+        .validate()
+        .expect("hard boundaries must be accepted");
+}
+
+#[test]
+fn test_metadata_limit_validation_rejects_each_value_above_boundary() {
+    for (name, limits) in [
+        (
+            "metadata entries",
+            MetadataLimits::builder().max_metadata_entries(4_097).build(),
+        ),
+        (
+            "schema fields",
+            MetadataLimits::builder().max_schema_fields(4_097).build(),
+        ),
+        (
+            "key bytes",
+            MetadataLimits::builder().max_key_bytes(257).build(),
+        ),
+    ] {
+        assert!(limits.validate().is_err(), "{name} above its cap must fail");
+    }
+}
