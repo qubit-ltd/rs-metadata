@@ -127,3 +127,14 @@ fn test_generic_deserializer_reports_unsupported_version_as_serde_error() {
             .contains("unsupported MetadataFilter wire format version 7; expected 1")
     );
 }
+
+#[test]
+fn test_metadata_filter_wire_rejects_duplicate_envelope_fields() {
+    for input in [
+        r#"{"version":1,"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"all"},"expression":{"kind":"none"},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"},"options":{"numeric_comparison_policy":"exact"}}"#,
+    ] {
+        assert!(serde_json::from_str::<MetadataFilter>(input).is_err());
+    }
+}
