@@ -65,3 +65,32 @@ fn test_filter_wire_round_trips_every_condition_and_boolean_operator() {
         assert_eq!(decoded, filter);
     }
 }
+
+#[test]
+fn test_filter_wire_rejects_invalid_operand_shapes_and_group_members() {
+    let invalid_expressions = [
+        serde_json::json!({"kind": "eq", "key": "k", "value": {"map": {}}}),
+        serde_json::json!({"kind": "ne", "key": "k", "value": {"sequence": []}}),
+        serde_json::json!({"kind": "lt", "key": "k"}),
+        serde_json::json!({"kind": "le", "key": "k", "value": null}),
+        serde_json::json!({"kind": "gt", "key": "k", "value": {}}),
+        serde_json::json!({"kind": "ge", "key": "k", "value": {"scalar": null}}),
+        serde_json::json!({"kind": "in", "key": "k", "values": [{"map": {}}]}),
+        serde_json::json!({"kind": "not_in", "key": "k", "values": [{"sequence": []}]}),
+        serde_json::json!({"kind": "exists"}),
+        serde_json::json!({"kind": "not_exists", "key": 1}),
+        serde_json::json!({"kind": "and", "children": [null, {"kind": "all"}]}),
+        serde_json::json!({"kind": "or", "children": [{"kind": "all"}, null]}),
+        serde_json::json!({"kind": "not", "expression": null}),
+        serde_json::json!({"kind": "unknown"}),
+    ];
+
+    for expression in invalid_expressions {
+        let mut envelope = serde_json::to_value(MetadataFilter::all()).expect("envelope should encode");
+        envelope["expression"] = expression;
+        assert!(
+            serde_json::from_value::<MetadataFilter>(envelope).is_err(),
+            "invalid expression must be rejected"
+        );
+    }
+}
