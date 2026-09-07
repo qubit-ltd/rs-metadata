@@ -10,6 +10,7 @@
 use std::hint::black_box;
 
 use criterion::BatchSize;
+use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::criterion_group;
 use criterion::criterion_main;
@@ -70,7 +71,8 @@ fn benchmark_metadata_json_decode(criterion: &mut Criterion) {
 
     criterion.bench_function("metadata/json_decode", |bencher| {
         bencher.iter(|| {
-            let decoded = Metadata::decode_json_slice(black_box(&encoded)).expect("benchmark metadata should decode");
+            let decoded = Metadata::decode_json_slice(black_box(&encoded))
+                .expect("benchmark metadata should decode");
             black_box(decoded)
         });
     });
@@ -102,6 +104,33 @@ fn benchmark_filter_match(criterion: &mut Criterion) {
     });
 }
 
+/// Benchmarks incremental construction of flattened AND expressions.
+fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
+    let mut group = criterion.benchmark_group("metadata/filter_expression_construction");
+    for condition_count in [16, 64, 128, 256] {
+        let keys: Vec<_> = (0..condition_count)
+            .map(|index| format!("key_{index}"))
+            .collect();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(condition_count),
+            keys.as_slice(),
+            |bencher, keys| {
+                bencher.iter(|| {
+                    let keys = black_box(keys).to_owned();
+                    let result = keys
+                        .iter()
+                        .fold(FilterExpression::builder(), |builder, key| {
+                            builder.exists(key)
+                        })
+                        .build();
+                    black_box(result)
+                });
+            },
+        );
+    }
+    group.finish();
+}
+
 /// Benchmarks bounded JSON decoding of a prepared metadata filter envelope.
 #[cfg(feature = "json")]
 fn benchmark_filter_json_decode(criterion: &mut Criterion) {
@@ -119,8 +148,8 @@ fn benchmark_filter_json_decode(criterion: &mut Criterion) {
 
     criterion.bench_function("metadata/filter_json_decode", |bencher| {
         bencher.iter(|| {
-            let decoded =
-                MetadataFilter::decode_json_slice(black_box(&encoded)).expect("benchmark filter should decode");
+            let decoded = MetadataFilter::decode_json_slice(black_box(&encoded))
+                .expect("benchmark filter should decode");
             black_box(decoded)
         });
     });
@@ -141,8 +170,11 @@ fn benchmark_schema_json_decode(criterion: &mut Criterion) {
 
     criterion.bench_function("metadata/schema_json_decode", |bencher| {
         bencher.iter(|| {
-            let decoded = MetadataSchema::decode_json_slice_with_limits(black_box(&encoded), MetadataLimits::default())
-                .expect("benchmark schema should decode");
+            let decoded = MetadataSchema::decode_json_slice_with_limits(
+                black_box(&encoded),
+                MetadataLimits::default(),
+            )
+            .expect("benchmark schema should decode");
             black_box(decoded)
         });
     });
@@ -156,7 +188,10 @@ fn benchmark_downstream_metadata_paths(criterion: &mut Criterion) {
     for count in [8, 64, 256] {
         let mut metadata = Metadata::new();
         for index in 0..count {
-            metadata.set(&format!("field_{index:03}"), "representative request metadata value");
+            metadata.set(
+                &format!("field_{index:03}"),
+                "representative request metadata value",
+            );
         }
         criterion.bench_function(&format!("metadata/clone_{count}_fields"), |bencher| {
             bencher.iter(|| black_box(black_box(&metadata).clone()));
@@ -209,6 +244,7 @@ criterion_group!(
     benchmark_downstream_metadata_paths,
     benchmark_metadata_typed_get,
     benchmark_metadata_json_decode,
+    benchmark_filter_expression_construction,
     benchmark_filter_match,
     benchmark_filter_json_decode,
     benchmark_schema_json_decode,
