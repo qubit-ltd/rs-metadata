@@ -173,6 +173,31 @@ fn test_condition_stops_before_unadmitted_key_field() {
     assert!(text.contains("<truncated>"), "{text}");
 }
 
+#[cfg(feature = "filter")]
+#[test]
+fn test_all_condition_variants_have_redacted_diagnostics() {
+    let expressions = [
+        FilterExpression::builder().eq("k", 1_i64).build(),
+        FilterExpression::builder().ne("k", 1_i64).build(),
+        FilterExpression::builder().lt("k", 1_i64).build(),
+        FilterExpression::builder().le("k", 1_i64).build(),
+        FilterExpression::builder().gt("k", 1_i64).build(),
+        FilterExpression::builder().ge("k", 1_i64).build(),
+        FilterExpression::builder().in_set("k", [1_i64, 2]).build(),
+        FilterExpression::builder().not_in_set("k", [1_i64, 2]).build(),
+        FilterExpression::builder().exists("k").build(),
+        FilterExpression::builder().not_exists("k").build(),
+    ];
+    for expression in expressions {
+        let expression = expression.expect("condition should build");
+        let FilterExpressionView::Condition(condition) = expression.view() else {
+            panic!("builder should produce a condition");
+        };
+        let text = complete_redacted_text(condition, &RedactionPolicy::default());
+        assert!(text.contains("Condition"), "{text}");
+    }
+}
+
 #[test]
 fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let metadata = Metadata::new().with("secret_number", 12345_i32);
