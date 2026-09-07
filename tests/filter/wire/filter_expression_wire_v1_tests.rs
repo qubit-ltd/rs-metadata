@@ -36,3 +36,32 @@ fn test_nested_expression_round_trips_through_filter_wire() {
 
     assert_eq!(decoded, filter);
 }
+
+#[test]
+fn test_filter_wire_round_trips_every_condition_and_boolean_operator() {
+    let expressions = [
+        FilterExpression::builder().eq("k", 1_i64).build(),
+        FilterExpression::builder().ne("k", 1_i64).build(),
+        FilterExpression::builder().lt("k", 1_i64).build(),
+        FilterExpression::builder().le("k", 1_i64).build(),
+        FilterExpression::builder().gt("k", 1_i64).build(),
+        FilterExpression::builder().ge("k", 1_i64).build(),
+        FilterExpression::builder().in_set("k", [1_i64, 2]).build(),
+        FilterExpression::builder().not_in_set("k", [1_i64, 2]).build(),
+        FilterExpression::builder().exists("k").build(),
+        FilterExpression::builder().not_exists("k").build(),
+        FilterExpression::builder().exists("k").and_group(|group| group.not_exists("j")).build(),
+        FilterExpression::builder().exists("k").or_group(|group| group.not_exists("j")).build(),
+        FilterExpression::builder().exists("k").not().build(),
+    ];
+
+    for expression in expressions {
+        let filter = MetadataFilter::builder()
+            .expression(expression.expect("expression should build"))
+            .build()
+            .expect("filter should build");
+        let encoded = serde_json::to_string(&filter).expect("wire encoding should succeed");
+        let decoded: MetadataFilter = serde_json::from_str(&encoded).expect("wire decoding should succeed");
+        assert_eq!(decoded, filter);
+    }
+}

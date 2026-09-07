@@ -47,3 +47,16 @@ fn test_schema_builder_replace_field_explicitly_overwrites_declaration() {
     assert_eq!(schema.field_type("id"), Some(DataType::Int64));
     assert!(!schema.field("id").unwrap().is_required());
 }
+
+#[test]
+fn test_schema_builder_reports_first_duplicate_after_further_declarations() {
+    let error = MetadataSchemaBuilder::default()
+        .required("id", DataType::String)
+        .optional("id", DataType::Int64)
+        .required("name", DataType::String)
+        .optional("name", DataType::Int64)
+        .build()
+        .expect_err("the first duplicate should remain the reported error");
+
+    assert_eq!(error, MetadataError::DuplicateSchemaField { key: "id".to_string() });
+}
