@@ -62,8 +62,18 @@ fn test_builder_rejects_unset_and_non_finite_filter_operands() {
             message: "filter operands must be concrete values".to_owned(),
         })
     );
-    assert!(FilterExpression::builder().eq("score", f64::NAN).build().is_err());
-    assert!(FilterExpression::builder().eq("score", f64::INFINITY).build().is_err());
+    assert!(
+        FilterExpression::builder()
+            .eq("score", f64::NAN)
+            .build()
+            .is_err()
+    );
+    assert!(
+        FilterExpression::builder()
+            .eq("score", f64::INFINITY)
+            .build()
+            .is_err()
+    );
 }
 
 #[test]
@@ -80,7 +90,10 @@ fn test_builder_creates_nested_boolean_expression() {
         .expect("filter should build");
 
     assert!(filter.matches(&sample()));
-    assert!(matches!(filter.expression().view(), FilterExpressionView::Or(_)));
+    assert!(matches!(
+        filter.expression().view(),
+        FilterExpressionView::Or(_)
+    ));
 }
 
 #[test]
@@ -98,7 +111,9 @@ fn test_or_group_matches_either_explicit_branch_within_group() {
         .expression(expression)
         .build()
         .expect("filter should build");
-    let metadata = Metadata::new().with("tenant", "other").with("priority", 2_i64);
+    let metadata = Metadata::new()
+        .with("tenant", "other")
+        .with("priority", 2_i64);
 
     assert!(filter.matches(&metadata));
 }
@@ -157,7 +172,9 @@ fn test_not_propagates_node_limit_error() {
 #[test]
 fn test_and_group_preserves_nested_error() {
     assert_eq!(
-        FilterExpression::builder().and_group(|group| group.not()).build(),
+        FilterExpression::builder()
+            .and_group(|group| group.not())
+            .build(),
         Err(MetadataError::InvalidFilterExpression {
             message: "cannot negate an empty filter expression".to_owned(),
         })
@@ -206,7 +223,10 @@ fn test_failed_builder_does_not_consume_membership_or_run_groups() {
         .and_group(|_| panic!("failed builder must skip group callback"))
         .build();
     assert_eq!(consumed.get(), 0);
-    assert!(matches!(result, Err(MetadataError::InvalidFilterExpression { .. })));
+    assert!(matches!(
+        result,
+        Err(MetadataError::InvalidFilterExpression { .. })
+    ));
 }
 
 #[test]
@@ -226,4 +246,33 @@ fn test_node_limit_stops_further_operand_conversion() {
             ..
         })
     ));
+}
+
+#[test]
+fn test_incremental_builder_accepts_exact_node_limit() {
+    let expression = (0..(FilterLimits::MAX.max_nodes() - 1))
+        .fold(FilterExpression::builder(), |builder, index| {
+            builder.exists(&format!("key_{index}"))
+        })
+        .build();
+
+    assert!(expression.is_ok());
+}
+
+#[test]
+fn test_incremental_builder_rejects_first_node_beyond_limit() {
+    let result = (0..FilterLimits::MAX.max_nodes())
+        .fold(FilterExpression::builder(), |builder, index| {
+            builder.exists(&format!("key_{index}"))
+        })
+        .build();
+
+    assert_eq!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::Nodes,
+            value: FilterLimits::MAX.max_nodes() + 1,
+            maximum: FilterLimits::MAX.max_nodes(),
+        })
+    );
 }

@@ -7,6 +7,8 @@
 // =============================================================================
 //! Immutable filter expressions and their read-only views.
 
+use std::fmt;
+
 use crate::Condition;
 use crate::FilterExpressionBuilder;
 use crate::FilterExpressionView;
@@ -27,11 +29,26 @@ use crate::filter::internal::MatchOutcome;
 /// invalid expression trees. The structure is Boolean, while evaluation uses
 /// a private three-valued outcome so missing data stays unknown through NOT,
 /// AND, and OR.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 #[must_use]
 pub struct FilterExpression {
     /// Private expression node.
     node: FilterExpressionNode,
+    /// Total number of nodes after logical-group flattening.
+    node_count: usize,
+    /// Maximum node depth after logical-group flattening.
+    max_depth: usize,
+}
+
+impl fmt::Debug for FilterExpression {
+    /// Formats the expression without exposing its cached implementation
+    /// metrics.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("FilterExpression")
+            .field("node", &self.node)
+            .finish()
+    }
 }
 
 impl FilterExpression {
@@ -101,7 +118,9 @@ impl FilterExpression {
     #[inline]
     pub fn view(&self) -> FilterExpressionView<'_> {
         match &self.node {
-            FilterExpressionNode::Condition(condition) => FilterExpressionView::Condition(condition),
+            FilterExpressionNode::Condition(condition) => {
+                FilterExpressionView::Condition(condition)
+            }
             FilterExpressionNode::And(children) => FilterExpressionView::And(children),
             FilterExpressionNode::Or(children) => FilterExpressionView::Or(children),
             FilterExpressionNode::Not(inner) => FilterExpressionView::Not(inner),
@@ -124,6 +143,8 @@ impl FilterExpression {
         condition.validate_operands()?;
         Ok(Self {
             node: FilterExpressionNode::Condition(condition),
+            node_count: 1,
+            max_depth: 1,
         })
     }
 
@@ -136,6 +157,8 @@ impl FilterExpression {
     pub(crate) const fn true_expression() -> Self {
         Self {
             node: FilterExpressionNode::True,
+            node_count: 1,
+            max_depth: 1,
         }
     }
 
@@ -148,6 +171,8 @@ impl FilterExpression {
     pub(crate) const fn false_expression() -> Self {
         Self {
             node: FilterExpressionNode::False,
+            node_count: 1,
+            max_depth: 1,
         }
     }
 
@@ -208,8 +233,12 @@ impl FilterExpression {
     /// A NOT expression containing the supplied child.
     #[inline]
     pub(crate) fn not_expression(expression: Self) -> Self {
+        let node_count = expression.node_count + 1;
+        let max_depth = expression.max_depth + 1;
         Self {
             node: FilterExpressionNode::Not(Box::new(expression)),
+            node_count,
+            max_depth,
         }
     }
 
@@ -219,11 +248,20 @@ impl FilterExpression {
     ///
     /// A simplified negated expression.
     pub(crate) fn negated_unchecked(self) -> Self {
-        match self.node {
-            FilterExpressionNode::True => Self::false_expression(),
-            FilterExpressionNode::False => Self::true_expression(),
-            FilterExpressionNode::Not(inner) => *inner,
-            node => Self::not_expression(Self { node }),
+        match self {
+            Self {
+                node: FilterExpressionNode::True,
+                ..
+            } => Self::false_expression(),
+            Self {
+                node: FilterExpressionNode::False,
+                ..
+            } => Self::true_expression(),
+            Self {
+                node: FilterExpressionNode::Not(inner),
+                ..
+            } => *inner,
+            expression => Self::not_expression(expression),
         }
     }
 
@@ -257,17 +295,25 @@ impl FilterExpression {
     /// # Returns
     ///
     /// The three-valued expression outcome.
-    pub(crate) fn evaluate(&self, metadata: &Metadata, options: FilterMatchOptions) -> MatchOutcome {
+    pub(crate) fn evaluate(
+        &self,
+        metadata: &Metadata,
+        options: FilterMatchOptions,
+    ) -> MatchOutcome {
         match &self.node {
             FilterExpressionNode::Condition(condition) => {
                 condition.evaluate(metadata, options.numeric_comparison_policy())
             }
-            FilterExpressionNode::And(children) => {
-                MatchOutcome::and(children.iter().map(|child| child.evaluate(metadata, options)))
-            }
-            FilterExpressionNode::Or(children) => {
-                MatchOutcome::or(children.iter().map(|child| child.evaluate(metadata, options)))
-            }
+            FilterExpressionNode::And(children) => MatchOutcome::and(
+                children
+                    .iter()
+                    .map(|child| child.evaluate(metadata, options)),
+            ),
+            FilterExpressionNode::Or(children) => MatchOutcome::or(
+                children
+                    .iter()
+                    .map(|child| child.evaluate(metadata, options)),
+            ),
             FilterExpressionNode::Not(inner) => inner.evaluate(metadata, options).not(),
             FilterExpressionNode::True => MatchOutcome::True,
             FilterExpressionNode::False => MatchOutcome::False,
@@ -320,69 +366,254 @@ impl FilterExpression {
     /// Returns [`MetadataError::FilterLimitExceeded`] when depth, node count,
     /// key length, or membership values exceed a configured bound.
     pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
-        let mut node_count = 0;
-        self.validate_limits_at(limits, 1, &mut node_count)
+        self.validate_structure_limits(limits)?;
+        self.validate_condition_limits(limits)
     }
 
-    /// Recursively validates one expression node at `depth`.
-    fn validate_limits_at(&self, limits: FilterLimits, depth: usize, node_count: &mut usize) -> MetadataResult<()> {
-        if depth > limits.max_depth() {
+    /// Validates cached structural metrics against resource limits in O(1).
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Structural bounds to enforce.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when the cached maximum
+    /// depth or total node count exceeds `limits`. The reported value is the
+    /// first value beyond the configured maximum, matching recursive
+    /// validation semantics.
+    pub(crate) fn validate_structure_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
+        if self.max_depth > limits.max_depth() {
             return Err(MetadataError::FilterLimitExceeded {
                 kind: FilterLimitKind::Depth,
-                value: depth,
+                value: limits.max_depth() + 1,
                 maximum: limits.max_depth(),
             });
         }
-        *node_count += 1;
-        if *node_count > limits.max_nodes() {
+        if self.node_count > limits.max_nodes() {
             return Err(MetadataError::FilterLimitExceeded {
                 kind: FilterLimitKind::Nodes,
-                value: *node_count,
+                value: limits.max_nodes() + 1,
                 maximum: limits.max_nodes(),
             });
         }
+        Ok(())
+    }
+
+    /// Recursively validates every leaf condition against resource limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Condition bounds to enforce.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when a condition key or
+    /// membership set exceeds `limits`.
+    fn validate_condition_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
         match &self.node {
             FilterExpressionNode::Condition(condition) => condition.validate_limits(limits),
             FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
                 for child in children {
-                    child.validate_limits_at(limits, depth + 1, node_count)?;
+                    child.validate_condition_limits(limits)?;
                 }
                 Ok(())
             }
-            FilterExpressionNode::Not(inner) => inner.validate_limits_at(limits, depth + 1, node_count),
+            FilterExpressionNode::Not(inner) => inner.validate_condition_limits(limits),
             FilterExpressionNode::True | FilterExpressionNode::False => Ok(()),
+        }
+    }
+
+    /// Asserts that cached structural metrics equal recursively computed
+    /// metrics.
+    #[cfg(test)]
+    fn assert_cached_metrics_consistent(&self) {
+        match &self.node {
+            FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
+                for child in children {
+                    child.assert_cached_metrics_consistent();
+                }
+            }
+            FilterExpressionNode::Not(inner) => inner.assert_cached_metrics_consistent(),
+            FilterExpressionNode::Condition(_)
+            | FilterExpressionNode::True
+            | FilterExpressionNode::False => {}
+        }
+        let (node_count, max_depth) = self.recursive_metrics();
+        assert_eq!(
+            self.node_count, node_count,
+            "cached node count differs from the expression tree"
+        );
+        assert_eq!(
+            self.max_depth, max_depth,
+            "cached maximum depth differs from the expression tree"
+        );
+    }
+
+    /// Recursively computes the node count and maximum depth for tests.
+    #[cfg(test)]
+    fn recursive_metrics(&self) -> (usize, usize) {
+        match &self.node {
+            FilterExpressionNode::Condition(_)
+            | FilterExpressionNode::True
+            | FilterExpressionNode::False => (1, 1),
+            FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
+                let mut node_count = 1;
+                let mut max_child_depth = 0;
+                for child in children {
+                    let (child_node_count, child_max_depth) = child.recursive_metrics();
+                    node_count += child_node_count;
+                    max_child_depth = max_child_depth.max(child_max_depth);
+                }
+                (node_count, max_child_depth + 1)
+            }
+            FilterExpressionNode::Not(inner) => {
+                let (node_count, max_depth) = inner.recursive_metrics();
+                (node_count + 1, max_depth + 1)
+            }
         }
     }
 
     /// Combines two non-constant expressions with logical AND while reusing a
     /// left AND group.
     fn combine_and(left: Self, right: Self) -> Self {
-        let mut children = match left.node {
-            FilterExpressionNode::And(children) => children,
-            node => vec![Self { node }],
+        let left_same_kind = matches!(&left.node, FilterExpressionNode::And(_));
+        let right_same_kind = matches!(&right.node, FilterExpressionNode::And(_));
+        let (node_count, max_depth) =
+            Self::combined_metrics(&left, &right, left_same_kind, right_same_kind);
+        let mut children = match left {
+            Self {
+                node: FilterExpressionNode::And(children),
+                ..
+            } => children,
+            expression => vec![expression],
         };
-        match right.node {
-            FilterExpressionNode::And(mut nested) => children.append(&mut nested),
-            node => children.push(Self { node }),
+        match right {
+            Self {
+                node: FilterExpressionNode::And(mut nested),
+                ..
+            } => children.append(&mut nested),
+            expression => children.push(expression),
         }
         Self {
             node: FilterExpressionNode::And(children),
+            node_count,
+            max_depth,
         }
     }
 
     /// Combines two non-constant expressions with logical OR while reusing a
     /// left OR group.
     fn combine_or(left: Self, right: Self) -> Self {
-        let mut children = match left.node {
-            FilterExpressionNode::Or(children) => children,
-            node => vec![Self { node }],
+        let left_same_kind = matches!(&left.node, FilterExpressionNode::Or(_));
+        let right_same_kind = matches!(&right.node, FilterExpressionNode::Or(_));
+        let (node_count, max_depth) =
+            Self::combined_metrics(&left, &right, left_same_kind, right_same_kind);
+        let mut children = match left {
+            Self {
+                node: FilterExpressionNode::Or(children),
+                ..
+            } => children,
+            expression => vec![expression],
         };
-        match right.node {
-            FilterExpressionNode::Or(mut nested) => children.append(&mut nested),
-            node => children.push(Self { node }),
+        match right {
+            Self {
+                node: FilterExpressionNode::Or(mut nested),
+                ..
+            } => children.append(&mut nested),
+            expression => children.push(expression),
         }
         Self {
             node: FilterExpressionNode::Or(children),
+            node_count,
+            max_depth,
         }
+    }
+
+    /// Calculates metrics for two expressions combined under one logical
+    /// operator, accounting for same-kind root flattening.
+    ///
+    /// # Parameters
+    ///
+    /// * `left` - Left expression before flattening.
+    /// * `right` - Right expression before flattening.
+    /// * `left_same_kind` - Whether the left root is flattened into the result.
+    /// * `right_same_kind` - Whether the right root is flattened into the result.
+    ///
+    /// # Returns
+    ///
+    /// The result's total node count and maximum depth.
+    fn combined_metrics(
+        left: &Self,
+        right: &Self,
+        left_same_kind: bool,
+        right_same_kind: bool,
+    ) -> (usize, usize) {
+        let node_count = match (left_same_kind, right_same_kind) {
+            (true, true) => left.node_count + right.node_count - 1,
+            (true, false) | (false, true) => left.node_count + right.node_count,
+            (false, false) => left.node_count + right.node_count + 1,
+        };
+        let max_depth = match (left_same_kind, right_same_kind) {
+            (true, true) => left.max_depth.max(right.max_depth),
+            (true, false) => left.max_depth.max(right.max_depth + 1),
+            (false, true) => (left.max_depth + 1).max(right.max_depth),
+            (false, false) => left.max_depth.max(right.max_depth) + 1,
+        };
+        (node_count, max_depth)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FilterExpression;
+
+    /// Verifies that cached metrics agree with a recursive traversal for
+    /// representative simplified and nested expression shapes.
+    #[test]
+    fn test_cached_metrics_match_recursive_metrics() {
+        let leaf = FilterExpression::builder()
+            .exists("leaf")
+            .build()
+            .expect("leaf expression should build");
+        leaf.assert_cached_metrics_consistent();
+
+        let left = FilterExpression::builder()
+            .exists("left_1")
+            .exists("left_2")
+            .build()
+            .expect("left expression should build");
+        let right = FilterExpression::builder()
+            .exists("right_1")
+            .exists("right_2")
+            .build()
+            .expect("right expression should build");
+        let flattened = left.try_and(right).expect("flattened AND should build");
+        flattened.assert_cached_metrics_consistent();
+
+        let nested = flattened
+            .try_or(
+                FilterExpression::builder()
+                    .exists("alternative")
+                    .build()
+                    .expect("alternative expression should build"),
+            )
+            .expect("nested OR should build")
+            .try_not()
+            .expect("negated expression should build");
+        nested.assert_cached_metrics_consistent();
+
+        FilterExpression::match_all()
+            .try_and(nested.clone())
+            .expect("true AND expression should simplify")
+            .assert_cached_metrics_consistent();
+        FilterExpression::match_none()
+            .try_or(nested)
+            .expect("false OR expression should simplify")
+            .assert_cached_metrics_consistent();
+        FilterExpression::match_all()
+            .try_not()
+            .expect("constant negation should simplify")
+            .assert_cached_metrics_consistent();
     }
 }
