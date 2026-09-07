@@ -17,16 +17,15 @@
 // =============================================================================
 //! Builder for [`crate::MetadataLimits`].
 
-use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
-use qubit_budget::json::JsonResource;
 
-use crate::metadata_limits::DEFAULT_MAX_JSON_BYTES;
 use crate::metadata_limits::DEFAULT_MAX_KEY_BYTES;
 use crate::metadata_limits::DEFAULT_MAX_METADATA_ENTRIES;
 use crate::metadata_limits::DEFAULT_MAX_SCHEMA_FIELDS;
 use crate::metadata_limits::MetadataLimits;
+use crate::metadata_limits::default_json_decode_limits;
+use crate::metadata_limits::default_json_encode_limits;
 
 /// Builder for [`MetadataLimits`].
 #[must_use]
@@ -90,12 +89,8 @@ impl MetadataLimitsBuilder {
 impl Default for MetadataLimitsBuilder {
     fn default() -> Self {
         Self {
-            json_decode: JsonDecodeLimits::builder()
-                .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, DEFAULT_MAX_JSON_BYTES))
-                .build(),
-            json_encode: JsonEncodeLimits::builder()
-                .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, DEFAULT_MAX_JSON_BYTES))
-                .build(),
+            json_decode: default_json_decode_limits(),
+            json_encode: default_json_encode_limits(),
             max_metadata_entries: DEFAULT_MAX_METADATA_ENTRIES,
             max_schema_fields: DEFAULT_MAX_SCHEMA_FIELDS,
             max_key_bytes: DEFAULT_MAX_KEY_BYTES,
