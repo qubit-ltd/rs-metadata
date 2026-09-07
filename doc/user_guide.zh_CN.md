@@ -41,7 +41,7 @@ Metadata -> MetadataSchema -> 已存值校验
 ```toml
 [dependencies]
 qubit-metadata = "0.10"
-qubit-datatype = "0.11"
+qubit-datatype = "0.12"
 ```
 
 使用可选能力时请显式启用对应 feature：
@@ -49,7 +49,7 @@ qubit-datatype = "0.11"
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", features = ["schema", "json"] }
-qubit-datatype = "0.11"
+qubit-datatype = "0.12"
 ```
 
 `schema` 会包含 `filter`；不需要 schema 校验时可使用
@@ -253,9 +253,10 @@ assert!(filter.matches(&metadata));
 ```rust
 use qubit_metadata::{Metadata, MetadataLimits};
 
-let limits = MetadataLimits::default()
-    .with_max_metadata_entries(128)
-    .with_max_key_bytes(128);
+let limits = MetadataLimits::builder()
+    .max_metadata_entries(128)
+    .max_key_bytes(128)
+    .build();
 let metadata = Metadata::decode_json_slice_with_limits(
     br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
@@ -338,13 +339,6 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 - 序列化 metadata 和 schema map 时遵守 4,096 个条目及 256 字节 key 的 wire 限制。
 - 将 V1 Serde 表示放在集成边界后面，以便未来 wire version 变化时能够有意识地处理。
 
-## 下一步
-
-- 阅读 [README](../README.zh_CN.md) 了解项目概览和安装摘要。
-- 浏览 [API 文档](https://docs.rs/qubit-metadata) 查看完整公共 API。
-- 修改 feature-gated 行为前运行 `cargo test --all-features`。
-- 查看[英文用户手册](user_guide.md)获取相同流程的英文版本。
-
 ## 明确读取方式和边界诊断
 
 索引流程中，校验标识字段时通常需要保持原有类型；接收外部文本时，才显式请求转换：
@@ -377,3 +371,11 @@ V1 序列化格式保持不变。
 跨模块字段应明确具体类型、单位和缺失规则。存储 schema 适配器必须拒绝无法表达的约束；
 通过逻辑 schema 校验并不意味着后端支持所有运算符。
 `merge` 仍会覆盖同名键；若批次中的请求标识等字段可能冲突，聚合层应单独保留逐批元数据。
+
+## 下一步
+
+- 阅读 [README](../README.zh_CN.md) 了解项目概览和安装摘要。
+- 浏览 [API 文档](https://docs.rs/qubit-metadata) 查看完整公共 API。
+- 阅读[设计文档](design.zh_CN.md)了解模块边界和兼容性不变量。
+- 修改 feature-gated 行为前运行 `cargo test --all-features`。
+- 查看[英文用户手册](user_guide.md)获取相同流程的英文版本。

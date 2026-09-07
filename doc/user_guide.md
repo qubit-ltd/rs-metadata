@@ -45,7 +45,7 @@ For the core metadata API (the crate's default feature set is core-only):
 ```toml
 [dependencies]
 qubit-metadata = "0.10"
-qubit-datatype = "0.11"
+qubit-datatype = "0.12"
 ```
 
 Enable optional layers explicitly when they are used:
@@ -53,7 +53,7 @@ Enable optional layers explicitly when they are used:
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.10", features = ["schema", "json"] }
-qubit-datatype = "0.11"
+qubit-datatype = "0.12"
 ```
 
 The `schema` feature includes `filter`; use `features = ["filter"]` when
@@ -278,9 +278,10 @@ JSON input:
 ```rust
 use qubit_metadata::{Metadata, MetadataLimits};
 
-let limits = MetadataLimits::default()
-    .with_max_metadata_entries(128)
-    .with_max_key_bytes(128);
+let limits = MetadataLimits::builder()
+    .max_metadata_entries(128)
+    .max_key_bytes(128)
+    .build();
 let metadata = Metadata::decode_json_slice_with_limits(
     br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
@@ -381,16 +382,6 @@ the caller must distinguish absence from a type mismatch or unset value.
 - Keep the V1 Serde representation behind an integration boundary so a future
   wire-version change can be handled deliberately.
 
-## Next steps
-
-- Read the [README](../README.md) for the project overview and installation
-  summary.
-- Browse the [API documentation](https://docs.rs/qubit-metadata) for the full
-  public surface.
-- Run `cargo test --all-features` before changing feature-gated behavior.
-- See the [Chinese user guide](user_guide.zh_CN.md) for the same workflow in
-  Simplified Chinese.
-
 ## Explicit reads and boundary diagnostics
 
 For an indexing pipeline, preserve the stored type when validating an identifier,
@@ -431,3 +422,11 @@ absence rule. A storage schema adapter must reject constraints it cannot express
 passing a logical schema check alone does not prove backend operator support.
 `merge` still overwrites matching keys: batch aggregators must retain per-batch
 fields explicitly when request identifiers or other values may conflict.
+
+## Next steps
+
+- Read the [README](../README.md) for the project overview and installation summary.
+- Browse the [API documentation](https://docs.rs/qubit-metadata) for the full public surface.
+- Read the [design document](design.md) for module and compatibility invariants.
+- Run `cargo test --all-features` before changing feature-gated behavior.
+- See the [Chinese user guide](user_guide.zh_CN.md) for the same workflow in Simplified Chinese.

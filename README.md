@@ -95,15 +95,18 @@ use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
 use qubit_metadata::MetadataLimits;
 
-let decode = default_json_decode_limits().with_input_bytes_limit(
-    ResourceLimit::new(JsonResource::InputBytes, 64 * 1024),
-);
-let encode = default_json_encode_limits().with_output_bytes_limit(
-    ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024),
-);
-let limits = MetadataLimits::default()
-    .with_json_decode(decode)
-    .with_json_encode(encode);
+let decode = default_json_decode_limits()
+    .into_builder()
+    .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
+    .build();
+let encode = default_json_encode_limits()
+    .into_builder()
+    .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+    .build();
+let limits = MetadataLimits::builder()
+    .json_decode(decode)
+    .json_encode(encode)
+    .build();
 ```
 
 `decode_json_slice_with_limits` creates one `JsonDecodeSession` from the decode
@@ -123,7 +126,8 @@ accepted consumption in that operation is not rolled back.
 - Schema validation of stored metadata remains strict about the declared
   concrete field type, even though filter schema checks accept compatible
   numeric representations.
-- Default JSON decoding limits input bytes, generic JSON structure and payload, and
+- `MetadataLimits::default()` includes byte, depth, node, sequence/map, key/string/number/payload,
+  and metadata-domain limits. JSON decoding limits input bytes, generic JSON structure and payload, and
   metadata-domain entry, schema-field, and key counts. Domain limits cannot
   exceed the canonical V1 serialization limits. Filter limits are transient
   receiver-side policy and are omitted from the V1 wire; the shared JSON
@@ -140,6 +144,8 @@ accepted consumption in that operation is not rolled back.
 
 - [English user guide](doc/user_guide.md)
 - [中文用户手册](doc/user_guide.zh_CN.md)
+- [English design](doc/design.md)
+- [中文设计文档](doc/design.zh_CN.md)
 - [Rust API documentation](https://docs.rs/qubit-metadata)
 - [中文 README](README.zh_CN.md)
 
