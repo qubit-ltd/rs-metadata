@@ -286,7 +286,7 @@ impl Metadata {
     /// # Returns
     ///
     /// `true` when this object contains no entries.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -297,7 +297,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The number of stored entries.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
@@ -313,7 +313,7 @@ impl Metadata {
     /// # Returns
     ///
     /// `true` when an entry exists for `key`.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
         self.0.contains_key(key)
@@ -331,7 +331,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The converted value, or `None` when lookup or conversion fails.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
@@ -353,7 +353,7 @@ impl Metadata {
     ///
     /// The borrowed string, or `None` when the key is absent, unset, or stores
     /// another value type.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn get_str(&self, key: &str) -> Option<&str> {
         self.try_get_str(key).ok()
@@ -374,7 +374,7 @@ impl Metadata {
     /// Returns [`MetadataError::MissingKey`] when the key is absent,
     /// [`MetadataError::MissingValue`] when it stores [`Value::Unset`], or
     /// [`MetadataError::TypeMismatch`] when the stored value is not a string.
-    #[inline(always)]
+    #[inline]
     pub fn try_get_str(&self, key: &str) -> MetadataResult<&str> {
         let value = self.concrete_entry(key)?;
         match value.get_ref::<str>() {
@@ -498,7 +498,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The stored value, or `None` when `key` is absent.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn get_raw(&self, key: &str) -> Option<&Value> {
         self.0.get(key)
@@ -513,7 +513,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The stored value's data type, or `None` when `key` is absent.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn data_type(&self, key: &str) -> Option<DataType> {
         self.0.get(key).map(Value::data_type)
@@ -530,7 +530,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The converted stored value or `default`.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn get_or<T>(&self, key: &str, default: T) -> T
     where
@@ -549,7 +549,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The previous value when the key was already present, or `None`.
-    #[inline(always)]
+    #[inline]
     pub fn insert<T>(&mut self, key: &str, value: T) -> Option<Value>
     where
         T: Into<Value>,
@@ -567,7 +567,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A mutable reference to this metadata object.
-    #[inline(always)]
+    #[inline]
     pub fn set<T>(&mut self, key: &str, value: T) -> &mut Self
     where
         T: Into<Value>,
@@ -586,7 +586,7 @@ impl Metadata {
     /// # Returns
     ///
     /// This metadata object after inserting the value.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn with<T>(mut self, key: &str, value: T) -> Self
     where
@@ -646,7 +646,7 @@ impl Metadata {
     /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
     /// constructed value's concrete type does not match the schema field type.
     #[cfg(feature = "schema")]
-    #[inline(always)]
+    #[inline]
     pub fn set_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<&mut Self>
     where
         T: Into<Value>,
@@ -674,7 +674,7 @@ impl Metadata {
     /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
     /// constructed value's concrete type does not match the schema field type.
     #[cfg(feature = "schema")]
-    #[inline(always)]
+    #[inline]
     pub fn with_checked<T>(mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Self>
     where
         T: Into<Value>,
@@ -693,13 +693,13 @@ impl Metadata {
     /// # Returns
     ///
     /// The removed value, or `None` when `key` was absent.
-    #[inline(always)]
+    #[inline]
     pub fn remove(&mut self, key: &str) -> Option<Value> {
         self.0.remove(key)
     }
 
     /// Removes all entries.
-    #[inline(always)]
+    #[inline]
     pub fn clear(&mut self) {
         self.0.clear();
     }
@@ -709,7 +709,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A borrowing iterator over entries in key order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata iterator must be consumed to inspect entries"]
     pub fn iter(&self) -> impl Iterator<Item = (&str, &Value)> {
         self.0.iter().map(|(key, value)| (key.as_str(), value))
@@ -720,7 +720,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A borrowing iterator over keys in sorted order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata key iterator must be consumed to inspect keys"]
     pub fn keys(&self) -> impl Iterator<Item = &str> {
         self.0.keys().map(String::as_str)
@@ -731,7 +731,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A borrowing iterator over values in key order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata value iterator must be consumed to inspect values"]
     pub fn values(&self) -> impl Iterator<Item = &Value> {
         self.0.values()
@@ -771,7 +771,7 @@ impl Metadata {
     ///
     /// * `predicate` - Callback invoked for each key and value; returning
     ///   `false` removes that entry.
-    #[inline(always)]
+    #[inline]
     pub fn retain<F>(&mut self, mut predicate: F)
     where
         F: FnMut(&str, &Value) -> bool,
@@ -784,7 +784,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The owned, key-sorted map of metadata values.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn into_inner(self) -> BTreeMap<String, Value> {
         self.0
@@ -857,7 +857,7 @@ impl Redact for Metadata {
 
 impl fmt::Debug for Metadata {
     /// Writes the strict-policy redacted representation.
-    #[inline(always)]
+    #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
@@ -871,7 +871,7 @@ impl fmt::Display for Metadata {
     ///
     /// The strict policy protects arbitrary user-defined keys and error text
     /// at this diagnostic boundary.
-    #[inline(always)]
+    #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
@@ -935,14 +935,14 @@ impl Metadata {
 }
 
 impl From<BTreeMap<String, Value>> for Metadata {
-    #[inline(always)]
+    #[inline]
     fn from(map: BTreeMap<String, Value>) -> Self {
         Self(map)
     }
 }
 
 impl From<Metadata> for BTreeMap<String, Value> {
-    #[inline(always)]
+    #[inline]
     fn from(meta: Metadata) -> Self {
         meta.0
     }
@@ -959,7 +959,7 @@ impl IntoIterator for Metadata {
     type IntoIter = std::collections::btree_map::IntoIter<String, Value>;
     type Item = (String, Value);
 
-    #[inline(always)]
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -969,14 +969,14 @@ impl<'a> IntoIterator for &'a Metadata {
     type IntoIter = std::collections::btree_map::Iter<'a, String, Value>;
     type Item = (&'a String, &'a Value);
 
-    #[inline(always)]
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
     }
 }
 
 impl Extend<(String, Value)> for Metadata {
-    #[inline(always)]
+    #[inline]
     fn extend<I: IntoIterator<Item = (String, Value)>>(&mut self, iter: I) {
         self.0.extend(iter);
     }

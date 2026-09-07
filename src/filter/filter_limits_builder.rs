@@ -48,7 +48,7 @@ impl FilterLimitsBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_depth(mut self, max_depth: usize) -> Self {
         self.max_depth = Some(max_depth);
@@ -64,7 +64,7 @@ impl FilterLimitsBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_nodes(mut self, max_nodes: usize) -> Self {
         self.max_nodes = Some(max_nodes);
@@ -80,7 +80,7 @@ impl FilterLimitsBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_set_values(mut self, max_set_values: usize) -> Self {
         self.max_set_values = Some(max_set_values);
@@ -96,7 +96,7 @@ impl FilterLimitsBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_key_bytes(mut self, max_key_bytes: usize) -> Self {
         self.max_key_bytes = Some(max_key_bytes);

@@ -60,7 +60,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The issues in discovery order.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn issues(&self) -> &[MetadataError] {
         &self.issues
@@ -71,7 +71,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The issue count.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
@@ -83,7 +83,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The owned issues in discovery order.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn into_issues(self) -> Vec<MetadataError> {
         self.issues

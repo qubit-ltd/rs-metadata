@@ -108,7 +108,7 @@ impl MatchOutcome {
     /// # Returns
     ///
     /// `true` only for [`MatchOutcome::True`].
-    #[inline(always)]
+    #[inline]
     pub(crate) const fn is_match(self) -> bool {
         matches!(self, Self::True)
     }

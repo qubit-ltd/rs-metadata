@@ -117,7 +117,7 @@ impl MetadataFilter {
     }
 
     /// Creates a builder for a metadata filter.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub const fn builder() -> MetadataFilterBuilder {
         MetadataFilterBuilder::new()
@@ -297,7 +297,7 @@ impl MetadataFilter {
     }
 
     /// Creates a filter from already validated parts.
-    #[inline(always)]
+    #[inline]
     pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
         Self {
             expression,
@@ -307,21 +307,21 @@ impl MetadataFilter {
     }
 
     /// Returns the root expression.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the filter expression should be inspected"]
     pub const fn expression(&self) -> &FilterExpression {
         &self.expression
     }
 
     /// Returns the evaluation options.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub const fn options(&self) -> FilterMatchOptions {
         self.options
     }
 
     /// Returns the resource limits.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the filter limits should be inspected"]
     pub const fn limits(&self) -> FilterLimits {
         *self.limits.get()
@@ -352,7 +352,7 @@ impl MetadataFilter {
     }
 
     /// Returns whether `metadata` satisfies this filter.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn matches(&self, metadata: &Metadata) -> bool {
         self.expression.evaluate(metadata, self.options).is_match()
@@ -364,7 +364,7 @@ impl MetadataFilter {
     ///
     /// Returns the first error produced by `visitor`.
     #[cfg(feature = "schema")]
-    #[inline(always)]
+    #[inline]
     pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
     where
         F: FnMut(&Condition) -> MetadataResult<()>,
@@ -375,7 +375,7 @@ impl MetadataFilter {
 
 impl Serialize for MetadataFilter {
     /// Serializes this filter through its versioned wire representation.
-    #[inline(always)]
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

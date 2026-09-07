@@ -70,21 +70,21 @@ impl fmt::Debug for FilterExpression {
 
 impl FilterExpression {
     /// Creates a builder for a non-empty filter expression.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub const fn builder() -> FilterExpressionBuilder {
         FilterExpressionBuilder::new()
     }
 
     /// Creates an expression that matches every metadata object.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the constructed all-matching expression should be used"]
     pub const fn match_all() -> Self {
         Self::true_expression()
     }
 
     /// Creates an expression that matches no metadata object.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the constructed no-match expression should be used"]
     pub const fn match_none() -> Self {
         Self::false_expression()
@@ -134,7 +134,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A zero-copy view preserving the node's Boolean structure.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the expression view should be inspected"]
     pub fn view(&self) -> FilterExpressionView<'_> {
         match &self.node {
@@ -288,7 +288,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// `true` only for the constant true node.
-    #[inline(always)]
+    #[inline]
     pub(crate) const fn is_true(&self) -> bool {
         matches!(&self.node, FilterExpressionNode::True)
     }
@@ -298,7 +298,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// `true` only for the constant false node.
-    #[inline(always)]
+    #[inline]
     pub(crate) const fn is_false(&self) -> bool {
         matches!(&self.node, FilterExpressionNode::False)
     }

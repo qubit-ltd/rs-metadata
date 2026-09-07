@@ -343,7 +343,7 @@ impl Redact for Condition {
 
 impl fmt::Debug for Condition {
     /// Writes the strict-policy diagnostic representation.
-    #[inline(always)]
+    #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
@@ -416,7 +416,7 @@ fn evaluate_membership(
 ///
 /// The stored value when it is concrete, or `None` when the key is absent or
 /// stores [`Value::Unset`].
-#[inline(always)]
+#[inline]
 fn concrete_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a Value> {
     meta.get_raw(key).filter(|value| !value.is_unset())
 }
