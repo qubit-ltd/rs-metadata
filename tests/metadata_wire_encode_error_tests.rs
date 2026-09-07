@@ -132,3 +132,19 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
     assert!(matches!(errors[3], MetadataWireEncodeError::Syntax(_)));
     assert!(matches!(errors[4], MetadataWireEncodeError::Io(_)));
 }
+
+#[test]
+fn test_metadata_wire_encode_error_converts_measured_budget_variants_directly() {
+    let budget = MeasuredBudgetError::Budget(BudgetError::Insufficient {
+        resource: JsonResource::OutputBytes,
+        limit: 1,
+        remaining: 0,
+        requested: 2,
+    });
+    let quantity = MeasuredBudgetError::Quantity {
+        resource: JsonResource::OutputBytes,
+        source: QuantityConversionError::new(QuantityMeasurement::U64(9), "u8"),
+    };
+    assert!(matches!(MetadataWireEncodeError::from(budget), MetadataWireEncodeError::Budget(_)));
+    assert!(matches!(MetadataWireEncodeError::from(quantity), MetadataWireEncodeError::Quantity { .. }));
+}
