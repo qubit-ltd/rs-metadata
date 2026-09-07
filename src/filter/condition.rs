@@ -110,6 +110,26 @@ pub enum Condition {
 }
 
 impl Condition {
+    /// Visits each value operand in wire order without allocating.
+    #[cfg(feature = "json")]
+    pub(crate) fn visit_operands<E>(&self, visitor: &mut impl FnMut(&Value) -> Result<(), E>) -> Result<(), E> {
+        match self {
+            Self::Equal { value, .. }
+            | Self::NotEqual { value, .. }
+            | Self::Less { value, .. }
+            | Self::LessEqual { value, .. }
+            | Self::Greater { value, .. }
+            | Self::GreaterEqual { value, .. } => visitor(value),
+            Self::In { values, .. } | Self::NotIn { values, .. } => {
+                for value in values {
+                    visitor(value)?;
+                }
+                Ok(())
+            }
+            Self::Exists { .. } | Self::NotExists { .. } => Ok(()),
+        }
+    }
+
     /// Validates that every comparison operand has stable matching and wire
     /// serialization semantics.
     ///
