@@ -138,3 +138,15 @@ fn test_metadata_filter_wire_rejects_duplicate_envelope_fields() {
         assert!(serde_json::from_str::<MetadataFilter>(input).is_err());
     }
 }
+
+#[test]
+fn test_metadata_filter_wire_reports_missing_and_unknown_envelope_fields() {
+    for input in [
+        r#"{}"#,
+        r#"{"version":1}"#,
+        r#"{"version":1,"expression":{"kind":"all"}}"#,
+        r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"},"extra":true}"#,
+    ] {
+        assert!(serde_json::from_str::<MetadataFilter>(input).is_err());
+    }
+}
