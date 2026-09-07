@@ -60,3 +60,14 @@ fn test_schema_builder_reports_first_duplicate_after_further_declarations() {
 
     assert_eq!(error, MetadataError::DuplicateSchemaField { key: "id".to_string() });
 }
+
+#[test]
+fn test_schema_builder_clone_debug_and_equality_are_stable() {
+    let builder = MetadataSchemaBuilder::default()
+        .required("id", DataType::String)
+        .unknown_metadata_field_policy(UnknownMetadataFieldPolicy::Allow)
+        .unknown_filter_field_policy(UnknownFilterFieldPolicy::AllowUnchecked);
+    let clone = builder.clone();
+    assert_eq!(builder, clone);
+    assert!(format!("{builder:?}").contains("id"));
+}

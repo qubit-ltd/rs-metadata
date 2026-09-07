@@ -481,6 +481,13 @@ fn test_metadata_default_json_helpers_round_trip_and_write() {
 }
 
 #[test]
+fn test_metadata_debug_clone_and_equality_are_stable() {
+    let metadata = Metadata::new().with("id", 7_i64);
+    assert_eq!(metadata.clone(), metadata);
+    assert!(format!("{metadata:?}").contains("id"));
+}
+
+#[test]
 fn test_iterators_return_sorted_entries() {
     let mut meta = Metadata::new();
     meta.set("z", "last");
