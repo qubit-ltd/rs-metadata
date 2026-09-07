@@ -77,3 +77,66 @@ fn test_alternating_groups_preserve_depth_limit_after_cached_validation() {
         })
     );
 }
+
+#[test]
+fn test_full_validation_reports_earlier_key_error_before_later_node_error() {
+    let expression = FilterExpression::builder()
+        .exists("too-long")
+        .exists("ok")
+        .build()
+        .expect("expression should fit hard limits");
+    let limits = FilterLimits::builder()
+        .max_nodes(2)
+        .max_key_bytes(1)
+        .build()
+        .expect("custom limits should build");
+
+    let result = MetadataFilter::builder()
+        .expression(expression)
+        .limits(limits)
+        .build();
+
+    assert_eq!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            value: "too-long".len(),
+            maximum: 1,
+        })
+    );
+}
+
+#[test]
+fn test_full_validation_reports_earlier_key_error_before_later_depth_error() {
+    let first = FilterExpression::builder()
+        .exists("too-long")
+        .build()
+        .expect("first expression should build");
+    let later_nested = FilterExpression::builder()
+        .exists("a")
+        .exists("b")
+        .build()
+        .expect("nested expression should build");
+    let expression = first
+        .try_or(later_nested)
+        .expect("combined expression should fit hard limits");
+    let limits = FilterLimits::builder()
+        .max_depth(2)
+        .max_key_bytes(1)
+        .build()
+        .expect("custom limits should build");
+
+    let result = MetadataFilter::builder()
+        .expression(expression)
+        .limits(limits)
+        .build();
+
+    assert_eq!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            value: "too-long".len(),
+            maximum: 1,
+        })
+    );
+}
