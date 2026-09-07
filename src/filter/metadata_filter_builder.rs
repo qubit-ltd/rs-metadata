@@ -36,7 +36,7 @@ pub struct MetadataFilterBuilder {
 
 impl MetadataFilterBuilder {
     /// Creates a builder with default options and library hard limits.
-    #[inline(always)]
+    #[inline]
     pub(crate) const fn new() -> Self {
         Self {
             expression: None,
@@ -46,7 +46,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the required root expression.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn expression(mut self, expression: FilterExpression) -> Self {
         self.expression = Some(expression);
@@ -54,7 +54,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the match options.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn options(mut self, options: FilterMatchOptions) -> Self {
         self.options = options;
@@ -62,7 +62,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the resource limits.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn limits(mut self, limits: FilterLimits) -> Self {
         self.limits = limits;
@@ -99,7 +99,7 @@ impl MetadataFilterBuilder {
 
 impl Default for MetadataFilterBuilder {
     /// Returns a builder with default options and library hard limits.
-    #[inline(always)]
+    #[inline]
     fn default() -> Self {
         Self::new()
     }

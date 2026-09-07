@@ -241,7 +241,7 @@ impl MetadataSchema {
 ///
 /// * `issues` - Destination issue list.
 /// * `result` - Validation result to inspect.
-#[inline(always)]
+#[inline]
 fn collect_issue(issues: &mut Vec<MetadataError>, result: MetadataResult<()>) {
     if let Err(error) = result {
         issues.push(error);
@@ -257,7 +257,7 @@ fn collect_issue(issues: &mut Vec<MetadataError>, result: MetadataResult<()>) {
 /// # Returns
 ///
 /// `true` for numeric and string types.
-#[inline(always)]
+#[inline]
 fn is_range_comparable_type(data_type: DataType) -> bool {
     data_type.is_numeric() || matches!(data_type, DataType::String)
 }

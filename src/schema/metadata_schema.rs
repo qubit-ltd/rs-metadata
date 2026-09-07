@@ -96,7 +96,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// An empty schema builder using the default unknown-field policy.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn builder() -> MetadataSchemaBuilder {
         MetadataSchemaBuilder::default()
@@ -265,7 +265,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// `Some` field definition for a declared key; otherwise, `None`.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn field(&self, key: &str) -> Option<&MetadataField> {
         self.fields.get(key)
@@ -280,7 +280,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// `Some` declared data type for a known key; otherwise, `None`.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn field_type(&self, key: &str) -> Option<DataType> {
         self.field(key).map(MetadataField::data_type)
@@ -291,7 +291,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// The policy applied to undeclared metadata keys.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn unknown_metadata_field_policy(&self) -> UnknownMetadataFieldPolicy {
         self.unknown_metadata_field_policy
@@ -302,7 +302,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// The policy applied to filter keys not declared in this schema.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn unknown_filter_field_policy(&self) -> UnknownFilterFieldPolicy {
         self.unknown_filter_field_policy
@@ -313,7 +313,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// An iterator yielding key and field-definition pairs.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the schema field iterator must be consumed to inspect fields"]
     pub fn fields(&self) -> impl Iterator<Item = (&str, &MetadataField)> {
         self.fields.iter().map(|(key, field)| (key.as_str(), field))

@@ -31,7 +31,7 @@ pub struct FilterExpressionBuilder {
 
 impl FilterExpressionBuilder {
     /// Creates an empty expression builder.
-    #[inline(always)]
+    #[inline]
     pub(crate) const fn new() -> Self {
         Self {
             expression: None,
@@ -432,7 +432,7 @@ fn empty_group_error(operator: &'static str) -> MetadataError {
 }
 
 /// Converts a typed value into its stored representation.
-#[inline(always)]
+#[inline]
 fn to_value<T>(value: T) -> Value
 where
     T: Into<Value>,

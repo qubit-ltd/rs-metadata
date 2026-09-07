@@ -43,7 +43,7 @@ impl MetadataField {
     /// # Returns
     ///
     /// The declared field data type.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata field type should be inspected"]
     pub fn data_type(&self) -> DataType {
         self.data_type
@@ -54,7 +54,7 @@ impl MetadataField {
     /// # Returns
     ///
     /// `true` when validation requires a concrete value for this field.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn is_required(&self) -> bool {
         self.required
