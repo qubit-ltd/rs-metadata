@@ -95,6 +95,29 @@ fn test_builder_rejects_unset_and_non_finite_filter_operands() {
 }
 
 #[test]
+fn test_builder_rejects_oversized_keys_and_membership_sets() {
+    let long_key = "k".repeat(FilterLimits::MAX.max_key_bytes() + 1);
+    let error = FilterExpression::builder().exists(&long_key).build().unwrap_err();
+    assert!(matches!(
+        error,
+        MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            ..
+        }
+    ));
+
+    let values = (0..10_000_i64).collect::<Vec<_>>();
+    let error = FilterExpression::builder().not_in_set("id", values).build().unwrap_err();
+    assert!(matches!(
+        error,
+        MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::SetValues,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn test_builder_creates_nested_boolean_expression() {
     let expression = FilterExpression::builder()
         .eq("status", "active")
