@@ -81,15 +81,18 @@ use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
 use qubit_metadata::MetadataLimits;
 
-let decode = default_json_decode_limits().with_input_bytes_limit(
-    ResourceLimit::new(JsonResource::InputBytes, 64 * 1024),
-);
-let encode = default_json_encode_limits().with_output_bytes_limit(
-    ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024),
-);
-let limits = MetadataLimits::default()
-    .with_json_decode(decode)
-    .with_json_encode(encode);
+let decode = default_json_decode_limits()
+    .into_builder()
+    .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
+    .build();
+let encode = default_json_encode_limits()
+    .into_builder()
+    .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+    .build();
+let limits = MetadataLimits::builder()
+    .json_decode(decode)
+    .json_encode(encode)
+    .build();
 ```
 
 `decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
@@ -104,7 +107,8 @@ let limits = MetadataLimits::default()
 - filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
-- 默认 JSON 解码会限制输入字节数、通用 JSON 结构与 payload，以及 metadata 条目数、schema 字段数和
+- `MetadataLimits::default()` 包含 byte、depth、node、sequence/map、key/string/number/payload
+  以及 metadata 领域限制。默认 JSON 解码会限制输入字节数、通用 JSON 结构与 payload，以及 metadata 条目数、schema 字段数和
   key 长度。领域限制不能超过 V1 序列化的规范硬上限。Filter limits 是接收端瞬态策略，不会
   写入 V1 wire；共享 JSON adapter 负责通用遍历，filter seed 负责 AST 和 membership 领域限制。
 - 脱敏后的 `Debug` 和 `Display` 适合诊断，不应被当成任意用户 key 或错误文本的保密边界。
@@ -117,6 +121,8 @@ let limits = MetadataLimits::default()
 - [中文用户手册](doc/user_guide.zh_CN.md)
 - [English User Guide](doc/user_guide.md)
 - [Rust API 文档](https://docs.rs/qubit-metadata)
+- [English design](doc/design.md)
+- [中文设计文档](doc/design.zh_CN.md)
 - [English README](README.md)
 
 ## 测试
