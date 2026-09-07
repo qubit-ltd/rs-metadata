@@ -48,6 +48,7 @@ impl FilterLimits {
     ///
     /// A builder whose omitted properties use library hard maximums.
     #[inline(always)]
+    #[must_use = "the builder must be configured or used to build filter limits"]
     pub const fn builder() -> FilterLimitsBuilder {
         FilterLimitsBuilder::new()
     }

@@ -63,6 +63,23 @@ use crate::wire::StrictStringMapSeed;
 /// A schema declares valid keys, their concrete [`DataType`], and whether they
 /// are required. It can validate actual [`Metadata`] values and validate that a
 /// [`crate::MetadataFilter`] references known fields with compatible operators.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_datatype::DataType;
+/// use qubit_metadata::Metadata;
+/// use qubit_metadata::MetadataSchema;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let metadata = Metadata::new().with("tenant", "acme");
+/// let schema = MetadataSchema::builder()
+///     .required("tenant", DataType::String)
+///     .build()?;
+/// schema.validate(&metadata)?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetadataSchema {
     /// Field definitions keyed by metadata key.
@@ -249,6 +266,7 @@ impl MetadataSchema {
     ///
     /// `Some` field definition for a declared key; otherwise, `None`.
     #[inline(always)]
+    #[must_use]
     pub fn field(&self, key: &str) -> Option<&MetadataField> {
         self.fields.get(key)
     }
@@ -263,6 +281,7 @@ impl MetadataSchema {
     ///
     /// `Some` declared data type for a known key; otherwise, `None`.
     #[inline(always)]
+    #[must_use]
     pub fn field_type(&self, key: &str) -> Option<DataType> {
         self.field(key).map(MetadataField::data_type)
     }
@@ -295,6 +314,7 @@ impl MetadataSchema {
     ///
     /// An iterator yielding key and field-definition pairs.
     #[inline(always)]
+    #[must_use = "the schema field iterator must be consumed to inspect fields"]
     pub fn fields(&self) -> impl Iterator<Item = (&str, &MetadataField)> {
         self.fields.iter().map(|(key, field)| (key.as_str(), field))
     }

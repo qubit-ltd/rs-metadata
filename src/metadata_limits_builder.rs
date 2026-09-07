@@ -76,6 +76,7 @@ impl MetadataLimitsBuilder {
 
     /// Builds metadata limits by consuming this builder.
     #[inline]
+    #[must_use = "the built metadata limits should be used"]
     pub fn build(self) -> MetadataLimits {
         MetadataLimits::from_builder(self)
     }

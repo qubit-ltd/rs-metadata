@@ -37,20 +37,28 @@ pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MetadataLimits {
+    /// JSON budgets applied while decoding an untrusted document.
     json_decode: JsonDecodeLimits,
+    /// JSON budgets applied while encoding a document.
     json_encode: JsonEncodeLimits,
+    /// Maximum number of entries accepted in one metadata map.
     max_metadata_entries: usize,
+    /// Maximum number of fields accepted in one metadata schema.
     max_schema_fields: usize,
+    /// Maximum UTF-8 byte length accepted for a metadata or schema key.
     max_key_bytes: usize,
 }
 
 impl MetadataLimits {
     /// Creates a builder with the default JSON profile and domain limits.
     #[inline(always)]
+    #[must_use = "the builder must be configured or used to build metadata limits"]
     pub fn builder() -> MetadataLimitsBuilder {
         MetadataLimitsBuilder::default()
     }
 
+    /// Creates immutable limits from the values held by `builder`.
+    #[inline(always)]
     pub(crate) fn from_builder(builder: MetadataLimitsBuilder) -> Self {
         Self {
             json_decode: builder.json_decode,
@@ -62,26 +70,36 @@ impl MetadataLimits {
     }
 
     /// Returns the JSON decoding profile.
+    #[inline(always)]
+    #[must_use]
     pub const fn json_decode(&self) -> JsonDecodeLimits {
         self.json_decode
     }
 
     /// Returns the JSON encoding profile.
+    #[inline(always)]
+    #[must_use]
     pub const fn json_encode(&self) -> JsonEncodeLimits {
         self.json_encode
     }
 
     /// Returns the metadata-entry domain limit.
+    #[inline(always)]
+    #[must_use]
     pub const fn max_metadata_entries(&self) -> usize {
         self.max_metadata_entries
     }
 
     /// Returns the schema-field domain limit.
+    #[inline(always)]
+    #[must_use]
     pub const fn max_schema_fields(&self) -> usize {
         self.max_schema_fields
     }
 
     /// Returns the metadata/schema key-byte domain limit.
+    #[inline(always)]
+    #[must_use]
     pub const fn max_key_bytes(&self) -> usize {
         self.max_key_bytes
     }

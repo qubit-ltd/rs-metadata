@@ -55,6 +55,24 @@ use crate::metadata_limits::MetadataLimits;
 ///
 /// Boolean composition belongs to [`FilterExpression`]. This type only binds
 /// an already-built expression to the options and limits used to evaluate it.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterExpression;
+/// use qubit_metadata::Metadata;
+/// use qubit_metadata::MetadataFilter;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let metadata = Metadata::new().with("tenant", "acme");
+/// let expression = FilterExpression::builder()
+///     .eq("tenant", "acme")
+///     .build()?;
+/// let filter = MetadataFilter::builder().expression(expression).build()?;
+/// assert!(filter.matches(&metadata));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct MetadataFilter {
     /// Root Boolean expression.
