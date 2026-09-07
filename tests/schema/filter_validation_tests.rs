@@ -136,3 +136,26 @@ fn test_schema_filter_validation_covers_all_operator_families_and_set_errors() {
         [MetadataError::InvalidFilterOperator { operator: "eq", .. }]
     ));
 }
+
+#[test]
+fn test_schema_filter_validation_aggregates_unknown_and_incompatible_conditions() {
+    let schema = MetadataSchema::builder()
+        .required("enabled", DataType::Bool)
+        .required("score", DataType::Int64)
+        .build()
+        .expect("schema should build");
+    let expression = FilterExpression::builder()
+        .eq("enabled", 1_i64)
+        .exists("missing")
+        .gt("score", "bad")
+        .build()
+        .expect("expression should build");
+    let issues = schema
+        .validate_filter(&filter(expression))
+        .expect_err("all incompatible conditions should be reported")
+        .into_issues();
+    assert_eq!(issues.len(), 3);
+    assert!(matches!(issues[0], MetadataError::InvalidFilterOperator { operator: "eq", .. }));
+    assert!(matches!(issues[1], MetadataError::UnknownFilterField { ref key } if key == "missing"));
+    assert!(matches!(issues[2], MetadataError::InvalidFilterOperator { operator: "gt", .. }));
+}
