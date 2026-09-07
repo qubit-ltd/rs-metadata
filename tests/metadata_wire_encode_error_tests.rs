@@ -145,6 +145,12 @@ fn test_metadata_wire_encode_error_converts_measured_budget_variants_directly() 
         resource: JsonResource::OutputBytes,
         source: QuantityConversionError::new(QuantityMeasurement::U64(9), "u8"),
     };
-    assert!(matches!(MetadataWireEncodeError::from(budget), MetadataWireEncodeError::Budget(_)));
-    assert!(matches!(MetadataWireEncodeError::from(quantity), MetadataWireEncodeError::Quantity { .. }));
+    assert!(matches!(
+        MetadataWireEncodeError::from(budget),
+        MetadataWireEncodeError::Budget(_)
+    ));
+    assert!(matches!(
+        MetadataWireEncodeError::from(quantity),
+        MetadataWireEncodeError::Quantity { .. }
+    ));
 }
