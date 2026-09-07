@@ -68,6 +68,7 @@
 mod constants;
 #[cfg(feature = "filter")]
 mod filter;
+mod internal;
 mod metadata;
 mod metadata_error;
 #[cfg(feature = "json")]

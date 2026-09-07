@@ -3,17 +3,7 @@
 //
 //    SPDX-License-Identifier: Apache-2.0
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 //! Builder for [`crate::MetadataLimits`].
 
@@ -31,10 +21,15 @@ use crate::metadata_limits::default_json_encode_limits;
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MetadataLimitsBuilder {
+    /// Receiver-controlled JSON budgets applied while decoding untrusted input.
     pub(crate) json_decode: JsonDecodeLimits,
+    /// Preflight and output budgets applied while encoding metadata documents.
     pub(crate) json_encode: JsonEncodeLimits,
+    /// Cardinality ceiling shared by metadata wire-map operations.
     pub(crate) max_metadata_entries: usize,
+    /// Cardinality ceiling shared by schema wire-map operations.
     pub(crate) max_schema_fields: usize,
+    /// UTF-8 byte ceiling shared by metadata and schema keys.
     pub(crate) max_key_bytes: usize,
 }
 

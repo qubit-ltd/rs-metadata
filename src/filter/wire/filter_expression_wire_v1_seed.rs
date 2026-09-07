@@ -7,6 +7,8 @@
 // =============================================================================
 //! Incremental V1 filter-expression decoding with receiver limits.
 
+// qubit-style: allow multiple-public-types
+
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;

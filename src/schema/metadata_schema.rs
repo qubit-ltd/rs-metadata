@@ -7,6 +7,9 @@
 // =============================================================================
 //! [`MetadataSchema`] — schema validation for metadata and filters.
 
+// Implements filter validation and its private compatibility checks.
+mod filter_validation;
+
 #[cfg(feature = "json")]
 use std::cell::RefCell;
 use std::collections::BTreeMap;

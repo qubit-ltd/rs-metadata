@@ -34,7 +34,6 @@ use qubit_json::encode::JsonEncoder;
 use qubit_redact::Redact;
 use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
-use qubit_redact::Sensitivity;
 use qubit_value::Value;
 use qubit_value::ValueError;
 #[cfg(feature = "json")]
@@ -57,6 +56,7 @@ use crate::MetadataResult;
 use crate::MetadataSchema;
 use crate::constants::STRICT_STRING_MAP_MAX_ENTRIES;
 use crate::constants::STRICT_STRING_MAP_MAX_KEY_BYTES;
+use crate::internal::MetadataValues;
 #[cfg(feature = "json")]
 use crate::metadata_limits::MetadataLimits;
 use crate::wire::METADATA_WIRE_VERSION_V1;
@@ -833,18 +833,6 @@ impl Redact for Metadata {
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("Metadata", |fields| {
             fields.nested("values", &MetadataValues(&self.0));
-        });
-    }
-}
-
-struct MetadataValues<'a>(&'a BTreeMap<String, Value>);
-
-impl Redact for MetadataValues<'_> {
-    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
-        writer.map(|entries| {
-            entries.for_each(self.0, |entries, (name, value)| {
-                entries.sensitive_entry(Sensitivity::Low, name, || value);
-            });
         });
     }
 }
