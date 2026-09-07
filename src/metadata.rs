@@ -5,7 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Provides the [`Metadata`] type — a structured, ordered, typed key-value
+//! Provides the [`Metadata`] type — a structured, key-sorted, typed key-value
 //! store.
 
 #[cfg(feature = "json")]
@@ -66,7 +66,7 @@ use crate::wire::MetadataWireValuesRef;
 use crate::wire::StrictStringMap;
 use crate::wire::StrictStringMapValueSeed;
 
-/// A structured, ordered, typed key-value store for metadata fields.
+/// A structured, key-sorted, typed key-value store for metadata fields.
 ///
 /// `Metadata` stores values as [`qubit_value::Value`], preserving concrete Rust
 /// scalar types such as `i64`, `u32`, `f64`, `String`, and `bool`.  This avoids
@@ -83,6 +83,18 @@ use crate::wire::StrictStringMapValueSeed;
 /// [`qubit_datatype::DataConversionTarget`]; use [`Metadata::get_raw`] when
 /// the stored runtime [`qubit_value::Value`] must be inspected without
 /// conversion.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::Metadata;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let metadata = Metadata::new().with("tenant", "acme");
+/// assert_eq!(metadata.try_get_str("tenant")?, "acme");
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, PartialEq, Default)]
 pub struct Metadata(
     /// Stored values indexed by metadata key.
@@ -320,6 +332,7 @@ impl Metadata {
     ///
     /// The converted value, or `None` when lookup or conversion fails.
     #[inline(always)]
+    #[must_use]
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
         T: DataConversionTarget,
@@ -486,6 +499,7 @@ impl Metadata {
     ///
     /// The stored value, or `None` when `key` is absent.
     #[inline(always)]
+    #[must_use]
     pub fn get_raw(&self, key: &str) -> Option<&Value> {
         self.0.get(key)
     }
@@ -500,6 +514,7 @@ impl Metadata {
     ///
     /// The stored value's data type, or `None` when `key` is absent.
     #[inline(always)]
+    #[must_use]
     pub fn data_type(&self, key: &str) -> Option<DataType> {
         self.0.get(key).map(Value::data_type)
     }
@@ -695,6 +710,7 @@ impl Metadata {
     ///
     /// A borrowing iterator over entries in key order.
     #[inline(always)]
+    #[must_use = "the metadata iterator must be consumed to inspect entries"]
     pub fn iter(&self) -> impl Iterator<Item = (&str, &Value)> {
         self.0.iter().map(|(key, value)| (key.as_str(), value))
     }
@@ -705,6 +721,7 @@ impl Metadata {
     ///
     /// A borrowing iterator over keys in sorted order.
     #[inline(always)]
+    #[must_use = "the metadata key iterator must be consumed to inspect keys"]
     pub fn keys(&self) -> impl Iterator<Item = &str> {
         self.0.keys().map(String::as_str)
     }
@@ -715,6 +732,7 @@ impl Metadata {
     ///
     /// A borrowing iterator over values in key order.
     #[inline(always)]
+    #[must_use = "the metadata value iterator must be consumed to inspect values"]
     pub fn values(&self) -> impl Iterator<Item = &Value> {
         self.0.values()
     }

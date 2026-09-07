@@ -29,6 +29,7 @@ impl FilterMatchOptions {
     ///
     /// A builder configured with exact numeric comparison by default.
     #[inline(always)]
+    #[must_use = "the builder must be configured or used to build match options"]
     pub const fn builder() -> FilterMatchOptionsBuilder {
         FilterMatchOptionsBuilder::new()
     }

@@ -29,6 +29,23 @@ use crate::filter::internal::MatchOutcome;
 /// invalid expression trees. The structure is Boolean, while evaluation uses
 /// a private three-valued outcome so missing data stays unknown through NOT,
 /// AND, and OR.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterExpression;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let expression = FilterExpression::builder()
+///     .eq("tenant", "acme")
+///     .build()?;
+/// assert!(matches!(
+///     expression.view(),
+///     qubit_metadata::FilterExpressionView::Condition(_)
+/// ));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, PartialEq)]
 #[must_use]
 pub struct FilterExpression {
@@ -61,12 +78,14 @@ impl FilterExpression {
 
     /// Creates an expression that matches every metadata object.
     #[inline(always)]
+    #[must_use = "the constructed all-matching expression should be used"]
     pub const fn match_all() -> Self {
         Self::true_expression()
     }
 
     /// Creates an expression that matches no metadata object.
     #[inline(always)]
+    #[must_use = "the constructed no-match expression should be used"]
     pub const fn match_none() -> Self {
         Self::false_expression()
     }
@@ -115,7 +134,8 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A zero-copy view preserving the node's Boolean structure.
-    #[inline]
+    #[inline(always)]
+    #[must_use = "the expression view should be inspected"]
     pub fn view(&self) -> FilterExpressionView<'_> {
         match &self.node {
             FilterExpressionNode::Condition(condition) => {
