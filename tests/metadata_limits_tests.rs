@@ -132,10 +132,7 @@ fn test_metadata_limit_validation_rejects_each_value_above_boundary() {
             "schema fields",
             MetadataLimits::builder().max_schema_fields(4_097).build(),
         ),
-        (
-            "key bytes",
-            MetadataLimits::builder().max_key_bytes(257).build(),
-        ),
+        ("key bytes", MetadataLimits::builder().max_key_bytes(257).build()),
     ] {
         assert!(limits.validate().is_err(), "{name} above its cap must fail");
     }

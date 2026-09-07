@@ -12,8 +12,8 @@ use qubit_value::Value;
 
 use super::MetadataSchema;
 use crate::Condition;
-use crate::MetadataField;
 use crate::MetadataError;
+use crate::MetadataField;
 use crate::MetadataFilter;
 use crate::MetadataResult;
 use crate::MetadataValidationError;
