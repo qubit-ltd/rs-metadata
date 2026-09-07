@@ -101,3 +101,38 @@ fn test_schema_honors_unknown_filter_field_policy() {
     assert!(strict.validate_filter(&filter(expression.clone())).is_err());
     assert!(permissive.validate_filter(&filter(expression)).is_ok());
 }
+
+#[test]
+fn test_schema_filter_validation_covers_all_operator_families_and_set_errors() {
+    let numeric = MetadataSchema::builder()
+        .required("score", DataType::Int64)
+        .build()
+        .expect("schema should build");
+    let invalid = [
+        FilterExpression::builder().ne("score", "bad").build(),
+        FilterExpression::builder().lt("score", "bad").build(),
+        FilterExpression::builder().le("score", "bad").build(),
+        FilterExpression::builder().gt("score", "bad").build(),
+        FilterExpression::builder().ge("score", "bad").build(),
+        FilterExpression::builder().in_set("score", ["bad"]).build(),
+        FilterExpression::builder().not_in_set("score", ["bad"]).build(),
+    ];
+    for expression in invalid {
+        let error = numeric.validate_filter(&filter(expression.expect("filter expression should build")));
+        assert!(error.is_err(), "incompatible operator must be rejected");
+    }
+
+    let bool_schema = MetadataSchema::builder()
+        .required("enabled", DataType::Bool)
+        .build()
+        .expect("schema should build");
+    let error = bool_schema
+        .validate_filter(&filter(
+            FilterExpression::builder().eq("enabled", 1_i64).build().expect("expression should build"),
+        ))
+        .expect_err("wrong scalar type must be rejected");
+    assert!(matches!(
+        error.into_issues().as_slice(),
+        [MetadataError::InvalidFilterOperator { operator: "eq", .. }]
+    ));
+}
