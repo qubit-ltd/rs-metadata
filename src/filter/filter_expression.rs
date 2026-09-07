@@ -366,8 +366,8 @@ impl FilterExpression {
     /// Returns [`MetadataError::FilterLimitExceeded`] when depth, node count,
     /// key length, or membership values exceed a configured bound.
     pub(crate) fn validate_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
-        self.validate_structure_limits(limits)?;
-        self.validate_condition_limits(limits)
+        let mut node_count = 0;
+        self.validate_limits_at(limits, 1, &mut node_count)
     }
 
     /// Validates cached structural metrics against resource limits in O(1).
@@ -400,26 +400,50 @@ impl FilterExpression {
         Ok(())
     }
 
-    /// Recursively validates every leaf condition against resource limits.
+    /// Recursively validates one expression node in depth-first order.
     ///
     /// # Parameters
     ///
-    /// * `limits` - Condition bounds to enforce.
+    /// * `limits` - Bounds to enforce.
+    /// * `depth` - Root-inclusive depth of this node.
+    /// * `node_count` - Number of nodes visited before this node.
     ///
     /// # Errors
     ///
-    /// Returns [`MetadataError::FilterLimitExceeded`] when a condition key or
-    /// membership set exceeds `limits`.
-    fn validate_condition_limits(&self, limits: FilterLimits) -> MetadataResult<()> {
+    /// Returns the first depth, node-count, or condition-limit error reached
+    /// by the depth-first traversal.
+    fn validate_limits_at(
+        &self,
+        limits: FilterLimits,
+        depth: usize,
+        node_count: &mut usize,
+    ) -> MetadataResult<()> {
+        if depth > limits.max_depth() {
+            return Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Depth,
+                value: depth,
+                maximum: limits.max_depth(),
+            });
+        }
+        *node_count += 1;
+        if *node_count > limits.max_nodes() {
+            return Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Nodes,
+                value: *node_count,
+                maximum: limits.max_nodes(),
+            });
+        }
         match &self.node {
             FilterExpressionNode::Condition(condition) => condition.validate_limits(limits),
             FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
                 for child in children {
-                    child.validate_condition_limits(limits)?;
+                    child.validate_limits_at(limits, depth + 1, node_count)?;
                 }
                 Ok(())
             }
-            FilterExpressionNode::Not(inner) => inner.validate_condition_limits(limits),
+            FilterExpressionNode::Not(inner) => {
+                inner.validate_limits_at(limits, depth + 1, node_count)
+            }
             FilterExpressionNode::True | FilterExpressionNode::False => Ok(()),
         }
     }
