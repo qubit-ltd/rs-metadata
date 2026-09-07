@@ -7,19 +7,19 @@
 
 ## 目标与非目标
 
-本 crate 提供有序且带类型的 metadata 容器、可选的 schema/filter 校验，以及严格的 V1
+本 crate 提供按 key 排序且带类型的 metadata 容器、可选的 schema/filter 校验，以及严格的 V1
 Serde 格式。它不绑定存储 provider，不负责定义 provider 的索引策略，不新增 wire 版本，
 也不把诊断格式化承诺为通用保密边界。
 
 ## 模块边界
 
-核心 metadata 模块负责有序值和类型化读取；schema 模块负责字段声明与校验；filter 模块
+核心 metadata 模块负责按 key 排序的值和类型化读取；schema 模块负责字段声明与校验；filter 模块
 负责不可变布尔表达式、匹配选项和接收端限制；wire 模块负责版本化 Serde envelope 与有界
 遍历。JSON budget profile 按方向独立配置，解码和编码策略互不替换。
 
 ## 核心数据模型
 
-`Metadata` 将字符串 key 映射到 `qubit_value::Value`，并保留插入顺序。`Value::Unset` 是
+`Metadata` 将字符串 key 映射到 `qubit_value::Value`，迭代和序列化均按 key 排序。`Value::Unset` 是
 已存在的、带声明类型但没有具体值的字段。`MetadataSchema` 区分 required 和 optional 字段，
 并按具体 `DataType` 校验已存值。`MetadataFilter` 根据 metadata 计算 `FilterExpression`。
 

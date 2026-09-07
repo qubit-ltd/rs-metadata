@@ -7,14 +7,14 @@ It describes invariants for integrations, not implementation history.
 
 ## Goals and non-goals
 
-The crate provides an ordered, typed metadata container, optional schema and
+The crate provides a key-sorted, typed metadata container, optional schema and
 filter validation, and strict V1 Serde formats. It is storage-provider neutral.
 It does not define a provider indexing strategy, add a new wire version, or
 turn diagnostic formatting into a general confidentiality boundary.
 
 ## Module boundaries
 
-The core metadata module owns ordered values and typed access. Schema modules
+The core metadata module owns key-sorted values and typed access. Schema modules
 own field declarations and validation. Filter modules own immutable Boolean
 expressions, matching options, and receiver-side limits. Wire modules own
 versioned Serde envelopes and bounded traversal. JSON budget profiles are
@@ -22,8 +22,8 @@ directional: decode and encode policies are configured independently.
 
 ## Core data model
 
-`Metadata` maps string keys to `qubit_value::Value` while preserving insertion
-order. `Value::Unset` is a present, typed declaration without a concrete value.
+`Metadata` maps string keys to `qubit_value::Value`; iteration and serialization
+are sorted by key. `Value::Unset` is a present, typed declaration without a concrete value.
 `MetadataSchema` distinguishes required and optional fields and validates stored
 values against concrete `DataType` declarations. `MetadataFilter` evaluates a
 `FilterExpression` against metadata.
