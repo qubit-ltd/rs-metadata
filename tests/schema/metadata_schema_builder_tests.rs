@@ -83,7 +83,9 @@ fn test_schema_builder_exercises_each_constructor_and_error_path() {
     assert_eq!(schema.field_type("optional"), Some(DataType::Bool));
 
     let duplicate = std::hint::black_box(
-        MetadataSchemaBuilder::default().required("id", DataType::String).optional("id", DataType::String),
+        MetadataSchemaBuilder::default()
+            .required("id", DataType::String)
+            .optional("id", DataType::String),
     )
     .build()
     .expect_err("duplicate declaration should fail");
