@@ -50,8 +50,14 @@ fn test_filter_wire_round_trips_every_condition_and_boolean_operator() {
         FilterExpression::builder().not_in_set("k", [1_i64, 2]).build(),
         FilterExpression::builder().exists("k").build(),
         FilterExpression::builder().not_exists("k").build(),
-        FilterExpression::builder().exists("k").and_group(|group| group.not_exists("j")).build(),
-        FilterExpression::builder().exists("k").or_group(|group| group.not_exists("j")).build(),
+        FilterExpression::builder()
+            .exists("k")
+            .and_group(|group| group.not_exists("j"))
+            .build(),
+        FilterExpression::builder()
+            .exists("k")
+            .or_group(|group| group.not_exists("j"))
+            .build(),
         FilterExpression::builder().exists("k").not().build(),
     ];
 

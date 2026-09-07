@@ -449,10 +449,7 @@ fn test_remove_and_clear_work() {
 #[test]
 fn test_metadata_iterators_and_conversions_expose_owned_and_borrowed_entries() {
     let mut metadata = Metadata::new();
-    metadata.extend([
-        ("b".to_string(), Value::Int64(2)),
-        ("a".to_string(), Value::Int64(1)),
-    ]);
+    metadata.extend([("b".to_string(), Value::Int64(2)), ("a".to_string(), Value::Int64(1))]);
     assert_eq!(metadata.keys().collect::<Vec<_>>(), vec!["a", "b"]);
     assert_eq!(metadata.values().count(), 2);
     assert_eq!(metadata.iter().count(), 2);
@@ -474,8 +471,13 @@ fn test_metadata_default_json_helpers_round_trip_and_write() {
     assert_eq!(decoded, metadata);
 
     let mut output = Vec::new();
-    metadata.to_json_writer(&mut output).expect("default JSON writer should succeed");
-    assert_eq!(Metadata::decode_json_slice(&output).expect("written JSON should decode"), metadata);
+    metadata
+        .to_json_writer(&mut output)
+        .expect("default JSON writer should succeed");
+    assert_eq!(
+        Metadata::decode_json_slice(&output).expect("written JSON should decode"),
+        metadata
+    );
     assert!(format!("{metadata:?}").contains("name"));
     assert!(metadata.to_string().contains("name"));
 }

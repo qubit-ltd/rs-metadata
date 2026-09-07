@@ -50,11 +50,9 @@ impl FilterExpressionBuilder {
         if let Some(error) = self.error {
             return Err(error);
         }
-        let expression = self
-            .expression
-            .ok_or(MetadataError::InvalidFilterExpression {
-                message: "a filter expression must contain at least one condition".to_string(),
-            })?;
+        let expression = self.expression.ok_or(MetadataError::InvalidFilterExpression {
+            message: "a filter expression must contain at least one condition".to_string(),
+        })?;
         expression.validate_limits(FilterLimits::MAX)?;
         Ok(expression)
     }
@@ -230,9 +228,7 @@ impl FilterExpressionBuilder {
     #[must_use]
     pub fn exists(self, key: &str) -> Self {
         self.append(
-            || Condition::Exists {
-                key: key.to_string(),
-            },
+            || Condition::Exists { key: key.to_string() },
             FilterExpression::and_unchecked,
         )
     }
@@ -242,9 +238,7 @@ impl FilterExpressionBuilder {
     #[must_use]
     pub fn not_exists(self, key: &str) -> Self {
         self.append(
-            || Condition::NotExists {
-                key: key.to_string(),
-            },
+            || Condition::NotExists { key: key.to_string() },
             FilterExpression::and_unchecked,
         )
     }
@@ -374,10 +368,7 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, next),
             None => next,
         };
-        if expression
-            .validate_structure_limits(FilterLimits::MAX)
-            .is_ok()
-        {
+        if expression.validate_structure_limits(FilterLimits::MAX).is_ok() {
             self.expression = Some(expression);
         } else {
             match expression.validate_limits(FilterLimits::MAX) {
@@ -413,10 +404,7 @@ impl FilterExpressionBuilder {
             Some(previous) => combine(previous, group),
             None => group,
         };
-        if expression
-            .validate_structure_limits(FilterLimits::MAX)
-            .is_ok()
-        {
+        if expression.validate_structure_limits(FilterLimits::MAX).is_ok() {
             self.expression = Some(expression);
         } else {
             match expression.validate_limits(FilterLimits::MAX) {

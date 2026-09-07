@@ -128,7 +128,10 @@ fn test_schema_filter_validation_covers_all_operator_families_and_set_errors() {
         .expect("schema should build");
     let error = bool_schema
         .validate_filter(&filter(
-            FilterExpression::builder().eq("enabled", 1_i64).build().expect("expression should build"),
+            FilterExpression::builder()
+                .eq("enabled", 1_i64)
+                .build()
+                .expect("expression should build"),
         ))
         .expect_err("wrong scalar type must be rejected");
     assert!(matches!(
@@ -155,7 +158,13 @@ fn test_schema_filter_validation_aggregates_unknown_and_incompatible_conditions(
         .expect_err("all incompatible conditions should be reported")
         .into_issues();
     assert_eq!(issues.len(), 3);
-    assert!(matches!(issues[0], MetadataError::InvalidFilterOperator { operator: "eq", .. }));
+    assert!(matches!(
+        issues[0],
+        MetadataError::InvalidFilterOperator { operator: "eq", .. }
+    ));
     assert!(matches!(issues[1], MetadataError::UnknownFilterField { ref key } if key == "missing"));
-    assert!(matches!(issues[2], MetadataError::InvalidFilterOperator { operator: "gt", .. }));
+    assert!(matches!(
+        issues[2],
+        MetadataError::InvalidFilterOperator { operator: "gt", .. }
+    ));
 }

@@ -91,10 +91,7 @@ fn test_full_validation_reports_earlier_key_error_before_later_node_error() {
         .build()
         .expect("custom limits should build");
 
-    let result = MetadataFilter::builder()
-        .expression(expression)
-        .limits(limits)
-        .build();
+    let result = MetadataFilter::builder().expression(expression).limits(limits).build();
 
     assert_eq!(
         result,
@@ -126,10 +123,7 @@ fn test_full_validation_reports_earlier_key_error_before_later_depth_error() {
         .build()
         .expect("custom limits should build");
 
-    let result = MetadataFilter::builder()
-        .expression(expression)
-        .limits(limits)
-        .build();
+    let result = MetadataFilter::builder().expression(expression).limits(limits).build();
 
     assert_eq!(
         result,

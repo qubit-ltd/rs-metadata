@@ -12,6 +12,7 @@ use qubit_metadata::FilterLimits;
 use qubit_metadata::MetadataFilter;
 use serde_json::Deserializer;
 use serde_json::Error;
+use serde_json::from_str;
 use serde_json::from_value;
 use serde_json::json;
 use serde_json::to_string;
@@ -135,7 +136,7 @@ fn test_metadata_filter_wire_rejects_duplicate_envelope_fields() {
         r#"{"version":1,"expression":{"kind":"all"},"expression":{"kind":"none"},"options":{"numeric_comparison_policy":"exact"}}"#,
         r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"},"options":{"numeric_comparison_policy":"exact"}}"#,
     ] {
-        assert!(serde_json::from_str::<MetadataFilter>(input).is_err());
+        assert!(from_str::<MetadataFilter>(input).is_err());
     }
 }
 
@@ -147,6 +148,6 @@ fn test_metadata_filter_wire_reports_missing_and_unknown_envelope_fields() {
         r#"{"version":1,"expression":{"kind":"all"}}"#,
         r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"},"extra":true}"#,
     ] {
-        assert!(serde_json::from_str::<MetadataFilter>(input).is_err());
+        assert!(from_str::<MetadataFilter>(input).is_err());
     }
 }

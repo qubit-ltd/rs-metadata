@@ -138,9 +138,7 @@ impl FilterExpression {
     #[must_use = "the expression view should be inspected"]
     pub fn view(&self) -> FilterExpressionView<'_> {
         match &self.node {
-            FilterExpressionNode::Condition(condition) => {
-                FilterExpressionView::Condition(condition)
-            }
+            FilterExpressionNode::Condition(condition) => FilterExpressionView::Condition(condition),
             FilterExpressionNode::And(children) => FilterExpressionView::And(children),
             FilterExpressionNode::Or(children) => FilterExpressionView::Or(children),
             FilterExpressionNode::Not(inner) => FilterExpressionView::Not(inner),
@@ -315,25 +313,17 @@ impl FilterExpression {
     /// # Returns
     ///
     /// The three-valued expression outcome.
-    pub(crate) fn evaluate(
-        &self,
-        metadata: &Metadata,
-        options: FilterMatchOptions,
-    ) -> MatchOutcome {
+    pub(crate) fn evaluate(&self, metadata: &Metadata, options: FilterMatchOptions) -> MatchOutcome {
         match &self.node {
             FilterExpressionNode::Condition(condition) => {
                 condition.evaluate(metadata, options.numeric_comparison_policy())
             }
-            FilterExpressionNode::And(children) => MatchOutcome::and(
-                children
-                    .iter()
-                    .map(|child| child.evaluate(metadata, options)),
-            ),
-            FilterExpressionNode::Or(children) => MatchOutcome::or(
-                children
-                    .iter()
-                    .map(|child| child.evaluate(metadata, options)),
-            ),
+            FilterExpressionNode::And(children) => {
+                MatchOutcome::and(children.iter().map(|child| child.evaluate(metadata, options)))
+            }
+            FilterExpressionNode::Or(children) => {
+                MatchOutcome::or(children.iter().map(|child| child.evaluate(metadata, options)))
+            }
             FilterExpressionNode::Not(inner) => inner.evaluate(metadata, options).not(),
             FilterExpressionNode::True => MatchOutcome::True,
             FilterExpressionNode::False => MatchOutcome::False,
@@ -432,12 +422,7 @@ impl FilterExpression {
     ///
     /// Returns the first depth, node-count, or condition-limit error reached
     /// by the depth-first traversal.
-    fn validate_limits_at(
-        &self,
-        limits: FilterLimits,
-        depth: usize,
-        node_count: &mut usize,
-    ) -> MetadataResult<()> {
+    fn validate_limits_at(&self, limits: FilterLimits, depth: usize, node_count: &mut usize) -> MetadataResult<()> {
         if depth > limits.max_depth() {
             return Err(MetadataError::FilterLimitExceeded {
                 kind: FilterLimitKind::Depth,
@@ -461,9 +446,7 @@ impl FilterExpression {
                 }
                 Ok(())
             }
-            FilterExpressionNode::Not(inner) => {
-                inner.validate_limits_at(limits, depth + 1, node_count)
-            }
+            FilterExpressionNode::Not(inner) => inner.validate_limits_at(limits, depth + 1, node_count),
             FilterExpressionNode::True | FilterExpressionNode::False => Ok(()),
         }
     }
@@ -479,9 +462,7 @@ impl FilterExpression {
                 }
             }
             FilterExpressionNode::Not(inner) => inner.assert_cached_metrics_consistent(),
-            FilterExpressionNode::Condition(_)
-            | FilterExpressionNode::True
-            | FilterExpressionNode::False => {}
+            FilterExpressionNode::Condition(_) | FilterExpressionNode::True | FilterExpressionNode::False => {}
         }
         let (node_count, max_depth) = self.recursive_metrics();
         assert_eq!(
@@ -498,9 +479,7 @@ impl FilterExpression {
     #[cfg(test)]
     fn recursive_metrics(&self) -> (usize, usize) {
         match &self.node {
-            FilterExpressionNode::Condition(_)
-            | FilterExpressionNode::True
-            | FilterExpressionNode::False => (1, 1),
+            FilterExpressionNode::Condition(_) | FilterExpressionNode::True | FilterExpressionNode::False => (1, 1),
             FilterExpressionNode::And(children) | FilterExpressionNode::Or(children) => {
                 let mut node_count = 1;
                 let mut max_child_depth = 0;
@@ -523,8 +502,7 @@ impl FilterExpression {
     fn combine_and(left: Self, right: Self) -> Self {
         let left_same_kind = matches!(&left.node, FilterExpressionNode::And(_));
         let right_same_kind = matches!(&right.node, FilterExpressionNode::And(_));
-        let (node_count, max_depth) =
-            Self::combined_metrics(&left, &right, left_same_kind, right_same_kind);
+        let (node_count, max_depth) = Self::combined_metrics(&left, &right, left_same_kind, right_same_kind);
         let mut children = match left {
             Self {
                 node: FilterExpressionNode::And(children),
@@ -551,8 +529,7 @@ impl FilterExpression {
     fn combine_or(left: Self, right: Self) -> Self {
         let left_same_kind = matches!(&left.node, FilterExpressionNode::Or(_));
         let right_same_kind = matches!(&right.node, FilterExpressionNode::Or(_));
-        let (node_count, max_depth) =
-            Self::combined_metrics(&left, &right, left_same_kind, right_same_kind);
+        let (node_count, max_depth) = Self::combined_metrics(&left, &right, left_same_kind, right_same_kind);
         let mut children = match left {
             Self {
                 node: FilterExpressionNode::Or(children),
@@ -582,17 +559,13 @@ impl FilterExpression {
     /// * `left` - Left expression before flattening.
     /// * `right` - Right expression before flattening.
     /// * `left_same_kind` - Whether the left root is flattened into the result.
-    /// * `right_same_kind` - Whether the right root is flattened into the result.
+    /// * `right_same_kind` - Whether the right root is flattened into the
+    ///   result.
     ///
     /// # Returns
     ///
     /// The result's total node count and maximum depth.
-    fn combined_metrics(
-        left: &Self,
-        right: &Self,
-        left_same_kind: bool,
-        right_same_kind: bool,
-    ) -> (usize, usize) {
+    fn combined_metrics(left: &Self, right: &Self, left_same_kind: bool, right_same_kind: bool) -> (usize, usize) {
         let node_count = match (left_same_kind, right_same_kind) {
             (true, true) => left.node_count + right.node_count - 1,
             (true, false) | (false, true) => left.node_count + right.node_count,

@@ -31,11 +31,7 @@ impl From<TenantId> for Value {
 }
 
 /// Builds an expression with `depth` alternating AND/OR levels.
-fn build_alternating_group(
-    builder: FilterExpressionBuilder,
-    depth: usize,
-    use_or: bool,
-) -> FilterExpressionBuilder {
+fn build_alternating_group(builder: FilterExpressionBuilder, depth: usize, use_or: bool) -> FilterExpressionBuilder {
     let builder = builder.exists("nested");
     if depth == 1 {
         return builder;
@@ -80,18 +76,8 @@ fn test_builder_rejects_unset_and_non_finite_filter_operands() {
             message: "filter operands must be concrete values".to_owned(),
         })
     );
-    assert!(
-        FilterExpression::builder()
-            .eq("score", f64::NAN)
-            .build()
-            .is_err()
-    );
-    assert!(
-        FilterExpression::builder()
-            .eq("score", f64::INFINITY)
-            .build()
-            .is_err()
-    );
+    assert!(FilterExpression::builder().eq("score", f64::NAN).build().is_err());
+    assert!(FilterExpression::builder().eq("score", f64::INFINITY).build().is_err());
 }
 
 #[test]
@@ -107,7 +93,10 @@ fn test_builder_rejects_oversized_keys_and_membership_sets() {
     ));
 
     let values = (0..10_000_i64).collect::<Vec<_>>();
-    let error = FilterExpression::builder().not_in_set("id", values).build().unwrap_err();
+    let error = FilterExpression::builder()
+        .not_in_set("id", values)
+        .build()
+        .unwrap_err();
     assert!(matches!(
         error,
         MetadataError::FilterLimitExceeded {
@@ -131,10 +120,7 @@ fn test_builder_creates_nested_boolean_expression() {
         .expect("filter should build");
 
     assert!(filter.matches(&sample()));
-    assert!(matches!(
-        filter.expression().view(),
-        FilterExpressionView::Or(_)
-    ));
+    assert!(matches!(filter.expression().view(), FilterExpressionView::Or(_)));
 }
 
 #[test]
@@ -152,9 +138,7 @@ fn test_or_group_matches_either_explicit_branch_within_group() {
         .expression(expression)
         .build()
         .expect("filter should build");
-    let metadata = Metadata::new()
-        .with("tenant", "other")
-        .with("priority", 2_i64);
+    let metadata = Metadata::new().with("tenant", "other").with("priority", 2_i64);
 
     assert!(filter.matches(&metadata));
 }
@@ -213,9 +197,7 @@ fn test_not_propagates_node_limit_error() {
 #[test]
 fn test_and_group_preserves_nested_error() {
     assert_eq!(
-        FilterExpression::builder()
-            .and_group(|group| group.not())
-            .build(),
+        FilterExpression::builder().and_group(|group| group.not()).build(),
         Err(MetadataError::InvalidFilterExpression {
             message: "cannot negate an empty filter expression".to_owned(),
         })
@@ -264,10 +246,7 @@ fn test_failed_builder_does_not_consume_membership_or_run_groups() {
         .and_group(|_| panic!("failed builder must skip group callback"))
         .build();
     assert_eq!(consumed.get(), 0);
-    assert!(matches!(
-        result,
-        Err(MetadataError::InvalidFilterExpression { .. })
-    ));
+    assert!(matches!(result, Err(MetadataError::InvalidFilterExpression { .. })));
 }
 
 #[test]
