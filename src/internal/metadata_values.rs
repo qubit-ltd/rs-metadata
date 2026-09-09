@@ -28,7 +28,7 @@ impl Redact for MetadataValues<'_> {
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.map(|entries| {
             entries.for_each(self.0, |entries, (name, value)| {
-                entries.sensitive_entry(Sensitivity::Low, name, || value);
+                entries.sensitive_entry_at_least(Sensitivity::Low, name, || value);
             });
         });
     }

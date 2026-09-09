@@ -13,6 +13,8 @@ use qubit_datatype::DataType;
 use qubit_metadata::FilterLimitKind;
 use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataWireLimitKind;
+use qubit_value::ValueError;
+use qubit_value::ValueMissing;
 
 #[test]
 fn test_display_formats_all_variants() {
@@ -20,13 +22,15 @@ fn test_display_formats_all_variants() {
         MetadataError::MissingKey("k".to_string()).to_string(),
         "Metadata key not found: k"
     );
+    let missing = ValueError::Missing(ValueMissing::unset_scalar(DataType::Int64, DataType::Int64));
+    let error = MetadataError::ValueAccess {
+        key: "count".to_owned(),
+        source: Box::new(missing.clone()),
+    };
+    assert!(error.to_string().contains("count"));
     assert_eq!(
-        MetadataError::MissingValue {
-            key: "count".to_string(),
-            data_type: DataType::Int64,
-        }
-        .to_string(),
-        "Metadata key 'count' has no concrete value (declared int64)"
+        std::error::Error::source(&error).and_then(|source| source.downcast_ref()),
+        Some(&missing)
     );
 
     let mismatch = MetadataError::TypeMismatch {

@@ -27,5 +27,5 @@ fn test_public_exports_are_usable() {
 fn test_core_metadata_is_usable_without_filter_feature() {
     let metadata = Metadata::new().with("key", "value");
 
-    assert_eq!(metadata.get::<String>("key"), Some("value".to_string()));
+    assert_eq!(metadata.get::<String>("key"), Ok("value".to_string()));
 }

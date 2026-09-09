@@ -10,7 +10,6 @@
 use std::fmt;
 
 use qubit_datatype::DataType;
-use qubit_value::Value;
 use qubit_value::ValueError;
 
 #[cfg(feature = "filter")]
@@ -33,14 +32,7 @@ pub enum MetadataError {
         /// Missing metadata key.
         String,
     ),
-    /// A requested key exists but stores no concrete value.
-    MissingValue {
-        /// Metadata key being read.
-        key: String,
-        /// Data type declared by the unset value.
-        data_type: DataType,
-    },
-    /// A stored value cannot be converted to the requested type.
+    /// Schema validation found a stored value of the wrong type.
     TypeMismatch {
         /// Metadata key being read or validated.
         key: String,
@@ -140,29 +132,6 @@ pub enum MetadataError {
 }
 
 impl MetadataError {
-    /// Builds a conversion error for `key` using the requested type and stored
-    /// value.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key being converted.
-    /// * `expected` - Requested target data type.
-    /// * `value` - Stored value that failed conversion.
-    /// * `error` - Lower-level conversion error.
-    ///
-    /// # Returns
-    ///
-    /// A structured [`MetadataError::TypeMismatch`] error.
-    #[inline]
-    pub(crate) fn conversion_error(key: &str, expected: DataType, value: &Value, error: ValueError) -> Self {
-        Self::TypeMismatch {
-            key: key.to_string(),
-            expected,
-            actual: value.data_type(),
-            message: error.to_string(),
-        }
-    }
-
     /// Builds a schema type-mismatch error for `key`.
     ///
     /// # Parameters
@@ -190,14 +159,12 @@ impl fmt::Display for MetadataError {
     /// Formats this metadata operation error for display.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ValueAccess { key, source } => write!(formatter, "Metadata key '{key}': {source}"),
+            Self::ValueAccess { key, source } => {
+                write!(formatter, "Metadata key '{key}': {source}")
+            }
             Self::MissingKey(key) => {
                 write!(formatter, "Metadata key not found: {key}")
             }
-            Self::MissingValue { key, data_type } => write!(
-                formatter,
-                "Metadata key '{key}' has no concrete value (declared {data_type})"
-            ),
             Self::TypeMismatch {
                 key,
                 expected,

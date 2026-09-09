@@ -335,7 +335,7 @@ impl Redact for Condition {
             fields.unredacted("operator", || operator);
             fields.unredacted("key", || self.key());
             if let Some(operand) = operand {
-                fields.sensitive(Sensitivity::Secret, "value", || operand);
+                fields.sensitive_at_least(Sensitivity::Secret, "value", || operand);
             }
         });
     }

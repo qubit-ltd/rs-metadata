@@ -47,11 +47,11 @@
 //!
 //! // Convenience API: get converts the stored value to the requested target;
 //! // missing keys and failed conversions both collapse to None.
-//! let author: Option<String> = meta.get("author");
+//! let author = meta.get_optional::<String>("author").unwrap();
 //! assert_eq!(author.as_deref(), Some("alice"));
 //!
 //! // Explicit API: preserve failure reasons for diagnostics.
-//! let priority = meta.try_get::<i64>("priority").unwrap();
+//! let priority = meta.convert::<i64>("priority").unwrap();
 //! assert_eq!(priority, 3);
 //! ```
 //!
