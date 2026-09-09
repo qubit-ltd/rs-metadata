@@ -51,7 +51,7 @@ fn test_metadata_v1_user_guide_example_decodes() {
 
     let metadata = Metadata::decode_json_slice(INPUT).expect("the user-guide V1 example should decode");
 
-    assert_eq!(metadata.get_str("tenant_id"), Some("acme"));
+    assert_eq!(metadata.get_ref::<str>("tenant_id"), Ok("acme"));
 }
 
 #[test]

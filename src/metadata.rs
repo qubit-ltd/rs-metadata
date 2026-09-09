@@ -34,6 +34,8 @@ use qubit_json::encode::JsonEncoder;
 use qubit_redact::Redact;
 use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
+use qubit_value::IntoValueDefault;
+use qubit_value::StrictValueRead;
 use qubit_value::Value;
 use qubit_value::ValueError;
 #[cfg(feature = "json")]
@@ -73,14 +75,14 @@ use crate::wire::StrictStringMapValueSeed;
 /// the ambiguity of a single JSON number type while still allowing callers to
 /// store explicit `Value::Json` values when they really need JSON payloads.
 /// [`Value::Unset`] retains a declared type but represents no concrete metadata
-/// value: typed reads report [`MetadataError::MissingValue`]. When the optional
+/// value: typed reads report [`MetadataError::ValueAccess`]. When the optional
 /// `schema` or `filter` features are enabled, their validation and matching
 /// APIs treat it as a missing concrete value.
 ///
 /// Use [`Metadata::with`] for fluent construction and [`Metadata::set`] when
 /// mutating an existing object. The typed [`Metadata::get`] and
-/// [`Metadata::try_get`] accessors convert stored values through
-/// [`qubit_datatype::DataConversionTarget`]; use [`Metadata::get_raw`] when
+/// [`Metadata::get_ref`] accessors read strictly; [`Metadata::convert`]
+/// explicitly converts stored values. Use [`Metadata::get_raw`] when
 /// the stored runtime [`qubit_value::Value`] must be inspected without
 /// conversion.
 ///
@@ -91,7 +93,7 @@ use crate::wire::StrictStringMapValueSeed;
 ///
 /// # fn main() -> qubit_metadata::MetadataResult<()> {
 /// let metadata = Metadata::new().with("tenant", "acme");
-/// assert_eq!(metadata.try_get_str("tenant")?, "acme");
+/// assert_eq!(metadata.get_ref::<str>("tenant")?, "acme");
 /// # Ok(())
 /// # }
 /// ```
@@ -319,173 +321,142 @@ impl Metadata {
         self.0.contains_key(key)
     }
 
-    /// Retrieves the value associated with `key` and converts it to `T`.
-    ///
-    /// This convenience method returns `None` when the key is absent or when
-    /// the stored [`Value`] cannot be converted to `T`.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// The converted value, or `None` when lookup or conversion fails.
-    #[inline]
-    #[must_use]
-    pub fn get<T>(&self, key: &str) -> Option<T>
-    where
-        T: DataConversionTarget,
-    {
-        self.try_get(key).ok()
-    }
-
-    /// Retrieves a borrowed string stored under `key`.
-    ///
-    /// This accessor only succeeds when the stored value is a concrete string;
-    /// it does not allocate or perform a conversion.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// The borrowed string, or `None` when the key is absent, unset, or stores
-    /// another value type.
-    #[inline]
-    #[must_use]
-    pub fn get_str(&self, key: &str) -> Option<&str> {
-        self.try_get_str(key).ok()
-    }
-
-    /// Retrieves a borrowed concrete string stored under `key`.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// The borrowed string stored under `key`.
+    /// Strictly reads `key` as `T`, without coercing the stored runtime type.
     ///
     /// # Errors
+    /// Returns MissingKey for an absent key, or ValueAccess preserving type
+    /// mismatch and unset facts. Use [`Self::convert`] for coercing reads.
+    pub fn get<T: StrictValueRead>(&self, key: &str) -> MetadataResult<T> {
+        T::read_scalar(self.entry(key)?).map_err(|source| Self::map_access_error(key, source))
+    }
+
+    /// Borrows the concrete payload under `key` without copying it.
     ///
-    /// Returns [`MetadataError::MissingKey`] when the key is absent,
-    /// [`MetadataError::MissingValue`] when it stores [`Value::Unset`], or
-    /// [`MetadataError::TypeMismatch`] when the stored value is not a string.
-    #[inline]
-    pub fn try_get_str(&self, key: &str) -> MetadataResult<&str> {
-        let value = self.concrete_entry(key)?;
-        match value.get_ref::<str>() {
-            Ok(string) => Ok(string),
-            Err(_) => Err(MetadataError::TypeMismatch {
-                key: key.to_string(),
-                expected: DataType::String,
-                actual: value.data_type(),
-                message: "stored value is not a string".to_string(),
-            }),
+    /// # Errors
+    /// Returns MissingKey or ValueAccess for unset storage or a type mismatch.
+    /// The returned reference borrows this metadata object, not the key.
+    pub fn get_ref<'a, T: ?Sized>(&'a self, key: &str) -> MetadataResult<&'a T>
+    where
+        &'a T: TryFrom<&'a Value, Error = ValueError>,
+    {
+        self.entry(key)?
+            .get_ref::<T>()
+            .map_err(|source| Self::map_access_error(key, source))
+    }
+
+    /// Strictly reads `key`, returning None only for absent or matching unset
+    /// storage.
+    ///
+    /// # Errors
+    /// Preserves type mismatches, including unset storage of a different type.
+    pub fn get_optional<T: StrictValueRead>(&self, key: &str) -> MetadataResult<Option<T>> {
+        match self.get(key) {
+            Ok(value) => Ok(Some(value)),
+            Err(error) if Self::is_defaultable(&error, false) => Ok(None),
+            Err(error) => Err(error),
         }
     }
 
-    /// Retrieves the value associated with `key` and converts it to `T`.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// The stored value converted to `T`.
+    /// Strictly reads `key`, adapting `default` only for absent or matching
+    /// unset storage.
     ///
     /// # Errors
-    ///
-    /// Returns [`MetadataError::MissingKey`] when the key is absent,
-    /// [`MetadataError::MissingValue`] when it stores [`Value::Unset`], or
-    /// [`MetadataError::TypeMismatch`] when the stored value cannot be
-    /// converted to the requested type.
-    pub fn try_get<T>(&self, key: &str) -> MetadataResult<T>
-    where
-        T: DataConversionTarget,
-    {
-        let value = self
-            .0
-            .get(key)
-            .ok_or_else(|| MetadataError::MissingKey(key.to_string()))?;
-        if value.is_unset() {
-            return Err(MetadataError::MissingValue {
-                key: key.to_string(),
-                data_type: value.data_type(),
-            });
-        }
-        value
-            .to::<T>()
-            .map_err(|error| MetadataError::conversion_error(key, T::DATA_TYPE, value, error))
+    /// Returns the original read error for a type mismatch; never hides invalid
+    /// data.
+    pub fn get_or<T: StrictValueRead>(&self, key: &str, default: impl IntoValueDefault<T>) -> MetadataResult<T> {
+        self.get_optional(key)
+            .map(|value| value.unwrap_or_else(|| default.into_value_default()))
     }
 
-    /// Strictly reads the concrete value under `key` without conversion.
-    ///
-    /// `T` follows `TryFrom<&Value>`. Numeric widths must match the stored
-    /// runtime type. For borrowed strings, use the existing `try_get_str`.
+    /// Converts `key` to `T` using the default conversion policy and limits.
     ///
     /// # Errors
-    /// Returns `MissingKey`, `MissingValue`, or `ValueAccess` retaining the
-    /// original strict-read error. Use `try_convert` for coercing reads.
-    pub fn try_get_strict<'a, T>(&'a self, key: &str) -> MetadataResult<T>
-    where
-        T: TryFrom<&'a Value, Error = ValueError>,
-    {
-        T::try_from(self.concrete_entry(key)?).map_err(|source| MetadataError::ValueAccess {
-            key: key.to_owned(),
-            source: Box::new(source),
-        })
+    /// Returns MissingKey or ValueAccess with the original missing, invalid,
+    /// unsupported, precision-loss or resource error and its source chain.
+    pub fn convert<T: DataConversionTarget>(&self, key: &str) -> MetadataResult<T> {
+        self.convert_with(key, ConversionPolicy::default_ref(), ConversionLimits::default_ref())
     }
 
-    /// Converts the value under `key` using the default conversion policy.
+    /// Converts `key` to `T` with explicit `policy` and `limits`.
+    ///
+    /// Each call owns one conversion budget and leaves stored data unchanged.
     ///
     /// # Errors
-    /// Returns `MissingKey`, `MissingValue`, or `ValueAccess` with the original
-    /// conversion reason and source chain. Unlike legacy `try_get`, errors are
-    /// not flattened to text.
-    pub fn try_convert<T: DataConversionTarget>(&self, key: &str) -> MetadataResult<T> {
-        self.try_convert_with(key, ConversionPolicy::default_ref(), ConversionLimits::default_ref())
-    }
-
-    /// Converts the value under `key` using explicit `policy` and `limits`.
-    ///
-    /// Each call starts its own conversion budget. `T` may be a downstream
-    /// conversion target. This method does not modify the stored value.
-    ///
-    /// # Errors
-    /// Returns `MissingKey`, `MissingValue`, or `ValueAccess` preserving
-    /// unsupported, invalid, inexact, overflow, and budget conversion failures.
-    pub fn try_convert_with<T: DataConversionTarget>(
+    /// Returns MissingKey or ValueAccess preserving conversion facts and
+    /// limits.
+    pub fn convert_with<T: DataConversionTarget>(
         &self,
         key: &str,
         policy: &ConversionPolicy,
         limits: &ConversionLimits,
     ) -> MetadataResult<T> {
-        self.concrete_entry(key)?
+        self.entry(key)?
             .to_with(policy, limits)
-            .map_err(|source| MetadataError::ValueAccess {
-                key: key.to_owned(),
-                source: Box::new(source),
-            })
+            .map_err(|source| Self::map_access_error(key, source))
     }
 
-    /// Looks up `key`, distinguishing an absent entry from an unset value.
-    fn concrete_entry(&self, key: &str) -> MetadataResult<&Value> {
-        let value = self
-            .0
-            .get(key)
-            .ok_or_else(|| MetadataError::MissingKey(key.to_owned()))?;
-        if value.is_unset() {
-            return Err(MetadataError::MissingValue {
-                key: key.to_owned(),
-                data_type: value.data_type(),
-            });
+    /// Converts `key`, returning None for absent, unset, or policy-missing
+    /// scalars.
+    ///
+    /// # Errors
+    /// All other conversion errors propagate with their source and key.
+    pub fn convert_optional_with<T: DataConversionTarget>(
+        &self,
+        key: &str,
+        policy: &ConversionPolicy,
+        limits: &ConversionLimits,
+    ) -> MetadataResult<Option<T>> {
+        match self.convert_with(key, policy, limits) {
+            Ok(value) => Ok(Some(value)),
+            Err(error) if Self::is_defaultable(&error, true) => Ok(None),
+            Err(error) => Err(error),
         }
-        Ok(value)
+    }
+
+    /// Converts `key`, adapting `default` only for a defaultable missing
+    /// scalar.
+    ///
+    /// # Errors
+    /// Invalid, unsupported, precision-loss and resource errors never default.
+    pub fn convert_or_with<T: DataConversionTarget>(
+        &self,
+        key: &str,
+        default: impl IntoValueDefault<T>,
+        policy: &ConversionPolicy,
+        limits: &ConversionLimits,
+    ) -> MetadataResult<T> {
+        self.convert_optional_with(key, policy, limits)
+            .map(|value| value.unwrap_or_else(|| default.into_value_default()))
+    }
+
+    /// Looks up storage, leaving unset and type classification to the value
+    /// layer.
+    fn entry(&self, key: &str) -> MetadataResult<&Value> {
+        self.get_raw(key)
+            .ok_or_else(|| MetadataError::MissingKey(key.to_owned()))
+    }
+
+    /// Attaches a key without flattening or replacing the original value error.
+    fn map_access_error(key: &str, source: ValueError) -> MetadataError {
+        MetadataError::ValueAccess {
+            key: key.to_owned(),
+            source: Box::new(source),
+        }
+    }
+
+    /// Applies the value layer's strict or conversion fallback classification.
+    fn is_defaultable(error: &MetadataError, conversion: bool) -> bool {
+        match error {
+            MetadataError::MissingKey(_) => true,
+            MetadataError::ValueAccess { source, .. } => source.missing().is_some_and(|missing| {
+                if conversion {
+                    missing.is_defaultable_for_conversion()
+                } else {
+                    missing.is_defaultable_for_strict_read()
+                }
+            }),
+            _ => false,
+        }
     }
 
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
@@ -517,26 +488,6 @@ impl Metadata {
     #[must_use]
     pub fn data_type(&self, key: &str) -> Option<DataType> {
         self.0.get(key).map(Value::data_type)
-    }
-
-    /// Retrieves and converts the value associated with `key`, or returns
-    /// `default` if lookup or conversion fails.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to retrieve.
-    /// * `default` - Value returned when lookup or conversion fails.
-    ///
-    /// # Returns
-    ///
-    /// The converted stored value or `default`.
-    #[inline]
-    #[must_use]
-    pub fn get_or<T>(&self, key: &str, default: T) -> T
-    where
-        T: DataConversionTarget,
-    {
-        self.try_get(key).unwrap_or(default)
     }
 
     /// Inserts a typed value and returns the previous value.

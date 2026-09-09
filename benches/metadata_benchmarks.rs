@@ -198,10 +198,10 @@ fn benchmark_downstream_metadata_paths(criterion: &mut Criterion) {
     }
     let metadata = Metadata::new().with("model", "embedding-model");
     criterion.bench_function("metadata/borrowed_string", |bencher| {
-        bencher.iter(|| black_box(metadata.get_str(black_box("model"))));
+        bencher.iter(|| black_box(metadata.get_ref::<str>(black_box("model"))));
     });
     criterion.bench_function("metadata/converted_string", |bencher| {
-        bencher.iter(|| black_box(metadata.try_convert::<String>(black_box("model"))));
+        bencher.iter(|| black_box(metadata.convert::<String>(black_box("model"))));
     });
     let records: Vec<_> = (0..1000_i64)
         .map(|score| Metadata::new().with("score", score))

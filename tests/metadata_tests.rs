@@ -9,6 +9,8 @@
 
 use std::collections::BTreeMap;
 
+use qubit_datatype::ConversionLimits;
+use qubit_datatype::ConversionPolicy;
 use qubit_datatype::DataType;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterLimitKind;
@@ -17,12 +19,99 @@ use qubit_metadata::MetadataError;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireLimitKind;
+use qubit_value::IntoValueDefault;
 use qubit_value::Value;
 use qubit_value::ValueError;
 
 mod support;
 
 use support::port::Port;
+
+#[test]
+fn test_strict_get_and_explicit_conversion_have_distinct_semantics() {
+    let metadata = Metadata::new().with("port", "42");
+    let error = metadata.get::<i32>("port").unwrap_err();
+    assert!(matches!(error, MetadataError::ValueAccess { source, .. }
+        if matches!(*source, ValueError::TypeMismatch { .. })));
+    assert_eq!(metadata.convert::<i32>("port").unwrap(), 42);
+    assert_eq!(metadata.get::<String>("port").unwrap(), "42");
+    assert_eq!(metadata.get_optional::<i32>("absent").unwrap(), None);
+    assert_eq!(metadata.get_or::<i32>("absent", 7).unwrap(), 7);
+}
+
+#[test]
+fn test_optional_and_default_reads_do_not_hide_type_errors() {
+    let metadata = Metadata::new()
+        .with("unset", Value::Unset(DataType::Int32))
+        .with("invalid", "secret-invalid");
+    assert_eq!(metadata.get_optional::<i32>("unset").unwrap(), None);
+    assert!(metadata.get_optional::<i64>("unset").is_err());
+    assert!(metadata.get_or::<i64>("unset", 7).is_err());
+    let error = metadata
+        .convert_or_with::<i32>(
+            "invalid",
+            7,
+            ConversionPolicy::default_ref(),
+            ConversionLimits::default_ref(),
+        )
+        .unwrap_err();
+    assert!(std::error::Error::source(&error).is_some());
+    assert!(!error.to_string().contains("secret-invalid"));
+    let raw = metadata.get_raw("invalid").unwrap().get_ref::<str>().unwrap();
+    assert_eq!(metadata.get_ref::<str>("invalid").unwrap().as_ptr(), raw.as_ptr());
+}
+
+#[test]
+fn test_conversion_optional_uses_policy_and_defaults_are_lazy() {
+    use std::cell::Cell;
+
+    use qubit_datatype::BlankStringPolicy;
+    use qubit_datatype::StringConversionPolicy;
+    struct CountedDefault<'a>(&'a Cell<usize>);
+    impl IntoValueDefault<i32> for CountedDefault<'_> {
+        /// Records adaptation so successful reads and errors can prove
+        /// laziness.
+        fn into_value_default(self) -> i32 {
+            self.0.set(self.0.get() + 1);
+            7
+        }
+    }
+    let policy = ConversionPolicy::builder()
+        .string_policy(
+            StringConversionPolicy::builder()
+                .trim(true)
+                .blank_string_policy(BlankStringPolicy::TreatAsMissing)
+                .build(),
+        )
+        .build();
+    let limits = ConversionLimits::default_ref();
+    let metadata = Metadata::new()
+        .with("blank", " ")
+        .with("number", 42_i32)
+        .with("invalid", "invalid");
+    assert_eq!(metadata.get_optional::<String>("blank").unwrap(), Some(" ".to_owned()));
+    assert_eq!(
+        metadata.convert_optional_with::<i32>("blank", &policy, limits).unwrap(),
+        None
+    );
+    let called = Cell::new(0);
+    assert_eq!(metadata.get_or::<i32>("number", CountedDefault(&called)).unwrap(), 42);
+    assert!(metadata.get_or::<i32>("invalid", CountedDefault(&called)).is_err());
+    assert!(
+        metadata
+            .convert_or_with::<i32>("invalid", CountedDefault(&called), &policy, limits)
+            .is_err()
+    );
+    assert_eq!(called.get(), 0);
+    assert_eq!(
+        metadata
+            .convert_or_with::<i32>("blank", CountedDefault(&called), &policy, limits)
+            .unwrap(),
+        7
+    );
+    assert_eq!(called.get(), 1);
+    assert_eq!(metadata.get_or::<String>("absent", "default").unwrap(), "default");
+}
 
 #[derive(Debug, Clone, Copy)]
 struct TenantId(u64);
@@ -37,7 +126,7 @@ impl From<TenantId> for Value {
 #[test]
 fn test_typed_reads_accept_downstream_conversion_targets() {
     let metadata = Metadata::new().with("port", Value::String("8080".to_owned()));
-    assert_eq!(metadata.try_get::<Port>("port"), Ok(Port(8080)));
+    assert_eq!(metadata.convert::<Port>("port"), Ok(Port(8080)));
 }
 
 #[test]
@@ -81,9 +170,9 @@ fn test_with_builds_metadata_fluently() {
         .with("priority", 42_i64)
         .with("reviewed", true);
 
-    assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
-    assert_eq!(meta.get::<i64>("priority"), Some(42));
-    assert_eq!(meta.get::<bool>("reviewed"), Some(true));
+    assert_eq!(meta.get::<String>("author").as_deref(), Ok("alice"));
+    assert_eq!(meta.get::<i64>("priority"), Ok(42));
+    assert_eq!(meta.get::<bool>("reviewed"), Ok(true));
 }
 
 #[test]
@@ -93,7 +182,7 @@ fn test_with_accepts_value_and_domain_newtype() {
         .with("tenant_id", TenantId(42));
 
     assert_eq!(metadata.get_raw("raw"), Some(&Value::String("stored".to_owned())));
-    assert_eq!(metadata.get::<u64>("tenant_id"), Some(42));
+    assert_eq!(metadata.get::<u64>("tenant_id"), Ok(42));
 }
 
 #[test]
@@ -104,9 +193,9 @@ fn test_set_and_get_scalar_values() {
     meta.set("reviewed", true);
     meta.set("score", std::f64::consts::PI);
 
-    assert_eq!(meta.get::<String>("author").as_deref(), Some("alice"));
-    assert_eq!(meta.get::<i64>("priority"), Some(42));
-    assert_eq!(meta.get::<bool>("reviewed"), Some(true));
+    assert_eq!(meta.get::<String>("author").as_deref(), Ok("alice"));
+    assert_eq!(meta.get::<i64>("priority"), Ok(42));
+    assert_eq!(meta.get::<bool>("reviewed"), Ok(true));
     assert!((meta.get::<f64>("score").unwrap() - std::f64::consts::PI).abs() < 1e-10);
 }
 
@@ -117,7 +206,7 @@ fn test_insert_returns_previous_value() {
     let old = meta.insert("key", "second");
 
     assert_eq!(old, Some(Value::String("first".to_string())));
-    assert_eq!(meta.get::<String>("key").as_deref(), Some("second"));
+    assert_eq!(meta.get::<String>("key").as_deref(), Ok("second"));
 }
 
 #[test]
@@ -125,31 +214,31 @@ fn test_set_supports_mutable_chaining() {
     let mut meta = Metadata::new();
     meta.set("first", 1_i64).set("second", 2_i64);
 
-    assert_eq!(meta.get::<i64>("first"), Some(1));
-    assert_eq!(meta.get::<i64>("second"), Some(2));
+    assert_eq!(meta.get::<i64>("first"), Ok(1));
+    assert_eq!(meta.get::<i64>("second"), Ok(2));
 }
 
 #[test]
 fn test_get_missing_key_returns_none() {
     let meta = Metadata::new();
-    let value: Option<String> = meta.get("missing");
+    let value = meta.get_optional::<String>("missing").unwrap();
     assert!(value.is_none());
 }
 
 #[test]
-fn test_get_wrong_type_returns_none() {
+fn test_get_wrong_type_returns_error() {
     let mut meta = Metadata::new();
     meta.set("key", "not-a-number");
-    let value: Option<i64> = meta.get("key");
-    assert!(value.is_none());
+    let value = meta.get::<i64>("key");
+    assert!(value.is_err());
 }
 
 #[test]
 fn test_get_str_borrows_stored_string() {
     let metadata = Metadata::new().with("name", "alice");
 
-    assert_eq!(metadata.get_str("name"), Some("alice"));
-    assert_eq!(metadata.try_get_str("name"), Ok("alice"));
+    assert_eq!(metadata.get_ref::<str>("name"), Ok("alice"));
+    assert_eq!(metadata.get_ref::<str>("name"), Ok("alice"));
 }
 
 #[test]
@@ -159,29 +248,27 @@ fn test_try_get_str_reports_missing_unset_and_non_string_values() {
         .with("count", 1_i64);
 
     assert!(matches!(
-        metadata.try_get_str("missing"),
+        metadata.get_ref::<str>("missing"),
         Err(MetadataError::MissingKey(key)) if key == "missing"
     ));
     assert!(matches!(
-        metadata.try_get_str("unset"),
-        Err(MetadataError::MissingValue { key, data_type })
-            if key == "unset" && data_type == DataType::String
+        metadata.get_ref::<str>("unset"),
+        Err(MetadataError::ValueAccess { key, source })
+            if key == "unset" && source.missing().unwrap().source_type() == Some(DataType::String)
     ));
     assert!(matches!(
-        metadata.try_get_str("count"),
-        Err(MetadataError::TypeMismatch {
-            key,
-            expected: DataType::String,
-            actual: DataType::Int64,
-            ..
-        }) if key == "count"
+        metadata.get_ref::<str>("count"),
+        Err(MetadataError::ValueAccess { key, source })
+            if key == "count" && matches!(*source, ValueError::TypeMismatch {
+                expected: DataType::String, actual: DataType::Int64
+            })
     ));
 }
 
 #[test]
 fn test_try_get_missing_key_reports_error() {
     let meta = Metadata::new();
-    let error = meta.try_get::<String>("missing").unwrap_err();
+    let error = meta.convert::<String>("missing").unwrap_err();
     assert_eq!(error, MetadataError::MissingKey("missing".to_string()));
 }
 
@@ -189,13 +276,13 @@ fn test_try_get_missing_key_reports_error() {
 fn test_try_get_unset_value_reports_missing_value() {
     let metadata = Metadata::new().with("count", Value::Unset(DataType::Int64));
 
-    assert_eq!(
-        metadata.try_get::<i64>("count"),
-        Err(MetadataError::MissingValue {
-            key: "count".to_string(),
-            data_type: DataType::Int64,
-        })
-    );
+    let error = metadata.convert::<i64>("count").unwrap_err();
+    let MetadataError::ValueAccess { key, source } = error else {
+        panic!("value access")
+    };
+    assert_eq!(key, "count");
+    assert_eq!(source.missing().unwrap().source_type(), Some(DataType::Int64));
+    assert_eq!(source.missing().unwrap().target_type(), Some(DataType::Int64));
 }
 
 #[test]
@@ -203,31 +290,28 @@ fn test_try_get_type_mismatch_reports_expected_and_actual_type() {
     let mut meta = Metadata::new();
     meta.set("key", "known-secret");
 
-    let error = meta.try_get::<i64>("key").unwrap_err();
+    let error = meta.convert::<i64>("key").unwrap_err();
     match error {
-        MetadataError::TypeMismatch {
-            key,
-            expected,
-            actual,
-            message,
-        } => {
+        MetadataError::ValueAccess { key, source } => {
             assert_eq!(key, "key");
-            assert_eq!(expected, DataType::Int64);
-            assert_eq!(actual, DataType::String);
-            assert!(!message.is_empty());
-            assert!(!message.contains("known-secret"));
+            let ValueError::Conversion(conversion) = *source else {
+                panic!("conversion error")
+            };
+            assert_eq!(conversion.to_type(), DataType::Int64);
+            assert_eq!(conversion.from_type(), Some(DataType::String));
+            assert!(!conversion.to_string().contains("known-secret"));
         }
-        other => panic!("expected TypeMismatch, got {other:?}"),
+        other => panic!("expected ValueAccess, got {other:?}"),
     }
 }
 
 #[test]
-fn test_get_or_returns_default_for_missing_key_or_type_mismatch() {
+fn test_get_or_defaults_missing_keys_and_preserves_type_mismatch() {
     let mut meta = Metadata::new();
     meta.set("key", "text");
 
-    assert_eq!(meta.get_or("missing", 42_i64), 42);
-    assert_eq!(meta.get_or("key", 7_i64), 7);
+    assert_eq!(meta.get_or("missing", 42_i64), Ok(42));
+    assert!(meta.get_or("key", 7_i64).is_err());
 }
 
 #[test]
@@ -257,8 +341,8 @@ fn test_set_checked_supports_mutable_chaining() {
         .set_checked(&schema, "second", 2_i64)
         .unwrap();
 
-    assert_eq!(meta.get::<i64>("first"), Some(1));
-    assert_eq!(meta.get::<i64>("second"), Some(2));
+    assert_eq!(meta.get::<i64>("first"), Ok(1));
+    assert_eq!(meta.get::<i64>("second"), Ok(2));
 }
 
 #[test]
@@ -334,7 +418,7 @@ fn test_with_checked_accepts_schema_compatible_value() {
         .with_checked(&schema, "known", "value")
         .expect("compatible value should be accepted");
 
-    assert_eq!(metadata.get_str("known"), Some("value"));
+    assert_eq!(metadata.get_ref::<str>("known"), Ok("value"));
 }
 
 #[test]
@@ -344,8 +428,8 @@ fn test_get_raw_and_set_value_support_mutable_chaining() {
         .set("count", Value::Int64(7));
 
     assert_eq!(meta.get_raw("raw"), Some(&Value::String("stored".to_string())));
-    assert_eq!(meta.get::<String>("raw").as_deref(), Some("stored"));
-    assert_eq!(meta.get::<i64>("count"), Some(7));
+    assert_eq!(meta.get::<String>("raw").as_deref(), Ok("stored"));
+    assert_eq!(meta.get::<i64>("count"), Ok(7));
 }
 
 #[test]
@@ -538,8 +622,8 @@ fn test_merge_and_merged_work() {
     assert_eq!(c.len(), 2);
 
     a.merge(b);
-    assert_eq!(a.get::<i64>("x"), Some(1));
-    assert_eq!(a.get::<i64>("y"), Some(2));
+    assert_eq!(a.get::<i64>("x"), Ok(1));
+    assert_eq!(a.get::<i64>("y"), Ok(2));
 }
 
 #[test]
@@ -551,7 +635,7 @@ fn test_merge_overwrites_on_conflict() {
     b.set("k", "overwritten");
 
     a.merge(b);
-    assert_eq!(a.get::<String>("k").as_deref(), Some("overwritten"));
+    assert_eq!(a.get::<String>("k").as_deref(), Ok("overwritten"));
 }
 
 #[test]
@@ -572,7 +656,7 @@ fn test_btreemap_conversions_work() {
     map.insert("k".to_string(), Value::String("v".to_string()));
 
     let meta = Metadata::from(map);
-    assert_eq!(meta.get::<String>("k").as_deref(), Some("v"));
+    assert_eq!(meta.get::<String>("k").as_deref(), Ok("v"));
 
     let map: BTreeMap<String, Value> = meta.into();
     assert_eq!(map.get("k"), Some(&Value::String("v".to_string())));
@@ -616,7 +700,7 @@ fn test_clone_is_independent() {
     let mut cloned = original.clone();
     cloned.set("k", "changed");
 
-    assert_eq!(original.get::<String>("k").as_deref(), Some("v"));
+    assert_eq!(original.get::<String>("k").as_deref(), Ok("v"));
 }
 
 #[test]
@@ -635,16 +719,16 @@ fn test_partial_eq_compares_values() {
 #[test]
 fn test_strict_read_preserves_type_and_borrows_string() {
     let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
-    assert_eq!(metadata.try_get_strict::<i64>("count").expect("i64"), 3);
-    let borrowed: &str = metadata.try_get_str("port").expect("borrowed string");
+    assert_eq!(metadata.get::<i64>("count").expect("i64"), 3);
+    let borrowed: &str = metadata.get_ref::<str>("port").expect("borrowed string");
     assert!(std::ptr::eq(
         borrowed.as_ptr(),
-        metadata.get_str("port").expect("string").as_ptr()
+        metadata.get_ref::<str>("port").expect("string").as_ptr()
     ));
-    let error = metadata.try_get_strict::<i64>("port").expect_err("no implicit parsing");
+    let error = metadata.get::<i64>("port").expect_err("no implicit parsing");
     assert!(matches!(error, MetadataError::ValueAccess { source, .. }
         if matches!(*source, ValueError::TypeMismatch { .. })));
-    assert_eq!(metadata.try_get::<i64>("port").expect("legacy conversion"), 8080);
+    assert_eq!(metadata.convert::<i64>("port").expect("legacy conversion"), 8080);
 }
 
 #[test]
@@ -655,7 +739,7 @@ fn test_explicit_conversion_preserves_source_and_policy() {
     use qubit_datatype::ConversionPolicy;
     use qubit_datatype::NumericConversionPolicy;
     let metadata = Metadata::new().with("score", 1.5_f64);
-    let error = metadata.try_convert::<i32>("score").expect_err("exact conversion");
+    let error = metadata.convert::<i32>("score").expect_err("exact conversion");
     assert!(error.source().expect("value source").is::<ValueError>());
     assert!(matches!(error, MetadataError::ValueAccess { source, .. }
         if matches!(*source, ValueError::Conversion(_))));
@@ -664,7 +748,7 @@ fn test_explicit_conversion_preserves_source_and_policy() {
         .build();
     assert_eq!(
         metadata
-            .try_convert_with::<i32>("score", &policy, ConversionLimits::default_ref())
+            .convert_with::<i32>("score", &policy, ConversionLimits::default_ref())
             .expect("lossy"),
         1
     );
@@ -674,23 +758,22 @@ fn test_explicit_conversion_preserves_source_and_policy() {
 fn test_explicit_reads_distinguish_absent_and_unset() {
     let metadata = Metadata::new().with("unset", Value::Unset(DataType::Int64));
     assert_eq!(
-        metadata.try_get_strict::<i64>("missing"),
+        metadata.get::<i64>("missing"),
         Err(MetadataError::MissingKey("missing".into()))
     );
-    assert_eq!(
-        metadata.try_convert::<i64>("unset"),
-        Err(MetadataError::MissingValue {
-            key: "unset".into(),
-            data_type: DataType::Int64
-        })
-    );
-    assert_eq!(
-        metadata.try_get_strict::<i64>("unset"),
-        Err(MetadataError::MissingValue {
-            key: "unset".into(),
-            data_type: DataType::Int64
-        })
-    );
+    for error in [
+        metadata.convert::<i64>("unset").unwrap_err(),
+        metadata.get::<i64>("unset").unwrap_err(),
+    ] {
+        let MetadataError::ValueAccess { key, source } = error else {
+            panic!("value access")
+        };
+        assert_eq!(key, "unset");
+        let missing = source.missing().unwrap();
+        assert!(missing.is_unset());
+        assert_eq!(missing.source_type(), Some(DataType::Int64));
+        assert_eq!(missing.target_type(), Some(DataType::Int64));
+    }
 }
 
 #[test]
@@ -708,7 +791,7 @@ fn test_explicit_conversion_retains_budget_failure() {
         .to_with::<i64>(ConversionPolicy::default_ref(), &limits)
         .expect_err("numeric text limit");
     let actual = metadata
-        .try_convert_with::<i64>("number", ConversionPolicy::default_ref(), &limits)
+        .convert_with::<i64>("number", ConversionPolicy::default_ref(), &limits)
         .expect_err("same numeric text limit");
     assert_eq!(
         actual,
