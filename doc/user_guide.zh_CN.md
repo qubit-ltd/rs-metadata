@@ -2,7 +2,7 @@
 
 [English User Guide](user_guide.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
-本手册面向使用 `qubit-metadata` 0.10 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
+本手册面向使用 `qubit-metadata` 0.11 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
 需要给记录、消息或文档分片附加可类型化、可查询 metadata，同时又不希望把 metadata
 模型绑定到某个存储 provider 的场景。
 
@@ -40,7 +40,7 @@ Metadata -> MetadataSchema -> 已存值校验
 
 ```toml
 [dependencies]
-qubit-metadata = "0.10"
+qubit-metadata = "0.11"
 qubit-datatype = "0.12"
 ```
 
@@ -48,7 +48,7 @@ qubit-datatype = "0.12"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", features = ["schema", "json"] }
+qubit-metadata = { version = "0.11", features = ["schema", "json"] }
 qubit-datatype = "0.12"
 ```
 
@@ -63,7 +63,7 @@ crate 声明了 `filter`、`schema`、`chrono`、`big-integer`、`big-decimal`�
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", default-features = false }
+qubit-metadata = { version = "0.11", default-features = false }
 ```
 
 这与当前核心功能默认配置等价，同时能明确记录应用自身的 feature 边界。
@@ -103,7 +103,7 @@ use qubit_metadata::Metadata;
 const TENANT_ID: &str = "tenant_id";
 
 let metadata = Metadata::new().with(TENANT_ID, "acme");
-assert_eq!(metadata.get_str(TENANT_ID), Some("acme"));
+assert_eq!(metadata.get_ref::<str>(TENANT_ID).unwrap(), "acme");
 ```
 
 如果 key/value 契约需要和存储 provider 共享，应增加 `MetadataSchema`，并在跨越边界前校验
@@ -111,25 +111,27 @@ metadata。本 crate 不会替调用方规范化 key 的拼写或命名风格。
 
 ### 2. 选择合适的读取失败模型
 
-当键缺失和转换失败都应视为不存在时使用 `get`。需要不经转换检查存储的 `Value` 时使用
-`get_raw`。当诊断信息属于应用行为时使用 `try_get`。
+`get` 严格读取并返回 `Result<T>`，`get_ref` 借用类型化载荷，`get_optional` 返回
+`Result<Option<T>>` 且保留类型错误。检查原始 `Value` 时使用 `get_raw`，需要转换时使用
+`convert`。与 `Config::get` 不同，`Metadata::get` 不执行隐式转换。
 
 ```rust
 use qubit_metadata::{Metadata, MetadataError};
 
 let metadata = Metadata::new().with("chunk_index", 3_i64);
 
-let index: Option<i64> = metadata.get("chunk_index");
+let index: Option<i64> = metadata.get_optional("chunk_index").unwrap();
 assert_eq!(index, Some(3));
 
-match metadata.try_get::<String>("chunk_index") {
-    Err(MetadataError::TypeMismatch { .. }) => {}
+match metadata.get::<String>("chunk_index") {
+    Err(MetadataError::ValueAccess { .. }) => {}
     other => panic!("unexpected result: {other:?}"),
 }
 ```
 
 `Value::Unset` 与 key 缺失不同：它仍然存在并保留声明类型，但不包含具体值。key 缺失时，
-`try_get` 返回 `MissingKey`；unset 值则返回 `MissingValue`。
+`get` 返回 `MissingKey`。类型符合要求的 unset 返回包含 `ValueError::Missing` 的
+`ValueAccess`；声明类型不匹配仍然是类型错误。可选/默认值读取只吸收允许回退的缺失状态。
 
 ### 3. 在存储边界定义 schema
 
@@ -295,7 +297,7 @@ wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 �
 
 | 边界 | API | 典型信息 |
 | --- | --- | --- |
-| 单次 metadata 读取 | `try_get` | key 缺失、unset、转换/类型不匹配 |
+| 单次 metadata 读取 | `get` / `convert` | key 缺失、unset、转换/类型不匹配 |
 | 单次 schema 校验 | `MetadataSchema::validate` | 通过 `issues()` 获取所有独立 metadata 问题 |
 | Filter 构造 | `build` / `build_checked` | 空分组、非法操作数、未知字段、操作符不兼容 |
 | JSON 输入 | `decode_json_slice_with_limits` | JSON budget、JSON 非法或 V1 校验失败 |
@@ -322,10 +324,10 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 有意在 JSON 解析器调用前执行。如果输入在限制内，再根据返回的 `MetadataWireDecodeError`
 检查领域限制和通用 JSON 预算事实。
 
-### `get` 隐藏了失败原因
+### getter 不再返回 `Option`
 
-这是它的既定契约。调用方需要区分缺失、类型不匹配和 unset 时，应改用 `try_get` 并匹配
-`MetadataError`。
+0.11 的 `get` 改为可能失败的严格读取。允许缺失时使用 `get_optional` 并传播 `Result`；
+需要按策略转换时使用 `convert_optional_with`。非法值返回错误，不再折叠为 `None`。
 
 ## 限制与最佳实践
 
@@ -346,17 +348,34 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 ```rust
 use qubit_metadata::Metadata;
 let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
-assert_eq!(metadata.try_get_strict::<i64>("count").unwrap(), 3);
-assert!(metadata.try_get_strict::<i64>("port").is_err());
-assert_eq!(metadata.try_convert::<u16>("port").unwrap(), 8080);
-assert_eq!(metadata.try_get_str("port").unwrap(), "8080");
+assert_eq!(metadata.get::<i64>("count").unwrap(), 3);
+assert!(metadata.get::<i64>("port").is_err());
+assert_eq!(metadata.convert::<u16>("port").unwrap(), 8080);
+assert_eq!(metadata.get_ref::<str>("port").unwrap(), "8080");
 ```
 
-`try_get_strict` 遵循严格的 `TryFrom<&Value>` 契约；借用字符串继续使用
-`try_get_str`。需要控制转换时，向 `try_convert_with` 传入 `ConversionPolicy`
-和 `ConversionLimits`，每次调用使用独立预算。两类新读取接口把原始 `ValueError`
-保存在 `MetadataError::ValueAccess` 中，可通过 `Error::source` 访问。
-键不存在与值为 Unset 仍分别报错。原有 `get`、`try_get` 和 `get_or` 的转换及回退语义不变。
+`get` 使用 `StrictValueRead`，`get_ref::<str>` 借用存储文本。`convert_with` 接收
+`ConversionPolicy` 和 `ConversionLimits`，每次调用使用独立预算。
+`convert_optional_with` 和 `convert_or_with` 为可选/默认值读取显式应用同一策略。
+`get_or` 严格读取，仅缺失键或类型符合要求的 unset 才通过 `IntoValueDefault` 适配默认值。
+转换默认值还允许标量被策略判定缺失的情况；非法转换不会触发默认值。
+
+读取错误把 `ValueError` 保存在 `MetadataError::ValueAccess` 中，通过 `Error::source`
+保留来源。`ValueError::Missing` 内的 `ValueMissing` 提供 `reason()`、`source_type()`、
+`target_type()`、`source_index()` 和可能存在的原始转换错误，不应把这些事实压成文本。
+
+| 原调用或错误 | 新用法 | 行为变化 |
+| --- | --- | --- |
+| 返回 `Option` 的 `get::<T>(key)` | `get_optional::<T>(key)` | 返回 `Result<Option<T>>`，严格检查类型 |
+| 转换读取 `try_get::<T>(key)` | `convert::<T>(key)` | 显式表达转换意图 |
+| `try_get_strict::<T>(key)` | `get::<T>(key)` | 常规 getter 默认严格读取 |
+| `get_str` / `try_get_str` | `get_ref::<str>` | 可能失败的借用严格读取 |
+| `try_convert` / `try_convert_with` | `convert` / `convert_with` | 不保留兼容别名 |
+| 转换型 `get_or` | `convert_or_with` | 显式策略与限额，非法值继续报错 |
+| `MetadataError::MissingValue` | 包含 `ValueError::Missing` 的 `ValueAccess` | 保留缺失事实和来源链 |
+
+schema 的 `MetadataError::TypeMismatch` 仍是独立的 schema 错误。Metadata 的 filter
+feature 和 fail-closed 匹配语义保持不变。
 
 有界 metadata/schema JSON 解码遇到条目数或键长超限时，返回
 `MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded { .. })`；

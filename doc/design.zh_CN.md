@@ -2,7 +2,7 @@
 
 [English design](design.md) · [中文用户手册](user_guide.zh_CN.md) · [中文 README](../README.zh_CN.md)
 
-本文记录 `qubit-metadata` 0.10 的稳定设计边界，供集成方参考；内容描述长期不变量，
+本文记录 `qubit-metadata` 0.11 的稳定设计边界，供集成方参考；内容描述长期不变量，
 不记录实现过程。
 
 ## 目标与非目标
@@ -22,6 +22,15 @@ Serde 格式。它不绑定存储 provider，不负责定义 provider 的索引�
 `Metadata` 将字符串 key 映射到 `qubit_value::Value`，迭代和序列化均按 key 排序。`Value::Unset` 是
 已存在的、带声明类型但没有具体值的字段。`MetadataSchema` 区分 required 和 optional 字段，
 并按具体 `DataType` 校验已存值。`MetadataFilter` 根据 metadata 计算 `FilterExpression`。
+
+`get`、`get_ref`、`get_optional` 和 `get_or` 使用值层的类型契约严格读取，全部返回
+`MetadataResult`；可选读取只吸收缺失，不隐藏类型不匹配。借用读取不克隆载荷。
+`convert`、`convert_with`、`convert_optional_with` 和 `convert_or_with` 显式请求转换，
+后几种方法接收策略与限额。默认值复用 `IntoValueDefault`，仅在需要时适配。
+删除旧 `try_get*` 别名和 `get_str`。
+
+Metadata 负责类型化业务属性、schema 校验和条件匹配；配置源组合、作用域、插值和业务结构体
+反序列化属于 `rs-config`。特别是 `Config::get` 会转换，`Metadata::get` 要求精确存储类型。
 
 ## V1 线协议与版本策略
 
@@ -49,6 +58,11 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 保留有用的类型、数量和版本号，但不嵌入被拒绝的 metadata 值；这属于诊断脱敏，不承诺隐藏任意
 用户 key 或错误文本。
 
+`MetadataError::ValueAccess` 保存 boxed `ValueError`。缺失读取保留 `ValueMissing` 的原因、
+源/目标类型、可选集合索引和原始转换错误，`Error::source` 保留这条来源链。
+删除 `MetadataError::MissingValue`，schema 的 `TypeMismatch` 仍是独立领域错误。
+可选/默认值读取使用对应的值缺失 predicate，不吞掉所有错误。
+
 ## Feature 与依赖架构
 
 默认 feature 集仅包含核心能力。`filter` 提供 filter 所需依赖，`schema` 包含 `filter`，`json`
@@ -57,6 +71,7 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 
 ## 兼容策略
 
-本版本保持公开名称和 V1 wire 表示稳定。已存值的 schema 校验仍与兼容数值的 filter 检查分离。
+0.11 按上述规则修改读取签名和缺失错误处理，不保留兼容别名。V1 wire 表示、filter 语义和
+schema 校验行为保持不变。已存值的 schema 校验仍与兼容数值的 filter 检查分离。
 集成方应使用 builder 和公开 Serde API，让 wire 数据保持在规范限制内，并把未来 wire 版本变化
 作为明确的兼容事件处理。

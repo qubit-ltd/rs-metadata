@@ -2,7 +2,7 @@
 
 [中文用户手册](user_guide.zh_CN.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
 
-This guide targets `qubit-metadata` 0.10 and Rust 1.94 or later. It is for
+This guide targets `qubit-metadata` 0.11 and Rust 1.94 or later. It is for
 Rust developers who need to attach typed, queryable metadata to records,
 messages, or document chunks without coupling the metadata model to a storage
 provider.
@@ -44,7 +44,7 @@ For the core metadata API (the crate's default feature set is core-only):
 
 ```toml
 [dependencies]
-qubit-metadata = "0.10"
+qubit-metadata = "0.11"
 qubit-datatype = "0.12"
 ```
 
@@ -52,7 +52,7 @@ Enable optional layers explicitly when they are used:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", features = ["schema", "json"] }
+qubit-metadata = { version = "0.11", features = ["schema", "json"] }
 qubit-datatype = "0.12"
 ```
 
@@ -68,7 +68,7 @@ For an explicit metadata-only declaration, disable default features:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", default-features = false }
+qubit-metadata = { version = "0.11", default-features = false }
 ```
 
 This is equivalent to the core-only default today and documents the intended
@@ -112,7 +112,7 @@ use qubit_metadata::Metadata;
 const TENANT_ID: &str = "tenant_id";
 
 let metadata = Metadata::new().with(TENANT_ID, "acme");
-assert_eq!(metadata.get_str(TENANT_ID), Some("acme"));
+assert_eq!(metadata.get_ref::<str>(TENANT_ID).unwrap(), "acme");
 ```
 
 When a key/value contract is shared with a storage provider, add a
@@ -121,27 +121,30 @@ crate does not normalize key spelling or naming style for callers.
 
 ### 2. Read values with the right failure model
 
-Use `get` when both a missing key and a conversion failure should be treated as
-absence. Use `get_raw` to inspect the stored `Value` without conversion. Use
-`try_get` when diagnostics are part of the application behavior.
+Use `get` for a strict typed `Result<T>`, `get_ref` to borrow a typed payload,
+and `get_optional` for `Result<Option<T>>`. Optional reads preserve type errors.
+Use `get_raw` to inspect the stored `Value`, and `convert` when conversion is
+intended. Unlike `Config::get`, `Metadata::get` never implicitly converts.
 
 ```rust
 use qubit_metadata::{Metadata, MetadataError};
 
 let metadata = Metadata::new().with("chunk_index", 3_i64);
 
-let index: Option<i64> = metadata.get("chunk_index");
+let index: Option<i64> = metadata.get_optional("chunk_index").unwrap();
 assert_eq!(index, Some(3));
 
-match metadata.try_get::<String>("chunk_index") {
-    Err(MetadataError::TypeMismatch { .. }) => {}
+match metadata.get::<String>("chunk_index") {
+    Err(MetadataError::ValueAccess { .. }) => {}
     other => panic!("unexpected result: {other:?}"),
 }
 ```
 
 `Value::Unset` is different from a missing key: it remains present and retains
-its declared type, but it does not contain a concrete value. `try_get` reports
-`MissingKey` for an absent key and `MissingValue` for an unset value.
+its declared type, but it does not contain a concrete value. `get` reports
+`MissingKey` for an absent key. An appropriately typed unset produces
+`ValueAccess` containing `ValueError::Missing`; a mismatched declared type is
+still a type error. Optional/default reads absorb only eligible missing states.
 
 ### 3. Define a schema at the storage boundary
 
@@ -329,7 +332,7 @@ Use the error type that matches the boundary being validated:
 
 | Boundary | API | Typical information |
 | --- | --- | --- |
-| One metadata read | `try_get` | missing key, unset value, conversion/type mismatch |
+| One metadata read | `get` / `convert` | missing key, unset value, conversion/type mismatch |
 | One schema check | `MetadataSchema::validate` | all independent metadata issues through `issues()` |
 | Filter construction | `build` / `build_checked` | empty groups, invalid operands, unknown fields, incompatible operators |
 | JSON input | `decode_json_slice_with_limits` | budget, invalid JSON, or V1 validation failure |
@@ -362,10 +365,11 @@ Compare the input byte length with the `JsonDecodeLimits` profile held by
 JSON parser is invoked. If the input is within that bound, inspect domain and
 generic budget facts in the returned `MetadataWireDecodeError`.
 
-### `get` hides the reason for failure
+### A getter no longer returns `Option`
 
-That is its contract. Replace it with `try_get` and match on `MetadataError` if
-the caller must distinguish absence from a type mismatch or unset value.
+Version 0.11 makes `get` strict and fallible. Use `get_optional` when absence is
+acceptable and propagate its `Result`; use `convert_optional_with` when you
+need policy-controlled conversion. Invalid values are errors, not `None`.
 
 ## Limitations and best practices
 
@@ -390,18 +394,37 @@ and request conversion explicitly when accepting external text:
 ```rust
 use qubit_metadata::Metadata;
 let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
-assert_eq!(metadata.try_get_strict::<i64>("count").unwrap(), 3);
-assert!(metadata.try_get_strict::<i64>("port").is_err());
-assert_eq!(metadata.try_convert::<u16>("port").unwrap(), 8080);
-assert_eq!(metadata.try_get_str("port").unwrap(), "8080");
+assert_eq!(metadata.get::<i64>("count").unwrap(), 3);
+assert!(metadata.get::<i64>("port").is_err());
+assert_eq!(metadata.convert::<u16>("port").unwrap(), 8080);
+assert_eq!(metadata.get_ref::<str>("port").unwrap(), "8080");
 ```
 
-`try_get_strict` follows the strict `TryFrom<&Value>` contract; use `try_get_str`
-for borrowed strings. `try_convert_with` accepts `ConversionPolicy` and
-`ConversionLimits`, with a fresh budget per call. Both new read paths retain
-`ValueError` under `MetadataError::ValueAccess` and expose it through `Error::source`.
-Missing keys and unset values remain separate errors. Legacy `get`, `try_get`,
-and `get_or` keep their existing conversion and fallback semantics.
+`get` uses `StrictValueRead`; `get_ref::<str>` borrows stored text.
+`convert_with` accepts `ConversionPolicy` and `ConversionLimits`, with a fresh
+budget per call. `convert_optional_with` and `convert_or_with` apply the same
+explicit policy to optional/defaulted reads. `get_or` reads strictly and uses
+`IntoValueDefault` only when an absent key or appropriately typed unset allows
+fallback. Conversion defaults additionally allow scalar policy-missing results;
+invalid conversion is never a default.
+
+Read errors retain `ValueError` under `MetadataError::ValueAccess` and expose
+it through `Error::source`. A `ValueError::Missing` contains `ValueMissing`
+with `reason()`, `source_type()`, `target_type()`, `source_index()`, and the
+original conversion error when present. Do not flatten these facts into text.
+
+| Old call or error | Replacement | Behavior change |
+| --- | --- | --- |
+| `get::<T>(key)` returning `Option` | `get_optional::<T>(key)` | Returns `Result<Option<T>>`, strictly checks types |
+| Converting `try_get::<T>(key)` | `convert::<T>(key)` | Explicit conversion intent |
+| `try_get_strict::<T>(key)` | `get::<T>(key)` | Strict reads are the default named getter |
+| `get_str` / `try_get_str` | `get_ref::<str>` | Borrowed, fallible strict read |
+| `try_convert` / `try_convert_with` | `convert` / `convert_with` | No compatibility aliases |
+| Converting `get_or` | `convert_or_with` | Explicit policy and limits; invalid values propagate |
+| `MetadataError::MissingValue` | `ValueAccess` containing `ValueError::Missing` | Preserves missing facts and source chain |
+
+Schema's `MetadataError::TypeMismatch` remains a schema error. Metadata filter
+features and fail-closed matching semantics remain unchanged.
 
 Bounded metadata/schema JSON decoding reports domain entry/key limits as
 `MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded { .. })` and

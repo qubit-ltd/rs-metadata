@@ -9,7 +9,7 @@
 
 `qubit-metadata` is a typed, ordered metadata model for Rust applications that
 need extensible fields without weakening the types of their core data model.
-It combines conversion-based access, optional schemas, composable filters, and
+It combines strict reads, explicit conversion, optional schemas, composable filters, and
 strict Serde wire formats in one small API.
 
 ## A real use case
@@ -27,9 +27,9 @@ let metadata = Metadata::new()
     .with("chunk_index", 3_i64)
     .with("language", "en");
 
-let tenant: Option<String> = metadata.get("tenant_id");
+let tenant: Option<String> = metadata.get_optional("tenant_id").unwrap();
 assert_eq!(tenant.as_deref(), Some("acme"));
-assert_eq!(metadata.try_get::<i64>("chunk_index").unwrap(), 3);
+assert_eq!(metadata.get::<i64>("chunk_index").unwrap(), 3);
 ```
 
 The stored values retain concrete runtime types through `qubit_value::Value`.
@@ -50,7 +50,7 @@ provider or domain model.
 
 ```toml
 [dependencies]
-qubit-metadata = "0.10"
+qubit-metadata = "0.11"
 ```
 
 The default feature set provides the core metadata container only. Enable
@@ -58,7 +58,7 @@ The default feature set provides the core metadata container only. Enable
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", features = ["schema"] }
+qubit-metadata = { version = "0.11", features = ["schema"] }
 ```
 
 Optional features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
@@ -69,8 +69,8 @@ directional JSON limit profiles.
 
 ## What it provides
 
-- `Metadata`: ordered `String -> Value` storage with `get`, diagnostic
-  `try_get`, `set`, `insert`, `with`, iteration, merge, and schema-checked
+- `Metadata`: ordered `String -> Value` storage with strict `get`, borrowed
+  `get_ref`, optional/defaulted reads, explicit `convert`, `set`, `insert`, `with`, iteration, merge, and schema-checked
   writes.
 - `MetadataSchema`: required/optional field definitions, concrete
   `qubit_datatype::DataType` validation, and independent policies for unknown
@@ -117,8 +117,10 @@ accepted consumption in that operation is not rolled back.
 
 ## Important boundaries
 
-- `get` intentionally collapses a missing key and a failed conversion to
-  `None`; use `try_get` when the reason matters.
+- `get` returns a strict `Result<T>`; it never converts or hides errors.
+  `get_optional` returns `Result<Option<T>>`, preserving type errors.
+  Use `convert` or `convert_with` when conversion is intended. `get_or` only
+  defaults missing keys and appropriately typed unset values.
 - `Value::Unset` records a declared type but is not a concrete value. It is
   rejected by required schema fields and does not satisfy filter predicates.
 - Filter evaluation is fail-closed three-valued logic: unknown values do not
@@ -141,6 +143,14 @@ accepted consumption in that operation is not rolled back.
   must be validated.
 
 ## Learn more
+
+Version 0.11 removes `try_get*`, `get_str`, and `MetadataError::MissingValue`.
+Migrate converting `try_get` calls to `convert`, strict reads to `get`, optional
+strict reads to `get_optional`, and borrowed text to `get_ref::<str>`.
+`MetadataError::ValueAccess` retains a `ValueError`, including `ValueMissing`
+facts and the original conversion error through `Error::source`. Filter and
+schema behavior, numeric comparison, and Wire V1 stay unchanged. Unlike
+`Config::get`, `Metadata::get` now requires the exact stored type.
 
 - [English user guide](doc/user_guide.md)
 - [中文用户手册](doc/user_guide.zh_CN.md)
