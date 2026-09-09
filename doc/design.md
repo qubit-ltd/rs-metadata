@@ -2,7 +2,7 @@
 
 [中文设计文档](design.zh_CN.md) · [User guide](user_guide.md) · [README](../README.md)
 
-This document records the stable design boundaries of `qubit-metadata` 0.10.
+This document records the stable design boundaries of `qubit-metadata` 0.11.
 It describes invariants for integrations, not implementation history.
 
 ## Goals and non-goals
@@ -27,6 +27,19 @@ are sorted by key. `Value::Unset` is a present, typed declaration without a conc
 `MetadataSchema` distinguishes required and optional fields and validates stored
 values against concrete `DataType` declarations. `MetadataFilter` evaluates a
 `FilterExpression` against metadata.
+
+The `get`, `get_ref`, `get_optional`, and `get_or` family reads strictly using
+the value layer's type contract. All return `MetadataResult`; optional reads
+hide absence, not type mismatches. Borrowed reads do not clone payloads.
+`convert`, `convert_with`, `convert_optional_with`, and `convert_or_with`
+explicitly request conversion, with the latter methods accepting policy and
+limits. Default parameters reuse `IntoValueDefault`, evaluated only when needed.
+The old `try_get*` aliases and `get_str` are removed.
+
+Metadata owns typed application attributes, schema validation, and filter
+matching. Configuration source composition, scopes, interpolation, and business
+struct deserialization belong to `rs-config`. In particular, `Config::get`
+converts while `Metadata::get` requires the exact stored type.
 
 ## V1 wire contract and versioning
 
@@ -63,6 +76,13 @@ syntax/envelope failures, and unsupported versions. Diagnostics preserve useful
 types, counts, and versions without embedding rejected metadata values. This is
 diagnostic redaction, not a promise to hide arbitrary user keys or error text.
 
+`MetadataError::ValueAccess` stores a boxed `ValueError`. Missing reads retain
+`ValueMissing` facts: reason, source and target types, optional collection index,
+and the original conversion error. `Error::source` preserves that chain.
+`MetadataError::MissingValue` is removed; schema's `TypeMismatch` remains a
+separate domain error. Optional/default reads use the appropriate value missing
+predicate instead of swallowing every error.
+
 ## Feature/dependency architecture
 
 The default feature set is core-only. `filter` supplies filter dependencies,
@@ -72,7 +92,9 @@ Applications should enable only the layers used at each boundary.
 
 ## Compatibility policy
 
-Public names and the V1 wire representation remain stable within this release.
+Version 0.11 changes read signatures and missing error handling as described
+above; no compatibility aliases are retained. The V1 wire representation,
+filter semantics, and schema validation behavior remain unchanged.
 The crate keeps strict stored-value schema validation distinct from compatible
 numeric filter checks. Integrations should use builders and public Serde APIs,
 keep wire data within canonical limits, and treat a future wire-version change

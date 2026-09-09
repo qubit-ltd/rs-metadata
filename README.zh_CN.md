@@ -8,7 +8,7 @@
 [![English Document](https://img.shields.io/badge/Document-English-blue.svg)](README.md)
 
 `qubit-metadata` 是面向 Rust 应用的类型明确、有序 metadata 模型，适合在不削弱
-核心数据模型类型的前提下附加可扩展字段。它在一个简洁的 API 中提供类型转换读取、
+核心数据模型类型的前提下附加可扩展字段。它在一个简洁的 API 中提供严格读取、显式类型转换、
 可选 schema、可组合 filter 以及严格的 Serde wire format。
 
 ## 一个真实场景
@@ -25,9 +25,9 @@ let metadata = Metadata::new()
     .with("chunk_index", 3_i64)
     .with("language", "en");
 
-let tenant: Option<String> = metadata.get("tenant_id");
+let tenant: Option<String> = metadata.get_optional("tenant_id").unwrap();
 assert_eq!(tenant.as_deref(), Some("acme"));
-assert_eq!(metadata.try_get::<i64>("chunk_index").unwrap(), 3);
+assert_eq!(metadata.get::<i64>("chunk_index").unwrap(), 3);
 ```
 
 存储值通过 `qubit_value::Value` 保留具体运行时类型。当后端需要固定字段和查询校验时，
@@ -44,7 +44,7 @@ metadata 容器不依赖任何存储 provider 或具体领域模型。
 
 ```toml
 [dependencies]
-qubit-metadata = "0.10"
+qubit-metadata = "0.11"
 ```
 
 默认 feature 集只提供核心 metadata 容器。需要 schema 校验时启用 `schema`；它会包含
@@ -52,7 +52,7 @@ qubit-metadata = "0.10"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.10", features = ["schema"] }
+qubit-metadata = { version = "0.11", features = ["schema"] }
 ```
 
 可选 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和
@@ -61,7 +61,7 @@ qubit-metadata = { version = "0.10", features = ["schema"] }
 
 ## 提供的能力
 
-- `Metadata`：有序的 `String -> Value` 存储，支持 `get`、带诊断的 `try_get`、`set`、
+- `Metadata`：有序的 `String -> Value` 存储，支持严格 `get`、借用 `get_ref`、可选/默认值读取、显式 `convert`、`set`、
   `insert`、`with`、迭代、合并和 schema 校验写入。
 - `MetadataSchema`：必填/可选字段定义、具体 `qubit_datatype::DataType` 校验，以及相互
   独立的未知 metadata 字段和未知 filter 字段策略。
@@ -101,7 +101,9 @@ let limits = MetadataLimits::builder()
 
 ## 重要边界
 
-- `get` 会有意把键缺失和转换失败都折叠为 `None`；需要判断具体原因时使用 `try_get`。
+- `get` 返回严格读取的 `Result<T>`，不转换、不隐藏错误；`get_optional` 返回
+  `Result<Option<T>>` 并保留类型错误。需要转换时使用 `convert` 或 `convert_with`。
+  `get_or` 只对缺失键和类型符合要求的 unset 使用默认值。
 - `Value::Unset` 会记录声明类型，但不是具体值。required schema 字段会拒绝它，filter
   谓词也不会将它视为匹配。
 - filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。
@@ -117,6 +119,12 @@ let limits = MetadataLimits::builder()
   `MetadataSchema`。
 
 ## 延伸阅读
+
+0.11 删除 `try_get*`、`get_str` 和 `MetadataError::MissingValue`。原来需要转换的 `try_get`
+调用改为 `convert`；严格读取用 `get`，可选严格读取用 `get_optional`，借用文本用
+`get_ref::<str>`。`MetadataError::ValueAccess` 保留 `ValueError`，包括 `ValueMissing`
+事实和通过 `Error::source` 可访问的原始转换错误。filter、schema、数值比较和 Wire V1
+保持不变。与 `Config::get` 不同，`Metadata::get` 现在要求精确的存储类型。
 
 - [中文用户手册](doc/user_guide.zh_CN.md)
 - [English User Guide](doc/user_guide.md)
