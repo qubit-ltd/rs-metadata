@@ -30,6 +30,7 @@ use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
 use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::MetadataWireLimitKind;
+use qubit_value::Value;
 
 fn filter_input(expression: &str) -> Vec<u8> {
     format!(r#"{{"version":1,"expression":{expression},"options":{{"numeric_comparison_policy":"exact"}}}}"#,)
@@ -44,6 +45,10 @@ fn input_limit(maximum: usize) -> MetadataLimits {
                 .build(),
         )
         .build()
+}
+
+fn number_limit(maximum: usize) -> JsonEncodeLimits {
+    JsonEncodeLimits::builder().max_number_bytes(maximum).build()
 }
 
 #[test]
@@ -281,6 +286,62 @@ fn test_metadata_encode_uses_output_budget() {
             ..
         })
     ));
+}
+
+#[test]
+fn test_metadata_encode_accepts_uint128_string_under_number_limit() {
+    let metadata = Metadata::new().with("value", Value::UInt128(123));
+    let encoded = metadata
+        .to_json_vec_with_limits(number_limit(2))
+        .expect("UInt128 is encoded as a string and should not consume number bytes");
+    assert_eq!(
+        String::from_utf8(encoded).unwrap(),
+        r#"{"version":1,"values":{"value":{"scalar":{"uint128":"123"}}}}"#
+    );
+}
+
+#[test]
+fn test_metadata_encode_accepts_float64_exponent_under_number_limit() {
+    let metadata = Metadata::new().with("value", Value::Float64(1e100));
+    let encoded = metadata
+        .to_json_vec_with_limits(number_limit(10))
+        .expect("Float64 uses the compact JSON representation for number bytes");
+    assert_eq!(
+        String::from_utf8(encoded).unwrap(),
+        r#"{"version":1,"values":{"value":{"scalar":{"float64":1e+100}}}}"#
+    );
+}
+
+#[test]
+fn test_filter_encode_accepts_uint128_string_under_number_limit() {
+    let expression = FilterExpression::builder()
+        .eq("value", Value::UInt128(123))
+        .build()
+        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    let encoded = filter
+        .to_json_vec_with_limits(number_limit(2))
+        .expect("UInt128 is encoded as a string and should not consume number bytes");
+    assert_eq!(
+        String::from_utf8(encoded).unwrap(),
+        r#"{"version":1,"expression":{"kind":"eq","key":"value","value":{"scalar":{"uint128":"123"}}},"options":{"numeric_comparison_policy":"exact"}}"#
+    );
+}
+
+#[test]
+fn test_filter_encode_accepts_float64_exponent_under_number_limit() {
+    let expression = FilterExpression::builder()
+        .eq("value", Value::Float64(1e100))
+        .build()
+        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    let encoded = filter
+        .to_json_vec_with_limits(number_limit(10))
+        .expect("Float64 uses the compact JSON representation for number bytes");
+    assert_eq!(
+        String::from_utf8(encoded).unwrap(),
+        r#"{"version":1,"expression":{"kind":"eq","key":"value","value":{"scalar":{"float64":1e+100}}},"options":{"numeric_comparison_policy":"exact"}}"#
+    );
 }
 
 #[test]
