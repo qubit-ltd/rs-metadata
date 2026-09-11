@@ -48,6 +48,8 @@ pub enum MetadataWireDecodeError {
     },
     /// The JSON lexical preflight rejected the document with source details.
     Syntax(JsonSyntaxError),
+    /// The caller supplied metadata limits outside the protocol hard caps.
+    InvalidLimits(serde_json::Error),
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
     Filter(MetadataError),
@@ -71,6 +73,7 @@ impl fmt::Display for MetadataWireDecodeError {
             Self::Budget(error) => fmt::Display::fmt(error, formatter),
             Self::Quantity { source, .. } => fmt::Display::fmt(source, formatter),
             Self::Syntax(error) => fmt::Display::fmt(error, formatter),
+            Self::InvalidLimits(error) => fmt::Display::fmt(error, formatter),
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),
             Self::InvalidJson(error) => fmt::Display::fmt(error, formatter),
@@ -87,6 +90,7 @@ impl Error for MetadataWireDecodeError {
             Self::Budget(error) => Some(error),
             Self::Quantity { source, .. } => Some(source),
             Self::Syntax(error) => Some(error),
+            Self::InvalidLimits(error) => Some(error),
             #[cfg(feature = "filter")]
             Self::Filter(error) => Some(error),
             Self::InvalidJson(error) => Some(error),

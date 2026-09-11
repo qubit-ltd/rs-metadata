@@ -80,6 +80,23 @@ impl MetadataLimitsBuilder {
     pub fn build(self) -> MetadataLimits {
         MetadataLimits::from_builder(self)
     }
+
+    /// Validates and builds metadata limits.
+    ///
+    /// Use this method when limits come from configuration rather than a
+    /// trusted compile-time profile. [`Self::build`] remains
+    /// available for compatibility and defers validation to the wire boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns a JSON configuration error when a domain limit exceeds its
+    /// protocol hard cap.
+    #[inline]
+    pub fn try_build(self) -> Result<MetadataLimits, serde_json::Error> {
+        let limits = MetadataLimits::from_builder(self);
+        limits.validate()?;
+        Ok(limits)
+    }
 }
 
 impl Default for MetadataLimitsBuilder {

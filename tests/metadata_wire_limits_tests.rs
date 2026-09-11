@@ -175,6 +175,15 @@ fn test_metadata_domain_entry_limit_is_preserved() {
 }
 
 #[test]
+fn test_metadata_decoder_reports_invalid_receiver_limits_separately() {
+    let limits = MetadataLimits::builder().max_metadata_entries(4_097).build();
+    let error = Metadata::decode_json_slice_with_limits(br#"{}"#, limits)
+        .expect_err("invalid receiver limits must be rejected");
+
+    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
+}
+
+#[test]
 fn test_metadata_domain_key_limit_is_preserved() {
     let metadata = Metadata::new().with("first", 1_i64);
     let input = serde_json::to_vec(&metadata).unwrap();
