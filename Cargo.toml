@@ -53,12 +53,12 @@ all = ["schema", "chrono", "big-number", "url", "json"]
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
-qubit-datatype = { version = "0.12", default-features = false, features = ["converter"] }
+qubit-datatype = { version = "0.13", default-features = false, features = ["converter"] }
 qubit-budget = { version = "0.5", optional = true }
 qubit-json = { version = "0.9", optional = true }
 qubit-redact = { version = "0.8", default-features = false }
 qubit-utils = { version = "0.3", optional = true }
-qubit-value = { version = "0.11", path = "../rs-value", default-features = false, features = ["converter", "redact"] }
+qubit-value = { version = "0.11", default-features = false, features = ["converter", "redact"] }
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false }
