@@ -50,7 +50,7 @@ provider or domain model.
 
 ```toml
 [dependencies]
-qubit-metadata = "0.11"
+qubit-metadata = "0.6"
 ```
 
 The default feature set provides the core metadata container only. Enable
@@ -58,7 +58,7 @@ The default feature set provides the core metadata container only. Enable
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.11", features = ["schema"] }
+qubit-metadata = { version = "0.6", features = ["schema"] }
 qubit-datatype = "0.13"
 ```
 
@@ -150,7 +150,7 @@ accepted consumption in that operation is not rolled back.
 
 ## Learn more
 
-Version 0.11 removes `try_get*`, `get_str`, and `MetadataError::MissingValue`.
+Version 0.6 removes `try_get*`, `get_str`, and `MetadataError::MissingValue`.
 Migrate converting `try_get` calls to `convert`, strict reads to `get`, optional
 strict reads to `get_optional`, and borrowed text to `get_ref::<str>`.
 `MetadataError::ValueAccess` retains a `ValueError`, including `ValueMissing`

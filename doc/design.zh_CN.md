@@ -2,7 +2,7 @@
 
 [English design](design.md) · [中文用户手册](user_guide.zh_CN.md) · [中文 README](../README.zh_CN.md)
 
-本文记录 `qubit-metadata` 0.11 的稳定设计边界，供集成方参考；内容描述长期不变量，
+本文记录 `qubit-metadata` 0.6 的稳定设计边界，供集成方参考；内容描述长期不变量，
 不记录实现过程。
 
 ## 目标与非目标
@@ -73,7 +73,7 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 
 ## 兼容策略
 
-0.11 按上述规则修改读取签名和缺失错误处理，不保留兼容别名。V1 wire 表示、filter 语义和
+0.6 按上述规则修改读取签名和缺失错误处理，不保留兼容别名。V1 wire 表示、filter 语义和
 schema 校验行为保持不变。已存值的 schema 校验仍与兼容数值的 filter 检查分离。
 集成方应使用 builder 和公开 Serde API，让 wire 数据保持在规范限制内，并把未来 wire 版本变化
 作为明确的兼容事件处理。

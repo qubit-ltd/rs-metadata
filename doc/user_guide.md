@@ -2,7 +2,7 @@
 
 [中文用户手册](user_guide.zh_CN.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
 
-This guide targets `qubit-metadata` 0.11 and Rust 1.94 or later. It is for
+This guide targets `qubit-metadata` 0.6 and Rust 1.94 or later. It is for
 Rust developers who need to attach typed, queryable metadata to records,
 messages, or document chunks without coupling the metadata model to a storage
 provider.
@@ -44,14 +44,14 @@ For the core metadata API (the crate's default feature set is core-only):
 
 ```toml
 [dependencies]
-qubit-metadata = "0.11"
+qubit-metadata = "0.6"
 ```
 
 Enable optional layers explicitly when they are used:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.11", features = ["schema", "json"] }
+qubit-metadata = { version = "0.6", features = ["schema", "json"] }
 qubit-datatype = "0.13"
 ```
 
@@ -67,7 +67,7 @@ For an explicit metadata-only declaration, disable default features:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.11", default-features = false }
+qubit-metadata = { version = "0.6", default-features = false }
 ```
 
 This is equivalent to the core-only default today and documents the intended
@@ -373,7 +373,7 @@ generic budget facts in the returned `MetadataWireDecodeError`.
 
 ### A getter no longer returns `Option`
 
-Version 0.11 makes `get` strict and fallible. Use `get_optional` when absence is
+Version 0.6 makes `get` strict and fallible. Use `get_optional` when absence is
 acceptable and propagate its `Result`; use `convert_optional_with` when you
 need policy-controlled conversion. Invalid values are errors, not `None`.
 
