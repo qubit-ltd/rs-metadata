@@ -18,6 +18,15 @@ use crate::metadata_limits::default_json_decode_limits;
 use crate::metadata_limits::default_json_encode_limits;
 
 /// Builder for [`MetadataLimits`].
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::MetadataLimits;
+///
+/// let limits = MetadataLimits::builder().max_metadata_entries(128).build();
+/// assert_eq!(limits.max_metadata_entries(), 128);
+/// ```
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MetadataLimitsBuilder {

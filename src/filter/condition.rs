@@ -32,6 +32,18 @@ use crate::MetadataResult;
 /// An absent key or [`Value::Unset`] produces an unknown outcome that remains
 /// unknown under logical negation and therefore fails closed when matching.
 /// Existence conditions define presence in terms of a concrete value.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::Condition;
+///
+/// let condition = Condition::Equal {
+///     key: "tenant".to_owned(),
+///     value: "acme".into(),
+/// };
+/// assert!(matches!(condition, Condition::Equal { .. }));
+/// ```
 #[derive(Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Condition {

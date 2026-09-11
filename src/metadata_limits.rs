@@ -34,6 +34,15 @@ pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 /// bounds separate from generic JSON map/key accounting. This preserves the
 /// protocol's domain limits while the directional JSON limit types handle
 /// document traversal, payload lengths, and complete input/output bytes.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::MetadataLimits;
+///
+/// let limits = MetadataLimits::builder().max_key_bytes(128).build();
+/// assert_eq!(limits.max_key_bytes(), 128);
+/// ```
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MetadataLimits {

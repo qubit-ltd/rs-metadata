@@ -12,6 +12,15 @@ use qubit_datatype::NumericComparisonPolicy;
 use super::FilterMatchOptions;
 
 /// Fluent builder for filter match options.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterMatchOptions;
+///
+/// let options = FilterMatchOptions::builder().build();
+/// assert_eq!(options, FilterMatchOptions::default());
+/// ```
 #[must_use]
 pub struct FilterMatchOptionsBuilder {
     /// Mixed numeric comparison policy.

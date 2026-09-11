@@ -19,6 +19,21 @@ use crate::schema::UnknownFilterFieldPolicy;
 use crate::schema::UnknownMetadataFieldPolicy;
 
 /// Builder for [`MetadataSchema`].
+///
+/// # Examples
+///
+/// ```
+/// use qubit_datatype::DataType;
+/// use qubit_metadata::MetadataSchema;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let schema = MetadataSchema::builder()
+///     .required("tenant", DataType::String)
+///     .build()?;
+/// assert!(schema.field("tenant").is_some());
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct MetadataSchemaBuilder {
     /// Field definitions being built.

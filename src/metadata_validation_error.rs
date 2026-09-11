@@ -16,6 +16,15 @@ use crate::metadata_error::MetadataError;
 /// Unlike single-entry metadata accessors, schema validation can discover
 /// multiple independent issues in one pass. This type preserves all collected
 /// [`MetadataError`] values so callers can report or fix them together.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::{MetadataError, MetadataValidationError};
+///
+/// let error = MetadataValidationError::from_issue(MetadataError::MissingKey("tenant".into()));
+/// assert_eq!(error.len(), 1);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetadataValidationError {
     /// Collected validation issues.

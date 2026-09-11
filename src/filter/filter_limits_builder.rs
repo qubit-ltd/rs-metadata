@@ -11,6 +11,18 @@ use super::FilterLimits;
 use crate::MetadataResult;
 
 /// Fluent builder for validated filter limits.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterLimits;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let limits = FilterLimits::builder().max_nodes(32).build()?;
+/// assert_eq!(limits.max_nodes(), 32);
+/// # Ok(())
+/// # }
+/// ```
 #[must_use]
 pub struct FilterLimitsBuilder {
     /// Requested maximum nesting depth.

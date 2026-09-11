@@ -8,6 +8,14 @@
 //! Filter resource-bound categories.
 
 /// Identifies one resource bounded while constructing or decoding a filter.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterLimitKind;
+///
+/// assert_eq!(FilterLimitKind::Depth, FilterLimitKind::Depth);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum FilterLimitKind {

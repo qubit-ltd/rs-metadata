@@ -14,6 +14,18 @@ use serde::Serialize;
 use super::FilterMatchOptionsBuilder;
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
+///
+/// # Examples
+///
+/// ```
+/// use qubit_datatype::NumericComparisonPolicy;
+/// use qubit_metadata::FilterMatchOptions;
+///
+/// let options = FilterMatchOptions::builder()
+///     .numeric_comparison_policy(NumericComparisonPolicy::Exact)
+///     .build();
+/// assert_eq!(options.numeric_comparison_policy(), NumericComparisonPolicy::Exact);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]

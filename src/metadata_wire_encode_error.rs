@@ -19,6 +19,15 @@ use qubit_json::encode::JsonEncodeErrorSource;
 use qubit_json::encode::JsonSerializationError;
 
 /// Failure returned by bounded metadata JSON encoding APIs.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::MetadataWireEncodeError;
+///
+/// let error = MetadataWireEncodeError::Io(std::io::Error::other("closed"));
+/// assert!(error.to_string().contains("closed"));
+/// ```
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum MetadataWireEncodeError {

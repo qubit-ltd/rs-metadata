@@ -14,6 +14,18 @@ use crate::FilterExpression;
 ///
 /// This enum preserves the complete Boolean structure without allowing
 /// callers to construct or mutate the filter's private representation.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::{FilterExpression, FilterExpressionView};
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let expression = FilterExpression::builder().eq("tenant", "acme").build()?;
+/// assert!(matches!(expression.view(), FilterExpressionView::Condition(_)));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[must_use]
 #[non_exhaustive]

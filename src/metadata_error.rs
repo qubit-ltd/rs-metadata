@@ -17,6 +17,15 @@ use crate::FilterLimitKind;
 use crate::MetadataWireLimitKind;
 
 /// Errors produced by explicit metadata accessors and schema validation.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::MetadataError;
+///
+/// let error = MetadataError::MissingKey("tenant".to_owned());
+/// assert!(error.to_string().contains("tenant"));
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum MetadataError {
