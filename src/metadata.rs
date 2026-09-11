@@ -158,7 +158,9 @@ impl Metadata {
         input: &[u8],
         limits: MetadataLimits,
     ) -> Result<Self, crate::MetadataWireDecodeError> {
-        limits.validate().map_err(crate::MetadataWireDecodeError::InvalidJson)?;
+        limits
+            .validate()
+            .map_err(crate::MetadataWireDecodeError::InvalidLimits)?;
         let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let error_slot = Rc::new(RefCell::new(None));
         let wire = decoder

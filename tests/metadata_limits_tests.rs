@@ -137,3 +137,13 @@ fn test_metadata_limit_validation_rejects_each_value_above_boundary() {
         assert!(limits.validate().is_err(), "{name} above its cap must fail");
     }
 }
+
+#[test]
+fn test_metadata_limits_try_build_rejects_invalid_domain_configuration() {
+    let error = MetadataLimits::builder()
+        .max_metadata_entries(4_097)
+        .try_build()
+        .expect_err("invalid domain limits must fail during configuration");
+
+    assert!(error.to_string().contains("metadata entries limit"));
+}
