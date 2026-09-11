@@ -234,7 +234,7 @@ fn test_get_wrong_type_returns_error() {
 }
 
 #[test]
-fn test_get_str_borrows_stored_string() {
+fn test_get_ref_borrows_stored_string() {
     let metadata = Metadata::new().with("name", "alice");
 
     assert_eq!(metadata.get_ref::<str>("name"), Ok("alice"));
@@ -242,7 +242,7 @@ fn test_get_str_borrows_stored_string() {
 }
 
 #[test]
-fn test_try_get_str_reports_missing_unset_and_non_string_values() {
+fn test_get_ref_reports_missing_unset_and_non_string_values() {
     let metadata = Metadata::new()
         .with("unset", Value::Unset(DataType::String))
         .with("count", 1_i64);
@@ -266,14 +266,14 @@ fn test_try_get_str_reports_missing_unset_and_non_string_values() {
 }
 
 #[test]
-fn test_try_get_missing_key_reports_error() {
+fn test_get_reports_missing_key_error() {
     let meta = Metadata::new();
     let error = meta.convert::<String>("missing").unwrap_err();
     assert_eq!(error, MetadataError::MissingKey("missing".to_string()));
 }
 
 #[test]
-fn test_try_get_unset_value_reports_missing_value() {
+fn test_get_reports_unset_value_as_missing() {
     let metadata = Metadata::new().with("count", Value::Unset(DataType::Int64));
 
     let error = metadata.convert::<i64>("count").unwrap_err();
@@ -286,7 +286,7 @@ fn test_try_get_unset_value_reports_missing_value() {
 }
 
 #[test]
-fn test_try_get_type_mismatch_reports_expected_and_actual_type() {
+fn test_get_reports_type_mismatch_with_expected_and_actual_type() {
     let mut meta = Metadata::new();
     meta.set("key", "known-secret");
 

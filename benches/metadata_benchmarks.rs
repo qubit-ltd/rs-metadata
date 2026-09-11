@@ -113,7 +113,6 @@ fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
             keys.as_slice(),
             |bencher, keys| {
                 bencher.iter(|| {
-                    let keys = black_box(keys).to_owned();
                     let result = keys
                         .iter()
                         .fold(FilterExpression::builder(), |builder, key| builder.exists(key))
