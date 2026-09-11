@@ -12,13 +12,14 @@
 //! This crate provides a [`Metadata`] type — a structured key-value store
 //! designed for any domain that needs to attach typed annotations to its data
 //! models. It is not a plain `HashMap` — it is a structured extensibility point
-//! with typed conversion access, [`qubit_value::Value`] backing, and
-//! first-class `serde` support.
+//! with strict typed access, explicit conversion helpers,
+//! [`qubit_value::Value`] backing, and first-class `serde` support.
 //!
 //! ## Design Goals
 //!
-//! - **Typed Values**: Conversion-based typed get, chainable set, and
-//!   replacement-aware insert APIs backed by [`qubit_value::Value`]
+//! - **Typed Values**: Strict typed reads, explicit conversion helpers,
+//!   chainable set, and replacement-aware insert APIs backed by
+//!   [`qubit_value::Value`]
 //! - **Generality**: No domain-specific assumptions — usable in any Rust
 //!   project
 //! - **Schema Support**: Optional schema validation for metadata and filters
@@ -32,8 +33,8 @@
 //! - Enable `filter` for composable filter expressions and their public types
 //! - Enable `schema` (which includes `filter`) for field definitions and
 //!   validation APIs
-//! - Error type: [`MetadataError`] — explicit failure reporting for `try_*`
-//!   APIs
+//! - Error type: [`MetadataError`] — structured failure reporting for reads,
+//!   conversions, validation, and wire boundaries
 //! - `schema` also provides aggregate validation errors
 //!
 //! ## Example
@@ -45,8 +46,7 @@
 //!     .with("author", "alice")
 //!     .with("priority", 3_i64);
 //!
-//! // Convenience API: get converts the stored value to the requested target;
-//! // missing keys and failed conversions both collapse to None.
+//! // Optional strict reads distinguish absence from conversion/type failures.
 //! let author = meta.get_optional::<String>("author").unwrap();
 //! assert_eq!(author.as_deref(), Some("alice"));
 //!

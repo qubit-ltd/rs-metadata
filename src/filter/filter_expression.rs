@@ -23,7 +23,7 @@ use crate::filter::internal::MatchOutcome;
 
 /// An immutable Boolean expression in a [`crate::MetadataFilter`].
 ///
-/// Expressions are constructed by [`crate::MetadataFilterBuilder`] and can be
+/// Expressions are constructed by [`FilterExpressionBuilder`] and can be
 /// inspected without allocation through [`FilterExpression::view`]. Their
 /// private representation prevents callers from constructing structurally
 /// invalid expression trees. The structure is Boolean, while evaluation uses
@@ -70,21 +70,21 @@ impl fmt::Debug for FilterExpression {
 
 impl FilterExpression {
     /// Creates a builder for a non-empty filter expression.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn builder() -> FilterExpressionBuilder {
         FilterExpressionBuilder::new()
     }
 
     /// Creates an expression that matches every metadata object.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the constructed all-matching expression should be used"]
     pub const fn match_all() -> Self {
         Self::true_expression()
     }
 
     /// Creates an expression that matches no metadata object.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the constructed no-match expression should be used"]
     pub const fn match_none() -> Self {
         Self::false_expression()
@@ -134,7 +134,7 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A zero-copy view preserving the node's Boolean structure.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the expression view should be inspected"]
     pub fn view(&self) -> FilterExpressionView<'_> {
         match &self.node {
