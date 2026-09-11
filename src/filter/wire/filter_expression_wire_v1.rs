@@ -285,3 +285,123 @@ impl FilterExpressionWireV1 {
         Ok(expression)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use qubit_value::MultiValues;
+    use qubit_value::ValueWirePayloadV1;
+
+    use super::FilterExpressionWireV1;
+    use crate::FilterLimitKind;
+    use crate::FilterLimits;
+    use crate::MetadataError;
+
+    fn non_scalar_payload() -> ValueWirePayloadV1 {
+        ValueWirePayloadV1::try_from(MultiValues::Int32(vec![1, 2])).expect("collection payload should convert")
+    }
+
+    #[test]
+    fn test_validate_limits_rejects_depth_nodes_key_and_membership() {
+        let depth_limits = FilterLimits::builder()
+            .max_depth(2)
+            .build()
+            .expect("limits should build");
+        let too_deep = FilterExpressionWireV1::Not {
+            expression: Box::new(FilterExpressionWireV1::Not {
+                expression: Box::new(FilterExpressionWireV1::All),
+            }),
+        };
+        assert!(matches!(
+            too_deep.validate_limits(depth_limits),
+            Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Depth,
+                value: 3,
+                maximum: 2,
+            })
+        ));
+
+        let node_limits = FilterLimits::builder()
+            .max_nodes(2)
+            .build()
+            .expect("limits should build");
+        let too_many_nodes = FilterExpressionWireV1::And {
+            children: vec![
+                FilterExpressionWireV1::All,
+                FilterExpressionWireV1::None,
+                FilterExpressionWireV1::All,
+            ],
+        };
+        assert!(matches!(
+            too_many_nodes.validate_limits(node_limits),
+            Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::Nodes,
+                value: 3,
+                maximum: 2,
+            })
+        ));
+
+        let key_limits = FilterLimits::builder()
+            .max_key_bytes(4)
+            .build()
+            .expect("limits should build");
+        let long_key = FilterExpressionWireV1::Exists {
+            key: "status".to_owned(),
+        };
+        assert!(matches!(
+            long_key.validate_limits(key_limits),
+            Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: 6,
+                maximum: 4,
+            })
+        ));
+
+        let set_limits = FilterLimits::builder()
+            .max_set_values(1)
+            .build()
+            .expect("limits should build");
+        let too_many_values = FilterExpressionWireV1::In {
+            key: "k".to_owned(),
+            values: vec![non_scalar_payload(), non_scalar_payload()],
+        };
+        assert!(matches!(
+            too_many_values.validate_limits(set_limits),
+            Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::SetValues,
+                value: 2,
+                maximum: 1,
+            })
+        ));
+    }
+
+    #[test]
+    fn test_into_expression_rejects_non_scalar_operands_and_short_groups() {
+        let non_scalar = FilterExpressionWireV1::Eq {
+            key: "k".to_owned(),
+            value: non_scalar_payload(),
+        };
+        assert!(matches!(
+            non_scalar.into_expression(),
+            Err(MetadataError::InvalidFilterExpression { .. })
+        ));
+
+        let single_child = FilterExpressionWireV1::And {
+            children: vec![FilterExpressionWireV1::All],
+        };
+        assert!(matches!(
+            single_child.into_expression(),
+            Err(MetadataError::InvalidFilterExpression { .. })
+        ));
+
+        let three_children = FilterExpressionWireV1::Or {
+            children: vec![
+                FilterExpressionWireV1::All,
+                FilterExpressionWireV1::None,
+                FilterExpressionWireV1::All,
+            ],
+        };
+        let _ = three_children
+            .into_expression()
+            .expect("three-child groups should fold into an expression");
+    }
+}
