@@ -59,7 +59,7 @@ impl FilterLimits {
     /// # Returns
     ///
     /// A builder whose omitted properties use library hard maximums.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the builder must be configured or used to build filter limits"]
     pub const fn builder() -> FilterLimitsBuilder {
         FilterLimitsBuilder::new()
@@ -101,21 +101,21 @@ impl FilterLimits {
     }
 
     /// Returns the maximum nesting depth.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_depth(&self) -> usize {
         self.max_depth
     }
 
     /// Returns the maximum number of expression nodes.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_nodes(&self) -> usize {
         self.max_nodes
     }
 
     /// Returns the maximum candidate values in one membership condition.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_set_values(&self) -> usize {
         self.max_set_values
@@ -126,7 +126,7 @@ impl FilterLimits {
     /// # Returns
     ///
     /// The configured key byte bound.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_key_bytes(&self) -> usize {
         self.max_key_length

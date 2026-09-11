@@ -69,9 +69,13 @@ enum ExpressionKind {
 
 /// Seed that decodes one expression while charging filter-domain budgets.
 pub(crate) struct FilterExpressionWireV1Seed<'a> {
+    /// Receiver-side AST limits.
     receiver_limits: FilterLimits,
+    /// Remaining node budget for this decode operation.
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
+    /// Current expression depth.
     depth: usize,
+    /// Slot retaining the first structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -159,11 +163,17 @@ fn capture_filter_error(error_slot: &Rc<RefCell<Option<MetadataError>>>, error: 
 
 /// Temporarily owned fields collected from one expression map.
 struct ExpressionFields {
+    /// Parsed expression kind tag.
     kind: Option<ExpressionKind>,
+    /// Optional condition key.
     key: Option<String>,
+    /// Optional single condition operand.
     value: Option<ValueWirePayloadV1>,
+    /// Optional membership operands.
     values: Option<Vec<ValueWirePayloadV1>>,
+    /// Optional Boolean children.
     children: Option<Vec<FilterExpressionWireV1>>,
+    /// Optional negated child expression.
     expression: Option<Box<FilterExpressionWireV1>>,
 }
 
@@ -354,9 +364,13 @@ where
 
 /// Visitor for one expression map.
 struct ExpressionVisitor<'a> {
+    /// Receiver-side AST limits.
     receiver_limits: FilterLimits,
+    /// Remaining node budget.
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
+    /// Current expression depth.
     depth: usize,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -449,9 +463,13 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
 
 /// Seed that bounds a sequence of child expressions.
 struct ExpressionSequenceSeed<'a> {
+    /// Receiver-side AST limits.
     receiver_limits: FilterLimits,
+    /// Remaining node budget.
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
+    /// Parent expression depth.
     depth: usize,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -491,9 +509,13 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
 
 /// Visitor for a bounded child-expression sequence.
 struct ExpressionSequenceVisitor<'a> {
+    /// Receiver-side AST limits.
     receiver_limits: FilterLimits,
+    /// Remaining node budget.
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
+    /// Child expression depth.
     depth: usize,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -527,9 +549,13 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
 
 /// Seed that checks one child collection item before reading its body.
 struct ExpressionElementSeed<'a> {
+    /// Receiver-side AST limits.
     receiver_limits: FilterLimits,
+    /// Remaining node budget.
     node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
+    /// Child expression depth.
     depth: usize,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -549,7 +575,9 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
 
 /// Seed that bounds a membership-value sequence.
 struct ValueSequenceSeed {
+    /// Receiver-side membership limit.
     receiver_limits: FilterLimits,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -580,7 +608,9 @@ impl<'de> DeserializeSeed<'de> for ValueSequenceSeed {
 
 /// Visitor for a bounded membership-value sequence.
 struct ValueSequenceVisitor {
+    /// Receiver-side membership limit.
     receiver_limits: FilterLimits,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -613,8 +643,11 @@ impl<'de> Visitor<'de> for ValueSequenceVisitor {
 
 /// Seed that checks one membership item before reading its payload.
 struct ValueElementSeed {
+    /// Receiver-side membership limit.
     receiver_limits: FilterLimits,
+    /// Next membership position being decoded.
     next_len: usize,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 

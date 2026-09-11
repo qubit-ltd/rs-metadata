@@ -60,7 +60,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the required root expression.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn expression(mut self, expression: FilterExpression) -> Self {
         self.expression = Some(expression);
@@ -68,7 +68,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the match options.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn options(mut self, options: FilterMatchOptions) -> Self {
         self.options = options;
@@ -76,7 +76,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the resource limits.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn limits(mut self, limits: FilterLimits) -> Self {
         self.limits = limits;

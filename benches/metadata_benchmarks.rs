@@ -106,7 +106,7 @@ fn benchmark_filter_match(criterion: &mut Criterion) {
 /// Benchmarks incremental construction of flattened AND expressions.
 fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
     let mut group = criterion.benchmark_group("metadata/filter_expression_construction");
-    for condition_count in [16, 64, 128, 256] {
+    for condition_count in [16, 64, 128, 255] {
         let keys: Vec<_> = (0..condition_count).map(|index| format!("key_{index}")).collect();
         group.bench_with_input(
             BenchmarkId::from_parameter(condition_count),
@@ -117,7 +117,7 @@ fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
                         .iter()
                         .fold(FilterExpression::builder(), |builder, key| builder.exists(key))
                         .build();
-                    black_box(result)
+                    black_box(result.expect("benchmark filter should build"))
                 });
             },
         );

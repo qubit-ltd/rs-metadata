@@ -28,6 +28,7 @@ use crate::MetadataWireLimitKind;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
+#[must_use]
 pub enum MetadataError {
     /// A strict read or explicit conversion failed without losing its source.
     ValueAccess {

@@ -30,6 +30,7 @@ use qubit_json::encode::JsonSerializationError;
 /// ```
 #[derive(Debug)]
 #[non_exhaustive]
+#[must_use]
 pub enum MetadataWireEncodeError {
     /// The JSON document exceeded one configured resource budget.
     Budget(BudgetError<JsonResource, usize>),

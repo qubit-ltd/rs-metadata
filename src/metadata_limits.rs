@@ -60,7 +60,7 @@ pub struct MetadataLimits {
 
 impl MetadataLimits {
     /// Creates a builder with the default JSON profile and domain limits.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the builder must be configured or used to build metadata limits"]
     pub fn builder() -> MetadataLimitsBuilder {
         MetadataLimitsBuilder::default()
@@ -79,35 +79,35 @@ impl MetadataLimits {
     }
 
     /// Returns the JSON decoding profile.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn json_decode(&self) -> JsonDecodeLimits {
         self.json_decode
     }
 
     /// Returns the JSON encoding profile.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn json_encode(&self) -> JsonEncodeLimits {
         self.json_encode
     }
 
     /// Returns the metadata-entry domain limit.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_metadata_entries(&self) -> usize {
         self.max_metadata_entries
     }
 
     /// Returns the schema-field domain limit.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_schema_fields(&self) -> usize {
         self.max_schema_fields
     }
 
     /// Returns the metadata/schema key-byte domain limit.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn max_key_bytes(&self) -> usize {
         self.max_key_bytes

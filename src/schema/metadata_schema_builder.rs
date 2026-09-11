@@ -57,7 +57,7 @@ impl MetadataSchemaBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn required(self, key: &str, data_type: DataType) -> Self {
         self.declare_field(key, MetadataField::new(data_type, true))
@@ -73,7 +73,7 @@ impl MetadataSchemaBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn optional(self, key: &str, data_type: DataType) -> Self {
         self.declare_field(key, MetadataField::new(data_type, false))
@@ -90,7 +90,7 @@ impl MetadataSchemaBuilder {
     ///
     /// The updated builder. This is the only declaration method that may
     /// overwrite an existing field.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn replace_field(mut self, key: &str, field: MetadataField) -> Self {
         let _ = self.fields.insert(key.to_string(), field);
@@ -106,7 +106,7 @@ impl MetadataSchemaBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn unknown_metadata_field_policy(mut self, policy: UnknownMetadataFieldPolicy) -> Self {
         self.unknown_metadata_field_policy = policy;
@@ -122,7 +122,7 @@ impl MetadataSchemaBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn unknown_filter_field_policy(mut self, policy: UnknownFilterFieldPolicy) -> Self {
         self.unknown_filter_field_policy = policy;
