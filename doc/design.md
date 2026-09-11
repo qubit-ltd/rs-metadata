@@ -63,7 +63,9 @@ canonical entry and key limits.
 
 Predicates evaluate to true, false, or unknown. Missing keys and unset values
 are unknown. `matches` returns true only for definite true, and Boolean
-composition propagates unknown; negation does not turn unknown into true.
+composition uses dominance (`false AND unknown` is false, `true OR unknown` is
+true); the other mixed cases remain unknown. Negation does not turn unknown
+into true.
 Numeric comparison policy is explicit, and approximate comparisons are not
 appropriate for ordering or grouping.
 
