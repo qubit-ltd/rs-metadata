@@ -151,3 +151,42 @@ fn test_metadata_filter_wire_reports_missing_and_unknown_envelope_fields() {
         assert!(from_str::<MetadataFilter>(input).is_err());
     }
 }
+
+#[test]
+fn test_expression_wire_rejects_duplicate_and_conflicting_fields() {
+    for input in [
+        r#"{"version":1,"expression":{"kind":"eq","kind":"eq","key":"k","value":{"scalar":{"string":"a"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"eq","key":"k","key":"k","value":{"scalar":{"string":"a"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"exists","key":"k","value":{"scalar":{"string":"a"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"in","key":"k","values":[{"scalar":{"string":"a"}}],"values":[{"scalar":{"string":"b"}}]},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"and","children":[{"kind":"all"},{"kind":"none"}],"children":[{"kind":"all"},{"kind":"none"}]},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"eq","key":"k","value":{"scalar":{"string":"a"}},"value":{"scalar":{"string":"b"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"not","expression":{"kind":"all"},"expression":{"kind":"none"}},"options":{"numeric_comparison_policy":"exact"}}"#,
+    ] {
+        assert!(
+            from_str::<MetadataFilter>(input).is_err(),
+            "invalid expression wire must be rejected: {input}"
+        );
+    }
+}
+
+#[test]
+fn test_expression_wire_rejects_non_object_expression_nodes() {
+    let input = r#"{"version":1,"expression":"not-an-object","options":{"numeric_comparison_policy":"exact"}}"#;
+    assert!(from_str::<MetadataFilter>(input).is_err());
+}
+
+#[test]
+fn test_metadata_filter_wire_rejects_non_object_envelope() {
+    assert!(from_str::<MetadataFilter>("[]").is_err());
+}
+
+#[test]
+fn test_expression_wire_rejects_non_array_membership_and_child_sequences() {
+    for input in [
+        r#"{"version":1,"expression":{"kind":"in","key":"k","values":"not-an-array"},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"and","children":"not-an-array"},"options":{"numeric_comparison_policy":"exact"}}"#,
+    ] {
+        assert!(from_str::<MetadataFilter>(input).is_err());
+    }
+}
