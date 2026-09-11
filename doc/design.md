@@ -2,7 +2,7 @@
 
 [中文设计文档](design.zh_CN.md) · [User guide](user_guide.md) · [README](../README.md)
 
-This document records the stable design boundaries of `qubit-metadata` 0.11.
+This document records the stable design boundaries of `qubit-metadata` 0.6.
 It describes invariants for integrations, not implementation history.
 
 ## Goals and non-goals
@@ -95,7 +95,7 @@ Applications should enable only the layers used at each boundary.
 
 ## Compatibility policy
 
-Version 0.11 changes read signatures and missing error handling as described
+Version 0.6 changes read signatures and missing error handling as described
 above; no compatibility aliases are retained. The V1 wire representation,
 filter semantics, and schema validation behavior remain unchanged.
 The crate keeps strict stored-value schema validation distinct from compatible

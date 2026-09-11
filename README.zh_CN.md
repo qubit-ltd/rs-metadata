@@ -44,7 +44,7 @@ metadata 容器不依赖任何存储 provider 或具体领域模型。
 
 ```toml
 [dependencies]
-qubit-metadata = "0.11"
+qubit-metadata = "0.6"
 ```
 
 默认 feature 集只提供核心 metadata 容器。需要 schema 校验时启用 `schema`；它会包含
@@ -52,7 +52,7 @@ qubit-metadata = "0.11"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.11", features = ["schema"] }
+qubit-metadata = { version = "0.6", features = ["schema"] }
 qubit-datatype = "0.13"
 ```
 
@@ -125,7 +125,7 @@ let limits = MetadataLimits::builder()
 
 ## 延伸阅读
 
-0.11 删除 `try_get*`、`get_str` 和 `MetadataError::MissingValue`。原来需要转换的 `try_get`
+0.6 删除 `try_get*`、`get_str` 和 `MetadataError::MissingValue`。原来需要转换的 `try_get`
 调用改为 `convert`；严格读取用 `get`，可选严格读取用 `get_optional`，借用文本用
 `get_ref::<str>`。`MetadataError::ValueAccess` 保留 `ValueError`，包括 `ValueMissing`
 事实和通过 `Error::source` 可访问的原始转换错误。filter、schema、数值比较和 Wire V1

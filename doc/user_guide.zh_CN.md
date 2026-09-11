@@ -2,7 +2,7 @@
 
 [English User Guide](user_guide.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
-本手册面向使用 `qubit-metadata` 0.11 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
+本手册面向使用 `qubit-metadata` 0.6 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
 需要给记录、消息或文档分片附加可类型化、可查询 metadata，同时又不希望把 metadata
 模型绑定到某个存储 provider 的场景。
 
@@ -40,14 +40,14 @@ Metadata -> MetadataSchema -> 已存值校验
 
 ```toml
 [dependencies]
-qubit-metadata = "0.11"
+qubit-metadata = "0.6"
 ```
 
 使用可选能力时请显式启用对应 feature：
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.11", features = ["schema", "json"] }
+qubit-metadata = { version = "0.6", features = ["schema", "json"] }
 qubit-datatype = "0.13"
 ```
 
@@ -62,7 +62,7 @@ crate 声明了 `filter`、`schema`、`chrono`、`big-integer`、`big-decimal`�
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.11", default-features = false }
+qubit-metadata = { version = "0.6", default-features = false }
 ```
 
 这与当前核心功能默认配置等价，同时能明确记录应用自身的 feature 边界。
@@ -330,7 +330,7 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 
 ### getter 不再返回 `Option`
 
-0.11 的 `get` 改为可能失败的严格读取。允许缺失时使用 `get_optional` 并传播 `Result`；
+0.6 的 `get` 改为可能失败的严格读取。允许缺失时使用 `get_optional` 并传播 `Result`；
 需要按策略转换时使用 `convert_optional_with`。非法值返回错误，不再折叠为 `None`。
 
 ## 限制与最佳实践
