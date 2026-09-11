@@ -12,6 +12,16 @@ use serde::Deserialize;
 use serde::Serialize;
 
 /// Definition of one metadata field in a [`crate::MetadataSchema`].
+///
+/// # Examples
+///
+/// ```
+/// use qubit_datatype::DataType;
+/// use qubit_metadata::MetadataField;
+///
+/// let field = MetadataField::new(DataType::String, true);
+/// assert!(field.is_required());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MetadataField {

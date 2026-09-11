@@ -24,6 +24,20 @@ use crate::MetadataValidationResult;
 ///
 /// The expression is mandatory. Repeated property calls are intentional and
 /// use last-write-wins semantics.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::{FilterExpression, Metadata, MetadataFilter};
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let expression = FilterExpression::builder().eq("tenant", "acme").build()?;
+/// let filter = MetadataFilter::builder().expression(expression).build()?;
+/// let metadata = Metadata::new().with("tenant", "acme");
+/// assert!(filter.matches(&metadata));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct MetadataFilterBuilder {
     /// Root expression supplied by the caller.

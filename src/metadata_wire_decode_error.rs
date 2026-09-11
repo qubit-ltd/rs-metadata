@@ -22,6 +22,15 @@ use serde::de::Error as DeError;
 use crate::MetadataError;
 
 /// Failure returned by a bounded metadata JSON decoding API.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::Metadata;
+///
+/// let error = Metadata::decode_json_slice(b"not-json").unwrap_err();
+/// assert!(!error.to_string().is_empty());
+/// ```
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum MetadataWireDecodeError {

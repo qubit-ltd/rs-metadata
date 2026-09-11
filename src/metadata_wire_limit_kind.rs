@@ -8,6 +8,14 @@
 //! Resource categories used by the metadata V1 wire contract.
 
 /// A metadata resource category bounded by the strict V1 wire contract.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::MetadataWireLimitKind;
+///
+/// assert_eq!(MetadataWireLimitKind::Entries, MetadataWireLimitKind::Entries);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum MetadataWireLimitKind {

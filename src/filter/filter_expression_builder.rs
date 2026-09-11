@@ -23,6 +23,20 @@ use crate::MetadataResult;
 /// operands are not converted, iterators are not consumed, and group callbacks
 /// are not invoked. Argument expressions themselves are still evaluated by
 /// Rust.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterExpressionBuilder;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let expression = FilterExpressionBuilder::default()
+///     .eq("tenant", "acme")
+///     .build()?;
+/// assert!(matches!(expression.view(), qubit_metadata::FilterExpressionView::Condition(_)));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FilterExpressionBuilder {
     expression: Option<FilterExpression>,

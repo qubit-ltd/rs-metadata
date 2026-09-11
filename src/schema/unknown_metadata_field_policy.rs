@@ -11,6 +11,14 @@ use serde::Deserialize;
 use serde::Serialize;
 
 /// Policy for metadata fields that are not declared by a schema.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::UnknownMetadataFieldPolicy;
+///
+/// assert_eq!(UnknownMetadataFieldPolicy::default(), UnknownMetadataFieldPolicy::Reject);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum UnknownMetadataFieldPolicy {

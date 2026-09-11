@@ -20,6 +20,18 @@ use crate::constants::FILTER_MAX_SET_VALUES;
 ///
 /// The defaults keep filters small enough for predictable allocation and
 /// recursive evaluation while leaving room for realistic application queries.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::FilterLimits;
+///
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
+/// let limits = FilterLimits::builder().max_depth(8).build()?;
+/// assert_eq!(limits.max_depth(), 8);
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub struct FilterLimits {
