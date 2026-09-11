@@ -26,7 +26,8 @@ directional: decode and encode policies are configured independently.
 are sorted by key. `Value::Unset` is a present, typed declaration without a concrete value.
 `MetadataSchema` distinguishes required and optional fields and validates stored
 values against concrete `DataType` declarations. `MetadataFilter` evaluates a
-`FilterExpression` against metadata.
+`FilterExpression` against metadata. Receiver-side limits are runtime policy:
+they are excluded from serialization, equality, and hashing.
 
 The `get`, `get_ref`, `get_optional`, and `get_or` family reads strictly using
 the value layer's type contract. All return `MetadataResult`; optional reads

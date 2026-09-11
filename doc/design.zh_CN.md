@@ -22,6 +22,7 @@ Serde 格式。它不绑定存储 provider，不负责定义 provider 的索引�
 `Metadata` 将字符串 key 映射到 `qubit_value::Value`，迭代和序列化均按 key 排序。`Value::Unset` 是
 已存在的、带声明类型但没有具体值的字段。`MetadataSchema` 区分 required 和 optional 字段，
 并按具体 `DataType` 校验已存值。`MetadataFilter` 根据 metadata 计算 `FilterExpression`。
+接收端 limits 属于运行时策略，不参与序列化、相等性和哈希。
 
 `get`、`get_ref`、`get_optional` 和 `get_or` 使用值层的类型契约严格读取，全部返回
 `MetadataResult`；可选读取只吸收缺失，不隐藏类型不匹配。借用读取不克隆载荷。
