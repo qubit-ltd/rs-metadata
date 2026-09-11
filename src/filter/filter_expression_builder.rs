@@ -39,7 +39,9 @@ use crate::MetadataResult;
 /// ```
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FilterExpressionBuilder {
+    /// Expression assembled so far, if at least one operation succeeded.
     expression: Option<FilterExpression>,
+    /// First construction error captured for fail-closed builder chaining.
     error: Option<MetadataError>,
 }
 
@@ -72,7 +74,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key == value` with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn eq<T>(self, key: &str, value: T) -> Self
     where
@@ -88,7 +90,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key != value` with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn ne<T>(self, key: &str, value: T) -> Self
     where
@@ -104,7 +106,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key < value` with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn lt<T>(self, key: &str, value: T) -> Self
     where
@@ -120,7 +122,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key <= value` with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn le<T>(self, key: &str, value: T) -> Self
     where
@@ -136,7 +138,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key > value` with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn gt<T>(self, key: &str, value: T) -> Self
     where
@@ -152,7 +154,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key >= value` with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn ge<T>(self, key: &str, value: T) -> Self
     where
@@ -168,7 +170,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a membership predicate with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn in_set<I, T>(mut self, key: &str, values: I) -> Self
     where
@@ -203,7 +205,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-membership predicate with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn not_in_set<I, T>(mut self, key: &str, values: I) -> Self
     where
@@ -238,7 +240,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends an existence predicate with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn exists(self, key: &str) -> Self {
         self.append(
@@ -248,7 +250,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-existence predicate with logical AND.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn not_exists(self, key: &str) -> Self {
         self.append(
@@ -270,7 +272,7 @@ impl FilterExpressionBuilder {
     ///     .build()?;
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn and_group<F>(self, build: F) -> Self
     where
@@ -311,7 +313,7 @@ impl FilterExpressionBuilder {
     /// assert!(filter.matches(&metadata));
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn or_group<F>(self, build: F) -> Self
     where
@@ -337,7 +339,7 @@ impl FilterExpressionBuilder {
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
     #[allow(clippy::should_implement_trait)]
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn not(mut self) -> Self {
         if self.error.is_some() {

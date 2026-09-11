@@ -44,7 +44,7 @@ pub struct MetadataLimitsBuilder {
 
 impl MetadataLimitsBuilder {
     /// Replaces the JSON decoding profile.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the configured builder must be used to build metadata limits"]
     pub fn json_decode(mut self, limits: JsonDecodeLimits) -> Self {
         self.json_decode = limits;
@@ -52,7 +52,7 @@ impl MetadataLimitsBuilder {
     }
 
     /// Replaces the JSON encoding profile.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the configured builder must be used to build metadata limits"]
     pub fn json_encode(mut self, limits: JsonEncodeLimits) -> Self {
         self.json_encode = limits;
@@ -60,7 +60,7 @@ impl MetadataLimitsBuilder {
     }
 
     /// Sets the metadata-entry domain limit.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the configured builder must be used to build metadata limits"]
     pub const fn max_metadata_entries(mut self, maximum: usize) -> Self {
         self.max_metadata_entries = maximum;
@@ -68,7 +68,7 @@ impl MetadataLimitsBuilder {
     }
 
     /// Sets the schema-field domain limit.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the configured builder must be used to build metadata limits"]
     pub const fn max_schema_fields(mut self, maximum: usize) -> Self {
         self.max_schema_fields = maximum;
@@ -76,7 +76,7 @@ impl MetadataLimitsBuilder {
     }
 
     /// Sets the metadata/schema key-byte domain limit.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the configured builder must be used to build metadata limits"]
     pub const fn max_key_bytes(mut self, maximum: usize) -> Self {
         self.max_key_bytes = maximum;
@@ -84,7 +84,7 @@ impl MetadataLimitsBuilder {
     }
 
     /// Builds metadata limits by consuming this builder.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the built metadata limits should be used"]
     pub fn build(self) -> MetadataLimits {
         MetadataLimits::from_builder(self)

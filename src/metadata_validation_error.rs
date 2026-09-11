@@ -26,6 +26,7 @@ use crate::metadata_error::MetadataError;
 /// assert_eq!(error.len(), 1);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use]
 pub struct MetadataValidationError {
     /// Collected validation issues.
     issues: Vec<MetadataError>,
@@ -41,8 +42,8 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// An aggregate error containing exactly one issue.
-    #[inline]
-    #[must_use]
+    #[inline(always)]
+    #[must_use = "the validation error should be inspected"]
     pub fn from_issue(issue: MetadataError) -> Self {
         Self { issues: vec![issue] }
     }
@@ -69,8 +70,8 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The issues in discovery order.
-    #[inline]
-    #[must_use]
+    #[inline(always)]
+    #[must_use = "the validation issues should be inspected"]
     pub fn issues(&self) -> &[MetadataError] {
         &self.issues
     }
@@ -80,7 +81,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The issue count.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
@@ -92,7 +93,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The owned issues in discovery order.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub fn into_issues(self) -> Vec<MetadataError> {
         self.issues

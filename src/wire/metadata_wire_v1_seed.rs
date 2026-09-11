@@ -19,6 +19,7 @@ use super::metadata_wire_v1::MetadataWireV1;
 
 /// Deserializes a metadata envelope with a bounded values seed.
 pub(crate) struct MetadataWireV1Seed<S> {
+    /// Seed used to decode the values map.
     values: S,
 }
 
@@ -41,6 +42,7 @@ where
         D: Deserializer<'de>,
     {
         struct MetadataWireVisitor<S> {
+            /// Decoded values-map seed, if the envelope supplied it.
             values: Option<S>,
         }
 

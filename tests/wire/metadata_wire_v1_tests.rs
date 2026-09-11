@@ -89,7 +89,7 @@ fn test_metadata_json_decoder_exercises_seed_error_paths() {
 fn test_metadata_json_decoder_rejects_unsupported_version() {
     let unsupported_version = br#"{"version":2,"values":{}}"#;
 
-    Metadata::decode_json_slice(unsupported_version)
+    let _ = Metadata::decode_json_slice(unsupported_version)
         .expect_err("the bounded JSON decoder must reject unsupported versions");
 }
 

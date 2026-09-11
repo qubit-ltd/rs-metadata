@@ -28,7 +28,9 @@ use crate::FilterMatchOptions;
 
 /// Seed that decodes one strict metadata-filter envelope.
 pub(crate) struct MetadataFilterWireV1Seed {
+    /// Receiver-side filter limits.
     receiver_limits: FilterLimits,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<crate::MetadataError>>>,
 }
 
@@ -59,7 +61,9 @@ impl<'de> DeserializeSeed<'de> for MetadataFilterWireV1Seed {
 
 /// Visitor for the strict metadata-filter envelope.
 struct MetadataFilterWireVisitor {
+    /// Receiver-side filter limits.
     receiver_limits: FilterLimits,
+    /// First structured limit error.
     error_slot: Rc<RefCell<Option<crate::MetadataError>>>,
 }
 

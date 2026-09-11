@@ -164,7 +164,7 @@ fn test_metadata_filter_json_writer_propagates_io_error() {
         }
     }
 
-    MetadataFilter::all()
+    let _ = MetadataFilter::all()
         .to_json_writer(FailingWriter)
         .expect_err("writer errors must be returned");
 }

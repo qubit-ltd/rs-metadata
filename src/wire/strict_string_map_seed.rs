@@ -25,18 +25,27 @@ use crate::MetadataWireLimitKind;
 
 /// Deserializes a strict string map with caller-provided resource bounds.
 pub(crate) struct StrictStringMapSeed<'a, V> {
+    /// Maximum number of entries accepted.
     max_entries: usize,
+    /// Maximum UTF-8 key length accepted.
     max_key_bytes: usize,
+    /// Optional slot retaining a structured wire-limit error.
     error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
+    /// Lifetime marker for the deserializer borrow.
     lifetime: std::marker::PhantomData<&'a ()>,
+    /// Marker for the seeded value type.
     marker: std::marker::PhantomData<fn() -> V>,
 }
 
 /// Deserializes a strict string map with a caller-provided value seed.
 pub(crate) struct StrictStringMapValueSeed<S> {
+    /// Maximum number of entries accepted.
     max_entries: usize,
+    /// Maximum UTF-8 key length accepted.
     max_key_bytes: usize,
+    /// Optional slot retaining a structured wire-limit error.
     error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
+    /// Seed used to decode each map value.
     value_seed: S,
 }
 
@@ -71,9 +80,13 @@ where
         D: Deserializer<'de>,
     {
         struct StrictStringMapValueVisitor<S> {
+            /// Maximum number of entries accepted.
             max_entries: usize,
+            /// Maximum UTF-8 key length accepted.
             max_key_bytes: usize,
+            /// Optional structured error slot.
             error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
+            /// Seed used to decode each value.
             value_seed: S,
         }
 
@@ -178,10 +191,15 @@ where
         let max_entries = self.max_entries;
         let max_key_bytes = self.max_key_bytes;
         struct StrictStringMapVisitor<'a, V> {
+            /// Maximum number of entries accepted.
             max_entries: usize,
+            /// Maximum UTF-8 key length accepted.
             max_key_bytes: usize,
+            /// Optional structured error slot.
             error_slot: Option<Rc<RefCell<Option<MetadataError>>>>,
+            /// Lifetime marker for the deserializer borrow.
             lifetime: std::marker::PhantomData<&'a ()>,
+            /// Marker for the map value type.
             marker: std::marker::PhantomData<fn() -> V>,
         }
 

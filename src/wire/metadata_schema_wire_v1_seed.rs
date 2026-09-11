@@ -21,6 +21,7 @@ use crate::UnknownMetadataFieldPolicy;
 
 /// Deserializes a schema envelope with a bounded fields seed.
 pub(crate) struct MetadataSchemaWireV1Seed<S> {
+    /// Seed used to decode the schema fields map.
     fields: S,
 }
 
@@ -44,6 +45,7 @@ where
         D: Deserializer<'de>,
     {
         struct MetadataSchemaWireVisitor<S> {
+            /// Decoded fields-map seed, if the envelope supplied it.
             fields: Option<S>,
         }
 

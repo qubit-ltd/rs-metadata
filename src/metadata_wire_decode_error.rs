@@ -33,6 +33,7 @@ use crate::MetadataError;
 /// ```
 #[derive(Debug)]
 #[non_exhaustive]
+#[must_use]
 pub enum MetadataWireDecodeError {
     /// A metadata map or schema exceeded a domain limit without exposing
     /// values.

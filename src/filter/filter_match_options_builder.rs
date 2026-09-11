@@ -49,7 +49,7 @@ impl FilterMatchOptionsBuilder {
     /// # Returns
     ///
     /// The updated builder.
-    #[inline]
+    #[inline(always)]
     #[must_use = "the configured builder must be used to build match options"]
     pub const fn numeric_comparison_policy(mut self, numeric_comparison_policy: NumericComparisonPolicy) -> Self {
         self.numeric_comparison_policy = numeric_comparison_policy;
@@ -61,7 +61,7 @@ impl FilterMatchOptionsBuilder {
     /// # Returns
     ///
     /// Options containing the selected comparison policy.
-    #[inline]
+    #[inline(always)]
     #[must_use]
     pub const fn build(self) -> FilterMatchOptions {
         FilterMatchOptions::from_numeric_comparison_policy(self.numeric_comparison_policy)
