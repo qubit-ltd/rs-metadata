@@ -41,7 +41,6 @@ Metadata -> MetadataSchema -> 已存值校验
 ```toml
 [dependencies]
 qubit-metadata = "0.11"
-qubit-datatype = "0.13"
 ```
 
 使用可选能力时请显式启用对应 feature：
