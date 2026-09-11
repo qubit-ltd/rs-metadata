@@ -106,7 +106,9 @@ let limits = MetadataLimits::builder()
   `get_or` 只对缺失键和类型符合要求的 unset 使用默认值。
 - `Value::Unset` 会记录声明类型，但不是具体值。required schema 字段会拒绝它，filter
   谓词也不会将它视为匹配。
-- filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。
+- filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。布尔组合遵循确定值优先的
+  规则：`false AND unknown` 为 `false`，`true OR unknown` 为 `true`；其余混合情况保持
+  `unknown`。
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
 - `MetadataLimits::default()` 包含 byte、depth、node、sequence/map、key/string/number/payload
@@ -117,6 +119,8 @@ let limits = MetadataLimits::builder()
 - Metadata key 本身是普通字符串。当 key 跨越模块、provider 或存储边界时，应在所属边界定义
   唯一的字符串常量，并在读写时复用；如果还需要校验 key/value 契约，应使用
   `MetadataSchema`。
+- 如果 limits 来自配置，建议使用 `MetadataLimits::builder().try_build()`，让无效领域上限
+  在进入 wire decoder 前就被拒绝。
 
 ## 延伸阅读
 

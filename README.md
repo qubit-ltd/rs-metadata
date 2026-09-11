@@ -124,7 +124,9 @@ accepted consumption in that operation is not rolled back.
 - `Value::Unset` records a declared type but is not a concrete value. It is
   rejected by required schema fields and does not satisfy filter predicates.
 - Filter evaluation is fail-closed three-valued logic: unknown values do not
-  become matches through negation.
+  become matches through negation. Boolean composition follows the usual
+  dominance rules: `false AND unknown` is `false`, while `true OR unknown` is
+  `true`; the remaining mixed cases stay `unknown`.
 - Schema validation of stored metadata remains strict about the declared
   concrete field type, even though filter schema checks accept compatible
   numeric representations.
@@ -141,6 +143,9 @@ accepted consumption in that operation is not rolled back.
   storage boundary, define one string constant at the owning boundary and use
   it for both writes and reads; use `MetadataSchema` when the key/value contract
   must be validated.
+- When limits are loaded from configuration, prefer
+  `MetadataLimits::builder().try_build()` so invalid domain caps are rejected
+  before reaching a wire decoder.
 
 ## Learn more
 

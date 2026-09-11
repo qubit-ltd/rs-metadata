@@ -41,7 +41,7 @@ Metadata -> MetadataSchema -> 已存值校验
 ```toml
 [dependencies]
 qubit-metadata = "0.11"
-qubit-datatype = "0.12"
+qubit-datatype = "0.13"
 ```
 
 使用可选能力时请显式启用对应 feature：
@@ -49,7 +49,7 @@ qubit-datatype = "0.12"
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.11", features = ["schema", "json"] }
-qubit-datatype = "0.12"
+qubit-datatype = "0.13"
 ```
 
 `schema` 会包含 `filter`；不需要 schema 校验时可使用
@@ -232,7 +232,8 @@ assert!(filter.matches(&metadata));
 ### Filter 的三值逻辑
 
 缺失 key 和 `Value::Unset` 的结果是 unknown。公开的 `matches` 只有在结果明确为 true 时
-才返回 `true`。取反会保留 unknown，AND/OR 会传播 unknown。因此，`ne("key", value)`
+才返回 `true`。取反会保留 unknown。布尔组合遵循确定值优先：`false AND unknown` 为
+`false`，`true OR unknown` 为 `true`，其余混合情况保持 unknown。因此，`ne("key", value)`
 和 `not(eq("key", value))` 都不会匹配缺失或 unset key。
 
 空集合是合法的：`in_set("key", [])` 什么都不匹配；`not_in_set("key", [])` 只匹配具体值。
@@ -277,6 +278,10 @@ key 256 个 UTF-8 字节。`MetadataLimits` 将这些 metadata 领域限制与�
 AST 限制和共享 JSON budget。Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
 字符串和嵌套 value 仍可能产生临时分配，但会受到外层输入字节上限约束。通用
 `serde::Deserialize` 适用于外层已经受控的协议。
+
+如果 limits 来自运维配置或配置文件，应先调用
+`MetadataLimits::builder().try_build()`。它会在配置阶段拒绝超过协议硬上限的领域限制；
+`build()` 仍保留给可信 profile 和兼容场景使用。
 
 ### 严格的 V1 wire format
 

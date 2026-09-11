@@ -45,7 +45,7 @@ For the core metadata API (the crate's default feature set is core-only):
 ```toml
 [dependencies]
 qubit-metadata = "0.11"
-qubit-datatype = "0.12"
+qubit-datatype = "0.13"
 ```
 
 Enable optional layers explicitly when they are used:
@@ -53,7 +53,7 @@ Enable optional layers explicitly when they are used:
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.11", features = ["schema", "json"] }
-qubit-datatype = "0.12"
+qubit-datatype = "0.13"
 ```
 
 The `schema` feature includes `filter`; use `features = ["filter"]` when
@@ -251,8 +251,10 @@ Other builder predicates are `ne`, `gt`, `lt`, `le`, `exists`, `not_exists`,
 
 Missing keys and `Value::Unset` evaluate to unknown. The public `matches`
 method returns `true` only for a definite true result. Negation preserves
-unknown, and AND/OR propagate it. Consequently, `ne("key", value)` and
-`not(eq("key", value))` do not match an absent or unset key.
+unknown. Boolean composition uses dominance: `false AND unknown` is `false`,
+`true OR unknown` is `true`, and the remaining mixed cases stay unknown.
+Consequently, `ne("key", value)` and `not(eq("key", value))` do not match an
+absent or unset key.
 
 Empty sets are valid: `in_set("key", [])` matches nothing, while
 `not_in_set("key", [])` matches only concrete values. Empty groups are rejected
@@ -308,6 +310,11 @@ transient receiver-side policy and are not serialized. Individual JSON strings
 and embedded value payloads may still require temporary allocations bounded by
 the outer input-byte limit. Generic `serde::Deserialize` remains intended for
 an already-bounded outer protocol.
+
+When limits come from an operator or configuration file, call
+`MetadataLimits::builder().try_build()` first. It rejects domain caps above the
+protocol hard limits during configuration; `build()` remains available for
+trusted profiles and compatibility.
 
 ### Strict V1 wire formats
 

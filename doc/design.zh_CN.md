@@ -48,8 +48,9 @@ metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形
 ## 三值过滤语义
 
 谓词结果分为 true、false 和 unknown。缺失 key 与 unset 值都是 unknown。`matches` 只有在结果
-明确为 true 时才返回 true；布尔组合会传播 unknown，取反也不会把 unknown 变成 true。数值比较
-策略需要显式配置；近似比较不适合用于排序或分组。
+明确为 true 时才返回 true；布尔组合遵循确定值优先（`false AND unknown` 为 false，
+`true OR unknown` 为 true），其余混合情况保持 unknown；取反也不会把 unknown 变成 true。
+数值比较策略需要显式配置；近似比较不适合用于排序或分组。
 
 ## 错误分类与脱敏
 
