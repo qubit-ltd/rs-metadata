@@ -53,6 +53,7 @@ qubit-metadata = "0.11"
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.11", features = ["schema"] }
+qubit-datatype = "0.13"
 ```
 
 可选 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和

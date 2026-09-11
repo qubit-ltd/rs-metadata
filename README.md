@@ -59,6 +59,7 @@ The default feature set provides the core metadata container only. Enable
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.11", features = ["schema"] }
+qubit-datatype = "0.13"
 ```
 
 Optional features are `chrono`, `big-integer`, `big-decimal`, `big-number`,
