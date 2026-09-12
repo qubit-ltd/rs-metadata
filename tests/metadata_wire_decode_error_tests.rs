@@ -72,8 +72,11 @@ fn test_quantity_error_preserves_source_chain() {
 fn test_domain_error_exposes_structured_source_without_values() {
     let metadata = Metadata::new().with("private-key", "private-value");
     let input = serde_json::to_vec(&metadata).expect("wire");
-    let error = Metadata::decode_json_slice_with_limits(&input, MetadataLimits::builder().max_key_bytes(2).build())
-        .expect_err("key limit");
+    let limits = MetadataLimits::builder()
+        .max_key_bytes(2)
+        .build()
+        .expect("limits should build");
+    let error = Metadata::decode_json_slice_with_limits(&input, limits).expect_err("key limit");
     assert!(error.source().expect("domain source").is::<MetadataError>());
     let message = error.to_string();
     assert!(message.contains("KeyBytes"));

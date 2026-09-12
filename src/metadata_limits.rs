@@ -40,8 +40,11 @@ pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 /// ```
 /// use qubit_metadata::MetadataLimits;
 ///
-/// let limits = MetadataLimits::builder().max_key_bytes(128).build();
+/// # fn main() -> Result<(), serde_json::Error> {
+/// let limits = MetadataLimits::builder().max_key_bytes(128).build()?;
 /// assert_eq!(limits.max_key_bytes(), 128);
+/// # Ok(())
+/// # }
 /// ```
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,6 +67,24 @@ impl MetadataLimits {
     #[must_use = "the builder must be configured or used to build metadata limits"]
     pub fn builder() -> MetadataLimitsBuilder {
         MetadataLimitsBuilder::default()
+    }
+
+    /// Constructs domain limits that intentionally bypass
+    /// [`MetadataLimitsBuilder::build`] validation for wire-boundary
+    /// regression tests.
+    #[cfg(debug_assertions)]
+    #[doc(hidden)]
+    pub fn debug_only_invalid_domain_limits(
+        max_metadata_entries: usize,
+        max_schema_fields: usize,
+        max_key_bytes: usize,
+    ) -> Self {
+        MetadataLimits::from_builder(
+            MetadataLimitsBuilder::default()
+                .max_metadata_entries(max_metadata_entries)
+                .max_schema_fields(max_schema_fields)
+                .max_key_bytes(max_key_bytes),
+        )
     }
 
     /// Creates immutable limits from the values held by `builder`.
@@ -139,7 +160,9 @@ impl MetadataLimits {
 
 impl Default for MetadataLimits {
     fn default() -> Self {
-        Self::builder().build()
+        Self::builder()
+            .build()
+            .expect("default metadata limits satisfy protocol hard caps")
     }
 }
 

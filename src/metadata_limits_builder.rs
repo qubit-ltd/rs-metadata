@@ -24,8 +24,11 @@ use crate::metadata_limits::default_json_encode_limits;
 /// ```
 /// use qubit_metadata::MetadataLimits;
 ///
-/// let limits = MetadataLimits::builder().max_metadata_entries(128).build();
+/// # fn main() -> Result<(), serde_json::Error> {
+/// let limits = MetadataLimits::builder().max_metadata_entries(128).build()?;
 /// assert_eq!(limits.max_metadata_entries(), 128);
+/// # Ok(())
+/// # }
 /// ```
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -83,25 +86,16 @@ impl MetadataLimitsBuilder {
         self
     }
 
-    /// Builds metadata limits by consuming this builder.
-    #[inline(always)]
-    #[must_use = "the built metadata limits should be used"]
-    pub fn build(self) -> MetadataLimits {
-        MetadataLimits::from_builder(self)
-    }
-
-    /// Validates and builds metadata limits.
-    ///
-    /// Use this method when limits come from configuration rather than a
-    /// trusted compile-time profile. [`Self::build`] remains
-    /// available for compatibility and defers validation to the wire boundary.
+    /// Builds validated metadata limits by consuming this builder.
     ///
     /// # Errors
     ///
-    /// Returns a JSON configuration error when a domain limit exceeds its
-    /// protocol hard cap.
+    /// Returns a configuration error when a domain limit exceeds its protocol
+    /// hard cap, matching [`crate::FilterLimitsBuilder::build`] validation
+    /// timing.
     #[inline]
-    pub fn try_build(self) -> Result<MetadataLimits, serde_json::Error> {
+    #[must_use = "the metadata limit validation result must be handled"]
+    pub fn build(self) -> Result<MetadataLimits, serde_json::Error> {
         let limits = MetadataLimits::from_builder(self);
         limits.validate()?;
         Ok(limits)

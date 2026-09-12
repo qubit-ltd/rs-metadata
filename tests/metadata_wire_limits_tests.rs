@@ -45,6 +45,7 @@ fn input_limit(maximum: usize) -> MetadataLimits {
                 .build(),
         )
         .build()
+        .expect("limits should build")
 }
 
 fn number_limit(maximum: usize) -> JsonEncodeLimits {
@@ -161,7 +162,10 @@ fn test_filter_set_values_limit_preserves_structured_error() {
 fn test_metadata_domain_entry_limit_is_preserved() {
     let metadata = Metadata::new().with("first", 1_i64).with("second", 2_i64);
     let input = serde_json::to_vec(&metadata).unwrap();
-    let limits = MetadataLimits::builder().max_metadata_entries(1).build();
+    let limits = MetadataLimits::builder()
+        .max_metadata_entries(1)
+        .build()
+        .expect("limits should build");
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain entry limit should reject the input");
     assert!(matches!(
@@ -176,9 +180,37 @@ fn test_metadata_domain_entry_limit_is_preserved() {
 
 #[test]
 fn test_metadata_decoder_reports_invalid_receiver_limits_separately() {
-    let limits = MetadataLimits::builder().max_metadata_entries(4_097).build();
+    let error = MetadataLimits::builder()
+        .max_metadata_entries(4_097)
+        .build()
+        .expect_err("invalid receiver limits must be rejected at build time");
+
+    assert!(error.to_string().contains("metadata entries limit"));
+
+    let limits = MetadataLimits::debug_only_invalid_domain_limits(4_097, 4_096, 256);
     let error = Metadata::decode_json_slice_with_limits(br#"{}"#, limits)
-        .expect_err("invalid receiver limits must be rejected");
+        .expect_err("invalid receiver limits must be rejected at the wire boundary");
+
+    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn test_schema_decoder_reports_invalid_receiver_limits_at_wire_boundary() {
+    let limits = MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_097, 256);
+    let error = MetadataSchema::decode_json_slice_with_limits(b"{}", limits)
+        .expect_err("invalid schema limits must be rejected at the wire boundary");
+
+    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_filter_decoder_reports_invalid_receiver_limits_at_wire_boundary() {
+    let limits = MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_096, 257);
+    let input = filter_input(r#"{"kind":"all"}"#);
+    let error = MetadataFilter::decode_json_slice_with_limits(&input, limits, FilterLimits::MAX)
+        .expect_err("invalid filter limits must be rejected at the wire boundary");
 
     assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
 }
@@ -187,7 +219,10 @@ fn test_metadata_decoder_reports_invalid_receiver_limits_separately() {
 fn test_metadata_domain_key_limit_is_preserved() {
     let metadata = Metadata::new().with("first", 1_i64);
     let input = serde_json::to_vec(&metadata).unwrap();
-    let limits = MetadataLimits::builder().max_key_bytes(4).build();
+    let limits = MetadataLimits::builder()
+        .max_key_bytes(4)
+        .build()
+        .expect("limits should build");
     let error = Metadata::decode_json_slice_with_limits(&input, limits)
         .expect_err("metadata domain key limit should reject the input");
     assert!(matches!(
@@ -209,7 +244,11 @@ fn test_json_budget_structural_limit_is_structured_source() {
         .build();
     let value = JsonValueLimits::builder().structure_limits(structure).build();
     let limits = JsonDecodeLimits::builder().value_limits(value).build();
-    let error = Metadata::decode_json_slice_with_limits(&input, MetadataLimits::builder().json_decode(limits).build())
+    let metadata_limits = MetadataLimits::builder()
+        .json_decode(limits)
+        .build()
+        .expect("limits should build");
+    let error = Metadata::decode_json_slice_with_limits(&input, metadata_limits)
         .expect_err("metadata envelope needs more than one JSON node");
     assert!(
         matches!(
@@ -378,9 +417,14 @@ fn test_schema_limits_and_wire_version_are_structured() {
         .build()
         .expect("schema");
     let input = serde_json::to_vec(&schema).expect("wire");
-    let error =
-        MetadataSchema::decode_json_slice_with_limits(&input, MetadataLimits::builder().max_schema_fields(1).build())
-            .expect_err("field count");
+    let error = MetadataSchema::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::builder()
+            .max_schema_fields(1)
+            .build()
+            .expect("limits should build"),
+    )
+    .expect_err("field count");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
@@ -389,9 +433,14 @@ fn test_schema_limits_and_wire_version_are_structured() {
             maximum: 1,
         })
     ));
-    let error =
-        MetadataSchema::decode_json_slice_with_limits(&input, MetadataLimits::builder().max_key_bytes(2).build())
-            .expect_err("key length");
+    let error = MetadataSchema::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::builder()
+            .max_key_bytes(2)
+            .build()
+            .expect("limits should build"),
+    )
+    .expect_err("key length");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {

@@ -44,7 +44,8 @@ fn test_metadata_limits_replace_json_profile() {
                 .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 8))
                 .build(),
         )
-        .build();
+        .build()
+        .expect("profile should build");
     assert_eq!(limits.json_decode().max_input_bytes(), Some(8));
     assert_eq!(
         limits.json_decode().input_bytes_limit().unwrap().resource(),
@@ -60,31 +61,19 @@ fn test_metadata_limits_replace_json_profile() {
         .max_metadata_entries(4_096)
         .max_schema_fields(4_096)
         .max_key_bytes(256)
-        .build();
+        .build()
+        .expect("profile should build");
     assert_eq!(limits.json_encode().max_output_bytes(), Some(8));
     assert_eq!(limits.max_metadata_entries(), 4_096);
     assert_eq!(limits.max_schema_fields(), 4_096);
     assert_eq!(limits.max_key_bytes(), 256);
-    limits.validate().expect("hard-boundary values are valid");
 }
 
 #[test]
 fn test_metadata_limits_reject_domain_values_above_hard_maxima() {
-    assert!(
-        MetadataLimits::builder()
-            .max_metadata_entries(4_097)
-            .build()
-            .validate()
-            .is_err()
-    );
-    assert!(
-        MetadataLimits::builder()
-            .max_schema_fields(4_097)
-            .build()
-            .validate()
-            .is_err()
-    );
-    assert!(MetadataLimits::builder().max_key_bytes(257).build().validate().is_err());
+    assert!(MetadataLimits::builder().max_metadata_entries(4_097).build().is_err());
+    assert!(MetadataLimits::builder().max_schema_fields(4_097).build().is_err());
+    assert!(MetadataLimits::builder().max_key_bytes(257).build().is_err());
 }
 
 #[test]
@@ -101,7 +90,8 @@ fn test_metadata_limits_builder_applies_every_profile_and_domain_override() {
         .max_metadata_entries(12)
         .max_schema_fields(13)
         .max_key_bytes(14)
-        .build();
+        .build()
+        .expect("profile should build");
 
     assert_eq!(limits.json_decode().max_input_bytes(), Some(9));
     assert_eq!(limits.json_encode().max_output_bytes(), Some(11));
@@ -112,18 +102,18 @@ fn test_metadata_limits_builder_applies_every_profile_and_domain_override() {
 
 #[test]
 fn test_metadata_limit_validation_accepts_hard_boundaries() {
-    MetadataLimits::builder()
+    let limits = MetadataLimits::builder()
         .max_metadata_entries(4_096)
         .max_schema_fields(4_096)
         .max_key_bytes(256)
         .build()
-        .validate()
         .expect("hard boundaries must be accepted");
+    assert_eq!(limits.max_key_bytes(), 256);
 }
 
 #[test]
 fn test_metadata_limit_validation_rejects_each_value_above_boundary() {
-    for (name, limits) in [
+    for (name, build) in [
         (
             "metadata entries",
             MetadataLimits::builder().max_metadata_entries(4_097).build(),
@@ -134,15 +124,34 @@ fn test_metadata_limit_validation_rejects_each_value_above_boundary() {
         ),
         ("key bytes", MetadataLimits::builder().max_key_bytes(257).build()),
     ] {
-        assert!(limits.validate().is_err(), "{name} above its cap must fail");
+        assert!(build.is_err(), "{name} above its cap must fail");
     }
 }
 
 #[test]
-fn test_metadata_limits_try_build_rejects_invalid_domain_configuration() {
+fn test_validate_rejects_each_invalid_domain_limit_without_build() {
+    assert!(
+        MetadataLimits::debug_only_invalid_domain_limits(4_097, 4_096, 256)
+            .validate()
+            .is_err()
+    );
+    assert!(
+        MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_097, 256)
+            .validate()
+            .is_err()
+    );
+    assert!(
+        MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_096, 257)
+            .validate()
+            .is_err()
+    );
+}
+
+#[test]
+fn test_metadata_limits_build_rejects_invalid_domain_configuration() {
     let error = MetadataLimits::builder()
         .max_metadata_entries(4_097)
-        .try_build()
+        .build()
         .expect_err("invalid domain limits must fail during configuration");
 
     assert!(error.to_string().contains("metadata entries limit"));
