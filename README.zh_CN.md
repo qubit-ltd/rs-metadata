@@ -93,7 +93,7 @@ let encode = default_json_encode_limits()
 let limits = MetadataLimits::builder()
     .json_decode(decode)
     .json_encode(encode)
-    .build();
+    .build()?;
 ```
 
 `decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
@@ -120,8 +120,8 @@ let limits = MetadataLimits::builder()
 - Metadata key 本身是普通字符串。当 key 跨越模块、provider 或存储边界时，应在所属边界定义
   唯一的字符串常量，并在读写时复用；如果还需要校验 key/value 契约，应使用
   `MetadataSchema`。
-- 如果 limits 来自配置，建议使用 `MetadataLimits::builder().try_build()`，让无效领域上限
-  在进入 wire decoder 前就被拒绝。
+- 如果 limits 来自配置，应使用 `MetadataLimits::builder().build()?`，在配置阶段拒绝无效领域上限，
+  与 `FilterLimitsBuilder::build` 一致。
 
 ## 延伸阅读
 

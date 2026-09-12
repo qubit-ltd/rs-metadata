@@ -1,6 +1,6 @@
 # qubit-metadata User Guide
 
-[中文用户手册](user_guide.zh_CN.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
+[中文用户手册](user_guide.zh_CN.md) · [Migrating to 0.6](migration_0.6.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
 
 This guide targets `qubit-metadata` 0.6 and Rust 1.94 or later. It is for
 Rust developers who need to attach typed, queryable metadata to records,
@@ -244,6 +244,14 @@ The expression is `status == "ready" AND (score >= 80 OR tag == "rust")`.
 Other builder predicates are `ne`, `gt`, `lt`, `le`, `exists`, `not_exists`,
 `in_set`, `not_in_set`, and `not`.
 
+## Migrating from earlier APIs
+
+If you upgrade from releases before 0.6, or still have call sites that relied on
+implicit conversion, optional `get`, or `MetadataError::MissingValue`, continue
+with [Migrating to 0.6: explicit reads and boundary diagnostics](migration_0.6.md)
+after the core workflow above. New projects can skip that note and stay in the
+sections below.
+
 ## Advanced usage
 
 ### Three-valued filter semantics
@@ -285,7 +293,7 @@ use qubit_metadata::{Metadata, MetadataLimits};
 let limits = MetadataLimits::builder()
     .max_metadata_entries(128)
     .max_key_bytes(128)
-    .build();
+    .build()?;
 let metadata = Metadata::decode_json_slice_with_limits(
     br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
@@ -311,9 +319,8 @@ the outer input-byte limit. Generic `serde::Deserialize` remains intended for
 an already-bounded outer protocol.
 
 When limits come from an operator or configuration file, call
-`MetadataLimits::builder().try_build()` first. It rejects domain caps above the
-protocol hard limits during configuration; `build()` remains available for
-trusted profiles and compatibility.
+`MetadataLimits::builder().build()?`. It rejects domain caps above the protocol
+hard limits during configuration, matching `FilterLimitsBuilder::build`.
 
 ### Strict V1 wire formats
 
@@ -375,7 +382,8 @@ generic budget facts in the returned `MetadataWireDecodeError`.
 
 Version 0.6 makes `get` strict and fallible. Use `get_optional` when absence is
 acceptable and propagate its `Result`; use `convert_optional_with` when you
-need policy-controlled conversion. Invalid values are errors, not `None`.
+need policy-controlled conversion. Invalid values are errors, not `None`. See
+the [0.6 migration guide](migration_0.6.md) for the full API mapping table.
 
 ## Limitations and best practices
 
@@ -392,70 +400,11 @@ need policy-controlled conversion. Invalid values are errors, not `None`.
 - Keep the V1 Serde representation behind an integration boundary so a future
   wire-version change can be handled deliberately.
 
-## Explicit reads and boundary diagnostics
-
-For an indexing pipeline, preserve the stored type when validating an identifier,
-and request conversion explicitly when accepting external text:
-
-```rust
-use qubit_metadata::Metadata;
-let metadata = Metadata::new().with("port", "8080").with("count", 3_i64);
-assert_eq!(metadata.get::<i64>("count").unwrap(), 3);
-assert!(metadata.get::<i64>("port").is_err());
-assert_eq!(metadata.convert::<u16>("port").unwrap(), 8080);
-assert_eq!(metadata.get_ref::<str>("port").unwrap(), "8080");
-```
-
-`get` uses `StrictValueRead`; `get_ref::<str>` borrows stored text.
-`convert_with` accepts `ConversionPolicy` and `ConversionLimits`, with a fresh
-budget per call. `convert_optional_with` and `convert_or_with` apply the same
-explicit policy to optional/defaulted reads. `get_or` reads strictly and uses
-`IntoValueDefault` only when an absent key or appropriately typed unset allows
-fallback. Conversion defaults additionally allow scalar policy-missing results;
-invalid conversion is never a default.
-
-Read errors retain `ValueError` under `MetadataError::ValueAccess` and expose
-it through `Error::source`. A `ValueError::Missing` contains `ValueMissing`
-with `reason()`, `source_type()`, `target_type()`, `source_index()`, and the
-original conversion error when present. Do not flatten these facts into text.
-
-| Old call or error | Replacement | Behavior change |
-| --- | --- | --- |
-| `get::<T>(key)` returning `Option` | `get_optional::<T>(key)` | Returns `Result<Option<T>>`, strictly checks types |
-| Converting `try_get::<T>(key)` | `convert::<T>(key)` | Explicit conversion intent |
-| `try_get_strict::<T>(key)` | `get::<T>(key)` | Strict reads are the default named getter |
-| `get_str` / `try_get_str` | `get_ref::<str>` | Borrowed, fallible strict read |
-| `try_convert` / `try_convert_with` | `convert` / `convert_with` | No compatibility aliases |
-| Converting `get_or` | `convert_or_with` | Explicit policy and limits; invalid values propagate |
-| `MetadataError::MissingValue` | `ValueAccess` containing `ValueError::Missing` | Preserves missing facts and source chain |
-
-Schema's `MetadataError::TypeMismatch` remains a schema error. Metadata filter
-features and fail-closed matching semantics remain unchanged.
-
-Bounded metadata/schema JSON decoding reports domain entry/key limits as
-`MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded { .. })` and
-unsupported versions as `UnsupportedVersion { expected, actual }`. These facts
-contain counts and version numbers, not metadata values. Syntax and other
-strict-envelope failures retain the default redacted JSON diagnostic policy.
-The V1 representation has not changed.
-
-Filter builders reject oversized inputs while constructing the expression.
-Membership iterators are consumed at most 129 times (128 allowed values plus
-one overflow probe); the probe is not converted. After the first failure,
-later operands are not converted, membership iterators are not consumed, and
-group callbacks are skipped. Rust still evaluates the arguments to each call.
-Node/depth checks apply after each composition, including nested groups.
-
-At downstream boundaries, document each shared key's concrete type, units, and
-absence rule. A storage schema adapter must reject constraints it cannot express;
-passing a logical schema check alone does not prove backend operator support.
-`merge` still overwrites matching keys: batch aggregators must retain per-batch
-fields explicitly when request identifiers or other values may conflict.
-
 ## Next steps
 
 - Read the [README](../README.md) for the project overview and installation summary.
 - Browse the [API documentation](https://docs.rs/qubit-metadata) for the full public surface.
+- Read [Migrating to 0.6](migration_0.6.md) when upgrading older call sites.
 - Read the [design document](design.md) for module and compatibility invariants.
 - Run `cargo test --all-features` before changing feature-gated behavior.
 - See the [Chinese user guide](user_guide.zh_CN.md) for the same workflow in Simplified Chinese.
