@@ -109,7 +109,7 @@ impl Metadata {
     /// # Returns
     ///
     /// An empty metadata object.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn new() -> Self {
         Self(BTreeMap::new())
@@ -290,7 +290,7 @@ impl Metadata {
     /// # Returns
     ///
     /// `true` when this object contains no entries.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -301,7 +301,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The number of stored entries.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
@@ -317,7 +317,7 @@ impl Metadata {
     /// # Returns
     ///
     /// `true` when an entry exists for `key`.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
         self.0.contains_key(key)
@@ -471,7 +471,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The stored value, or `None` when `key` is absent.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn get_raw(&self, key: &str) -> Option<&Value> {
         self.0.get(key)
@@ -486,7 +486,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The stored value's data type, or `None` when `key` is absent.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn data_type(&self, key: &str) -> Option<DataType> {
         self.0.get(key).map(Value::data_type)
@@ -539,7 +539,7 @@ impl Metadata {
     /// # Returns
     ///
     /// This metadata object after inserting the value.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn with<T>(mut self, key: &str, value: T) -> Self
     where
@@ -662,7 +662,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A borrowing iterator over entries in key order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata iterator must be consumed to inspect entries"]
     pub fn iter(&self) -> impl Iterator<Item = (&str, &Value)> {
         self.0.iter().map(|(key, value)| (key.as_str(), value))
@@ -673,7 +673,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A borrowing iterator over keys in sorted order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata key iterator must be consumed to inspect keys"]
     pub fn keys(&self) -> impl Iterator<Item = &str> {
         self.0.keys().map(String::as_str)
@@ -684,7 +684,7 @@ impl Metadata {
     /// # Returns
     ///
     /// A borrowing iterator over values in key order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the metadata value iterator must be consumed to inspect values"]
     pub fn values(&self) -> impl Iterator<Item = &Value> {
         self.0.values()
@@ -737,7 +737,7 @@ impl Metadata {
     /// # Returns
     ///
     /// The owned, key-sorted map of metadata values.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn into_inner(self) -> BTreeMap<String, Value> {
         self.0

@@ -162,6 +162,17 @@ fn test_expression_wire_rejects_duplicate_and_conflicting_fields() {
         r#"{"version":1,"expression":{"kind":"and","children":[{"kind":"all"},{"kind":"none"}],"children":[{"kind":"all"},{"kind":"none"}]},"options":{"numeric_comparison_policy":"exact"}}"#,
         r#"{"version":1,"expression":{"kind":"eq","key":"k","value":{"scalar":{"string":"a"}},"value":{"scalar":{"string":"b"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
         r#"{"version":1,"expression":{"kind":"not","expression":{"kind":"all"},"expression":{"kind":"none"}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"all","key":"extra"},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"eq","key":"k"},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"and","children":[{"kind":"all"},{"kind":"none"}],"key":"extra"},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"none","value":{"scalar":{"string":"a"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"ne","key":"k","value":{"scalar":{"string":"a"}},"values":[{"scalar":{"string":"b"}}]},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"lt","key":"k","value":{"scalar":{"string":"a"}},"children":[{"kind":"all"},{"kind":"none"}]},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"in","key":"k","values":[{"scalar":{"string":"a"}}],"value":{"scalar":{"string":"b"}}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"not_in","key":"k","values":[{"scalar":{"string":"a"}}],"expression":{"kind":"all"}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"exists","key":"k","children":[{"kind":"all"},{"kind":"none"}]},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{"kind":"or","children":[{"kind":"all"},{"kind":"none"}],"expression":{"kind":"all"}},"options":{"numeric_comparison_policy":"exact"}}"#,
+        r#"{"version":1,"expression":{},"options":{"numeric_comparison_policy":"exact"}}"#,
     ] {
         assert!(
             from_str::<MetadataFilter>(input).is_err(),

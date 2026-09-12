@@ -42,7 +42,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// An aggregate error containing exactly one issue.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the validation error should be inspected"]
     pub fn from_issue(issue: MetadataError) -> Self {
         Self { issues: vec![issue] }
@@ -70,7 +70,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The issues in discovery order.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the validation issues should be inspected"]
     pub fn issues(&self) -> &[MetadataError] {
         &self.issues
@@ -81,7 +81,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The issue count.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
@@ -93,7 +93,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// The owned issues in discovery order.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn into_issues(self) -> Vec<MetadataError> {
         self.issues

@@ -40,7 +40,7 @@ impl FilterMatchOptions {
     /// # Returns
     ///
     /// A builder configured with exact numeric comparison by default.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the builder must be configured or used to build match options"]
     pub const fn builder() -> FilterMatchOptionsBuilder {
         FilterMatchOptionsBuilder::new()
@@ -67,7 +67,7 @@ impl FilterMatchOptions {
     /// # Returns
     ///
     /// The configured comparison policy.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the numeric comparison policy should be inspected"]
     pub const fn numeric_comparison_policy(&self) -> NumericComparisonPolicy {
         self.numeric_comparison_policy

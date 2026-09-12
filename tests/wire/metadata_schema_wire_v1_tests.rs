@@ -166,6 +166,7 @@ fn test_metadata_schema_json_decoder_maps_syntax_and_budget_errors() {
                 .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 1))
                 .build(),
         )
-        .build();
+        .build()
+        .expect("limits should build");
     assert!(MetadataSchema::decode_json_slice_with_limits(b"{}", limits,).is_err());
 }

@@ -143,7 +143,8 @@ fn test_metadata_filter_json_decoder_rejects_malformed_input() {
                 .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 1))
                 .build(),
         )
-        .build();
+        .build()
+        .expect("limits should build");
     let error = MetadataFilter::decode_json_slice_with_limits(b"{}", limits, FilterLimits::MAX)
         .expect_err("the input budget must be enforced");
     assert!(!error.to_string().is_empty());
