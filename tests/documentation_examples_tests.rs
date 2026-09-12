@@ -26,7 +26,8 @@ fn test_readme_directional_limits_example() {
     let limits = MetadataLimits::builder()
         .json_decode(decode)
         .json_encode(encode)
-        .build();
+        .build()
+        .expect("limits should build");
     assert_eq!(limits.json_decode().max_input_bytes(), Some(64 * 1024));
     assert_eq!(limits.json_encode().max_output_bytes(), Some(128 * 1024));
 }
@@ -36,7 +37,8 @@ fn test_user_guide_domain_limits_example() {
     let limits = MetadataLimits::builder()
         .max_metadata_entries(128)
         .max_key_bytes(128)
-        .build();
+        .build()
+        .expect("limits should build");
     assert_eq!(limits.max_metadata_entries(), 128);
     assert_eq!(limits.max_key_bytes(), 128);
 }
