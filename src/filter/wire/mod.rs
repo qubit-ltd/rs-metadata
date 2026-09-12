@@ -7,6 +7,7 @@
 // =============================================================================
 //! Wire-format support for metadata filters.
 
+mod expression_decode;
 mod filter_expression_wire_v1;
 mod filter_expression_wire_v1_ref;
 mod filter_expression_wire_v1_seed;
