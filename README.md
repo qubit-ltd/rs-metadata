@@ -107,7 +107,7 @@ let encode = default_json_encode_limits()
 let limits = MetadataLimits::builder()
     .json_decode(decode)
     .json_encode(encode)
-    .build();
+    .build()?;
 ```
 
 `decode_json_slice_with_limits` creates one `JsonDecodeSession` from the decode
@@ -144,9 +144,9 @@ accepted consumption in that operation is not rolled back.
   storage boundary, define one string constant at the owning boundary and use
   it for both writes and reads; use `MetadataSchema` when the key/value contract
   must be validated.
-- When limits are loaded from configuration, prefer
-  `MetadataLimits::builder().try_build()` so invalid domain caps are rejected
-  before reaching a wire decoder.
+- When limits are loaded from configuration, use
+  `MetadataLimits::builder().build()?` so invalid domain caps are rejected at
+  configuration time, consistent with `FilterLimitsBuilder::build`.
 
 ## Learn more
 
