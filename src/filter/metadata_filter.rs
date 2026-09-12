@@ -90,7 +90,7 @@ impl MetadataFilter {
     ///
     /// A constant-true filter using default match options and library hard
     /// limits.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the constructed all-matching filter should be used"]
     pub fn all() -> Self {
         Self::new(
@@ -106,7 +106,7 @@ impl MetadataFilter {
     ///
     /// A constant-false filter using default match options and library hard
     /// limits.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the constructed no-match filter should be used"]
     pub fn none() -> Self {
         Self::new(
@@ -117,7 +117,7 @@ impl MetadataFilter {
     }
 
     /// Creates a builder for a metadata filter.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub const fn builder() -> MetadataFilterBuilder {
         MetadataFilterBuilder::new()
@@ -309,21 +309,21 @@ impl MetadataFilter {
     }
 
     /// Returns the root expression.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the filter expression should be inspected"]
     pub const fn expression(&self) -> &FilterExpression {
         &self.expression
     }
 
     /// Returns the evaluation options.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub const fn options(&self) -> FilterMatchOptions {
         self.options
     }
 
     /// Returns the resource limits.
-    #[inline(always)]
+    #[inline]
     #[must_use = "the filter limits should be inspected"]
     pub const fn limits(&self) -> FilterLimits {
         *self.limits.get()
@@ -355,7 +355,7 @@ impl MetadataFilter {
     }
 
     /// Returns whether `metadata` satisfies this filter.
-    #[inline(always)]
+    #[inline]
     #[must_use]
     pub fn matches(&self, metadata: &Metadata) -> bool {
         self.expression.evaluate(metadata, self.options).is_match()

@@ -91,6 +91,26 @@ fn test_builder_rejects_oversized_keys_and_membership_sets() {
             ..
         }
     ));
+    assert!(matches!(
+        FilterExpression::builder()
+            .in_set(&long_key, [1_i64])
+            .build()
+            .unwrap_err(),
+        MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            ..
+        }
+    ));
+    assert!(matches!(
+        FilterExpression::builder()
+            .not_in_set(&long_key, [1_i64])
+            .build()
+            .unwrap_err(),
+        MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            ..
+        }
+    ));
 
     let values = (0..10_000_i64).collect::<Vec<_>>();
     let error = FilterExpression::builder()

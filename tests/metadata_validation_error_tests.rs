@@ -52,9 +52,14 @@ fn test_validation_error_can_wrap_single_issue() {
 
     let error = MetadataValidationError::from_issue(issue.clone());
 
-    assert_eq!(error.issues(), &[issue]);
+    assert_eq!(error.issues(), std::slice::from_ref(&issue));
+    assert_eq!(error.len(), 1);
+    assert_eq!(error.into_issues(), vec![issue]);
     assert_eq!(
-        error.to_string(),
+        MetadataValidationError::from_issue(MetadataError::UnknownFilterField {
+            key: "missing".to_string(),
+        })
+        .to_string(),
         "1 metadata validation issue(s); 1: Metadata filter references key 'missing' not defined in schema"
     );
 }

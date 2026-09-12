@@ -11,6 +11,12 @@ use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::FilterMatchOptions;
 
 #[test]
+fn test_default_builder_matches_filter_match_options_default() {
+    let options = FilterMatchOptions::builder().build();
+    assert_eq!(options, FilterMatchOptions::default());
+}
+
+#[test]
 fn test_numeric_comparison_policy_uses_last_value() {
     let options = FilterMatchOptions::builder()
         .numeric_comparison_policy(NumericComparisonPolicy::Approximate)

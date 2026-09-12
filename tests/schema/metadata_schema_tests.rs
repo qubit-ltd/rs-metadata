@@ -266,3 +266,27 @@ fn test_schema_fields_iterates_in_key_order() {
 
     assert_eq!(keys, vec!["a", "z"]);
 }
+
+#[cfg(feature = "json")]
+#[test]
+fn test_schema_json_writer_round_trips_through_bounded_encoders() {
+    use qubit_metadata::default_json_encode_limits;
+
+    let schema = MetadataSchema::builder()
+        .required("status", DataType::String)
+        .build()
+        .expect("schema should build");
+
+    let encoded = schema.to_json_vec().expect("schema should encode");
+    assert_eq!(
+        MetadataSchema::decode_json_slice(&encoded).expect("schema should decode"),
+        schema
+    );
+
+    let mut buffer = Vec::new();
+    schema.to_json_writer(&mut buffer).expect("schema should write");
+    schema
+        .to_json_writer_with_limits(&mut buffer, default_json_encode_limits())
+        .expect("schema should write with limits");
+    assert!(!buffer.is_empty());
+}

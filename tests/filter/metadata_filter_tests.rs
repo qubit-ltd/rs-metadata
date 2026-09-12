@@ -13,6 +13,8 @@ use qubit_metadata::FilterLimits;
 use qubit_metadata::FilterMatchOptions;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
+#[cfg(feature = "json")]
+use qubit_metadata::default_json_encode_limits;
 
 use crate::support::test_support::sample;
 
@@ -69,4 +71,23 @@ fn test_filter_distinguishes_exact_and_approximate_numeric_policies() {
 
     assert!(!exact.matches(&metadata));
     assert!(approximate.matches(&metadata));
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_filter_json_encode_and_decode_surface() {
+    let filter = MetadataFilter::all();
+    let encoded = filter.to_json_vec().expect("filter should encode");
+    let decoded = MetadataFilter::decode_json_slice(&encoded).expect("filter should decode");
+    assert_eq!(decoded, filter);
+
+    filter
+        .to_json_vec_with_limits(default_json_encode_limits())
+        .expect("filter should encode with limits");
+
+    let mut buffer = Vec::new();
+    filter.to_json_writer(&mut buffer).expect("filter should write");
+    filter
+        .to_json_writer_with_limits(&mut buffer, default_json_encode_limits())
+        .expect("filter should write with limits");
 }
