@@ -1,3 +1,2 @@
 multiple-public-types | src/wire/strict_string_map_seed.rs | The private seed and its internal structured limit record share one focused decoder module.
-multiple-public-types | src/filter/wire/filter_expression_wire_v1_seed.rs | The private seeds, visitors, and field state form one recursive Serde decoder state machine.
 multiple-public-types | src/filter/wire/metadata_filter_wire_v1_seed.rs | The private envelope seed and visitor form one strict Serde decoder state machine.
