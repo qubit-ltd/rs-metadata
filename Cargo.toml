@@ -1,6 +1,6 @@
 [package]
 name = "qubit-metadata"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 rust-version = "1.94"
 authors = ["Haixing Hu <starfish.hu@gmail.com>"]
@@ -55,7 +55,7 @@ qubit-budget = { version = "0.7", optional = true }
 qubit-json = { version = "0.10", optional = true }
 qubit-redact = { version = "0.9", default-features = false }
 qubit-utils = { version = "0.3", optional = true }
-qubit-value = { path = "../rs-value", default-features = false, features = ["converter", "redact"] }
+qubit-value = { version = "0.12.1", path = "../rs-value", default-features = false, features = ["converter", "redact"] }
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false }
