@@ -2,7 +2,7 @@
 
 [中文用户手册](user_guide.zh_CN.md) · [Migrating to 0.6](migration_0.6.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
 
-This guide targets `qubit-metadata` 0.6 and Rust 1.94 or later. It is for
+This guide targets `qubit-metadata` 0.7 and Rust 1.94 or later. It is for
 Rust developers who need to attach typed, queryable metadata to records,
 messages, or document chunks without coupling the metadata model to a storage
 provider.
@@ -44,15 +44,15 @@ For the core metadata API (the crate's default feature set is core-only):
 
 ```toml
 [dependencies]
-qubit-metadata = "0.6"
+qubit-metadata = "0.7"
 ```
 
 Enable optional layers explicitly when they are used:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", features = ["schema", "json"] }
-qubit-datatype = "0.13"
+qubit-metadata = { version = "0.7", features = ["schema", "json"] }
+qubit-datatype = "0.15"
 ```
 
 The `schema` feature includes `filter`; use `features = ["filter"]` when
@@ -67,7 +67,7 @@ For an explicit metadata-only declaration, disable default features:
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", default-features = false }
+qubit-metadata = { version = "0.7", default-features = false }
 ```
 
 This is equivalent to the core-only default today and documents the intended

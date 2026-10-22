@@ -24,6 +24,7 @@ use qubit_json::encode::JsonEncodeError;
 use qubit_json::encode::JsonEncoder;
 use qubit_json::encode::JsonSerializationError;
 use qubit_json::encode::JsonSerializationErrorKind;
+use qubit_json::encode::JsonSerializerStateError;
 use qubit_metadata::MetadataWireEncodeError;
 use serde::Serialize;
 use serde::Serializer;
@@ -39,6 +40,19 @@ impl Serialize for InvalidRawValue {
         let token = concat!("$", "serde_json", ":", ":private::RawValue");
         let mut state = serializer.serialize_struct(token, 1)?;
         state.serialize_field(token, "[")?;
+        state.end()
+    }
+}
+
+struct InvalidNumberProtocol;
+
+impl Serialize for InvalidNumberProtocol {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let token = concat!("$", "serde_json", ":", ":private::Number");
+        let state = serializer.serialize_struct(token, 0)?;
         state.end()
     }
 }
@@ -131,6 +145,25 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
     assert!(matches!(errors[2], MetadataWireEncodeError::Quantity { .. }));
     assert!(matches!(errors[3], MetadataWireEncodeError::Syntax(_)));
     assert!(matches!(errors[4], MetadataWireEncodeError::Io(_)));
+}
+
+#[test]
+fn test_invalid_number_protocol_remains_structured_in_wire_error() {
+    let error = JsonEncoder::unlimited()
+        .to_vec(&InvalidNumberProtocol)
+        .expect_err("an empty private Number protocol must fail");
+    let error = MetadataWireEncodeError::from(error);
+
+    match error {
+        MetadataWireEncodeError::Json(source) => {
+            assert_eq!(
+                source.serializer_state_error(),
+                Some(JsonSerializerStateError::InvalidNumberProtocol),
+            );
+            assert!(source.is_serializer_contract_error());
+        }
+        other => panic!("expected structured JSON serialization error, got {other:?}"),
+    }
 }
 
 #[test]

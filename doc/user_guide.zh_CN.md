@@ -2,7 +2,7 @@
 
 [English User Guide](user_guide.md) · [迁移到 0.6](migration_0.6.zh_CN.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
-本手册面向使用 `qubit-metadata` 0.6 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
+本手册面向使用 `qubit-metadata` 0.7 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
 需要给记录、消息或文档分片附加可类型化、可查询 metadata，同时又不希望把 metadata
 模型绑定到某个存储 provider 的场景。
 
@@ -40,15 +40,15 @@ Metadata -> MetadataSchema -> 已存值校验
 
 ```toml
 [dependencies]
-qubit-metadata = "0.6"
+qubit-metadata = "0.7"
 ```
 
 使用可选能力时请显式启用对应 feature：
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", features = ["schema", "json"] }
-qubit-datatype = "0.13"
+qubit-metadata = { version = "0.7", features = ["schema", "json"] }
+qubit-datatype = "0.15"
 ```
 
 `schema` 会包含 `filter`；不需要 schema 校验时可使用
@@ -62,7 +62,7 @@ crate 声明了 `filter`、`schema`、`chrono`、`big-integer`、`big-decimal`�
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", default-features = false }
+qubit-metadata = { version = "0.7", default-features = false }
 ```
 
 这与当前核心功能默认配置等价，同时能明确记录应用自身的 feature 边界。

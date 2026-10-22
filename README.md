@@ -50,7 +50,7 @@ provider or domain model.
 
 ```toml
 [dependencies]
-qubit-metadata = "0.6"
+qubit-metadata = "0.7"
 ```
 
 The default feature set provides the core metadata container only. Enable
@@ -58,8 +58,8 @@ The default feature set provides the core metadata container only. Enable
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", features = ["schema"] }
-qubit-datatype = "0.13"
+qubit-metadata = { version = "0.7", features = ["schema"] }
+qubit-datatype = "0.15"
 ```
 
 Optional features are `chrono`, `big-integer`, `big-decimal`, `big-number`,

@@ -44,7 +44,7 @@ metadata 容器不依赖任何存储 provider 或具体领域模型。
 
 ```toml
 [dependencies]
-qubit-metadata = "0.6"
+qubit-metadata = "0.7"
 ```
 
 默认 feature 集只提供核心 metadata 容器。需要 schema 校验时启用 `schema`；它会包含
@@ -52,8 +52,8 @@ qubit-metadata = "0.6"
 
 ```toml
 [dependencies]
-qubit-metadata = { version = "0.6", features = ["schema"] }
-qubit-datatype = "0.13"
+qubit-metadata = { version = "0.7", features = ["schema"] }
+qubit-datatype = "0.15"
 ```
 
 可选 feature 包括 `chrono`、`big-integer`、`big-decimal`、`big-number`、`url`、`json` 和
