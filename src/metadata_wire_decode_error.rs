@@ -9,6 +9,8 @@
 
 use std::error::Error;
 use std::fmt;
+use std::io;
+use std::sync::Arc;
 
 use qubit_budget::BudgetError;
 use qubit_budget::MeasuredBudgetError;
@@ -35,6 +37,13 @@ use crate::MetadataError;
 #[non_exhaustive]
 #[must_use]
 pub enum MetadataWireDecodeError {
+    /// Reading the JSON wire input failed.
+    Read {
+        /// Stable standard I/O failure category.
+        kind: io::ErrorKind,
+        /// Original error retained for detailed diagnostics.
+        source: Option<Arc<io::Error>>,
+    },
     /// A metadata map or schema exceeded a domain limit without exposing
     /// values.
     Domain(MetadataError),
@@ -75,6 +84,7 @@ impl fmt::Display for MetadataWireDecodeError {
     /// Formats a bounded JSON decoding failure.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Read { kind, .. } => write!(formatter, "Failed to read metadata JSON input: {kind:?}"),
             Self::Domain(error) => fmt::Display::fmt(error, formatter),
             Self::UnsupportedVersion { expected, actual } => write!(
                 formatter,
@@ -95,6 +105,7 @@ impl Error for MetadataWireDecodeError {
     /// Returns the budget, filter, or Serde source associated with the error.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Read { source, .. } => source.as_deref().map(|error| error as &(dyn Error + 'static)),
             Self::Domain(error) => Some(error),
             Self::UnsupportedVersion { .. } => None,
             Self::Budget(error) => Some(error),
@@ -115,6 +126,7 @@ impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
         let line = error.line().unwrap_or(0);
         let column = error.column().unwrap_or(0);
         match error.into_source() {
+            JsonDecodeErrorSource::Read { kind, source, .. } => Self::Read { kind, source },
             JsonDecodeErrorSource::Budget { source, .. } => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
                 MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
