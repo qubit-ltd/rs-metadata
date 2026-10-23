@@ -13,15 +13,16 @@ use qubit_metadata::MetadataError;
 #[test]
 fn test_build_rejects_each_zero_limit() {
     for result in [
-        FilterLimits::builder().max_depth(0).build(),
-        FilterLimits::builder().max_nodes(0).build(),
-        FilterLimits::builder().max_set_values(0).build(),
-        FilterLimits::builder().max_key_bytes(0).build(),
+        ("max_depth", FilterLimits::builder().max_depth(0).build()),
+        ("max_nodes", FilterLimits::builder().max_nodes(0).build()),
+        ("max_set_values", FilterLimits::builder().max_set_values(0).build()),
+        ("max_key_bytes", FilterLimits::builder().max_key_bytes(0).build()),
     ] {
-        assert!(matches!(
-            result,
-            Err(MetadataError::InvalidFilterLimit { value: 0, .. })
-        ));
+        let (limit_name, result) = result;
+        assert!(
+            matches!(result, Err(MetadataError::InvalidFilterLimit { value: 0, .. })),
+            "expected zero {limit_name} to be rejected"
+        );
     }
 }
 

@@ -28,6 +28,7 @@ use qubit_json::encode::JsonSerializerStateError;
 use qubit_metadata::MetadataWireEncodeError;
 use serde::Serialize;
 use serde::Serializer;
+use serde::ser::SerializeMap;
 use serde::ser::SerializeStruct;
 
 struct InvalidRawValue;
@@ -44,15 +45,15 @@ impl Serialize for InvalidRawValue {
     }
 }
 
-struct InvalidNumberProtocol;
+struct InvalidMapProtocol;
 
-impl Serialize for InvalidNumberProtocol {
+impl Serialize for InvalidMapProtocol {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let token = concat!("$", "serde_json", ":", ":private::Number");
-        let state = serializer.serialize_struct(token, 0)?;
+        let mut state = serializer.serialize_map(Some(1))?;
+        state.serialize_value(&1_u8)?;
         state.end()
     }
 }
@@ -148,17 +149,17 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
 }
 
 #[test]
-fn test_invalid_number_protocol_remains_structured_in_wire_error() {
+fn test_invalid_map_protocol_remains_structured_in_wire_error() {
     let error = JsonEncoder::unlimited()
-        .to_vec(&InvalidNumberProtocol)
-        .expect_err("an empty private Number protocol must fail");
+        .to_vec(&InvalidMapProtocol)
+        .expect_err("a map value without a key must fail");
     let error = MetadataWireEncodeError::from(error);
 
     match error {
         MetadataWireEncodeError::Json(source) => {
             assert_eq!(
                 source.serializer_state_error(),
-                Some(JsonSerializerStateError::InvalidNumberProtocol),
+                Some(JsonSerializerStateError::MapValueWithoutKey),
             );
             assert!(source.is_serializer_contract_error());
         }

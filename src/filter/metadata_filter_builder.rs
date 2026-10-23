@@ -51,6 +51,7 @@ pub struct MetadataFilterBuilder {
 impl MetadataFilterBuilder {
     /// Creates a builder with default options and library hard limits.
     #[inline]
+    #[must_use]
     pub(crate) const fn new() -> Self {
         Self {
             expression: None,

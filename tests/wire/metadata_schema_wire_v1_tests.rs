@@ -17,24 +17,36 @@ use qubit_datatype::DataType;
 #[cfg(feature = "json")]
 use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
+use serde_json::from_str;
+use serde_json::from_value;
+use serde_json::json;
+use serde_json::to_string;
+use serde_json::to_value;
+use serde_json::to_vec;
 
 #[test]
 fn test_metadata_schema_rejects_unknown_field_and_unsupported_version() {
     let schema = MetadataSchema::default();
-    let mut unknown = serde_json::to_value(&schema).expect("schema should serialize");
-    unknown["extra"] = serde_json::json!(true);
-    let mut version = serde_json::to_value(&schema).expect("schema should serialize");
-    version["version"] = serde_json::json!(2);
+    let mut unknown = to_value(&schema).expect("schema should serialize");
+    unknown["extra"] = json!(true);
+    let mut version = to_value(&schema).expect("schema should serialize");
+    version["version"] = json!(2);
 
-    assert!(serde_json::from_value::<MetadataSchema>(unknown).is_err());
-    assert!(serde_json::from_value::<MetadataSchema>(version).is_err());
+    assert!(
+        from_value::<MetadataSchema>(unknown).is_err(),
+        "unknown schema fields should be rejected"
+    );
+    assert!(
+        from_value::<MetadataSchema>(version).is_err(),
+        "unsupported schema versions should be rejected"
+    );
 }
 
 #[test]
 fn test_metadata_schema_v1_round_trip() {
     let schema = MetadataSchema::default();
-    let encoded = serde_json::to_string(&schema).expect("schema should serialize");
-    let decoded = serde_json::from_str(&encoded).expect("schema should deserialize");
+    let encoded = to_string(&schema).expect("schema should serialize");
+    let decoded = from_str(&encoded).expect("schema should deserialize");
 
     assert_eq!(schema, decoded);
 }
@@ -47,7 +59,10 @@ fn test_metadata_schema_serialization_enforces_hard_key_limit() {
         .build()
         .expect("schema should build");
 
-    assert!(serde_json::to_vec(&schema).is_err());
+    assert!(
+        to_vec(&schema).is_err(),
+        "serialization should reject keys over the hard limit"
+    );
 }
 
 #[test]
@@ -58,21 +73,27 @@ fn test_metadata_schema_serialization_enforces_hard_entry_limit() {
     }
     let schema = builder.build().expect("schema should build");
 
-    assert!(serde_json::to_vec(&schema).is_err());
+    assert!(
+        to_vec(&schema).is_err(),
+        "serialization should reject entries over the hard limit"
+    );
 }
 
 #[test]
 #[cfg(feature = "json")]
 fn test_metadata_schema_json_decoder_rejects_unsupported_version() {
-    let input = serde_json::json!({
+    let input = json!({
         "version": 2,
         "fields": {},
         "unknown_metadata_field_policy": "reject",
         "unknown_filter_field_policy": "reject",
     });
-    let input = serde_json::to_vec(&input).expect("input should serialize");
+    let input = to_vec(&input).expect("input should serialize");
 
-    assert!(MetadataSchema::decode_json_slice(&input).is_err());
+    assert!(
+        MetadataSchema::decode_json_slice(&input).is_err(),
+        "the decoder should reject unsupported schema versions"
+    );
 }
 
 #[test]
@@ -85,7 +106,10 @@ fn test_metadata_schema_json_decoder_exercises_seed_error_paths() {
         "unknown_metadata_field_policy": "allow",
         "unknown_filter_field_policy": "reject"
     }"#;
-    assert!(MetadataSchema::decode_json_slice(duplicate_policy).is_err());
+    assert!(
+        MetadataSchema::decode_json_slice(duplicate_policy).is_err(),
+        "the decoder should reject duplicate metadata policies"
+    );
 
     let duplicate_filter_policy = br#"{
         "version": 1,
@@ -94,7 +118,10 @@ fn test_metadata_schema_json_decoder_exercises_seed_error_paths() {
         "unknown_filter_field_policy": "reject",
         "unknown_filter_field_policy": "allow_unchecked"
     }"#;
-    assert!(MetadataSchema::decode_json_slice(duplicate_filter_policy).is_err());
+    assert!(
+        MetadataSchema::decode_json_slice(duplicate_filter_policy).is_err(),
+        "the decoder should reject duplicate filter policies"
+    );
 
     let wrong_fields_type = br#"{
         "version": 1,
@@ -102,7 +129,10 @@ fn test_metadata_schema_json_decoder_exercises_seed_error_paths() {
         "unknown_metadata_field_policy": "reject",
         "unknown_filter_field_policy": "reject"
     }"#;
-    assert!(MetadataSchema::decode_json_slice(wrong_fields_type).is_err());
+    assert!(
+        MetadataSchema::decode_json_slice(wrong_fields_type).is_err(),
+        "the decoder should reject a non-object fields value"
+    );
 
     let invalid_field = br#"{
         "version": 1,
@@ -110,7 +140,10 @@ fn test_metadata_schema_json_decoder_exercises_seed_error_paths() {
         "unknown_metadata_field_policy": "reject",
         "unknown_filter_field_policy": "reject"
     }"#;
-    assert!(MetadataSchema::decode_json_slice(invalid_field).is_err());
+    assert!(
+        MetadataSchema::decode_json_slice(invalid_field).is_err(),
+        "the decoder should reject invalid field definitions"
+    );
 }
 
 #[test]
@@ -151,14 +184,20 @@ fn test_metadata_schema_json_decoder_rejects_missing_and_unknown_fields() {
         missing_filter_policy.as_slice(),
         unknown_field.as_slice(),
     ] {
-        assert!(MetadataSchema::decode_json_slice(input).is_err());
+        assert!(
+            MetadataSchema::decode_json_slice(input).is_err(),
+            "the decoder should reject missing or unknown envelope fields"
+        );
     }
 }
 
 #[test]
 #[cfg(feature = "json")]
 fn test_metadata_schema_json_decoder_maps_syntax_and_budget_errors() {
-    assert!(MetadataSchema::decode_json_slice(b"!").is_err());
+    assert!(
+        MetadataSchema::decode_json_slice(b"!").is_err(),
+        "the decoder should reject malformed JSON syntax"
+    );
 
     let limits = MetadataLimits::builder()
         .json_decode(
@@ -168,5 +207,8 @@ fn test_metadata_schema_json_decoder_maps_syntax_and_budget_errors() {
         )
         .build()
         .expect("limits should build");
-    assert!(MetadataSchema::decode_json_slice_with_limits(b"{}", limits,).is_err());
+    assert!(
+        MetadataSchema::decode_json_slice_with_limits(b"{}", limits).is_err(),
+        "the decoder should reject input exceeding its byte budget"
+    );
 }

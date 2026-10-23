@@ -9,17 +9,25 @@
 
 use qubit_metadata::FilterExpression;
 use qubit_metadata::MetadataFilter;
+use serde_json::from_str;
+use serde_json::from_value;
+use serde_json::json;
+use serde_json::to_string;
+use serde_json::to_value;
 
 #[test]
 fn test_malformed_expression_nodes_are_rejected() {
     for expression in [
-        serde_json::json!({"kind": "and", "children": []}),
-        serde_json::json!({"kind": "or", "children": [{"kind": "all"}]}),
-        serde_json::json!({"kind": "exists", "key": "k", "extra": true}),
+        json!({"kind": "and", "children": []}),
+        json!({"kind": "or", "children": [{"kind": "all"}]}),
+        json!({"kind": "exists", "key": "k", "extra": true}),
     ] {
-        let mut envelope = serde_json::to_value(MetadataFilter::all()).unwrap();
+        let mut envelope = to_value(MetadataFilter::all()).expect("envelope should encode");
         envelope["expression"] = expression;
-        assert!(serde_json::from_value::<MetadataFilter>(envelope).is_err());
+        assert!(
+            from_value::<MetadataFilter>(envelope).is_err(),
+            "malformed expression must be rejected"
+        );
     }
 }
 
@@ -29,10 +37,13 @@ fn test_nested_expression_round_trips_through_filter_wire() {
         .eq("status", "active")
         .or_group(|group| group.exists("tag").not())
         .build()
-        .unwrap();
-    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
-    let encoded = serde_json::to_string(&filter).unwrap();
-    let decoded: MetadataFilter = serde_json::from_str(&encoded).unwrap();
+        .expect("expression should build");
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .expect("filter should build");
+    let encoded = to_string(&filter).expect("filter should serialize");
+    let decoded: MetadataFilter = from_str(&encoded).expect("filter should deserialize");
 
     assert_eq!(decoded, filter);
 }
@@ -66,8 +77,8 @@ fn test_filter_wire_round_trips_every_condition_and_boolean_operator() {
             .expression(expression.expect("expression should build"))
             .build()
             .expect("filter should build");
-        let encoded = serde_json::to_string(&filter).expect("wire encoding should succeed");
-        let decoded: MetadataFilter = serde_json::from_str(&encoded).expect("wire decoding should succeed");
+        let encoded = to_string(&filter).expect("wire encoding should succeed");
+        let decoded: MetadataFilter = from_str(&encoded).expect("wire decoding should succeed");
         assert_eq!(decoded, filter);
     }
 }
@@ -75,27 +86,27 @@ fn test_filter_wire_round_trips_every_condition_and_boolean_operator() {
 #[test]
 fn test_filter_wire_rejects_invalid_operand_shapes_and_group_members() {
     let invalid_expressions = [
-        serde_json::json!({"kind": "eq", "key": "k", "value": {"map": {}}}),
-        serde_json::json!({"kind": "ne", "key": "k", "value": {"sequence": []}}),
-        serde_json::json!({"kind": "lt", "key": "k"}),
-        serde_json::json!({"kind": "le", "key": "k", "value": null}),
-        serde_json::json!({"kind": "gt", "key": "k", "value": {}}),
-        serde_json::json!({"kind": "ge", "key": "k", "value": {"scalar": null}}),
-        serde_json::json!({"kind": "in", "key": "k", "values": [{"map": {}}]}),
-        serde_json::json!({"kind": "not_in", "key": "k", "values": [{"sequence": []}]}),
-        serde_json::json!({"kind": "exists"}),
-        serde_json::json!({"kind": "not_exists", "key": 1}),
-        serde_json::json!({"kind": "and", "children": [null, {"kind": "all"}]}),
-        serde_json::json!({"kind": "or", "children": [{"kind": "all"}, null]}),
-        serde_json::json!({"kind": "not", "expression": null}),
-        serde_json::json!({"kind": "unknown"}),
+        json!({"kind": "eq", "key": "k", "value": {"map": {}}}),
+        json!({"kind": "ne", "key": "k", "value": {"sequence": []}}),
+        json!({"kind": "lt", "key": "k"}),
+        json!({"kind": "le", "key": "k", "value": null}),
+        json!({"kind": "gt", "key": "k", "value": {}}),
+        json!({"kind": "ge", "key": "k", "value": {"scalar": null}}),
+        json!({"kind": "in", "key": "k", "values": [{"map": {}}]}),
+        json!({"kind": "not_in", "key": "k", "values": [{"sequence": []}]}),
+        json!({"kind": "exists"}),
+        json!({"kind": "not_exists", "key": 1}),
+        json!({"kind": "and", "children": [null, {"kind": "all"}]}),
+        json!({"kind": "or", "children": [{"kind": "all"}, null]}),
+        json!({"kind": "not", "expression": null}),
+        json!({"kind": "unknown"}),
     ];
 
     for expression in invalid_expressions {
-        let mut envelope = serde_json::to_value(MetadataFilter::all()).expect("envelope should encode");
+        let mut envelope = to_value(MetadataFilter::all()).expect("envelope should encode");
         envelope["expression"] = expression;
         assert!(
-            serde_json::from_value::<MetadataFilter>(envelope).is_err(),
+            from_value::<MetadataFilter>(envelope).is_err(),
             "invalid expression must be rejected"
         );
     }

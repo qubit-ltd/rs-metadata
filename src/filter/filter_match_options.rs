@@ -41,7 +41,6 @@ impl FilterMatchOptions {
     ///
     /// A builder configured with exact numeric comparison by default.
     #[inline]
-    #[must_use = "the builder must be configured or used to build match options"]
     pub const fn builder() -> FilterMatchOptionsBuilder {
         FilterMatchOptionsBuilder::new()
     }

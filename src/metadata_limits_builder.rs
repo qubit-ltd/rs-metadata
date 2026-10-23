@@ -48,7 +48,6 @@ pub struct MetadataLimitsBuilder {
 impl MetadataLimitsBuilder {
     /// Replaces the JSON decoding profile.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build metadata limits"]
     pub fn json_decode(mut self, limits: JsonDecodeLimits) -> Self {
         self.json_decode = limits;
         self
@@ -56,7 +55,6 @@ impl MetadataLimitsBuilder {
 
     /// Replaces the JSON encoding profile.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build metadata limits"]
     pub fn json_encode(mut self, limits: JsonEncodeLimits) -> Self {
         self.json_encode = limits;
         self
@@ -64,7 +62,6 @@ impl MetadataLimitsBuilder {
 
     /// Sets the metadata-entry domain limit.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build metadata limits"]
     pub const fn max_metadata_entries(mut self, maximum: usize) -> Self {
         self.max_metadata_entries = maximum;
         self
@@ -72,7 +69,6 @@ impl MetadataLimitsBuilder {
 
     /// Sets the schema-field domain limit.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build metadata limits"]
     pub const fn max_schema_fields(mut self, maximum: usize) -> Self {
         self.max_schema_fields = maximum;
         self
@@ -80,7 +76,6 @@ impl MetadataLimitsBuilder {
 
     /// Sets the metadata/schema key-byte domain limit.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build metadata limits"]
     pub const fn max_key_bytes(mut self, maximum: usize) -> Self {
         self.max_key_bytes = maximum;
         self
@@ -94,7 +89,6 @@ impl MetadataLimitsBuilder {
     /// hard cap, matching [`crate::FilterLimitsBuilder::build`] validation
     /// timing.
     #[inline]
-    #[must_use = "the metadata limit validation result must be handled"]
     pub fn build(self) -> Result<MetadataLimits, serde_json::Error> {
         let limits = MetadataLimits::from_builder(self);
         limits.validate()?;

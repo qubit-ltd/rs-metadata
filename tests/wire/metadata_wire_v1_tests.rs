@@ -20,8 +20,14 @@ fn test_metadata_rejects_unknown_field_and_unsupported_version() {
     let unknown = r#"{"version":1,"values":{},"extra":true}"#;
     let version = r#"{"version":2,"values":{}}"#;
 
-    assert!(from_str::<Metadata>(unknown).is_err());
-    assert!(from_str::<Metadata>(version).is_err());
+    assert!(
+        from_str::<Metadata>(unknown).is_err(),
+        "the V1 envelope should reject unknown fields"
+    );
+    assert!(
+        from_str::<Metadata>(version).is_err(),
+        "the V1 envelope should reject unsupported versions"
+    );
 }
 
 #[test]
@@ -40,8 +46,12 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
     let metadata = Metadata::new().with("port", 8080_i32);
     let encoded = to_value(metadata).expect("metadata should serialize");
 
-    assert_eq!(encoded["version"], json!(1));
-    assert_eq!(encoded["values"]["port"], json!({"scalar": {"int32": 8080}}));
+    assert_eq!(encoded["version"], json!(1), "the envelope should own version 1");
+    assert_eq!(
+        encoded["values"]["port"],
+        json!({"scalar": {"int32": 8080}}),
+        "the values map should contain an unversioned V1 payload"
+    );
 }
 
 #[test]
@@ -51,7 +61,11 @@ fn test_metadata_v1_user_guide_example_decodes() {
 
     let metadata = Metadata::decode_json_slice(INPUT).expect("the user-guide V1 example should decode");
 
-    assert_eq!(metadata.get_ref::<str>("tenant_id"), Ok("acme"));
+    assert_eq!(
+        metadata.get_ref::<str>("tenant_id"),
+        Ok("acme"),
+        "the user-guide tenant ID should decode"
+    );
 }
 
 #[test]
@@ -61,16 +75,25 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
         let key = format!("key-{index}");
         metadata.set(&key, index as i64);
     }
-    assert!(to_vec(&metadata).is_err());
+    assert!(
+        to_vec(&metadata).is_err(),
+        "serialization should reject more than 4096 entries"
+    );
 
     let long_key = "k".repeat(257);
     let metadata = Metadata::new().with(&long_key, 1_i64);
-    assert!(to_vec(&metadata).is_err());
+    assert!(
+        to_vec(&metadata).is_err(),
+        "serialization should reject keys longer than 256 bytes"
+    );
 
     let malformed_after_limit = format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
     let error = from_slice::<Metadata>(malformed_after_limit.as_bytes())
         .expect_err("the hard entry limit should reject before the value");
-    assert!(error.to_string().contains("256 bytes"));
+    assert!(
+        error.to_string().contains("256 bytes"),
+        "the entry-limit error should explain the 256-byte key limit"
+    );
 }
 
 #[test]
@@ -78,10 +101,16 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
 fn test_metadata_json_decoder_exercises_seed_error_paths() {
     let wrong_values_type = br#"{"version":1,"values":[]}"#;
 
-    assert!(Metadata::decode_json_slice(wrong_values_type).is_err());
+    assert!(
+        Metadata::decode_json_slice(wrong_values_type).is_err(),
+        "the JSON decoder should reject a non-object values field"
+    );
 
     let invalid_value = br#"{"version":1,"values":{"name":{"invalid":true}}}"#;
-    assert!(Metadata::decode_json_slice(invalid_value).is_err());
+    assert!(
+        Metadata::decode_json_slice(invalid_value).is_err(),
+        "the JSON decoder should reject an invalid metadata value"
+    );
 }
 
 #[test]
@@ -105,6 +134,9 @@ fn test_metadata_json_decoder_rejects_missing_and_unknown_fields() {
         missing_values.as_slice(),
         unknown_field.as_slice(),
     ] {
-        assert!(Metadata::decode_json_slice(input).is_err());
+        assert!(
+            Metadata::decode_json_slice(input).is_err(),
+            "the JSON decoder should reject missing required fields and unknown fields"
+        );
     }
 }

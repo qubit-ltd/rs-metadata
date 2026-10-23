@@ -84,7 +84,9 @@ impl fmt::Display for MetadataWireDecodeError {
     /// Formats a bounded JSON decoding failure.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Read { kind, .. } => write!(formatter, "Failed to read metadata JSON input: {kind:?}"),
+            Self::Read { kind, .. } => {
+                write!(formatter, "Failed to read metadata JSON input: {kind:?}")
+            }
             Self::Domain(error) => fmt::Display::fmt(error, formatter),
             Self::UnsupportedVersion { expected, actual } => write!(
                 formatter,
@@ -126,7 +128,6 @@ impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
         let line = error.line().unwrap_or(0);
         let column = error.column().unwrap_or(0);
         match error.into_source() {
-            JsonDecodeErrorSource::Read { kind, source, .. } => Self::Read { kind, source },
             JsonDecodeErrorSource::Budget { source, .. } => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
                 MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },

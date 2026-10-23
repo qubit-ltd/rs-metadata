@@ -44,13 +44,12 @@ impl FilterMatchOptionsBuilder {
     ///
     /// # Parameters
     ///
-    /// * numeric_comparison_policy - Policy applied to mixed numeric values.
+    /// * `numeric_comparison_policy` - Policy applied to mixed numeric values.
     ///
     /// # Returns
     ///
     /// The updated builder.
     #[inline]
-    #[must_use = "the configured builder must be used to build match options"]
     pub const fn numeric_comparison_policy(mut self, numeric_comparison_policy: NumericComparisonPolicy) -> Self {
         self.numeric_comparison_policy = numeric_comparison_policy;
         self

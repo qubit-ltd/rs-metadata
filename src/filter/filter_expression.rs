@@ -92,6 +92,10 @@ impl FilterExpression {
 
     /// Combines this expression with `other` using logical AND.
     ///
+    /// # Parameters
+    ///
+    /// * `other` - Expression whose conditions must also match.
+    ///
     /// # Errors
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when the resulting
@@ -104,6 +108,10 @@ impl FilterExpression {
     }
 
     /// Combines this expression with `other` using logical OR.
+    ///
+    /// # Parameters
+    ///
+    /// * `other` - Expression whose conditions may also match.
     ///
     /// # Errors
     ///
@@ -156,6 +164,11 @@ impl FilterExpression {
     /// # Returns
     ///
     /// A new condition expression.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterOperand`] when a comparison
+    /// operand is unset or cannot be represented by the V1 wire format.
     #[inline]
     pub(crate) fn condition(condition: Condition) -> MetadataResult<Self> {
         condition.validate_operands()?;

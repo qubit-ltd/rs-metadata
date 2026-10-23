@@ -16,16 +16,28 @@ use serde::de::Error as _;
 
 use crate::metadata_limits_builder::MetadataLimitsBuilder;
 
-/// Default maximum complete metadata JSON input or output length.
+/// Default maximum number of bytes in a complete metadata JSON document.
+///
+/// This bound applies to both the complete input accepted during decoding and
+/// the complete output produced during encoding. Directional JSON profiles
+/// apply it through their respective input and output byte budgets.
 pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
 
-/// Default maximum metadata map entries accepted by the JSON profile.
+/// Default maximum number of entries accepted in a metadata map.
+///
+/// This domain limit is separate from the generic JSON map-entry budget.
 pub const DEFAULT_MAX_METADATA_ENTRIES: usize = 4_096;
 
-/// Default maximum schema fields accepted by the JSON profile.
+/// Default maximum number of fields accepted in a metadata schema.
+///
+/// This domain limit applies to schema fields independently of generic JSON
+/// traversal limits.
 pub const DEFAULT_MAX_SCHEMA_FIELDS: usize = 4_096;
 
-/// Default maximum UTF-8 bytes in one metadata key.
+/// Default maximum UTF-8 byte length of one metadata or schema key.
+///
+/// The limit counts encoded bytes, so a multi-byte character consumes more
+/// than one byte.
 pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 
 /// Domain-specific metadata limits composed with a shared JSON profile.
@@ -63,15 +75,33 @@ pub struct MetadataLimits {
 
 impl MetadataLimits {
     /// Creates a builder with the default JSON profile and domain limits.
+    ///
+    /// # Returns
+    ///
+    /// A builder initialized with the protocol defaults.
     #[inline(always)]
     #[must_use = "the builder must be configured or used to build metadata limits"]
     pub fn builder() -> MetadataLimitsBuilder {
         MetadataLimitsBuilder::default()
     }
 
-    /// Constructs domain limits that intentionally bypass
-    /// [`MetadataLimitsBuilder::build`] validation for wire-boundary
-    /// regression tests.
+    /// Constructs domain limits without validating their protocol hard caps.
+    ///
+    /// This constructor is available only in debug builds and is intended for
+    /// tests that need to exercise wire-boundary handling of invalid limits.
+    /// The supplied values are preserved as-is.
+    ///
+    /// # Parameters
+    ///
+    /// * `max_metadata_entries` - Maximum metadata-map entry count.
+    /// * `max_schema_fields` - Maximum schema-field count.
+    /// * `max_key_bytes` - Maximum UTF-8 byte length of a metadata or schema
+    ///   key.
+    ///
+    /// # Returns
+    ///
+    /// A limits value containing the supplied domain limits and the default
+    /// JSON profiles.
     #[cfg(debug_assertions)]
     #[doc(hidden)]
     pub fn debug_only_invalid_domain_limits(
@@ -87,7 +117,17 @@ impl MetadataLimits {
         )
     }
 
-    /// Creates immutable limits from the values held by `builder`.
+    /// Creates immutable limits from the values held by `builder` without
+    /// validating the domain hard caps.
+    ///
+    /// # Parameters
+    ///
+    /// * `builder` - The builder whose JSON profiles and domain limits are
+    ///   copied into the resulting value.
+    ///
+    /// # Returns
+    ///
+    /// A limits value containing the builder's configured values.
     #[inline]
     pub(crate) fn from_builder(builder: MetadataLimitsBuilder) -> Self {
         Self {
@@ -99,35 +139,70 @@ impl MetadataLimits {
         }
     }
 
-    /// Returns the JSON decoding profile.
+    /// Returns the JSON budgets used to decode an untrusted document.
+    ///
+    /// The returned value is copied and can be used to inspect the profile
+    /// without changing this limits value.
+    ///
+    /// # Returns
+    ///
+    /// The decoding profile stored in this value.
     #[inline(always)]
     #[must_use]
     pub const fn json_decode(&self) -> JsonDecodeLimits {
         self.json_decode
     }
 
-    /// Returns the JSON encoding profile.
+    /// Returns the JSON budgets used to encode a document.
+    ///
+    /// The returned value is copied and can be used to inspect the profile
+    /// without changing this limits value.
+    ///
+    /// # Returns
+    ///
+    /// The encoding profile stored in this value.
     #[inline(always)]
     #[must_use]
     pub const fn json_encode(&self) -> JsonEncodeLimits {
         self.json_encode
     }
 
-    /// Returns the metadata-entry domain limit.
+    /// Returns the maximum number of entries accepted in a metadata map.
+    ///
+    /// This domain-specific bound is independent of generic JSON map
+    /// accounting.
+    ///
+    /// # Returns
+    ///
+    /// The metadata-entry limit stored in this value.
     #[inline(always)]
     #[must_use]
     pub const fn max_metadata_entries(&self) -> usize {
         self.max_metadata_entries
     }
 
-    /// Returns the schema-field domain limit.
+    /// Returns the maximum number of fields accepted in a metadata schema.
+    ///
+    /// This domain-specific bound is independent of generic JSON traversal
+    /// limits.
+    ///
+    /// # Returns
+    ///
+    /// The schema-field limit stored in this value.
     #[inline(always)]
     #[must_use]
     pub const fn max_schema_fields(&self) -> usize {
         self.max_schema_fields
     }
 
-    /// Returns the metadata/schema key-byte domain limit.
+    /// Returns the maximum UTF-8 byte length accepted for one key.
+    ///
+    /// The byte count applies to metadata and schema keys and is distinct from
+    /// the generic JSON key budget.
+    ///
+    /// # Returns
+    ///
+    /// The key-byte limit stored in this value.
     #[inline(always)]
     #[must_use]
     pub const fn max_key_bytes(&self) -> usize {
@@ -135,6 +210,11 @@ impl MetadataLimits {
     }
 
     /// Validates receiver-controlled domain limits against protocol hard caps.
+    ///
+    /// # Errors
+    ///
+    /// Returns a JSON error when the metadata-entry, schema-field, or key-byte
+    /// limit exceeds its corresponding protocol maximum.
     pub fn validate(&self) -> Result<(), serde_json::Error> {
         if self.max_metadata_entries > DEFAULT_MAX_METADATA_ENTRIES {
             return Err(serde_json::Error::custom(format!(
@@ -159,6 +239,14 @@ impl MetadataLimits {
 }
 
 impl Default for MetadataLimits {
+    /// Creates the protocol's default metadata and JSON limits.
+    ///
+    /// The defaults satisfy the domain hard caps, so construction cannot fail.
+    ///
+    /// # Returns
+    ///
+    /// A limits value containing the standard decoding, encoding, and domain
+    /// profiles.
     fn default() -> Self {
         Self::builder()
             .build()
@@ -167,6 +255,14 @@ impl Default for MetadataLimits {
 }
 
 /// Creates the default direction-independent metadata JSON value profile.
+///
+/// The profile bounds nesting, nodes, sequence items, map entries, keys,
+/// strings, numbers, and payload size. Complete input and output byte limits
+/// are supplied separately by the directional profiles.
+///
+/// # Returns
+///
+/// A value profile configured with the protocol defaults.
 pub fn default_json_value_limits() -> JsonValueLimits {
     JsonValueLimits::<JsonResource, usize>::builder()
         .max_depth(64_usize)
@@ -181,6 +277,13 @@ pub fn default_json_value_limits() -> JsonValueLimits {
 }
 
 /// Creates the default metadata JSON decoding profile.
+///
+/// The profile applies the protocol's complete-input byte limit together with
+/// the shared metadata JSON value limits.
+///
+/// # Returns
+///
+/// A decoding profile configured with the protocol defaults.
 pub fn default_json_decode_limits() -> JsonDecodeLimits {
     JsonDecodeLimits::builder()
         .input_bytes_limit(ResourceLimit::new(
@@ -192,6 +295,13 @@ pub fn default_json_decode_limits() -> JsonDecodeLimits {
 }
 
 /// Creates the default metadata JSON encoding profile.
+///
+/// The profile applies the protocol's complete-output byte limit together
+/// with the shared metadata JSON value limits.
+///
+/// # Returns
+///
+/// An encoding profile configured with the protocol defaults.
 pub fn default_json_encode_limits() -> JsonEncodeLimits {
     JsonEncodeLimits::builder()
         .output_bytes_limit(ResourceLimit::new(
@@ -203,6 +313,17 @@ pub fn default_json_encode_limits() -> JsonEncodeLimits {
 }
 
 /// Converts protocol JSON limits to the native quantity used by JSON parsing.
+///
+/// The protocol and parser currently represent these quantities with the same
+/// unsigned integer type, so conversion preserves the input exactly.
+///
+/// # Parameters
+///
+/// * `value` - A protocol limit expressed as a `usize`.
+///
+/// # Returns
+///
+/// The unchanged quantity in the parser's native representation.
 fn json_quantity(value: usize) -> usize {
     value
 }

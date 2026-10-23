@@ -101,6 +101,10 @@ impl FilterLimits {
     }
 
     /// Returns the maximum nesting depth.
+    ///
+    /// # Returns
+    ///
+    /// The configured maximum nesting depth.
     #[inline(always)]
     #[must_use]
     pub const fn max_depth(&self) -> usize {
@@ -108,6 +112,10 @@ impl FilterLimits {
     }
 
     /// Returns the maximum number of expression nodes.
+    ///
+    /// # Returns
+    ///
+    /// The configured maximum expression-node count.
     #[inline(always)]
     #[must_use]
     pub const fn max_nodes(&self) -> usize {
@@ -115,6 +123,10 @@ impl FilterLimits {
     }
 
     /// Returns the maximum candidate values in one membership condition.
+    ///
+    /// # Returns
+    ///
+    /// The configured maximum candidate-value count.
     #[inline(always)]
     #[must_use]
     pub const fn max_set_values(&self) -> usize {

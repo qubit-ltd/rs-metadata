@@ -14,10 +14,9 @@ use std::fmt::Write;
 use qubit_datatype::DataType;
 use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataValidationError;
+use support::counting_writer::CountingWriter;
 
 mod support;
-
-use support::counting_writer::CountingWriter;
 
 #[test]
 fn test_validation_error_exposes_collected_issues() {

@@ -7,6 +7,7 @@
 // =============================================================================
 //! Internal strict wire envelopes for core metadata types.
 
+mod internal;
 #[cfg(feature = "schema")]
 mod metadata_schema_wire_v1;
 #[cfg(all(feature = "json", feature = "schema"))]
@@ -16,6 +17,7 @@ mod metadata_wire_v1_seed;
 mod metadata_wire_values_ref;
 mod strict_string_map;
 mod strict_string_map_seed;
+mod strict_string_map_value_seed;
 
 #[cfg(feature = "schema")]
 pub(crate) use metadata_schema_wire_v1::METADATA_SCHEMA_WIRE_VERSION_V1;
@@ -30,4 +32,4 @@ pub(crate) use metadata_wire_values_ref::MetadataWireValuesRef;
 pub(crate) use strict_string_map::StrictStringMap;
 #[cfg(all(feature = "json", feature = "schema"))]
 pub(crate) use strict_string_map_seed::StrictStringMapSeed;
-pub(crate) use strict_string_map_seed::StrictStringMapValueSeed;
+pub(crate) use strict_string_map_value_seed::StrictStringMapValueSeed;

@@ -162,7 +162,10 @@ fn test_schema_filter_validation_aggregates_unknown_and_incompatible_conditions(
         issues[0],
         MetadataError::InvalidFilterOperator { operator: "eq", .. }
     ));
-    assert!(matches!(issues[1], MetadataError::UnknownFilterField { ref key } if key == "missing"));
+    assert!(matches!(
+        issues[1],
+        MetadataError::UnknownFilterField { ref key } if key == "missing"
+    ));
     assert!(matches!(
         issues[2],
         MetadataError::InvalidFilterOperator { operator: "gt", .. }

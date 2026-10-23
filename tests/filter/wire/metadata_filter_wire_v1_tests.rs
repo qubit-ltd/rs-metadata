@@ -70,7 +70,10 @@ fn test_receiver_rejects_expression_exceeding_sender_declaration() {
         "limits": {"max_key_bytes": 5}
     });
 
-    assert!(from_value::<MetadataFilter>(encoded).is_err());
+    assert!(
+        from_value::<MetadataFilter>(encoded).is_err(),
+        "receiver must reject a sender limit declaration that exceeds its own limits"
+    );
 }
 
 #[test]
@@ -78,7 +81,10 @@ fn test_receiver_accepts_expression_at_exact_boundary() {
     let encoded = to_string(&filter_for_existing_key("status")).unwrap();
     let receiver = FilterLimits::builder().max_key_bytes(6).build().unwrap();
 
-    assert!(deserialize_with_filter_limits(&encoded, receiver).is_ok());
+    assert!(
+        deserialize_with_filter_limits(&encoded, receiver).is_ok(),
+        "receiver must accept an expression at its exact key limit"
+    );
 }
 
 #[test]
@@ -136,7 +142,10 @@ fn test_metadata_filter_wire_rejects_duplicate_envelope_fields() {
         r#"{"version":1,"expression":{"kind":"all"},"expression":{"kind":"none"},"options":{"numeric_comparison_policy":"exact"}}"#,
         r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"},"options":{"numeric_comparison_policy":"exact"}}"#,
     ] {
-        assert!(from_str::<MetadataFilter>(input).is_err());
+        assert!(
+            from_str::<MetadataFilter>(input).is_err(),
+            "duplicate envelope fields must be rejected: {input}"
+        );
     }
 }
 
@@ -148,7 +157,10 @@ fn test_metadata_filter_wire_reports_missing_and_unknown_envelope_fields() {
         r#"{"version":1,"expression":{"kind":"all"}}"#,
         r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"},"extra":true}"#,
     ] {
-        assert!(from_str::<MetadataFilter>(input).is_err());
+        assert!(
+            from_str::<MetadataFilter>(input).is_err(),
+            "missing or unknown envelope fields must be rejected: {input}"
+        );
     }
 }
 
@@ -184,12 +196,18 @@ fn test_expression_wire_rejects_duplicate_and_conflicting_fields() {
 #[test]
 fn test_expression_wire_rejects_non_object_expression_nodes() {
     let input = r#"{"version":1,"expression":"not-an-object","options":{"numeric_comparison_policy":"exact"}}"#;
-    assert!(from_str::<MetadataFilter>(input).is_err());
+    assert!(
+        from_str::<MetadataFilter>(input).is_err(),
+        "a non-object expression node must be rejected"
+    );
 }
 
 #[test]
 fn test_metadata_filter_wire_rejects_non_object_envelope() {
-    assert!(from_str::<MetadataFilter>("[]").is_err());
+    assert!(
+        from_str::<MetadataFilter>("[]").is_err(),
+        "a non-object metadata-filter envelope must be rejected"
+    );
 }
 
 #[test]
@@ -198,6 +216,9 @@ fn test_expression_wire_rejects_non_array_membership_and_child_sequences() {
         r#"{"version":1,"expression":{"kind":"in","key":"k","values":"not-an-array"},"options":{"numeric_comparison_policy":"exact"}}"#,
         r#"{"version":1,"expression":{"kind":"and","children":"not-an-array"},"options":{"numeric_comparison_policy":"exact"}}"#,
     ] {
-        assert!(from_str::<MetadataFilter>(input).is_err());
+        assert!(
+            from_str::<MetadataFilter>(input).is_err(),
+            "non-array membership values or child sequences must be rejected: {input}"
+        );
     }
 }

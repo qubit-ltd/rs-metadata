@@ -71,9 +71,18 @@ fn test_metadata_limits_replace_json_profile() {
 
 #[test]
 fn test_metadata_limits_reject_domain_values_above_hard_maxima() {
-    assert!(MetadataLimits::builder().max_metadata_entries(4_097).build().is_err());
-    assert!(MetadataLimits::builder().max_schema_fields(4_097).build().is_err());
-    assert!(MetadataLimits::builder().max_key_bytes(257).build().is_err());
+    assert!(
+        MetadataLimits::builder().max_metadata_entries(4_097).build().is_err(),
+        "metadata entry limits above the hard maximum must fail"
+    );
+    assert!(
+        MetadataLimits::builder().max_schema_fields(4_097).build().is_err(),
+        "schema field limits above the hard maximum must fail"
+    );
+    assert!(
+        MetadataLimits::builder().max_key_bytes(257).build().is_err(),
+        "key byte limits above the hard maximum must fail"
+    );
 }
 
 #[test]
@@ -133,17 +142,20 @@ fn test_validate_rejects_each_invalid_domain_limit_without_build() {
     assert!(
         MetadataLimits::debug_only_invalid_domain_limits(4_097, 4_096, 256)
             .validate()
-            .is_err()
+            .is_err(),
+        "validation must reject a metadata entry limit above its cap"
     );
     assert!(
         MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_097, 256)
             .validate()
-            .is_err()
+            .is_err(),
+        "validation must reject a schema field limit above its cap"
     );
     assert!(
         MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_096, 257)
             .validate()
-            .is_err()
+            .is_err(),
+        "validation must reject a key byte limit above its cap"
     );
 }
 
@@ -154,5 +166,8 @@ fn test_metadata_limits_build_rejects_invalid_domain_configuration() {
         .build()
         .expect_err("invalid domain limits must fail during configuration");
 
-    assert!(error.to_string().contains("metadata entries limit"));
+    assert!(
+        error.to_string().contains("metadata entries limit"),
+        "the build error must identify the invalid metadata entry limit"
+    );
 }

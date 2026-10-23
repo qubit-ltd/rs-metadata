@@ -27,6 +27,7 @@ pub(crate) struct MetadataSchemaWireV1Seed<S> {
 
 impl<S> MetadataSchemaWireV1Seed<S> {
     /// Creates a schema-envelope seed.
+    #[inline]
     pub(crate) const fn new(fields: S) -> Self {
         Self { fields }
     }
@@ -44,6 +45,7 @@ where
     where
         D: Deserializer<'de>,
     {
+        /// Visits the envelope map and enforces its strict field contract.
         struct MetadataSchemaWireVisitor<S> {
             /// Decoded fields-map seed, if the envelope supplied it.
             fields: Option<S>,

@@ -43,7 +43,6 @@ impl MetadataValidationError {
     ///
     /// An aggregate error containing exactly one issue.
     #[inline]
-    #[must_use = "the validation error should be inspected"]
     pub fn from_issue(issue: MetadataError) -> Self {
         Self { issues: vec![issue] }
     }

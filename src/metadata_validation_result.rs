@@ -9,5 +9,14 @@
 
 use crate::MetadataValidationError;
 
-/// Result type for schema validation that may report multiple issues.
+/// Reports the outcome of schema validation that may collect multiple issues.
+///
+/// # Type Parameters
+///
+/// - `T`: The value produced when validation succeeds.
+///
+/// # Returns
+///
+/// `Ok(T)` contains the validated value. `Err(MetadataValidationError)`
+/// contains the collected validation issues.
 pub type MetadataValidationResult<T> = Result<T, MetadataValidationError>;

@@ -123,6 +123,14 @@ pub enum Condition {
 
 impl Condition {
     /// Visits each value operand in wire order without allocating.
+    ///
+    /// # Parameters
+    ///
+    /// * `visitor` - Callback invoked for each operand in wire order.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first error produced by `visitor` and stops visiting.
     #[cfg(feature = "json")]
     pub(crate) fn visit_operands<E>(&self, visitor: &mut impl FnMut(&Value) -> Result<(), E>) -> Result<(), E> {
         match self {
@@ -254,6 +262,7 @@ impl Condition {
     }
 
     /// Returns the metadata key referenced by this condition.
+    #[must_use]
     #[inline]
     fn key(&self) -> &str {
         match self {

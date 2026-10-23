@@ -15,6 +15,7 @@ use qubit_metadata::Metadata;
 ///
 /// Metadata containing status, score, ratio, verification, and tag fields.
 #[allow(dead_code)]
+#[must_use]
 #[inline]
 pub fn sample() -> Metadata {
     let mut m = Metadata::new();

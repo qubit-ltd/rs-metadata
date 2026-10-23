@@ -5,6 +5,8 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+//! Integration tests for examples documented in the README and user guide.
+
 #![cfg(feature = "json")]
 
 use qubit_budget::ResourceLimit;

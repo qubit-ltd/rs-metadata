@@ -110,6 +110,11 @@ impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
     type Error = ValueWireEncodeError;
 
     /// Converts an expression into a borrowed V1 serialization node.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any condition value cannot be represented by the
+    /// V1 wire format.
     fn try_from(expression: &'a FilterExpression) -> Result<Self, Self::Error> {
         Ok(match expression.view() {
             FilterExpressionView::True => Self::All,

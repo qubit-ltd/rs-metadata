@@ -37,11 +37,32 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
     type Value = Vec<FilterExpressionWireV1>;
 
     /// Describes a sequence of filter expression nodes.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter that receives the expected input description.
+    ///
+    /// # Returns
+    ///
+    /// Returns the result of writing the description to `formatter`.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a sequence of filter expressions")
     }
 
     /// Decodes children one by one and charges each collection item first.
+    ///
+    /// # Parameters
+    ///
+    /// * `sequence` - Deserializer access to the child-expression sequence.
+    ///
+    /// # Returns
+    ///
+    /// The decoded child expressions in input order.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer error when a child cannot be decoded or its
+    /// resource budget is exceeded.
     fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,

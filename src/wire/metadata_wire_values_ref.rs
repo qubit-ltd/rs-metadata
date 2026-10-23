@@ -17,10 +17,30 @@ use serde::ser::Error as SerError;
 use serde::ser::SerializeMap;
 
 /// Borrowed map adapter that validates and serializes V1 value payloads.
-pub(crate) struct MetadataWireValuesRef<'a>(pub(crate) &'a BTreeMap<String, Value>);
+pub(crate) struct MetadataWireValuesRef<'a>(
+    /// Metadata values borrowed for strict V1 wire serialization.
+    pub(crate) &'a BTreeMap<String, Value>,
+);
 
 impl Serialize for MetadataWireValuesRef<'_> {
     /// Serializes each value as a validated borrowed V1 payload.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `S` — the serializer implementation.
+    ///
+    /// # Parameters
+    ///
+    /// * `serializer` — the destination receiving the metadata map.
+    ///
+    /// # Returns
+    ///
+    /// The serializer's result after writing all metadata entries.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error if a value cannot be represented as a
+    /// V1 payload or if serializing the map fails.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

@@ -245,6 +245,7 @@ impl MetadataSchema {
     /// # Returns
     ///
     /// A new immutable schema.
+    #[must_use]
     #[inline]
     pub(crate) fn new(
         fields: BTreeMap<String, MetadataField>,
@@ -472,6 +473,8 @@ impl<'de> Deserialize<'de> for MetadataSchema {
 }
 
 impl Default for MetadataSchema {
+    /// Creates an empty schema that rejects undeclared metadata and filter
+    /// fields.
     #[inline]
     fn default() -> Self {
         Self {

@@ -55,13 +55,12 @@ impl FilterLimitsBuilder {
     ///
     /// # Parameters
     ///
-    /// * max_depth - Requested root-inclusive expression depth.
+    /// * `max_depth` - Requested root-inclusive expression depth.
     ///
     /// # Returns
     ///
     /// The updated builder.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_depth(mut self, max_depth: usize) -> Self {
         self.max_depth = Some(max_depth);
         self
@@ -71,13 +70,12 @@ impl FilterLimitsBuilder {
     ///
     /// # Parameters
     ///
-    /// * max_nodes - Requested count including constants and logical nodes.
+    /// * `max_nodes` - Requested count including constants and logical nodes.
     ///
     /// # Returns
     ///
     /// The updated builder.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_nodes(mut self, max_nodes: usize) -> Self {
         self.max_nodes = Some(max_nodes);
         self
@@ -87,13 +85,12 @@ impl FilterLimitsBuilder {
     ///
     /// # Parameters
     ///
-    /// * max_set_values - Requested candidate-value count.
+    /// * `max_set_values` - Requested candidate-value count.
     ///
     /// # Returns
     ///
     /// The updated builder.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_set_values(mut self, max_set_values: usize) -> Self {
         self.max_set_values = Some(max_set_values);
         self
@@ -103,13 +100,12 @@ impl FilterLimitsBuilder {
     ///
     /// # Parameters
     ///
-    /// * max_key_bytes - Requested byte bound.
+    /// * `max_key_bytes` - Requested byte bound.
     ///
     /// # Returns
     ///
     /// The updated builder.
     #[inline(always)]
-    #[must_use = "the configured builder must be used to build filter limits"]
     pub const fn max_key_bytes(mut self, max_key_bytes: usize) -> Self {
         self.max_key_bytes = Some(max_key_bytes);
         self
@@ -126,7 +122,6 @@ impl FilterLimitsBuilder {
     ///
     /// Limits using explicit values and hard maximums for unset properties.
     #[inline(always)]
-    #[must_use = "the filter limit validation result must be handled"]
     pub fn build(self) -> MetadataResult<FilterLimits> {
         FilterLimits::try_new(
             self.max_depth.unwrap_or(FilterLimits::MAX.max_depth()),

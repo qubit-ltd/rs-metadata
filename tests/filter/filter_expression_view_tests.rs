@@ -18,5 +18,8 @@ fn test_expression_view_preserves_boolean_structure() {
         .build()
         .expect("expression should build");
 
-    assert!(matches!(expression.view(), FilterExpressionView::Or(_)));
+    assert!(
+        matches!(expression.view(), FilterExpressionView::Or(_)),
+        "the expression view should preserve the top-level OR group"
+    );
 }

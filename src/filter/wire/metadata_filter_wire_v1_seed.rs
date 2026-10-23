@@ -34,6 +34,8 @@ pub(crate) struct MetadataFilterWireV1Seed {
 
 impl MetadataFilterWireV1Seed {
     /// Creates a bounded filter-envelope seed.
+    #[must_use]
+    #[inline]
     pub(crate) fn new(receiver_limits: FilterLimits, error_slot: Rc<RefCell<Option<crate::MetadataError>>>) -> Self {
         Self {
             receiver_limits,

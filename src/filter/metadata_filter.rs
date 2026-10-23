@@ -123,6 +123,16 @@ impl MetadataFilter {
         MetadataFilterBuilder::new()
     }
 
+    /// Creates a filter from already validated parts.
+    #[inline]
+    pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
+        Self {
+            expression,
+            options,
+            limits: Transient::new(limits),
+        }
+    }
+
     /// Deserializes a filter and validates a receiver-controlled AST bound.
     ///
     /// The receiver bound is charged while the AST is being decoded. Callers
@@ -298,16 +308,6 @@ impl MetadataFilter {
             .map_err(Into::into)
     }
 
-    /// Creates a filter from already validated parts.
-    #[inline]
-    pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
-        Self {
-            expression,
-            options,
-            limits: Transient::new(limits),
-        }
-    }
-
     /// Returns the root expression.
     #[inline]
     #[must_use = "the filter expression should be inspected"]
@@ -332,6 +332,7 @@ impl MetadataFilter {
     /// Preflights every operand against the shared JSON encoding budget.
     #[cfg(feature = "json")]
     fn preflight_wire_values(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
+        /// Checks every value operand in one expression subtree.
         fn visit(
             expression: &FilterExpression,
             checker: &mut ValueWireEncodePreflight,

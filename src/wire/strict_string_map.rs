@@ -14,14 +14,20 @@ use serde::Deserializer;
 use serde::de::DeserializeSeed;
 
 /// A string-keyed map that rejects duplicate keys while deserializing.
-pub(crate) struct StrictStringMap<V>(pub(crate) BTreeMap<String, V>);
+pub(crate) struct StrictStringMap<V>(
+    /// Entries decoded after duplicate-key validation.
+    pub(crate) BTreeMap<String, V>,
+);
 
 impl<V> StrictStringMap<V> {
-    /// Returns the decoded entries.
+    /// Consumes this wrapper and returns its decoded entries without further
+    /// validation.
     ///
     /// # Returns
     ///
-    /// The complete map after duplicate-key validation.
+    /// The map whose keys were checked for duplicates during deserialization.
+    #[must_use]
+    #[inline]
     pub(crate) fn into_inner(self) -> BTreeMap<String, V> {
         self.0
     }
