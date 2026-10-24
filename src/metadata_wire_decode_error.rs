@@ -128,6 +128,7 @@ impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
         let line = error.line().unwrap_or(0);
         let column = error.column().unwrap_or(0);
         match error.into_source() {
+            JsonDecodeErrorSource::Read { kind, source, .. } => Self::Read { kind, source },
             JsonDecodeErrorSource::Budget { source, .. } => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
                 MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },

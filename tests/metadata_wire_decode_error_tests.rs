@@ -10,18 +10,70 @@
 #![cfg(feature = "json")]
 
 use std::error::Error;
+use std::io;
 
 use qubit_budget::BudgetError;
 use qubit_budget::Observation;
 use qubit_budget::QuantityConversionError;
 use qubit_budget::QuantityMeasurement;
 use qubit_budget::json::JsonResource;
+use qubit_json::decode::DiagnosticPolicy;
+use qubit_json::decode::JsonDecoder;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataLimits;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
+
+struct FailedRead;
+
+impl io::Read for FailedRead {
+    fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "private-read-detail",
+        ))
+    }
+}
+
+#[test]
+fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
+    for policy in [DiagnosticPolicy::Redacted, DiagnosticPolicy::Detailed] {
+        let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode())
+            .with_diagnostic_policy(policy);
+        let json_error = decoder
+            .decode_input::<serde_json::Value, _>(&mut FailedRead)
+            .expect_err("input read should fail");
+        let error = MetadataWireDecodeError::from(json_error);
+
+        let MetadataWireDecodeError::Read { kind, source } = &error else {
+            panic!("read failures must retain their structured metadata variant");
+        };
+        assert_eq!(*kind, io::ErrorKind::PermissionDenied);
+        assert_eq!(
+            error.source().is_some(),
+            policy == DiagnosticPolicy::Detailed
+        );
+
+        let display = error.to_string();
+        let debug = format!("{error:?}");
+        if policy == DiagnosticPolicy::Redacted {
+            assert!(source.is_none());
+            assert!(error.source().is_none());
+            assert!(!display.contains("private-read-detail"));
+            assert!(!debug.contains("private-read-detail"));
+        } else {
+            let source = source
+                .as_ref()
+                .expect("detailed diagnostics retain read source");
+            assert!(source.to_string().contains("private-read-detail"));
+            let chain_source = error.source().expect("detailed source chain");
+            assert!(chain_source.to_string().contains("private-read-detail"));
+            assert!(display.contains("PermissionDenied"));
+        }
+    }
+}
 
 #[cfg(feature = "filter")]
 #[test]

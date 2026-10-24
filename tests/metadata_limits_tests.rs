@@ -13,6 +13,8 @@ use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
+use qubit_json::decode::JsonDecoder;
+use qubit_json::encode::JsonEncoder;
 use qubit_metadata::MetadataLimits;
 
 #[test]
@@ -34,6 +36,18 @@ fn test_metadata_limits_default_exposes_domain_profile() {
     assert_eq!(decode.value_limits().max_number_bytes(), Some(4_096));
     assert_eq!(decode.value_limits().max_payload_bytes(), Some(1_048_576));
     assert_eq!(encode.value_limits(), decode.value_limits());
+}
+
+#[test]
+fn test_metadata_json_limits_share_current_codec_types() {
+    let limits = MetadataLimits::default();
+    let value: serde_json::Value = JsonDecoder::with_limits(limits.json_decode())
+        .decode_str("{}")
+        .expect("current decoder accepts metadata limits");
+    let bytes = JsonEncoder::with_limits(limits.json_encode())
+        .to_vec(&value)
+        .expect("current encoder accepts metadata limits");
+    assert_eq!(bytes, b"{}");
 }
 
 #[test]
