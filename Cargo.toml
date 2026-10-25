@@ -75,3 +75,8 @@ codegen-units = 1
 opt-level = 3
 lto = true
 codegen-units = 1
+
+# Keep local candidate integration on one `qubit-budget` crate identity when
+# `qubit-json` is resolved from crates.io during a checkout build.
+[patch.crates-io]
+qubit-budget = { path = "../rs-budget" }
