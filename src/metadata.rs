@@ -127,10 +127,14 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireDecodeError::Budget`] when the document
-    /// exceeds a shared JSON limit, or `InvalidJson` for syntax and envelope
-    /// failures. Domain limits return `Domain`; unsupported versions return
-    /// `UnsupportedVersion`.
+    /// Returns [`crate::MetadataWireDecodeError::Budget`] or
+    /// [`crate::MetadataWireDecodeError::Quantity`] when shared JSON traversal
+    /// exceeds a configured limit, [`crate::MetadataWireDecodeError::Syntax`]
+    /// for malformed JSON syntax, or
+    /// [`crate::MetadataWireDecodeError::InvalidJson`] for strict-envelope and
+    /// other deserialization failures. Domain limits return `Domain`; invalid
+    /// metadata limit configuration returns `InvalidLimits`; unsupported
+    /// versions return `UnsupportedVersion`.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -150,9 +154,11 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns a structured budget error before or during decoding, `Domain`
-    /// for entry/key limits, `UnsupportedVersion` for a version mismatch, or
-    /// redacted JSON errors for syntax, envelope, and scalar wire failures.
+    /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
+    /// configured limit, `Domain` for entry/key limits, `UnsupportedVersion`
+    /// for a version mismatch, `InvalidLimits` for invalid metadata limits,
+    /// `Syntax` for malformed JSON syntax, or `InvalidJson` for strict-envelope
+    /// and scalar wire failures.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -791,16 +797,11 @@ impl Redact for Metadata {
     ///
     /// # Parameters
     ///
-    /// * `session` - Shared policy and cumulative diagnostic budgets.
-    /// * `formatter` - Destination formatting context.
+    /// * `writer` - Redaction writer receiving the metadata representation.
     ///
     /// # Returns
     ///
-    /// The formatter result for the admitted safe map representation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`fmt::Error`] when the destination rejects safe output.
+    /// Returns `()` after writing through the redaction writer.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("Metadata", |fields| {
             fields.nested("values", &MetadataValues(&self.0));

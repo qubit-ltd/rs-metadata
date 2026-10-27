@@ -183,24 +183,28 @@ impl MetadataFilter {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, a nested-value limit error,
-    /// `UnsupportedVersion` for a version mismatch, a structured
-    /// filter-contract error, or `InvalidJson` for malformed strict filter
-    /// input and receiver-limit failures found during incremental decoding.
+    /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
+    /// configured budget, `Filter` when the receiver AST or filter contract
+    /// exceeds its limit, `UnsupportedVersion` for a version mismatch,
+    /// `InvalidLimits` for invalid metadata limits, `Syntax` for malformed JSON
+    /// syntax, or `InvalidJson` for strict-envelope and other deserialization
+    /// failures. Receiver AST limits are charged during incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
         Self::decode_json_slice_with_limits(input, MetadataLimits::default(), FilterLimits::MAX)
     }
 
-    /// Decodes a strict metadata-filter JSON envelope after validating both
-    /// wire-byte and receiver-controlled AST limits.
+    /// Decodes a strict metadata-filter JSON envelope after validating the
+    /// shared metadata limits. Receiver-controlled AST limits are charged
+    /// during incremental decoding.
     ///
     /// # Parameters
     ///
     /// * `input` - Complete untrusted JSON input.
     /// * `limits` - Shared JSON limits for this decoding session.
-    /// * `receiver_filter_limits` - Local AST limits validated after decoding.
+    /// * `receiver_filter_limits` - Local AST limits charged while decoding the
+    ///   expression tree.
     ///
     /// # Returns
     ///
@@ -208,14 +212,13 @@ impl MetadataFilter {
     ///
     /// # Errors
     ///
-    /// Returns an input-size error before parsing, `UnsupportedVersion` for a
-    /// version mismatch, a structured filter-contract error in `Filter`, or
-    /// `InvalidJson` for syntax, strict-envelope, nested value, and
-    /// receiver-limit failures. Receiver AST limits are charged while the
-    /// expression tree is read; generic JSON traversal is handled by the
-    /// shared budget adapter. Individual
-    /// JSON strings and embedded value payloads remain bounded by the outer
-    /// input-byte limit.
+    /// Returns `Budget` or `Quantity` when generic JSON traversal exceeds a
+    /// configured budget, `Filter` when seeded traversal detects an AST limit
+    /// or the decoded filter violates its contract, `UnsupportedVersion` for a
+    /// version mismatch, `InvalidLimits` for invalid metadata limits, `Syntax`
+    /// for malformed JSON syntax, or `InvalidJson` for strict-envelope and
+    /// other deserialization failures. Individual JSON strings and embedded
+    /// value payloads remain bounded by the outer input-byte limit.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],

@@ -86,8 +86,7 @@ impl MetadataLimitsBuilder {
     /// # Errors
     ///
     /// Returns a configuration error when a domain limit exceeds its protocol
-    /// hard cap, matching [`crate::FilterLimitsBuilder::build`] validation
-    /// timing.
+    /// hard cap. Validation happens while building the limits.
     #[inline]
     pub fn build(self) -> Result<MetadataLimits, serde_json::Error> {
         let limits = MetadataLimits::from_builder(self);
