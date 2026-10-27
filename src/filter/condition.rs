@@ -291,7 +291,7 @@ impl Condition {
 ///
 /// Returns [`MetadataError::InvalidFilterOperand`] when `value` is unset or
 /// cannot be represented by the V1 wire format.
-fn validate_operand(operator: &'static str, value: &Value) -> MetadataResult<()> {
+pub(super) fn validate_operand(operator: &'static str, value: &Value) -> MetadataResult<()> {
     if value.is_unset() {
         return Err(MetadataError::InvalidFilterOperand {
             operator,

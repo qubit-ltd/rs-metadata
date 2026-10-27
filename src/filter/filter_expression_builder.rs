@@ -15,6 +15,7 @@ use crate::FilterLimitKind;
 use crate::FilterLimits;
 use crate::MetadataError;
 use crate::MetadataResult;
+use crate::filter::condition::validate_operand;
 
 /// Fluent builder for a non-empty [`FilterExpression`].
 ///
@@ -188,7 +189,7 @@ impl FilterExpressionBuilder {
             });
             return self;
         }
-        let values = match collect_values(values) {
+        let values = match collect_values("in_set", values) {
             Ok(values) => values,
             Err(error) => {
                 self.error = Some(error);
@@ -223,7 +224,7 @@ impl FilterExpressionBuilder {
             });
             return self;
         }
-        let values = match collect_values(values) {
+        let values = match collect_values("not_in_set", values) {
             Ok(values) => values,
             Err(error) => {
                 self.error = Some(error);
@@ -456,11 +457,24 @@ where
     value.into()
 }
 
-/// Collects at most the hard maximum, consuming one extra item to detect
-/// overflow.
+/// Converts and validates membership operands in iterator order.
 ///
-/// Returns a set-limit error without converting the rejected item.
-fn collect_values<I, T>(values: I) -> MetadataResult<Vec<Value>>
+/// # Parameters
+///
+/// * `operator` - Membership operator used in any operand error.
+/// * `values` - Candidate operands, consumed lazily until the first error.
+///
+/// # Returns
+///
+/// The converted operands when all values are valid and within the hard limit.
+///
+/// # Errors
+///
+/// Returns the first [`MetadataError::InvalidFilterOperand`] encountered.
+/// If all preceding operands are valid, returns
+/// [`MetadataError::FilterLimitExceeded`] when a 129th item is requested; that
+/// item is consumed from the iterator but not converted.
+fn collect_values<I, T>(operator: &'static str, values: I) -> MetadataResult<Vec<Value>>
 where
     I: IntoIterator<Item = T>,
     T: Into<Value>,
@@ -475,7 +489,9 @@ where
                 maximum,
             });
         }
-        result.push(value.into());
+        let value = value.into();
+        validate_operand(operator, &value)?;
+        result.push(value);
     }
     Ok(result)
 }

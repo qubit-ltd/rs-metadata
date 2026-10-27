@@ -7,6 +7,10 @@
 // =============================================================================
 //! Tests for [`qubit_metadata::FilterExpressionBuilder`].
 
+use std::cell::Cell;
+use std::iter::from_fn;
+use std::rc::Rc;
+
 use qubit_datatype::DataType;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::FilterExpressionBuilder;
@@ -27,6 +31,18 @@ impl From<TenantId> for Value {
     /// Converts a tenant identifier into its filter operand representation.
     fn from(value: TenantId) -> Self {
         Self::UInt64(value.0)
+    }
+}
+
+struct CountedOperand {
+    value: Option<Value>,
+    conversions: Rc<Cell<usize>>,
+}
+
+impl From<CountedOperand> for Value {
+    fn from(operand: CountedOperand) -> Self {
+        operand.conversions.set(operand.conversions.get() + 1);
+        operand.value.expect("rejected operands must not be converted")
     }
 }
 
@@ -242,6 +258,13 @@ fn test_empty_groups_report_operator_specific_errors() {
 
 #[test]
 fn test_membership_stops_consuming_at_detection_item() {
+    assert!(
+        FilterExpression::builder()
+            .in_set("id", 0..FilterLimits::MAX.max_set_values() as i64)
+            .build()
+            .is_ok()
+    );
+
     let consumed = std::cell::Cell::new(0);
     let values = (0..10_000_i64).inspect(|_| consumed.set(consumed.get() + 1));
     let result = FilterExpression::builder().in_set("id", values).build();
@@ -254,6 +277,94 @@ fn test_membership_stops_consuming_at_detection_item() {
             maximum: 128,
         })
     );
+}
+
+#[test]
+fn test_membership_stops_iteration_at_first_invalid_operand() {
+    for negated in [false, true] {
+        let calls = Cell::new(0);
+        let values = from_fn(|| {
+            calls.set(calls.get() + 1);
+            assert_eq!(calls.get(), 1, "must not request an item after invalid operand");
+            Some(Value::Unset(DataType::String))
+        });
+        let builder = FilterExpression::builder();
+        let builder = if negated {
+            builder.not_in_set("key", values)
+        } else {
+            builder.in_set("key", values)
+        };
+        let operator = if negated { "not_in_set" } else { "in_set" };
+        assert_eq!(
+            builder.build(),
+            Err(MetadataError::InvalidFilterOperand {
+                operator,
+                data_type: DataType::String,
+                message: "filter operands must be concrete values".to_owned(),
+            })
+        );
+        assert_eq!(calls.get(), 1);
+    }
+}
+
+#[test]
+fn test_membership_invalid_operand_precedes_set_limit() {
+    for negated in [false, true] {
+        let consumed = Cell::new(0);
+        let values = from_fn(|| {
+            consumed.set(consumed.get() + 1);
+            Some(if consumed.get() == 1 {
+                Value::Unset(DataType::String)
+            } else {
+                Value::Int64(consumed.get() as i64)
+            })
+        });
+        let builder = FilterExpression::builder();
+        let builder = if negated {
+            builder.not_in_set("key", values)
+        } else {
+            builder.in_set("key", values)
+        };
+        let operator = if negated { "not_in_set" } else { "in_set" };
+
+        assert_eq!(
+            builder.build(),
+            Err(MetadataError::InvalidFilterOperand {
+                operator,
+                data_type: DataType::String,
+                message: "filter operands must be concrete values".to_owned(),
+            })
+        );
+        assert_eq!(consumed.get(), 1);
+    }
+}
+
+#[test]
+fn test_membership_non_finite_operand_stops_conversion() {
+    let conversions = Rc::new(Cell::new(0));
+    let mut requested = 0;
+    let values = from_fn(|| {
+        requested += 1;
+        Some(CountedOperand {
+            value: if requested == 1 {
+                Some(Value::Float64(f64::NAN))
+            } else {
+                None
+            },
+            conversions: Rc::clone(&conversions),
+        })
+    });
+
+    assert_eq!(
+        FilterExpression::builder().not_in_set("key", values).build(),
+        Err(MetadataError::InvalidFilterOperand {
+            operator: "not_in_set",
+            data_type: DataType::Float64,
+            message: "filter operands must be representable by the V1 wire format".to_owned(),
+        })
+    );
+    assert_eq!(conversions.get(), 1);
+    assert_eq!(requested, 1);
 }
 
 #[test]
