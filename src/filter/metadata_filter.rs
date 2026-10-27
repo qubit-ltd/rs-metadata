@@ -149,7 +149,7 @@ impl MetadataFilter {
     /// Returns a deserialization error for malformed V1 data or an unsupported
     /// version. The underlying deserializer's error type receives the
     /// structured filter-limit or policy failure through `D::Error::custom`;
-    /// this generic API cannot return [`crate::MetadataWireDecodeError`]
+    /// this generic API cannot return `MetadataWireDecodeError`
     /// directly.
     pub fn deserialize_with_filter_limits<'de, D>(
         deserializer: D,
