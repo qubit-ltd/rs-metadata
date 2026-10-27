@@ -95,6 +95,7 @@ use qubit_budget::ResourceLimit;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
 use qubit_metadata::MetadataLimits;
+use qubit_metadata::Metadata;
 
 let decode = default_json_decode_limits()
     .into_builder()
@@ -108,7 +109,13 @@ let limits = MetadataLimits::builder()
     .json_decode(decode)
     .json_encode(encode)
     .build()?;
+
+let metadata = Metadata::new().with("tenant_id", "acme");
+let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+assert!(!bytes.is_empty());
 ```
+
+This example needs the `json` feature and a direct `qubit-budget = { version = "0.10", features = ["json"] }` dependency. See the [English guide](doc/user_guide.md#bounded-json-encoding) for a complete round-trip and writer example.
 
 `decode_json_slice_with_limits` creates one `JsonDecodeSession` from the decode
 profile and uses it for complete-input admission plus the entire seeded wire

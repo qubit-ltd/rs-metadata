@@ -81,6 +81,7 @@ use qubit_budget::ResourceLimit;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
 use qubit_metadata::MetadataLimits;
+use qubit_metadata::Metadata;
 
 let decode = default_json_decode_limits()
     .into_builder()
@@ -94,7 +95,13 @@ let limits = MetadataLimits::builder()
     .json_decode(decode)
     .json_encode(encode)
     .build()?;
+
+let metadata = Metadata::new().with("tenant_id", "acme");
+let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+assert!(!bytes.is_empty());
 ```
+
+这段调用需要启用 `json` feature，并直接依赖 `qubit-budget = { version = "0.10", features = ["json"] }`。完整往返与 writer 示例见[中文用户手册](doc/user_guide.zh_CN.md#有界-json-编码)。
 
 `decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
 让它同时负责完整输入准入和整个 seed wire 遍历；encode profile 则单独交给有界序列化

@@ -2,7 +2,7 @@
 
 [English design](design.md) · [中文用户手册](user_guide.zh_CN.md) · [中文 README](../README.zh_CN.md)
 
-本文记录 `qubit-metadata` 0.6 的稳定设计边界，供集成方参考；内容描述长期不变量，
+本文记录 `qubit-metadata` 0.7 的稳定设计边界，供集成方参考；内容描述长期不变量，
 不记录实现过程。
 
 ## 目标与非目标
@@ -16,6 +16,13 @@ Serde 格式。它不绑定存储 provider，不负责定义 provider 的索引�
 核心 metadata 模块负责按 key 排序的值和类型化读取；schema 模块负责字段声明与校验；filter 模块
 负责不可变布尔表达式、匹配选项和接收端限制；wire 模块负责版本化 Serde envelope 与有界
 遍历。JSON budget profile 按方向独立配置，解码和编码策略互不替换。
+
+启用 `json` 后，metadata 可以使用有界 JSON 编码；启用 `schema` 后，schema 也提供相同
+能力。编码器先检查值能否表示以及资源 profile 是否允许，再生成完整的紧凑 JSON 输出。
+返回 Vec 的 API 会返回该缓冲区；writer API 会先缓冲完整文档再写入，但目标 I/O 出错时
+仍可能已经写出部分字节。持久化、事务、传输、重试和补偿由应用负责。只有在编码 API
+显式接收 `limits.json_encode()` 时，自定义 `MetadataLimits` 编码 profile 才会生效；解码
+设置不会改变输出预算。
 
 ## 核心数据模型
 
@@ -73,7 +80,7 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 
 ## 兼容策略
 
-0.6 按上述规则修改读取签名和缺失错误处理，不保留兼容别名。V1 wire 表示、filter 语义和
+0.6 曾按上述规则修改读取签名和缺失错误处理，不保留兼容别名。V1 wire 表示、filter 语义和
 schema 校验行为保持不变。已存值的 schema 校验仍与兼容数值的 filter 检查分离。
 集成方应使用 builder 和公开 Serde API，让 wire 数据保持在规范限制内，并把未来 wire 版本变化
 作为明确的兼容事件处理。

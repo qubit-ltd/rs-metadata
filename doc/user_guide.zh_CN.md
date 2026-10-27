@@ -289,6 +289,79 @@ AST 限制和共享 JSON budget。Filter limits 是接收端瞬态策略，不�
 `MetadataLimits::builder().build()?`，在配置阶段拒绝超过协议硬上限的领域限制，
 与 `FilterLimitsBuilder::build` 一致。
 
+### 有界 JSON 编码
+
+文档分片准备写入存储或发送到后端时，应在应用自己的边界完成编码，再把生成的字节交给
+持久化或传输代码。下面的完整最小程序设置输出预算、编码 metadata、重新解码并检查结果，
+同时验证 writer 输出与 vec 编码一致：
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+qubit-budget = { version = "0.10", features = ["json"] }
+```
+
+```rust
+use qubit_budget::json::JsonResource;
+use qubit_budget::ResourceLimit;
+use qubit_metadata::default_json_encode_limits;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let encode = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+        .build();
+    let limits = MetadataLimits::builder().json_encode(encode).build()?;
+    let metadata = Metadata::new()
+        .with("tenant_id", "acme")
+        .with("document_id", "doc-42")
+        .with("chunk_index", 3_i64);
+
+    let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+    // 应用在此处把字节交给自己的存储或传输层。
+    let restored = Metadata::decode_json_slice_with_limits(&bytes, limits)?;
+    assert_eq!(restored, metadata);
+
+    let mut output = Vec::new();
+    metadata.to_json_writer_with_limits(&mut output, limits.json_encode())?;
+    assert_eq!(output, bytes);
+    Ok(())
+}
+```
+
+这只是帮助熟悉 API 的入门练习，并未实现存储。真实应用仍需负责事务、发送、重试，以及
+I/O 失败后的补偿。`to_json_vec` 和 `to_json_writer` 使用默认输出预算；若
+`MetadataLimits` 配置了自定义编码 profile，调用时要显式传入 `limits.json_encode()`。
+修改 `json_decode` 不会改变输出 profile。启用 `schema` feature 后，`MetadataSchema`
+也提供同一组 `to_json_vec*` 和 `to_json_writer*` 方法。
+
+编码器会先检查值是否可表示以及预算是否足够，再生成完整的紧凑 JSON 缓冲区；writer API
+随后写出缓冲结果。若目标 writer 写入失败，目标端仍可能已经收到部分字节，因此不能据此
+认为文件或网络写入具有事务原子性。将输出预算设为 1 字节可以稳定观察拒绝结果：
+
+```rust
+use qubit_budget::json::JsonResource;
+use qubit_budget::ResourceLimit;
+use qubit_metadata::default_json_encode_limits;
+use qubit_metadata::{Metadata, MetadataWireEncodeError};
+
+let limits = default_json_encode_limits()
+    .into_builder()
+    .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+    .build();
+let metadata = Metadata::new().with("tenant_id", "acme");
+assert!(matches!(
+    metadata.to_json_vec_with_limits(limits),
+    Err(MetadataWireEncodeError::Budget(_))
+));
+```
+
+遇到预算错误时，应缩减输出，或按应用策略调整预算；不要对同一载荷改用无限额配置重试。
+`MetadataWireEncodeError` 还会区分 `Quantity`、`Syntax`、`Json` 和 `Io`。该枚举标记为
+`non_exhaustive`，穷举匹配时应保留兜底分支。
+
 ### 严格的 V1 wire format
 
 Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知字段、畸形节点和不支持

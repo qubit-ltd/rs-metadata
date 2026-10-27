@@ -322,6 +322,87 @@ When limits come from an operator or configuration file, call
 `MetadataLimits::builder().build()?`. It rejects domain caps above the protocol
 hard limits during configuration, matching `FilterLimitsBuilder::build`.
 
+### Bounded JSON encoding
+
+For an application that stores or sends document chunks, encode each chunk at
+the application boundary and pass the resulting bytes to its own persistence or
+transport code. This complete minimal program configures an output budget,
+encodes metadata, decodes it again, and checks that a writer produces the same
+wire bytes:
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+qubit-budget = { version = "0.10", features = ["json"] }
+```
+
+```rust
+use qubit_budget::json::JsonResource;
+use qubit_budget::ResourceLimit;
+use qubit_metadata::default_json_encode_limits;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let encode = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+        .build();
+    let limits = MetadataLimits::builder().json_encode(encode).build()?;
+    let metadata = Metadata::new()
+        .with("tenant_id", "acme")
+        .with("document_id", "doc-42")
+        .with("chunk_index", 3_i64);
+
+    let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+    // The application passes these bytes to its own storage or transport layer.
+    let restored = Metadata::decode_json_slice_with_limits(&bytes, limits)?;
+    assert_eq!(restored, metadata);
+
+    let mut output = Vec::new();
+    metadata.to_json_writer_with_limits(&mut output, limits.json_encode())?;
+    assert_eq!(output, bytes);
+    Ok(())
+}
+```
+
+This is an entry-level exercise, not a storage implementation. The application
+still owns transactions, sending, retries, and compensation for I/O failures.
+`to_json_vec` and `to_json_writer` use the default output budget; when a
+`MetadataLimits` value contains a custom encode profile, pass
+`limits.json_encode()` explicitly. Changing `json_decode` does not change that
+output profile. `MetadataSchema` has the same `to_json_vec*` and
+`to_json_writer*` family when the `schema` feature is enabled.
+
+The encoder checks value representability and budgets before producing the
+compact JSON buffer. The writer API then writes that buffered output; a writer
+failure can still leave some bytes at the destination. This does not make file
+or network writes transactional. A one-byte budget gives a predictable
+rejection:
+
+```rust
+use qubit_budget::json::JsonResource;
+use qubit_budget::ResourceLimit;
+use qubit_metadata::default_json_encode_limits;
+use qubit_metadata::{Metadata, MetadataWireEncodeError};
+
+let limits = default_json_encode_limits()
+    .into_builder()
+    .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+    .build();
+let metadata = Metadata::new().with("tenant_id", "acme");
+assert!(matches!(
+    metadata.to_json_vec_with_limits(limits),
+    Err(MetadataWireEncodeError::Budget(_))
+));
+```
+
+Handle the budget failure by reducing the output or changing the configured
+budget according to application policy; do not retry the same payload with an
+unbounded profile. `MetadataWireEncodeError` also distinguishes `Quantity`,
+`Syntax`, `Json`, and `Io`. The enum is `non_exhaustive`, so callers should keep
+a fallback arm when matching all variants.
+
 ### Strict V1 wire formats
 
 Metadata, schema, and filters serialize through strict V1 envelopes. Unknown

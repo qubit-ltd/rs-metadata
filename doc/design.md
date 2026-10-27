@@ -2,7 +2,7 @@
 
 [中文设计文档](design.zh_CN.md) · [User guide](user_guide.md) · [README](../README.md)
 
-This document records the stable design boundaries of `qubit-metadata` 0.6.
+This document records the stable design boundaries of `qubit-metadata` 0.7.
 It describes invariants for integrations, not implementation history.
 
 ## Goals and non-goals
@@ -19,6 +19,16 @@ own field declarations and validation. Filter modules own immutable Boolean
 expressions, matching options, and receiver-side limits. Wire modules own
 versioned Serde envelopes and bounded traversal. JSON budget profiles are
 directional: decode and encode policies are configured independently.
+
+With the `json` feature, bounded JSON encoding is available for metadata and,
+with `schema`, schemas as well. Encoders check value representability and the
+configured resource profile before producing compact JSON output. Vector APIs
+return that buffer; writer APIs buffer the complete document before writing,
+but a destination I/O error can still leave partial bytes at the destination.
+Applications own persistence, transaction, transport, retry, and compensation
+semantics. A custom `MetadataLimits` encode profile is used only when the
+caller passes `limits.json_encode()` to the encoding method; decode settings do
+not alter output budgets.
 
 ## Core data model
 
@@ -95,7 +105,7 @@ Applications should enable only the layers used at each boundary.
 
 ## Compatibility policy
 
-Version 0.6 changes read signatures and missing error handling as described
+Version 0.6 changed read signatures and missing error handling as described
 above; no compatibility aliases are retained. The V1 wire representation,
 filter semantics, and schema validation behavior remain unchanged.
 The crate keeps strict stored-value schema validation distinct from compatible

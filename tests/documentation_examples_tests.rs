@@ -11,7 +11,9 @@
 
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
+use qubit_metadata::Metadata;
 use qubit_metadata::MetadataLimits;
+use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
 
@@ -43,4 +45,46 @@ fn test_user_guide_domain_limits_example() {
         .expect("limits should build");
     assert_eq!(limits.max_metadata_entries(), 128);
     assert_eq!(limits.max_key_bytes(), 128);
+}
+
+#[test]
+fn test_user_guide_bounded_json_encoding_example() {
+    let encode = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+        .build();
+    let limits = MetadataLimits::builder()
+        .json_encode(encode)
+        .build()
+        .expect("limits should build");
+    let metadata = Metadata::new()
+        .with("tenant_id", "acme")
+        .with("document_id", "doc-42")
+        .with("chunk_index", 3_i64);
+
+    let bytes = metadata
+        .to_json_vec_with_limits(limits.json_encode())
+        .expect("metadata should encode");
+    let restored = Metadata::decode_json_slice_with_limits(&bytes, limits).expect("encoded metadata should decode");
+    assert_eq!(restored, metadata);
+
+    let mut output = Vec::new();
+    metadata
+        .to_json_writer_with_limits(&mut output, limits.json_encode())
+        .expect("metadata should write");
+    assert_eq!(output, bytes);
+}
+
+#[test]
+fn test_user_guide_output_budget_rejects_metadata() {
+    let limits = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+        .build();
+    let metadata = Metadata::new().with("tenant_id", "acme");
+
+    assert!(matches!(
+        metadata.to_json_vec_with_limits(limits),
+        Err(MetadataWireEncodeError::Budget(_))
+    ));
 }
