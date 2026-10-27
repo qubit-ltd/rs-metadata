@@ -120,8 +120,9 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
     let invalid_raw = JsonEncoder::unlimited()
         .to_vec(&InvalidRawValue)
         .expect_err("invalid RawValue text must fail");
+    let mut rejecting = RejectingWriter;
     let writer = JsonEncoder::unlimited()
-        .write_buffered(RejectingWriter, &true)
+        .write_buffered(&mut rejecting, &true)
         .expect_err("rejecting writer must fail");
     let errors = [
         MetadataWireEncodeError::from(serialization),

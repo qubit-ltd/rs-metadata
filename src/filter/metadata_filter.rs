@@ -298,7 +298,7 @@ impl MetadataFilter {
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
-        writer: W,
+        mut writer: W,
         limits: JsonEncodeLimits,
     ) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -307,7 +307,7 @@ impl MetadataFilter {
         self.preflight_wire_values(limits)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session)
-            .write_buffered(writer, self)
+            .write_buffered(&mut writer, self)
             .map_err(Into::into)
     }
 
