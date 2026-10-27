@@ -7,12 +7,15 @@
 // =============================================================================
 //! Tests for Boolean expression semantics.
 
+use qubit_datatype::DataType;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::FilterExpressionView;
 use qubit_metadata::FilterLimitKind;
 use qubit_metadata::FilterLimits;
+use qubit_metadata::Metadata;
 use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataFilter;
+use qubit_value::Value;
 
 use crate::support::test_support::sample;
 
@@ -37,6 +40,82 @@ fn test_and_or_and_not_are_expression_operations() {
         .expect("filter should build");
 
     assert!(!filter.matches(&sample()));
+}
+
+#[test]
+fn test_and_or_follow_three_valued_logic_for_missing_and_unset_values() {
+    // Each row is (left, right, AND, OR); None represents Unknown.
+    let cases = [
+        (Some(true), Some(true), Some(true), Some(true)),
+        (Some(true), Some(false), Some(false), Some(true)),
+        (Some(true), None, None, Some(true)),
+        (Some(false), Some(true), Some(false), Some(true)),
+        (Some(false), Some(false), Some(false), Some(false)),
+        (Some(false), None, Some(false), None),
+        (None, Some(true), None, Some(true)),
+        (None, Some(false), Some(false), None),
+        (None, None, None, None),
+    ];
+
+    for unset_unknown in [false, true] {
+        let unknown_mode = if unset_unknown { "unset" } else { "missing" };
+        for (left_value, right_value, expected_and, expected_or) in cases {
+            let mut metadata = Metadata::new();
+            if let Some(value) = left_value {
+                metadata = metadata.with("left", value);
+            } else if unset_unknown {
+                metadata = metadata.with("left", Value::Unset(DataType::Bool));
+            }
+            if let Some(value) = right_value {
+                metadata = metadata.with("right", value);
+            } else if unset_unknown {
+                metadata = metadata.with("right", Value::Unset(DataType::Bool));
+            }
+
+            let left = FilterExpression::builder()
+                .eq("left", true)
+                .build()
+                .expect("left predicate should build");
+            let right = FilterExpression::builder()
+                .eq("right", true)
+                .build()
+                .expect("right predicate should build");
+
+            for (operator, expected, expression) in [
+                (
+                    "AND",
+                    expected_and,
+                    left.clone().try_and(right.clone()).expect("AND should build"),
+                ),
+                (
+                    "OR",
+                    expected_or,
+                    left.clone().try_or(right.clone()).expect("OR should build"),
+                ),
+            ] {
+                let filter = MetadataFilter::builder()
+                    .expression(expression.clone())
+                    .build()
+                    .expect("combined filter should build");
+                assert_eq!(
+                    filter.matches(&metadata),
+                    expected == Some(true),
+                    "left={left_value:?}, right={right_value:?}, operator={operator}, unknown_mode={unknown_mode}"
+                );
+
+                let negated = expression.try_not().expect("NOT should build");
+                let negated_filter = MetadataFilter::builder()
+                    .expression(negated)
+                    .build()
+                    .expect("negated filter should build");
+                assert_eq!(
+                    negated_filter.matches(&metadata),
+                    expected == Some(false),
+                    "left={left_value:?}, right={right_value:?}, operator=NOT {operator}, unknown_mode={unknown_mode}"
+                );
+            }
+        }
+    }
 }
 
 #[test]
