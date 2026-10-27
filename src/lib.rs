@@ -89,6 +89,9 @@ mod metadata_wire_limit_kind;
 mod schema;
 mod wire;
 
+#[cfg(test)]
+mod tests;
+
 #[cfg(feature = "filter")]
 pub use filter::Condition;
 #[cfg(feature = "filter")]

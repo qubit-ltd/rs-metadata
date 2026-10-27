@@ -85,38 +85,6 @@ impl MetadataLimits {
         MetadataLimitsBuilder::default()
     }
 
-    /// Constructs domain limits without validating their protocol hard caps.
-    ///
-    /// This constructor is available only in debug builds and is intended for
-    /// tests that need to exercise wire-boundary handling of invalid limits.
-    /// The supplied values are preserved as-is.
-    ///
-    /// # Parameters
-    ///
-    /// * `max_metadata_entries` - Maximum metadata-map entry count.
-    /// * `max_schema_fields` - Maximum schema-field count.
-    /// * `max_key_bytes` - Maximum UTF-8 byte length of a metadata or schema
-    ///   key.
-    ///
-    /// # Returns
-    ///
-    /// A limits value containing the supplied domain limits and the default
-    /// JSON profiles.
-    #[cfg(debug_assertions)]
-    #[doc(hidden)]
-    pub fn debug_only_invalid_domain_limits(
-        max_metadata_entries: usize,
-        max_schema_fields: usize,
-        max_key_bytes: usize,
-    ) -> Self {
-        MetadataLimits::from_builder(
-            MetadataLimitsBuilder::default()
-                .max_metadata_entries(max_metadata_entries)
-                .max_schema_fields(max_schema_fields)
-                .max_key_bytes(max_key_bytes),
-        )
-    }
-
     /// Creates immutable limits from the values held by `builder` without
     /// validating the domain hard caps.
     ///

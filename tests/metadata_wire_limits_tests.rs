@@ -7,10 +7,12 @@
 // =============================================================================
 //! Tests for metadata JSON budget integration and domain limits.
 
-#![cfg(all(feature = "json", feature = "schema"))]
+#![cfg(feature = "json")]
 
 use qubit_budget::BudgetError;
+#[cfg(feature = "filter")]
 use qubit_budget::InsufficientBudgetError;
+#[cfg(feature = "filter")]
 use qubit_budget::ResourceBudget;
 use qubit_budget::ResourceLimit;
 use qubit_budget::StructureLimits;
@@ -18,20 +20,27 @@ use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 use qubit_budget::json::JsonValueLimits;
+#[cfg(feature = "schema")]
 use qubit_datatype::DataType;
+#[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
+#[cfg(feature = "filter")]
 use qubit_metadata::FilterLimitKind;
+#[cfg(feature = "filter")]
 use qubit_metadata::FilterLimits;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataError;
+#[cfg(feature = "filter")]
 use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataLimits;
+#[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
 use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::MetadataWireLimitKind;
 use qubit_value::Value;
 
+#[cfg(feature = "filter")]
 fn filter_input(expression: &str) -> Vec<u8> {
     format!(r#"{{"version":1,"expression":{expression},"options":{{"numeric_comparison_policy":"exact"}}}}"#,)
         .into_bytes()
@@ -52,6 +61,7 @@ fn number_limit(maximum: usize) -> JsonEncodeLimits {
     JsonEncodeLimits::builder().max_number_bytes(maximum).build()
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_resource_budget_preserves_filter_limit_facts() {
     let mut budget = ResourceBudget::<FilterLimitKind, usize>::new(FilterLimitKind::Nodes, 1);
@@ -93,6 +103,7 @@ fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
     assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_filter_domain_limits_remain_separate_from_json_budget() {
     let input = filter_input(r#"{"kind":"not","expression":{"kind":"all"}}"#);
@@ -109,6 +120,7 @@ fn test_filter_domain_limits_remain_separate_from_json_budget() {
     ));
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_filter_key_limit_preserves_structured_error() {
     let input = filter_input(r#"{"kind":"exists","key":"status"}"#);
@@ -125,6 +137,7 @@ fn test_filter_key_limit_preserves_structured_error() {
     ));
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_filter_node_limit_preserves_structured_error() {
     let input = filter_input(r#"{"kind":"or","children":[{"kind":"all"},{"kind":"all"}]}"#);
@@ -141,6 +154,7 @@ fn test_filter_node_limit_preserves_structured_error() {
     ));
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_filter_set_values_limit_preserves_structured_error() {
     let input =
@@ -176,43 +190,6 @@ fn test_metadata_domain_entry_limit_is_preserved() {
             maximum: 1,
         })
     ));
-}
-
-#[test]
-fn test_metadata_decoder_reports_invalid_receiver_limits_separately() {
-    let error = MetadataLimits::builder()
-        .max_metadata_entries(4_097)
-        .build()
-        .expect_err("invalid receiver limits must be rejected at build time");
-
-    assert!(error.to_string().contains("metadata entries limit"));
-
-    let limits = MetadataLimits::debug_only_invalid_domain_limits(4_097, 4_096, 256);
-    let error = Metadata::decode_json_slice_with_limits(br#"{}"#, limits)
-        .expect_err("invalid receiver limits must be rejected at the wire boundary");
-
-    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
-}
-
-#[cfg(feature = "schema")]
-#[test]
-fn test_schema_decoder_reports_invalid_receiver_limits_at_wire_boundary() {
-    let limits = MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_097, 256);
-    let error = MetadataSchema::decode_json_slice_with_limits(b"{}", limits)
-        .expect_err("invalid schema limits must be rejected at the wire boundary");
-
-    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
-}
-
-#[cfg(feature = "filter")]
-#[test]
-fn test_filter_decoder_reports_invalid_receiver_limits_at_wire_boundary() {
-    let limits = MetadataLimits::debug_only_invalid_domain_limits(4_096, 4_096, 257);
-    let input = filter_input(r#"{"kind":"all"}"#);
-    let error = MetadataFilter::decode_json_slice_with_limits(&input, limits, FilterLimits::MAX)
-        .expect_err("invalid filter limits must be rejected at the wire boundary");
-
-    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
 }
 
 #[test]
@@ -264,18 +241,26 @@ fn test_json_budget_structural_limit_is_structured_source() {
 }
 
 #[test]
-fn test_metadata_schema_and_filter_round_trip() {
+fn test_metadata_round_trip() {
     let metadata = Metadata::new().with("name", "alice");
     let input = serde_json::to_vec(&metadata).unwrap();
     assert_eq!(Metadata::decode_json_slice(&input).unwrap(), metadata);
+}
 
+#[cfg(feature = "schema")]
+#[test]
+fn test_metadata_schema_round_trip() {
     let schema = MetadataSchema::builder()
         .required("name", DataType::String)
         .build()
         .unwrap();
     let input = serde_json::to_vec(&schema).unwrap();
     assert_eq!(MetadataSchema::decode_json_slice(&input).unwrap(), schema);
+}
 
+#[cfg(feature = "filter")]
+#[test]
+fn test_metadata_filter_round_trip() {
     let filter = MetadataFilter::builder()
         .expression(FilterExpression::builder().exists("name").build().unwrap())
         .build()
@@ -360,6 +345,7 @@ fn test_metadata_encode_accepts_float64_exponent_under_number_limit() {
     );
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_filter_encode_accepts_uint128_string_under_number_limit() {
     let expression = FilterExpression::builder()
@@ -376,6 +362,7 @@ fn test_filter_encode_accepts_uint128_string_under_number_limit() {
     );
 }
 
+#[cfg(feature = "filter")]
 #[test]
 fn test_filter_encode_accepts_float64_exponent_under_number_limit() {
     let expression = FilterExpression::builder()
@@ -392,15 +379,20 @@ fn test_filter_encode_accepts_float64_exponent_under_number_limit() {
     );
 }
 
+#[cfg(feature = "schema")]
 #[test]
-fn test_metadata_schema_and_filter_encode_round_trip() {
+fn test_metadata_schema_encode_round_trip() {
     let schema = MetadataSchema::builder()
         .required("name", DataType::String)
         .build()
         .unwrap();
     let schema_json = schema.to_json_vec().unwrap();
     assert_eq!(MetadataSchema::decode_json_slice(&schema_json).unwrap(), schema);
+}
 
+#[cfg(feature = "filter")]
+#[test]
+fn test_metadata_filter_encode_round_trip() {
     let filter = MetadataFilter::builder()
         .expression(FilterExpression::builder().exists("name").build().unwrap())
         .build()
@@ -409,6 +401,7 @@ fn test_metadata_schema_and_filter_encode_round_trip() {
     assert_eq!(MetadataFilter::decode_json_slice(&filter_json).unwrap(), filter);
 }
 
+#[cfg(feature = "schema")]
 #[test]
 fn test_schema_limits_and_wire_version_are_structured() {
     let schema = MetadataSchema::builder()
