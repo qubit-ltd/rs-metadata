@@ -146,6 +146,79 @@ fn test_membership_with_incomparable_candidates_stays_unknown() {
 }
 
 #[test]
+fn test_stored_nan_comparisons_remain_unknown_under_negation() {
+    let expressions = [
+        ("ne", FilterExpression::builder().ne("score", 0_f64)),
+        ("not_eq", FilterExpression::builder().eq("score", 0_f64).not()),
+        ("not_in", FilterExpression::builder().not_in_set("score", [0_f64])),
+        ("not_ne", FilterExpression::builder().ne("score", 0_f64).not()),
+        (
+            "not_not_in",
+            FilterExpression::builder().not_in_set("score", [0_f64]).not(),
+        ),
+    ];
+    let filters: Vec<_> = expressions
+        .into_iter()
+        .map(|(label, builder)| {
+            let expression = builder.build().expect("finite operands should build");
+            (label, filter(expression))
+        })
+        .collect();
+
+    for (stored_type, stored) in [("f32", Value::Float32(f32::NAN)), ("f64", Value::Float64(f64::NAN))] {
+        let metadata = Metadata::new().with("score", stored);
+        for (operator, predicate) in &filters {
+            assert!(
+                !predicate.matches(&metadata),
+                "stored {stored_type} NaN must remain unknown for {operator}"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_mixed_membership_prefers_definite_match_in_both_candidate_orders() {
+    let metadata = Metadata::new().with("age", 18_i64);
+    let orders = [
+        ("unknown_first", vec![Value::String("bad".to_owned()), Value::Int64(18)]),
+        ("match_first", vec![Value::Int64(18), Value::String("bad".to_owned())]),
+    ];
+
+    for (order, candidates) in orders {
+        let expressions = [
+            (
+                "in",
+                FilterExpression::builder().in_set("age", candidates.clone()),
+                true,
+            ),
+            (
+                "not_in",
+                FilterExpression::builder().not_in_set("age", candidates.clone()),
+                false,
+            ),
+            (
+                "negated_in",
+                FilterExpression::builder().in_set("age", candidates.clone()).not(),
+                false,
+            ),
+            (
+                "negated_not_in",
+                FilterExpression::builder().not_in_set("age", candidates).not(),
+                true,
+            ),
+        ];
+        for (operator, builder, expected) in expressions {
+            let expression = builder.build().expect("mixed concrete operands should build");
+            assert_eq!(
+                filter(expression).matches(&metadata),
+                expected,
+                "unexpected {operator} result with {order}"
+            );
+        }
+    }
+}
+
+#[test]
 fn test_not_equal_and_negated_equal_both_fail_closed_for_missing_value() {
     let not_equal = FilterExpression::builder()
         .ne("missing", "value")
