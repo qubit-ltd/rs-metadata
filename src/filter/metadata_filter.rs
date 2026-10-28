@@ -279,6 +279,30 @@ impl MetadataFilter {
     }
 
     /// Encodes this filter to a writer with the default JSON budget profile.
+    ///
+    /// The complete compact JSON document is buffered after operand preflight
+    /// and budget checks, before any bytes are written to the destination. A
+    /// preflight, budget, or serialization error therefore leaves the writer
+    /// untouched. An I/O error during writing may leave a prefix in the writer;
+    /// this method does not provide atomicity, rollback, or automatic retries.
+    /// Applications are responsible for persistence and retry decisions.
+    /// The default profile is returned by
+    /// [`crate::default_json_encode_limits`]; decode limits do not affect
+    /// the output budget.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination receiving the compact JSON document.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` after the complete document is written.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
+    /// budget checks, serialization, or destination I/O fails. Only destination
+    /// I/O errors can occur after writing has started.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -289,16 +313,29 @@ impl MetadataFilter {
 
     /// Encodes this filter to a writer with caller-provided JSON budgets.
     ///
+    /// The complete compact JSON document is buffered after operand preflight
+    /// and budget checks, before any bytes are written to the destination. A
+    /// preflight, budget, or serialization error therefore leaves the writer
+    /// untouched. An I/O error during writing may leave a prefix in the writer;
+    /// this method does not provide atomicity, rollback, or automatic retries.
+    /// Applications are responsible for persistence and retry decisions. The
+    /// supplied [`JsonEncodeLimits`] controls encoding; decode limits do not
+    /// affect the output budget.
+    ///
     /// # Parameters
     ///
     /// * `writer` - Destination receiving the compact JSON document.
     /// * `limits` - Output and JSON-value budgets for this operation.
     ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` after the complete document is written.
+    ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
-    /// budget, the filter cannot be represented by the V1 wire format, or the
-    /// writer rejects the output.
+    /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
+    /// budget checks, serialization, or destination I/O fails. Only destination
+    /// I/O errors can occur after writing has started.
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
