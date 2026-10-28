@@ -186,9 +186,11 @@ impl MetadataFilter {
     /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
     /// configured budget, `Filter` when the receiver AST or filter contract
     /// exceeds its limit, `UnsupportedVersion` for a version mismatch,
-    /// `InvalidLimits` for invalid metadata limits, `Syntax` for malformed JSON
-    /// syntax, or `InvalidJson` for strict-envelope and other deserialization
-    /// failures. Receiver AST limits are charged during incremental decoding.
+    /// `InvalidLimits` for invalid metadata limits, and `Syntax` for lexical
+    /// JSON errors. Shared decoder failures such as empty input, invalid UTF-8,
+    /// unexpected top-level types, or deserialization failures return `Decode`.
+    /// Receiver AST or filter-contract failures return `Filter`; receiver AST
+    /// limits are charged during incremental decoding.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -215,10 +217,12 @@ impl MetadataFilter {
     /// Returns `Budget` or `Quantity` when generic JSON traversal exceeds a
     /// configured budget, `Filter` when seeded traversal detects an AST limit
     /// or the decoded filter violates its contract, `UnsupportedVersion` for a
-    /// version mismatch, `InvalidLimits` for invalid metadata limits, `Syntax`
-    /// for malformed JSON syntax, or `InvalidJson` for strict-envelope and
-    /// other deserialization failures. Individual JSON strings and embedded
-    /// value payloads remain bounded by the outer input-byte limit.
+    /// version mismatch, `InvalidLimits` for invalid metadata limits, and
+    /// `Syntax` for lexical JSON errors. Shared decoder failures such as empty
+    /// input, invalid UTF-8, unexpected top-level types, or deserialization
+    /// failures return `Decode`. Receiver AST or filter-contract failures
+    /// return `Filter`. Individual JSON strings and embedded value payloads
+    /// remain bounded by the outer input-byte limit.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],

@@ -115,8 +115,12 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns a structured budget error or `InvalidJson` for malformed strict
-    /// schema input.
+    /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
+    /// configured limit, `Domain` for schema field/key limits,
+    /// `UnsupportedVersion` for a version mismatch, and `InvalidLimits` for
+    /// invalid metadata limits. Lexical JSON errors return `Syntax`; shared
+    /// decoder failures such as empty input, invalid UTF-8, unexpected
+    /// top-level types, or deserialization failures return `Decode`.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -137,9 +141,12 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns a structured budget error, `Domain` for field/key limits,
-    /// `UnsupportedVersion` for version mismatches, or redacted JSON errors for
-    /// syntax and other strict schema-envelope failures.
+    /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
+    /// configured limit, `Domain` for schema field/key limits,
+    /// `UnsupportedVersion` for a version mismatch, and `InvalidLimits` for
+    /// invalid metadata limits. Lexical JSON errors return `Syntax`; shared
+    /// decoder failures such as empty input, invalid UTF-8, unexpected
+    /// top-level types, or deserialization failures return `Decode`.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -199,7 +206,26 @@ impl MetadataSchema {
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
-    /// Encodes this schema to a writer with the default JSON budget profile.
+    /// Encodes this schema to a writer with the default JSON budget profile
+    /// ([`crate::default_json_encode_limits`]).
+    ///
+    /// The complete compact JSON document is buffered and validated before
+    /// the first write to `writer`. A budget or serialization failure leaves
+    /// the destination untouched by this operation. A destination I/O error
+    /// may leave a written prefix; this method does not provide atomic writes
+    /// or rollback. Applications own persistence and retry semantics. Decode
+    /// limits do not affect output budgets; use
+    /// [`Self::to_json_writer_with_limits`] to provide explicit output budgets.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` after the buffered document is written successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when a budget or
+    /// serialization failure occurs before writing, or when a destination
+    /// writer rejects bytes.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -212,8 +238,20 @@ impl MetadataSchema {
     ///
     /// # Parameters
     ///
-    /// * `writer` - Destination receiving the compact JSON document.
-    /// * `limits` - Output and JSON-value budgets for this operation.
+    /// * `writer` - Destination receiving the complete compact JSON document.
+    /// * `limits` - Explicit output and JSON-value budgets for this operation.
+    ///
+    /// The complete compact JSON document is buffered and validated before
+    /// the first write to `writer`. A budget or serialization failure leaves
+    /// the destination untouched by this operation. A destination I/O error
+    /// may leave a written prefix; this method does not provide atomic writes
+    /// or rollback. Applications own persistence and retry semantics. Output
+    /// budgets come only from the explicitly supplied `limits`; decode limits
+    /// do not affect them.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` after the buffered document is written successfully.
     ///
     /// # Errors
     ///

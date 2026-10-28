@@ -130,11 +130,16 @@ impl Metadata {
     /// Returns [`crate::MetadataWireDecodeError::Budget`] or
     /// [`crate::MetadataWireDecodeError::Quantity`] when shared JSON traversal
     /// exceeds a configured limit, [`crate::MetadataWireDecodeError::Syntax`]
-    /// for malformed JSON syntax, or
-    /// [`crate::MetadataWireDecodeError::InvalidJson`] for strict-envelope and
-    /// other deserialization failures. Domain limits return `Domain`; invalid
-    /// metadata limit configuration returns `InvalidLimits`; unsupported
-    /// versions return `UnsupportedVersion`.
+    /// for lexical JSON errors, and [`crate::MetadataWireDecodeError::Decode`]
+    /// for shared decoder failures such as empty input, invalid UTF-8,
+    /// unexpected top-level types, or deserialization failures. Domain limits
+    /// return [`crate::MetadataWireDecodeError::Domain`]; invalid metadata
+    /// limit configuration returns [`crate::MetadataWireDecodeError::InvalidLimits`];
+    /// unsupported versions return
+    /// [`crate::MetadataWireDecodeError::UnsupportedVersion`]. A metadata
+    /// value conversion failure after wire materialization returns
+    /// [`crate::MetadataWireDecodeError::InvalidJson`]; such a failure may no
+    /// longer have source coordinates.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -156,9 +161,12 @@ impl Metadata {
     ///
     /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
     /// configured limit, `Domain` for entry/key limits, `UnsupportedVersion`
-    /// for a version mismatch, `InvalidLimits` for invalid metadata limits,
-    /// `Syntax` for malformed JSON syntax, or `InvalidJson` for strict-envelope
-    /// and scalar wire failures.
+    /// for a version mismatch, and `InvalidLimits` for invalid metadata limits.
+    /// Lexical JSON errors return `Syntax`; shared decoder failures such as
+    /// empty input, invalid UTF-8, unexpected top-level types, or
+    /// deserialization failures return `Decode`. A metadata value conversion
+    /// failure after wire materialization returns `InvalidJson` and may no
+    /// longer have source coordinates.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -241,11 +249,26 @@ impl Metadata {
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
-    /// Encodes this metadata object to a writer with the default JSON budget.
+    /// Encodes this metadata object to a writer with the default JSON budget
+    /// profile ([`crate::default_json_encode_limits`]).
     ///
     /// # Parameters
     ///
     /// * `writer` - Destination receiving the complete compact JSON document.
+    ///
+    /// The complete compact JSON document is buffered and validated before
+    /// the first write to `writer`. A budget or serialization failure leaves
+    /// the destination untouched by this operation. A destination I/O error
+    /// may leave a written prefix; this method does not provide atomic writes
+    /// or rollback. Applications own persistence and retry semantics.
+    ///
+    /// Output budgets use the default encoding profile. Decode limits do not
+    /// affect them; use [`Self::to_json_writer_with_limits`] to provide
+    /// explicit output budgets.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` after the buffered document is written successfully.
     ///
     /// # Errors
     ///
@@ -264,7 +287,19 @@ impl Metadata {
     /// # Parameters
     ///
     /// * `writer` - Destination receiving the complete compact JSON document.
-    /// * `limits` - Output and JSON-value budgets for this operation.
+    /// * `limits` - Explicit output and JSON-value budgets for this operation.
+    ///
+    /// The complete compact JSON document is buffered and validated before
+    /// the first write to `writer`. A budget or serialization failure leaves
+    /// the destination untouched by this operation. A destination I/O error
+    /// may leave a written prefix; this method does not provide atomic writes
+    /// or rollback. Applications own persistence and retry semantics. Output
+    /// budgets come only from the explicitly supplied `limits`; decode limits
+    /// do not affect them.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` after the buffered document is written successfully.
     ///
     /// # Errors
     ///

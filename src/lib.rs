@@ -55,9 +55,37 @@
 //! assert_eq!(priority, 3);
 //! ```
 //!
-//! The `filter` feature uses fail-closed three-valued logic: a missing or unset
-//! value stays unknown through negation and does not match at the public API
-//! boundary.
+//! Comparison predicates in the `filter` feature use three-valued logic: a
+//! missing or unset value is unknown, remains unknown through negation, and
+//! does not match at the public API boundary. Existence predicates are an
+//! exception: `exists` and `not_exists` always return definite Booleans, and
+//! `exists(...).not()` is true when no concrete value is stored.
+//!
+//! ```rust
+//! # #[cfg(feature = "filter")]
+//! # fn main() -> qubit_metadata::MetadataResult<()> {
+//! use qubit_metadata::FilterExpression;
+//! use qubit_metadata::Metadata;
+//! use qubit_metadata::MetadataFilter;
+//!
+//! let metadata = Metadata::new();
+//! let comparison = MetadataFilter::builder()
+//!     .expression(FilterExpression::builder().eq("tenant", "acme").not().build()?)
+//!     .build()?;
+//! let absent = MetadataFilter::builder()
+//!     .expression(FilterExpression::builder().not_exists("tenant").build()?)
+//!     .build()?;
+//! let negated_exists = MetadataFilter::builder()
+//!     .expression(FilterExpression::builder().exists("tenant").not().build()?)
+//!     .build()?;
+//! assert!(!comparison.matches(&metadata));
+//! assert!(absent.matches(&metadata));
+//! assert!(negated_exists.matches(&metadata));
+//! # Ok(())
+//! # }
+//! # #[cfg(not(feature = "filter"))]
+//! # fn main() {}
+//! ```
 //!
 //! `Metadata`'s `Debug` and `Display` implementations are bounded and rendered
 //! through the default redaction policy. They are useful diagnostic views, not
