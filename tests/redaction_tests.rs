@@ -238,13 +238,18 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
         .build()
         .expect("policy should build");
 
-    let debug = complete_redacted_text(&metadata, &policy);
-    let display = debug.clone();
+    let explicit = complete_redacted_text(&metadata, &policy);
+    let debug = format!("{metadata:?}");
+    let display = format!("{metadata}");
 
-    assert!(!debug.contains("nested-secret"));
-    assert!(!debug.contains("outer-secret"));
-    assert!(!debug.contains("Ada"));
-    assert!(!display.contains("nested-secret"));
-    assert!(!display.contains("outer-secret"));
-    assert!(!display.contains('\n'));
+    for (label, output) in [
+        ("explicit", explicit.as_str()),
+        ("Debug", debug.as_str()),
+        ("Display", display.as_str()),
+    ] {
+        for secret in ["nested-secret", "outer-secret", "Ada"] {
+            assert!(!output.contains(secret), "{label} exposed {secret}: {output}");
+        }
+    }
+    assert!(!display.contains('\n'), "Display must be single-line: {display}");
 }

@@ -10,6 +10,8 @@
 use qubit_metadata::FilterExpression;
 use qubit_metadata::FilterLimits;
 use qubit_metadata::MetadataFilter;
+#[cfg(feature = "json")]
+use qubit_metadata::MetadataLimits;
 use serde_json::Deserializer;
 use serde_json::Error;
 use serde_json::from_str;
@@ -220,5 +222,39 @@ fn test_expression_wire_rejects_non_array_membership_and_child_sequences() {
             from_str::<MetadataFilter>(input).is_err(),
             "non-array membership values or child sequences must be rejected: {input}"
         );
+    }
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_filter_fuzz_positive_seeds_round_trip() {
+    let receiver_limits = FilterLimits::builder()
+        .max_depth(4)
+        .max_nodes(16)
+        .max_set_values(8)
+        .max_key_bytes(32)
+        .build()
+        .expect("fuzz receiver limits should be valid");
+    let cases: [(&str, &[u8]); 2] = [
+        (
+            "minimal",
+            include_bytes!("../../../fuzz/corpus/decode_metadata_filter/minimal.json"),
+        ),
+        (
+            "nested",
+            include_bytes!("../../../fuzz/corpus/decode_metadata_filter/nested.json"),
+        ),
+    ];
+    for (name, input) in cases {
+        let value = MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), receiver_limits)
+            .unwrap_or_else(|error| panic!("{name} seed must decode: {error}"));
+        let encoded = to_string(&value).expect("seed filter must serialize");
+        let restored = MetadataFilter::decode_json_slice_with_limits(
+            encoded.as_bytes(),
+            MetadataLimits::default(),
+            receiver_limits,
+        )
+        .expect("serialized seed must decode");
+        assert_eq!(restored, value, "{name} seed must round trip");
     }
 }
