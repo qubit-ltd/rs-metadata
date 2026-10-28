@@ -71,8 +71,8 @@ pub enum MetadataWireDecodeError {
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
     Filter(MetadataError),
-    /// JSON syntax or strict wire-envelope decoding failed after the byte limit
-    /// check.
+    /// A materialized metadata wire value could not be converted to a scalar
+    /// metadata value.
     InvalidJson(
         /// The original serde_json error.
         serde_json::Error,
