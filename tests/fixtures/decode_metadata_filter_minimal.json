@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "expression": { "kind": "all" },
+  "options": { "numeric_comparison_policy": "exact" }
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "expression": {
+    "kind": "and",
+    "children": [
+      { "kind": "exists", "key": "status" },
+      {
+        "kind": "not",
+        "expression": { "kind": "not_exists", "key": "deleted_at" }
+      }
+    ]
+  },
+  "options": { "numeric_comparison_policy": "exact" }
+}

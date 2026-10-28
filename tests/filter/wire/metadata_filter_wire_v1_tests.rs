@@ -238,11 +238,11 @@ fn test_filter_fuzz_positive_seeds_round_trip() {
     let cases: [(&str, &[u8]); 2] = [
         (
             "minimal",
-            include_bytes!("../../../fuzz/corpus/decode_metadata_filter/minimal.json"),
+            include_bytes!("../../fixtures/decode_metadata_filter_minimal.json"),
         ),
         (
             "nested",
-            include_bytes!("../../../fuzz/corpus/decode_metadata_filter/nested.json"),
+            include_bytes!("../../fixtures/decode_metadata_filter_nested.json"),
         ),
     ];
     for (name, input) in cases {
