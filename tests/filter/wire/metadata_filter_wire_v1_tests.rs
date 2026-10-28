@@ -64,18 +64,18 @@ fn test_receiver_rejects_expression_exceeding_its_key_limit() {
 }
 
 #[test]
-fn test_receiver_rejects_expression_exceeding_sender_declaration() {
+fn test_filter_wire_rejects_sender_limits_field() {
     let encoded = json!({
         "version": 1,
-        "expression": {"kind": "exists", "key": "status"},
+        "expression": {"kind": "exists", "key": "id"},
         "options": {"numeric_comparison_policy": "exact"},
         "limits": {"max_key_bytes": 5}
     });
 
-    assert!(
-        from_value::<MetadataFilter>(encoded).is_err(),
-        "receiver must reject a sender limit declaration that exceeds its own limits"
-    );
+    let error = from_value::<MetadataFilter>(encoded).expect_err("V1 filters must reject sender-supplied limits");
+    let message = error.to_string();
+    assert!(message.contains("unknown field"), "unexpected error: {message}");
+    assert!(message.contains("limits"), "missing field context: {message}");
 }
 
 #[test]
