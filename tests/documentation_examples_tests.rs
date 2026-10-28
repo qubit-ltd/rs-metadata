@@ -13,6 +13,7 @@ use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataLimits;
+use qubit_metadata::MetadataWireDecodeError;
 use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
@@ -37,14 +38,18 @@ fn test_readme_directional_limits_example() {
 }
 
 #[test]
-fn test_user_guide_domain_limits_example() {
+fn test_user_guide_domain_limits_example() -> Result<(), MetadataWireDecodeError> {
     let limits = MetadataLimits::builder()
         .max_metadata_entries(128)
         .max_key_bytes(128)
         .build()
-        .expect("limits should build");
-    assert_eq!(limits.max_metadata_entries(), 128);
-    assert_eq!(limits.max_key_bytes(), 128);
+        .map_err(MetadataWireDecodeError::InvalidLimits)?;
+    let metadata = Metadata::decode_json_slice_with_limits(
+        br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
+        limits,
+    )?;
+    assert_eq!(metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"), "acme");
+    Ok(())
 }
 
 #[test]

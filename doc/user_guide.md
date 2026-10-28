@@ -290,17 +290,21 @@ When `json` is enabled, use the slice decoding methods for complete untrusted
 JSON input:
 
 ```rust
-use qubit_metadata::{Metadata, MetadataLimits};
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
+use qubit_metadata::MetadataWireDecodeError;
 
 let limits = MetadataLimits::builder()
     .max_metadata_entries(128)
     .max_key_bytes(128)
-    .build()?;
+    .build()
+    .map_err(MetadataWireDecodeError::InvalidLimits)?;
 let metadata = Metadata::decode_json_slice_with_limits(
     br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
 )?;
-# Ok::<(), qubit_metadata::MetadataWireDecodeError>(())
+assert_eq!(metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"), "acme");
+# Ok::<(), MetadataWireDecodeError>(())
 ```
 
 The default limits are 1,048,576 input bytes, 4,096 metadata entries, 4,096
@@ -436,6 +440,17 @@ Use the error type that matches the boundary being validated:
 Conversion diagnostics keep structured expected and actual types without
 embedding the rejected source value. This makes errors suitable for logs while
 avoiding accidental disclosure of metadata contents.
+
+For bounded JSON decoding, `Read`, `Budget`, `Quantity`, and `Syntax` remain
+separate error categories. Shared decoder failures for empty input, invalid UTF-8,
+an unexpected top-level type, or deserialization are reported as
+`MetadataWireDecodeError::Decode`; inspect its `kind()` and other accessors for
+structured details instead of parsing display text. The standard metadata
+entry points use `Redacted` diagnostics. A `Detailed` source is retained only
+when the caller explicitly chose that policy before conversion. Existing code
+that manually constructs `InvalidJson` can continue to do so, while matches
+that assumed it covered all JSON failures should add a `Decode` arm. Error text
+and source-chain depth are not compatibility guarantees.
 
 ## Troubleshooting
 

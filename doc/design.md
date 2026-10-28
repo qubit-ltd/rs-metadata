@@ -91,6 +91,16 @@ syntax/envelope failures, and unsupported versions. Diagnostics preserve useful
 types, counts, and versions without embedding rejected metadata values. This is
 diagnostic redaction, not a promise to hide arbitrary user keys or error text.
 
+`MetadataWireDecodeError::Decode` preserves shared decoder failures for empty input,
+invalid UTF-8, unexpected top-level types, and deserialization, including their
+`kind()` and structured accessors. `Read`, `Budget`, `Quantity`, and `Syntax` keep
+their existing dedicated mappings. Standard metadata entry points use `Redacted`
+diagnostics; a `Detailed` source is retained only when the caller selected that
+policy before conversion. The legacy `InvalidJson` variant remains manually
+constructible. Callers that matched it as the complete set of JSON failures should
+add a `Decode` arm. Display text and source-chain depth are not compatibility
+contracts.
+
 `MetadataError::ValueAccess` stores a boxed `ValueError`. Missing reads retain
 `ValueMissing` facts: reason, source and target types, optional collection index,
 and the original conversion error. `Error::source` preserves that chain.

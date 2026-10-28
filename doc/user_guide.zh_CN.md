@@ -261,17 +261,21 @@ assert!(filter.matches(&metadata));
 启用 `json` 后，对于完整的不可信 JSON 输入使用 slice 解码方法：
 
 ```rust
-use qubit_metadata::{Metadata, MetadataLimits};
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
+use qubit_metadata::MetadataWireDecodeError;
 
 let limits = MetadataLimits::builder()
     .max_metadata_entries(128)
     .max_key_bytes(128)
-    .build()?;
+    .build()
+    .map_err(MetadataWireDecodeError::InvalidLimits)?;
 let metadata = Metadata::decode_json_slice_with_limits(
     br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
     limits,
 )?;
-# Ok::<(), qubit_metadata::MetadataWireDecodeError>(())
+assert_eq!(metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"), "acme");
+# Ok::<(), MetadataWireDecodeError>(())
 ```
 
 默认限制是输入 1,048,576 字节、4,096 个 metadata 条目、4,096 个 schema 字段，以及每个
@@ -389,6 +393,13 @@ wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 �
 
 转换诊断会保留期望类型和实际类型等结构化信息，而不会嵌入被拒绝的原始值。这使错误
 适合写入日志，同时减少意外泄露 metadata 内容的风险。
+
+有界 JSON 解码仍将 `Read`、`Budget`、`Quantity` 和 `Syntax` 分开报告。共享 decoder
+产生的空输入、非法 UTF-8、顶层类型不符或反序列化失败则归为
+`MetadataWireDecodeError::Decode`；应通过 `kind()` 等 accessor 读取结构化信息，不要解析
+展示文本。标准 metadata 入口使用 `Redacted` 诊断策略。只有调用方在转换前明确选择
+`Detailed` 时，详细来源才会保留。仍可手工构造旧的 `InvalidJson`；如果原有匹配代码假设它
+涵盖所有 JSON 失败，应增加 `Decode` 分支。错误字符串和来源链深度不属于兼容性保证。
 
 ## 排障
 

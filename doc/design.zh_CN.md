@@ -68,6 +68,13 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 保留有用的类型、数量和版本号，但不嵌入被拒绝的 metadata 值；这属于诊断脱敏，不承诺隐藏任意
 用户 key 或错误文本。
 
+`MetadataWireDecodeError::Decode` 保留共享 decoder 对空输入、非法 UTF-8、顶层类型不符和
+反序列化失败的分类，包括 `kind()` 与结构化 accessor。`Read`、`Budget`、`Quantity` 和
+`Syntax` 继续使用原有的独立映射。标准 metadata 入口采用 `Redacted` 诊断；只有调用方在
+转换前选择了 `Detailed`，才会保留详细来源。旧的 `InvalidJson` 变体仍可手工构造。若调用方
+原先将它视为 JSON 失败的完整集合，应增加 `Decode` 分支。展示文本和来源链深度不属于兼容性
+契约。
+
 `MetadataError::ValueAccess` 保存 boxed `ValueError`。缺失读取保留 `ValueMissing` 的原因、
 源/目标类型、可选集合索引和原始转换错误，`Error::source` 保留这条来源链。
 删除 `MetadataError::MissingValue`，schema 的 `TypeMismatch` 仍是独立领域错误。
