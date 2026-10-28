@@ -143,6 +143,74 @@ fn test_builder_rejects_oversized_keys_and_membership_sets() {
 }
 
 #[test]
+fn test_oversized_keys_skip_scalar_operand_conversion() {
+    type Append = fn(FilterExpressionBuilder, &str, CountedOperand) -> FilterExpressionBuilder;
+    let operations: [Append; 6] = [
+        FilterExpressionBuilder::eq::<CountedOperand>,
+        FilterExpressionBuilder::ne::<CountedOperand>,
+        FilterExpressionBuilder::lt::<CountedOperand>,
+        FilterExpressionBuilder::le::<CountedOperand>,
+        FilterExpressionBuilder::gt::<CountedOperand>,
+        FilterExpressionBuilder::ge::<CountedOperand>,
+    ];
+    let maximum = FilterLimits::MAX.max_key_bytes();
+    let key = "k".repeat(maximum + 1);
+    for operation in operations {
+        let conversions = Rc::new(Cell::new(0));
+        let result = operation(
+            FilterExpression::builder(),
+            &key,
+            CountedOperand {
+                value: Some(Value::Int64(1)),
+                conversions: Rc::clone(&conversions),
+            },
+        )
+        .build();
+        assert_eq!(conversions.get(), 0, "oversized keys must skip conversion");
+        assert_eq!(result, Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            value: key.len(),
+            maximum,
+        }));
+    }
+}
+
+#[test]
+fn test_key_preflight_preserves_boundaries_and_first_error() {
+    let maximum = FilterLimits::MAX.max_key_bytes();
+    let exact = "k".repeat(maximum);
+    assert!(FilterExpression::builder().eq(&exact, 1_i64).build().is_ok());
+    assert!(FilterExpression::builder().exists(&exact).build().is_ok());
+    let key = "é".repeat(maximum / 2 + 1);
+    for builder in [
+        FilterExpression::builder().exists(&key),
+        FilterExpression::builder().not_exists(&key),
+    ] {
+        assert_eq!(builder.build(), Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            value: key.len(),
+            maximum,
+        }));
+    }
+    let conversions = Rc::new(Cell::new(0));
+    let rejected = FilterExpression::builder().eq(&key, CountedOperand {
+        value: None,
+        conversions: Rc::clone(&conversions),
+    }).build();
+    assert!(matches!(rejected, Err(MetadataError::FilterLimitExceeded {
+        kind: FilterLimitKind::KeyBytes, ..
+    })));
+    assert_eq!(conversions.get(), 0);
+    let failed = FilterExpression::builder().not();
+    let first = failed.clone().build();
+    assert_eq!(failed.eq(&key, CountedOperand {
+        value: None,
+        conversions: Rc::clone(&conversions),
+    }).build(), first);
+    assert_eq!(conversions.get(), 0);
+}
+
+#[test]
 fn test_builder_creates_nested_boolean_expression() {
     let expression = FilterExpression::builder()
         .eq("status", "active")

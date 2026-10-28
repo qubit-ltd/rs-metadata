@@ -86,6 +86,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
+            key,
             || Condition::Equal {
                 key: key.to_string(),
                 value: to_value(value),
@@ -102,6 +103,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
+            key,
             || Condition::NotEqual {
                 key: key.to_string(),
                 value: to_value(value),
@@ -118,6 +120,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
+            key,
             || Condition::Less {
                 key: key.to_string(),
                 value: to_value(value),
@@ -134,6 +137,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
+            key,
             || Condition::LessEqual {
                 key: key.to_string(),
                 value: to_value(value),
@@ -150,6 +154,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
+            key,
             || Condition::Greater {
                 key: key.to_string(),
                 value: to_value(value),
@@ -166,6 +171,7 @@ impl FilterExpressionBuilder {
         T: Into<Value>,
     {
         self.append(
+            key,
             || Condition::GreaterEqual {
                 key: key.to_string(),
                 value: to_value(value),
@@ -201,6 +207,7 @@ impl FilterExpressionBuilder {
             }
         };
         self.append(
+            key,
             || Condition::In {
                 key: key.to_string(),
                 values,
@@ -236,6 +243,7 @@ impl FilterExpressionBuilder {
             }
         };
         self.append(
+            key,
             || Condition::NotIn {
                 key: key.to_string(),
                 values,
@@ -249,6 +257,7 @@ impl FilterExpressionBuilder {
     #[must_use]
     pub fn exists(self, key: &str) -> Self {
         self.append(
+            key,
             || Condition::Exists { key: key.to_string() },
             FilterExpression::and_unchecked,
         )
@@ -259,6 +268,7 @@ impl FilterExpressionBuilder {
     #[must_use]
     pub fn not_exists(self, key: &str) -> Self {
         self.append(
+            key,
             || Condition::NotExists { key: key.to_string() },
             FilterExpression::and_unchecked,
         )
@@ -367,10 +377,20 @@ impl FilterExpressionBuilder {
     /// immediately.
     fn append(
         mut self,
+        key: &str,
         condition: impl FnOnce() -> Condition,
         combine: fn(FilterExpression, FilterExpression) -> FilterExpression,
     ) -> Self {
         if self.error.is_some() {
+            return self;
+        }
+        let maximum = FilterLimits::MAX.max_key_bytes();
+        if key.len() > maximum {
+            self.error = Some(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
+                maximum,
+            });
             return self;
         }
         let condition = condition();
