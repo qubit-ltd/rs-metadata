@@ -134,8 +134,9 @@ impl Metadata {
     /// for shared decoder failures such as empty input, invalid UTF-8,
     /// unexpected top-level types, or deserialization failures. Domain limits
     /// return [`crate::MetadataWireDecodeError::Domain`]; invalid metadata
-    /// limit configuration returns [`crate::MetadataWireDecodeError::InvalidLimits`];
-    /// unsupported versions return
+    /// limit configuration returns
+    /// [`crate::MetadataWireDecodeError::InvalidLimits`]; unsupported
+    /// versions return
     /// [`crate::MetadataWireDecodeError::UnsupportedVersion`]. A metadata
     /// value conversion failure after wire materialization returns
     /// [`crate::MetadataWireDecodeError::InvalidJson`]; such a failure may no

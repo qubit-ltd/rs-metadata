@@ -48,7 +48,10 @@ fn test_user_guide_domain_limits_example() -> Result<(), MetadataWireDecodeError
         br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
         limits,
     )?;
-    assert_eq!(metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"), "acme");
+    assert_eq!(
+        metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"),
+        "acme"
+    );
     Ok(())
 }
 

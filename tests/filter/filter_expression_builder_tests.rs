@@ -167,11 +167,14 @@ fn test_oversized_keys_skip_scalar_operand_conversion() {
         )
         .build();
         assert_eq!(conversions.get(), 0, "oversized keys must skip conversion");
-        assert_eq!(result, Err(MetadataError::FilterLimitExceeded {
-            kind: FilterLimitKind::KeyBytes,
-            value: key.len(),
-            maximum,
-        }));
+        assert_eq!(
+            result,
+            Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
+                maximum,
+            })
+        );
     }
 }
 
@@ -186,27 +189,47 @@ fn test_key_preflight_preserves_boundaries_and_first_error() {
         FilterExpression::builder().exists(&key),
         FilterExpression::builder().not_exists(&key),
     ] {
-        assert_eq!(builder.build(), Err(MetadataError::FilterLimitExceeded {
-            kind: FilterLimitKind::KeyBytes,
-            value: key.len(),
-            maximum,
-        }));
+        assert_eq!(
+            builder.build(),
+            Err(MetadataError::FilterLimitExceeded {
+                kind: FilterLimitKind::KeyBytes,
+                value: key.len(),
+                maximum,
+            })
+        );
     }
     let conversions = Rc::new(Cell::new(0));
-    let rejected = FilterExpression::builder().eq(&key, CountedOperand {
-        value: None,
-        conversions: Rc::clone(&conversions),
-    }).build();
-    assert!(matches!(rejected, Err(MetadataError::FilterLimitExceeded {
-        kind: FilterLimitKind::KeyBytes, ..
-    })));
+    let rejected = FilterExpression::builder()
+        .eq(
+            &key,
+            CountedOperand {
+                value: None,
+                conversions: Rc::clone(&conversions),
+            },
+        )
+        .build();
+    assert!(matches!(
+        rejected,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::KeyBytes,
+            ..
+        })
+    ));
     assert_eq!(conversions.get(), 0);
     let failed = FilterExpression::builder().not();
     let first = failed.clone().build();
-    assert_eq!(failed.eq(&key, CountedOperand {
-        value: None,
-        conversions: Rc::clone(&conversions),
-    }).build(), first);
+    assert_eq!(
+        failed
+            .eq(
+                &key,
+                CountedOperand {
+                    value: None,
+                    conversions: Rc::clone(&conversions),
+                }
+            )
+            .build(),
+        first
+    );
     assert_eq!(conversions.get(), 0);
 }
 

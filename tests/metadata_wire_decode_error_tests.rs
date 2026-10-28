@@ -34,18 +34,15 @@ struct FailedRead;
 
 impl io::Read for FailedRead {
     fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
-        Err(io::Error::new(
-            io::ErrorKind::PermissionDenied,
-            "private-read-detail",
-        ))
+        Err(io::Error::new(io::ErrorKind::PermissionDenied, "private-read-detail"))
     }
 }
 
 #[test]
 fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
     for policy in [DiagnosticPolicy::Redacted, DiagnosticPolicy::Detailed] {
-        let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode())
-            .with_diagnostic_policy(policy);
+        let mut decoder =
+            JsonDecoder::with_limits(MetadataLimits::default().json_decode()).with_diagnostic_policy(policy);
         let json_error = decoder
             .decode_input::<serde_json::Value, _>(&mut FailedRead)
             .expect_err("input read should fail");
@@ -55,10 +52,7 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
             panic!("read failures must retain their structured metadata variant");
         };
         assert_eq!(*kind, io::ErrorKind::PermissionDenied);
-        assert_eq!(
-            error.source().is_some(),
-            policy == DiagnosticPolicy::Detailed
-        );
+        assert_eq!(error.source().is_some(), policy == DiagnosticPolicy::Detailed);
 
         let display = error.to_string();
         let debug = format!("{error:?}");
@@ -68,9 +62,7 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
             assert!(!display.contains("private-read-detail"));
             assert!(!debug.contains("private-read-detail"));
         } else {
-            let source = source
-                .as_ref()
-                .expect("detailed diagnostics retain read source");
+            let source = source.as_ref().expect("detailed diagnostics retain read source");
             assert!(source.to_string().contains("private-read-detail"));
             let chain_source = error.source().expect("detailed source chain");
             assert!(chain_source.to_string().contains("private-read-detail"));
@@ -164,8 +156,8 @@ fn test_schema_unsupported_version_retains_version_number() {
 #[test]
 fn test_shared_deserialize_error_preserves_diagnostic_policy() {
     for policy in [DiagnosticPolicy::Redacted, DiagnosticPolicy::Detailed] {
-        let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode())
-            .with_diagnostic_policy(policy);
+        let mut decoder =
+            JsonDecoder::with_limits(MetadataLimits::default().json_decode()).with_diagnostic_policy(policy);
         let shared = decoder
             .decode_str::<Metadata>(r#"{"values":{}}"#)
             .expect_err("version is required");
@@ -177,18 +169,22 @@ fn test_shared_deserialize_error_preserves_diagnostic_policy() {
         assert_eq!(shared.diagnostic_policy(), policy);
         assert_eq!(shared.kind(), JsonDecodeErrorKind::Deserialize);
         assert_eq!(shared.source().is_some(), policy == DiagnosticPolicy::Detailed);
-        assert!(error
-            .source()
-            .expect("shared error wrapper")
-            .is::<qubit_json::decode::JsonDecodeError>());
+        assert!(
+            error
+                .source()
+                .expect("shared error wrapper")
+                .is::<qubit_json::decode::JsonDecodeError>()
+        );
         if policy == DiagnosticPolicy::Redacted {
             assert!(!format!("{error:?}").contains("missing field"));
         } else {
-            assert!(shared
-                .source()
-                .expect("original serde source")
-                .to_string()
-                .contains("version"));
+            assert!(
+                shared
+                    .source()
+                    .expect("original serde source")
+                    .to_string()
+                    .contains("version")
+            );
         }
     }
 }

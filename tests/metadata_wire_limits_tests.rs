@@ -20,9 +20,9 @@ use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 use qubit_budget::json::JsonValueLimits;
-use qubit_json::decode::JsonDecodeErrorKind;
 #[cfg(feature = "schema")]
 use qubit_datatype::DataType;
+use qubit_json::decode::JsonDecodeErrorKind;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
 #[cfg(feature = "filter")]
