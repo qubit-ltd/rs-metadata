@@ -18,7 +18,11 @@ use qubit_budget::QuantityConversionError;
 use qubit_budget::QuantityMeasurement;
 use qubit_budget::json::JsonResource;
 use qubit_json::decode::DiagnosticPolicy;
+use qubit_json::decode::JsonDecodeErrorKind;
 use qubit_json::decode::JsonDecoder;
+use qubit_json::decode::JsonRootKind;
+use qubit_json::decode::NormalizingJsonDecodePolicy;
+use qubit_json::decode::NormalizingJsonDecoder;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataLimits;
@@ -155,4 +159,84 @@ fn test_schema_unsupported_version_retains_version_number() {
         error,
         MetadataWireDecodeError::UnsupportedVersion { expected: 1, actual: 7 }
     ));
+}
+
+#[test]
+fn test_shared_deserialize_error_preserves_diagnostic_policy() {
+    for policy in [DiagnosticPolicy::Redacted, DiagnosticPolicy::Detailed] {
+        let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode())
+            .with_diagnostic_policy(policy);
+        let shared = decoder
+            .decode_str::<Metadata>(r#"{"values":{}}"#)
+            .expect_err("version is required");
+        assert_eq!(shared.kind(), JsonDecodeErrorKind::Deserialize);
+        let error = MetadataWireDecodeError::from(shared);
+        let MetadataWireDecodeError::Decode(shared) = &error else {
+            panic!("shared deserialization facts must be preserved");
+        };
+        assert_eq!(shared.diagnostic_policy(), policy);
+        assert_eq!(shared.kind(), JsonDecodeErrorKind::Deserialize);
+        assert_eq!(shared.source().is_some(), policy == DiagnosticPolicy::Detailed);
+        assert!(error
+            .source()
+            .expect("shared error wrapper")
+            .is::<qubit_json::decode::JsonDecodeError>());
+        if policy == DiagnosticPolicy::Redacted {
+            assert!(!format!("{error:?}").contains("missing field"));
+        } else {
+            assert!(shared
+                .source()
+                .expect("original serde source")
+                .to_string()
+                .contains("version"));
+        }
+    }
+}
+
+#[test]
+fn test_shared_invalid_utf8_retains_offset() {
+    let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode());
+    let shared = decoder
+        .decode_utf8::<serde_json::Value>(&[b' ', 0xff])
+        .expect_err("invalid UTF-8");
+    let MetadataWireDecodeError::Decode(shared) = MetadataWireDecodeError::from(shared) else {
+        panic!("UTF-8 facts must be preserved");
+    };
+    assert_eq!(shared.kind(), JsonDecodeErrorKind::InvalidUtf8);
+    assert_eq!(shared.utf8_valid_up_to(), Some(1));
+    assert_eq!(shared.utf8_error_len(), Some(1));
+    assert!(shared.source().is_none());
+}
+
+#[test]
+fn test_shared_unexpected_top_level_retains_kinds() {
+    let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode());
+    let shared = decoder
+        .decode_object_str::<serde_json::Value>("[]")
+        .expect_err("an object is required");
+    let MetadataWireDecodeError::Decode(shared) = MetadataWireDecodeError::from(shared) else {
+        panic!("top-level kinds must be preserved");
+    };
+    assert_eq!(shared.kind(), JsonDecodeErrorKind::UnexpectedTopLevel);
+    assert_eq!(shared.expected_top_level(), Some(JsonRootKind::Object));
+    assert_eq!(shared.actual_top_level(), Some(JsonRootKind::Array));
+}
+
+#[test]
+fn test_shared_normalized_empty_input_retains_category() {
+    let mut decoder = NormalizingJsonDecoder::with_limits(
+        NormalizingJsonDecodePolicy::default(),
+        MetadataLimits::default().json_decode(),
+    );
+    let shared = decoder
+        .decode_str::<serde_json::Value>("")
+        .expect_err("normalization leaves no document");
+    assert_eq!(shared.kind(), JsonDecodeErrorKind::EmptyInput);
+    let stage = shared.stage();
+    let MetadataWireDecodeError::Decode(shared) = MetadataWireDecodeError::from(shared) else {
+        panic!("empty-input category must be preserved");
+    };
+    assert_eq!(shared.kind(), JsonDecodeErrorKind::EmptyInput);
+    assert_eq!(shared.stage(), stage);
+    assert_eq!(shared.raw_input_bytes(), 0);
 }

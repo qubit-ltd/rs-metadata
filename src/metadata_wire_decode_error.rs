@@ -19,7 +19,6 @@ use qubit_budget::json::JsonResource;
 use qubit_json::decode::JsonDecodeError;
 use qubit_json::decode::JsonDecodeErrorSource;
 use qubit_json::decode::JsonSyntaxError;
-use serde::de::Error as DeError;
 
 use crate::MetadataError;
 
@@ -78,6 +77,9 @@ pub enum MetadataWireDecodeError {
         /// The original serde_json error.
         serde_json::Error,
     ),
+    /// A shared decoding failure retaining its structured facts and
+    /// diagnostic policy.
+    Decode(JsonDecodeError<JsonResource>),
 }
 
 impl fmt::Display for MetadataWireDecodeError {
@@ -99,6 +101,7 @@ impl fmt::Display for MetadataWireDecodeError {
             #[cfg(feature = "filter")]
             Self::Filter(error) => fmt::Display::fmt(error, formatter),
             Self::InvalidJson(error) => fmt::Display::fmt(error, formatter),
+            Self::Decode(error) => fmt::Display::fmt(error, formatter),
         }
     }
 }
@@ -117,6 +120,7 @@ impl Error for MetadataWireDecodeError {
             #[cfg(feature = "filter")]
             Self::Filter(error) => Some(error),
             Self::InvalidJson(error) => Some(error),
+            Self::Decode(error) => Some(error),
         }
     }
 }
@@ -124,22 +128,14 @@ impl Error for MetadataWireDecodeError {
 impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
     /// Converts a shared JSON decoding error into a metadata wire error.
     fn from(error: JsonDecodeError<JsonResource>) -> Self {
-        let kind = error.kind();
-        let line = error.line().unwrap_or(0);
-        let column = error.column().unwrap_or(0);
-        match error.into_source() {
+        match error.clone().into_source() {
             JsonDecodeErrorSource::Read { kind, source, .. } => Self::Read { kind, source },
             JsonDecodeErrorSource::Budget { source, .. } => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
                 MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
             },
             JsonDecodeErrorSource::InvalidJson { syntax, .. } => Self::Syntax(syntax),
-            JsonDecodeErrorSource::EmptyInput { .. }
-            | JsonDecodeErrorSource::InvalidUtf8 { .. }
-            | JsonDecodeErrorSource::UnexpectedTopLevel { .. }
-            | JsonDecodeErrorSource::Deserialize { .. } => Self::InvalidJson(<serde_json::Error as DeError>::custom(
-                format_args!("JSON decoding failed ({kind:?}) at line {line}, column {column}",),
-            )),
+            _ => Self::Decode(error),
         }
     }
 }

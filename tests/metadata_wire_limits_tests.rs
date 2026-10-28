@@ -20,6 +20,7 @@ use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 use qubit_budget::json::JsonValueLimits;
+use qubit_json::decode::JsonDecodeErrorKind;
 #[cfg(feature = "schema")]
 use qubit_datatype::DataType;
 #[cfg(feature = "filter")]
@@ -100,7 +101,10 @@ fn test_decode_rejects_input_before_json_parsing() {
 fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
     let error =
         Metadata::decode_json_slice_with_limits(b"null", input_limit(4)).expect_err("null is not a metadata envelope");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
+    let MetadataWireDecodeError::Decode(error) = error else {
+        panic!("null must retain its shared decoding error");
+    };
+    assert_eq!(error.kind(), JsonDecodeErrorKind::Deserialize);
 }
 
 #[cfg(feature = "filter")]
