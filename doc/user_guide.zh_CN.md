@@ -237,11 +237,30 @@ assert!(filter.matches(&metadata));
 
 ### Filter 的三值逻辑
 
-对缺失 key 或 `Value::Unset` 进行相等、范围和集合比较会得到 unknown。公开的 `matches` 只有在
-结果明确为 true 时才返回 `true`，因此比较谓词及其取反都不会匹配缺失或 unset key。存在性谓词
-返回确定的布尔值：没有存储具体值时，`exists` 为 false、`not_exists` 为 true；所以
-`exists("key").not()` 也为 true。布尔组合遵循确定值优先：`false AND unknown` 为 `false`，
-`true OR unknown` 为 `true`，其余混合情况保持 unknown。
+对缺失 key 或 `Value::Unset` 进行相等、范围和集合比较会得到 unknown。具体值的类型或运算不兼容、
+数值比较失败时也可能得到 unknown。不同类型的值不会隐式转换；兼容数值类型由
+`NumericComparisonPolicy` 决定。取反会保留 unknown，因此 `ne`、否定比较和 `not_in_set` 不能绕过
+不可比较的类型。集合条件逐项比较候选，并由确定结果优先于 unknown 候选。公开的 `matches` 只有在结果
+明确为 true 时才返回 `true`。存在性谓词仍返回确定值：没有存储具体值时，`exists` 为 false、
+`not_exists` 为 true；所以 `exists("key").not()` 也为 true。布尔组合遵循确定值优先：
+`false AND unknown` 为 `false`，`true OR unknown` 为 `true`，其余混合情况保持 unknown。
+
+```rust
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+
+let metadata = Metadata::new().with("age", "not-a-number");
+let expressions = [
+    FilterExpression::builder().ne("age", 18_i64).build().unwrap(),
+    FilterExpression::builder().eq("age", 18_i64).not().build().unwrap(),
+    FilterExpression::builder().not_in_set("age", [18_i64, 21_i64]).build().unwrap(),
+];
+for expression in expressions {
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    assert!(!filter.matches(&metadata));
+}
+```
 
 空集合是合法的：`in_set("key", [])` 什么都不匹配；`not_in_set("key", [])` 只匹配具体值。
 空分组会被 `build()` 拒绝，因为它通常说明查询构造过程遗漏了条件。

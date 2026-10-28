@@ -113,10 +113,13 @@ assert!(!bytes.is_empty());
   `Result<Option<T>>` 并保留类型错误。需要转换时使用 `convert` 或 `convert_with`。
   `get_or` 只对缺失键和类型符合要求的 unset 使用默认值。
 - `Value::Unset` 会记录声明类型，但不是具体值；required schema 字段会拒绝它。对缺失或
-  unset 值进行相等、范围和集合比较会得到 unknown；没有存储具体值时，`exists` 为 false，
-  `not_exists` 为 true，因此 `exists(...).not()` 为 true。取反会保留 unknown；布尔组合遵循
-  确定值优先的规则：`false AND unknown` 为 `false`，`true OR unknown` 为 `true`；其余混合情况
-  保持 `unknown`。
+  unset 值进行相等、范围和集合比较会得到 unknown。具体值无法比较或数值比较失败时也会得到
+  unknown；不会隐式转换不同类型的值。取反会保留 unknown，因此 `ne`、否定比较和 `not_in_set`
+  不能绕过不可比较的类型。`matches` 只有在结果明确为 true 时才返回 true。存在性谓词仍返回确定值：
+  没有存储具体值时，`exists` 为 false、`not_exists` 为 true，因此 `exists(...).not()` 为 true。
+  布尔组合遵循确定值优先的规则：`false AND unknown` 为 `false`，`true OR unknown` 为 `true`；
+  其余混合情况保持 `unknown`。
+  具体示例见[Filter 的三值逻辑](doc/user_guide.zh_CN.md#filter-的三值逻辑)。
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
 - `MetadataLimits::default()` 包含 byte、depth、node、sequence/map、key/string/number/payload

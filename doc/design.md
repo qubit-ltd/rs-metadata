@@ -73,12 +73,17 @@ canonical entry and key limits.
 ## Three-valued filter semantics
 
 Equality, range, and membership comparisons against missing keys or unset
-values evaluate to unknown. Existence predicates return definite Booleans:
-`exists` is false and `not_exists` is true when no concrete value is stored, so
-`exists(...).not()` is true. `matches` returns true only for definite true.
-Negation preserves unknown. Boolean composition uses dominance
-(`false AND unknown` is false, `true OR unknown` is true); the other mixed
-cases remain unknown.
+values evaluate to unknown. Incomparable concrete values and failed numeric
+comparisons also evaluate to unknown; values are not implicitly converted
+between types, and compatibility between numeric types follows
+`NumericComparisonPolicy`. Negation preserves unknown, so `ne`, negated
+comparisons, and `not_in_set` cannot turn an unknown result into a match.
+Existence predicates return definite Booleans: `exists` is false and
+`not_exists` is true when no concrete value is stored, so `exists(...).not()`
+is true. `matches` returns true only for definite true. Boolean composition
+uses dominance (`false AND unknown` is false, `true OR unknown` is true); the
+other mixed cases remain unknown. Membership retains its per-candidate
+comparison and definite-result precedence.
 Numeric comparison policy is explicit, and approximate comparisons are not
 appropriate for ordering or grouping.
 

@@ -257,13 +257,35 @@ sections below.
 ### Three-valued filter semantics
 
 Equality, range, and membership comparisons against a missing key or
-`Value::Unset` produce unknown. The public `matches` method returns `true` only
-for a definite true result, so comparison predicates and their negations do
-not match an absent or unset key. Existence predicates return definite Boolean
-results: `exists` is false and `not_exists` is true when no concrete value is
-stored; consequently, `exists("key").not()` is also true. Boolean composition
-uses dominance: `false AND unknown` is `false`, `true OR unknown` is `true`,
-and the remaining mixed cases stay unknown.
+`Value::Unset` produce unknown. Comparisons of concrete values can also produce
+unknown when their types or operations are incompatible, or when a numeric
+comparison fails. Values are not implicitly converted between types; compatible
+numeric types are determined by `NumericComparisonPolicy`. Negation preserves
+unknown, so `ne`, negated comparisons, and `not_in_set` cannot bypass an
+incomparable type. For a membership condition, candidates are compared
+individually and a definite result takes precedence over an unknown candidate.
+The public `matches` method returns `true` only for a definite true result.
+Existence predicates remain definite: `exists` is false and `not_exists` is
+true when no concrete value is stored; consequently, `exists("key").not()` is
+also true. Boolean composition uses dominance: `false AND unknown` is `false`,
+`true OR unknown` is `true`, and the remaining mixed cases stay unknown.
+
+```rust
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+
+let metadata = Metadata::new().with("age", "not-a-number");
+let expressions = [
+    FilterExpression::builder().ne("age", 18_i64).build().unwrap(),
+    FilterExpression::builder().eq("age", 18_i64).not().build().unwrap(),
+    FilterExpression::builder().not_in_set("age", [18_i64, 21_i64]).build().unwrap(),
+];
+for expression in expressions {
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    assert!(!filter.matches(&metadata));
+}
+```
 
 Empty sets are valid: `in_set("key", [])` matches nothing, while
 `not_in_set("key", [])` matches only concrete values. Empty groups are rejected

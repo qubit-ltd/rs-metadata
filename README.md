@@ -131,11 +131,16 @@ accepted consumption in that operation is not rolled back.
   defaults missing keys and appropriately typed unset values.
 - `Value::Unset` records a declared type but is not a concrete value. Required
   schema fields reject it. Equality, range, and membership comparisons against
-  a missing or unset value produce unknown; `exists` is false and `not_exists`
-  is true when no concrete value is stored, so `exists(...).not()` is true.
-  Negation preserves unknown. Boolean composition follows the usual dominance
-  rules: `false AND unknown` is `false`, while `true OR unknown` is `true`; the
-  remaining mixed cases stay `unknown`.
+  a missing or unset value produce unknown. Incomparable concrete values and
+  failed numeric comparisons also produce unknown; values are not implicitly
+  converted between types. Negation preserves unknown, so `ne`, negated
+  comparisons, and `not_in_set` cannot bypass an incomparable type. `matches`
+  returns true only for a definite true result. Existence predicates remain
+  definite: `exists` is false and `not_exists` is true when no concrete value
+  is stored, so `exists(...).not()` is true. Boolean composition follows the
+  usual dominance rules: `false AND unknown` is `false`, while
+  `true OR unknown` is `true`; the remaining mixed cases stay `unknown`.
+  For a concrete example, see [Three-valued filter semantics](doc/user_guide.md#three-valued-filter-semantics).
 - Schema validation of stored metadata remains strict about the declared
   concrete field type, even though filter schema checks accept compatible
   numeric representations.

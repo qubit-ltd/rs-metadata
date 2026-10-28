@@ -29,9 +29,15 @@ use crate::MetadataResult;
 /// A single comparison operator applied to one metadata key.
 ///
 /// Equality, range, and membership conditions require a concrete stored value.
-/// An absent key or [`Value::Unset`] produces an unknown outcome that remains
-/// unknown under logical negation and therefore fails closed when matching.
-/// Existence conditions define presence in terms of a concrete value.
+/// An absent key or [`Value::Unset`] produces an unknown outcome. Comparisons
+/// of concrete values can also be unknown when their types or operations are
+/// incompatible or a numeric comparison fails; compatible numeric types follow
+/// the configured [`NumericComparisonPolicy`], and values are not implicitly
+/// converted. Unknown remains unknown under logical negation, so `ne`, negated
+/// comparisons, and `not_in_set` cannot bypass an incomparable type.
+/// Existence conditions define presence in terms of a concrete value and return
+/// definite Boolean outcomes. Membership conditions compare candidates
+/// individually and prefer a definite result over an unknown candidate.
 ///
 /// # Examples
 ///
