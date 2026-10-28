@@ -237,10 +237,11 @@ assert!(filter.matches(&metadata));
 
 ### Filter 的三值逻辑
 
-缺失 key 和 `Value::Unset` 的结果是 unknown。公开的 `matches` 只有在结果明确为 true 时
-才返回 `true`。取反会保留 unknown。布尔组合遵循确定值优先：`false AND unknown` 为
-`false`，`true OR unknown` 为 `true`，其余混合情况保持 unknown。因此，`ne("key", value)`
-和 `not(eq("key", value))` 都不会匹配缺失或 unset key。
+对缺失 key 或 `Value::Unset` 进行相等、范围和集合比较会得到 unknown。公开的 `matches` 只有在
+结果明确为 true 时才返回 `true`，因此比较谓词及其取反都不会匹配缺失或 unset key。存在性谓词
+返回确定的布尔值：没有存储具体值时，`exists` 为 false、`not_exists` 为 true；所以
+`exists("key").not()` 也为 true。布尔组合遵循确定值优先：`false AND unknown` 为 `false`，
+`true OR unknown` 为 `true`，其余混合情况保持 unknown。
 
 空集合是合法的：`in_set("key", [])` 什么都不匹配；`not_in_set("key", [])` 只匹配具体值。
 空分组会被 `build()` 拒绝，因为它通常说明查询构造过程遗漏了条件。
@@ -393,8 +394,9 @@ wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 �
 
 ### Filter 意外没有匹配
 
-检查 key 是否缺失或存储了 `Value::Unset`；两者都是 unknown，不是 false，因此不会匹配。
-检查声明的 `DataType` 和数值比较策略。对于嵌套 filter，可以检查 `expression().view()`
+先判断谓词类别。对缺失或 unset 值进行相等、范围和集合比较会得到 unknown，因此不会匹配；
+存在性谓词则返回确定结果（没有存储具体值时，`exists` 为 false、`not_exists` 为 true）。
+再检查声明的 `DataType` 和数值比较策略。对于嵌套 filter，可以检查 `expression().view()`
 确认分组和连接词结构。
 
 ### Schema 拒绝了可以进行数值比较的值

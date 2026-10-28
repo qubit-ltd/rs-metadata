@@ -256,12 +256,14 @@ sections below.
 
 ### Three-valued filter semantics
 
-Missing keys and `Value::Unset` evaluate to unknown. The public `matches`
-method returns `true` only for a definite true result. Negation preserves
-unknown. Boolean composition uses dominance: `false AND unknown` is `false`,
-`true OR unknown` is `true`, and the remaining mixed cases stay unknown.
-Consequently, `ne("key", value)` and `not(eq("key", value))` do not match an
-absent or unset key.
+Equality, range, and membership comparisons against a missing key or
+`Value::Unset` produce unknown. The public `matches` method returns `true` only
+for a definite true result, so comparison predicates and their negations do
+not match an absent or unset key. Existence predicates return definite Boolean
+results: `exists` is false and `not_exists` is true when no concrete value is
+stored; consequently, `exists("key").not()` is also true. Boolean composition
+uses dominance: `false AND unknown` is `false`, `true OR unknown` is `true`,
+and the remaining mixed cases stay unknown.
 
 Empty sets are valid: `in_set("key", [])` matches nothing, while
 `not_in_set("key", [])` matches only concrete values. Empty groups are rejected
@@ -439,10 +441,12 @@ avoiding accidental disclosure of metadata contents.
 
 ### A filter unexpectedly does not match
 
-Check whether the key is absent or stores `Value::Unset`; both are unknown, not
-false, and therefore do not match. Check the declared `DataType` and the
-numeric comparison policy. For nested filters, inspect `expression().view()` to
-verify the grouping and connector structure.
+First identify the predicate category. Equality, range, and membership
+comparisons against an absent or unset value produce unknown, so they do not
+match; existence predicates return definite results (`exists` is false and
+`not_exists` is true when no concrete value is stored). Then check the declared
+`DataType` and numeric comparison policy. For nested filters, inspect
+`expression().view()` to verify the grouping and connector structure.
 
 ### Schema validation rejects a value that compares numerically
 

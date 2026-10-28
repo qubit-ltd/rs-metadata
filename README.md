@@ -129,12 +129,13 @@ accepted consumption in that operation is not rolled back.
   `get_optional` returns `Result<Option<T>>`, preserving type errors.
   Use `convert` or `convert_with` when conversion is intended. `get_or` only
   defaults missing keys and appropriately typed unset values.
-- `Value::Unset` records a declared type but is not a concrete value. It is
-  rejected by required schema fields and does not satisfy filter predicates.
-- Filter evaluation is fail-closed three-valued logic: unknown values do not
-  become matches through negation. Boolean composition follows the usual
-  dominance rules: `false AND unknown` is `false`, while `true OR unknown` is
-  `true`; the remaining mixed cases stay `unknown`.
+- `Value::Unset` records a declared type but is not a concrete value. Required
+  schema fields reject it. Equality, range, and membership comparisons against
+  a missing or unset value produce unknown; `exists` is false and `not_exists`
+  is true when no concrete value is stored, so `exists(...).not()` is true.
+  Negation preserves unknown. Boolean composition follows the usual dominance
+  rules: `false AND unknown` is `false`, while `true OR unknown` is `true`; the
+  remaining mixed cases stay `unknown`.
 - Schema validation of stored metadata remains strict about the declared
   concrete field type, even though filter schema checks accept compatible
   numeric representations.

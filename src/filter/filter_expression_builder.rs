@@ -61,7 +61,11 @@ impl FilterExpressionBuilder {
     /// # Errors
     ///
     /// Returns [`MetadataError::InvalidFilterExpression`] for empty or invalid
-    /// groups, or [`MetadataError::FilterLimitExceeded`] for oversized trees.
+    /// groups, [`MetadataError::FilterLimitExceeded`] for oversized trees, or
+    /// [`MetadataError::InvalidFilterOperand`] for unset operands or operands
+    /// that cannot be represented by the V1 wire format, including non-finite
+    /// floating-point values. Chained construction retains the first error
+    /// and returns it from this method.
     #[inline]
     pub fn build(self) -> MetadataResult<FilterExpression> {
         if let Some(error) = self.error {

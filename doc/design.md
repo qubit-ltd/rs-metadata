@@ -72,11 +72,13 @@ canonical entry and key limits.
 
 ## Three-valued filter semantics
 
-Predicates evaluate to true, false, or unknown. Missing keys and unset values
-are unknown. `matches` returns true only for definite true, and Boolean
-composition uses dominance (`false AND unknown` is false, `true OR unknown` is
-true); the other mixed cases remain unknown. Negation does not turn unknown
-into true.
+Equality, range, and membership comparisons against missing keys or unset
+values evaluate to unknown. Existence predicates return definite Booleans:
+`exists` is false and `not_exists` is true when no concrete value is stored, so
+`exists(...).not()` is true. `matches` returns true only for definite true.
+Negation preserves unknown. Boolean composition uses dominance
+(`false AND unknown` is false, `true OR unknown` is true); the other mixed
+cases remain unknown.
 Numeric comparison policy is explicit, and approximate comparisons are not
 appropriate for ordering or grouping.
 

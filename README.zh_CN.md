@@ -112,11 +112,11 @@ assert!(!bytes.is_empty());
 - `get` 返回严格读取的 `Result<T>`，不转换、不隐藏错误；`get_optional` 返回
   `Result<Option<T>>` 并保留类型错误。需要转换时使用 `convert` 或 `convert_with`。
   `get_or` 只对缺失键和类型符合要求的 unset 使用默认值。
-- `Value::Unset` 会记录声明类型，但不是具体值。required schema 字段会拒绝它，filter
-  谓词也不会将它视为匹配。
-- filter 使用 fail-closed 三值逻辑：unknown 不会通过取反变成匹配。布尔组合遵循确定值优先的
-  规则：`false AND unknown` 为 `false`，`true OR unknown` 为 `true`；其余混合情况保持
-  `unknown`。
+- `Value::Unset` 会记录声明类型，但不是具体值；required schema 字段会拒绝它。对缺失或
+  unset 值进行相等、范围和集合比较会得到 unknown；没有存储具体值时，`exists` 为 false，
+  `not_exists` 为 true，因此 `exists(...).not()` 为 true。取反会保留 unknown；布尔组合遵循
+  确定值优先的规则：`false AND unknown` 为 `false`，`true OR unknown` 为 `true`；其余混合情况
+  保持 `unknown`。
 - 存储 metadata 的 schema 校验仍严格要求具体字段类型；filter 的 schema 检查则允许兼容的
   数值表示。
 - `MetadataLimits::default()` 包含 byte、depth、node、sequence/map、key/string/number/payload

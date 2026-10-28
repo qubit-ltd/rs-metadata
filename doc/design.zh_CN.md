@@ -55,9 +55,10 @@ metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形
 
 ## 三值过滤语义
 
-谓词结果分为 true、false 和 unknown。缺失 key 与 unset 值都是 unknown。`matches` 只有在结果
-明确为 true 时才返回 true；布尔组合遵循确定值优先（`false AND unknown` 为 false，
-`true OR unknown` 为 true），其余混合情况保持 unknown；取反也不会把 unknown 变成 true。
+对缺失 key 或 unset 值进行相等、范围和集合比较会得到 unknown。存在性谓词返回确定的布尔值：
+没有存储具体值时，`exists` 为 false、`not_exists` 为 true，因此 `exists(...).not()` 为 true。
+`matches` 只有在结果明确为 true 时才返回 true；取反会保留 unknown。布尔组合遵循确定值优先
+（`false AND unknown` 为 false，`true OR unknown` 为 true），其余混合情况保持 unknown。
 数值比较策略需要显式配置；近似比较不适合用于排序或分组。
 
 ## 错误分类与脱敏
