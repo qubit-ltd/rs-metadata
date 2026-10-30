@@ -120,8 +120,16 @@ This example needs the `json` feature and a direct `qubit-budget = { version = "
 `decode_json_slice_with_limits` creates one `JsonDecodeSession` from the decode
 profile and uses it for complete-input admission plus the entire seeded wire
 traversal. The encode profile is separately available to bounded serialization
-boundaries. A failed request does not consume the rejected charge, but prior
-accepted consumption in that operation is not rolled back.
+boundaries. Rejected charges are not applied. Accepted input bytes remain
+consumed on failure; source value charges commit after the wire seed
+deserializes successfully, before subsequent domain conversion.
+The dedicated JSON helpers preserve native numbers under
+`serde_json/arbitrary_precision` feature unification. They first materialize a
+unique-key source tree under the configured JSON depth and other resource
+budgets, then decode the domain representation. The current unique-key decoder
+has no additional fixed 127-container limit. Domain deserialization failures do
+not retain original source coordinates. Generic Serde seeds continue to depend
+on the events supplied by their outer deserializer.
 
 ## Important boundaries
 

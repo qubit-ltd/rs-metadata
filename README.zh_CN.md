@@ -105,7 +105,11 @@ assert!(!bytes.is_empty());
 
 `decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
 让它同时负责完整输入准入和整个 seed wire 遍历；encode profile 则单独交给有界序列化
-边界。失败请求不会消费被拒绝的 charge，但本次操作此前已接受的消耗不会回滚。
+边界。被拒绝的 charge 不会生效；失败时已接受的输入字节计费保留，源值计费在 wire seed 反序列化成功后、后续领域转换前提交。
+专用 JSON helper 在 `serde_json/arbitrary_precision` feature 合并后仍提供原生数字事件，并先在
+配置的 JSON 深度及其他资源预算内构造无重复键的源树，再执行领域解码。
+当前 unique-key decoder 没有额外的固定 127 层容器上限；领域反序列化错误不保留原始源码坐标。
+通用 Serde seed 则继续依赖外层 deserializer 所提供的事件。
 
 ## 重要边界
 
