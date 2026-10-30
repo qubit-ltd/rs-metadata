@@ -48,6 +48,19 @@
       "features": [
         "json"
       ]
+    },
+    {
+      "name": "json-schema-arbitrary-precision",
+      "commands": [
+        "test",
+        "clippy"
+      ],
+      "defaultFeatures": false,
+      "features": [
+        "json",
+        "schema",
+        "serde_json/arbitrary_precision"
+      ]
     }
   ]
 }
