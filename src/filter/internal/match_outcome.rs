@@ -9,9 +9,9 @@
 
 /// The internal truth value of a filter expression.
 ///
-/// [`MatchOutcome::Unknown`] represents an expression that depends on a
-/// missing key or a key storing `Value::Unset`. It remains unknown through
-/// logical negation and is treated as a non-match at the public API boundary.
+/// Unknown may result from a missing key, Value::Unset, incomparable
+/// concrete values, or a failed numeric comparison. Logical negation
+/// preserves unknown; the public matching boundary accepts only definite true.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub(crate) enum MatchOutcome {
@@ -19,7 +19,8 @@ pub(crate) enum MatchOutcome {
     True,
     /// The expression is false.
     False,
-    /// The expression cannot be decided because a concrete value is absent.
+    /// The expression cannot be decided because a value is absent or the
+    /// supplied values cannot be reliably compared.
     Unknown,
 }
 

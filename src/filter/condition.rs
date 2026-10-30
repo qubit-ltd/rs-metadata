@@ -332,14 +332,12 @@ fn validate_operands(operator: &'static str, values: &[Value]) -> MetadataResult
 impl Redact for Condition {
     /// Writes a diagnostic condition representation under the active policy.
     ///
-    /// The condition node is entered before its discriminant is inspected. The
-    /// synthetic operator label is derived from that discriminant and does not
-    /// consume a field node. The source key and optional operand fields are
-    /// admitted in source order. Accessors are invoked only after admission;
-    /// operand access is skipped for opaque masking but remains available to a
-    /// disabled policy that intentionally restores source values. A node-budget
-    /// rejection adds one structural truncation field and terminates the branch
-    /// without touching the rejected field.
+    /// The discriminant is inspected and an optional operand is borrowed
+    /// before the record node is entered. The record and synthetic operator
+    /// field consume node budget, as do admitted key and operand fields.
+    /// Field formatting is deferred until admission; opaque masking skips
+    /// operand formatting. A node-budget rejection adds a structural
+    /// truncation field and stops the branch before formatting that field.
     ///
     /// # Parameters
     ///
