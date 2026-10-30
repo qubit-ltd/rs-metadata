@@ -52,6 +52,21 @@ fn test_metadata_schema_v1_round_trip() {
 }
 
 #[test]
+fn test_metadata_schema_rejects_positional_envelope() {
+    let input = r#"[1,{},"reject","reject"]"#;
+
+    assert!(
+        from_str::<MetadataSchema>(input).is_err(),
+        "the strict schema envelope must reject positional input"
+    );
+    #[cfg(feature = "json")]
+    assert!(
+        MetadataSchema::decode_json_slice(input.as_bytes()).is_err(),
+        "the bounded decoder must reject positional input"
+    );
+}
+
+#[test]
 fn test_metadata_schema_serialization_enforces_hard_key_limit() {
     let long_key = "k".repeat(257);
     let schema = MetadataSchema::builder()
