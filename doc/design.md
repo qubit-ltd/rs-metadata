@@ -58,7 +58,9 @@ Metadata, schema, and filter envelopes use strict V1 representations. Unknown
 fields, malformed nodes, and unsupported versions are rejected. Filter limits
 are receiver-side transient policy and are not serialized. Bounded decoders
 report unsupported versions as `UnsupportedVersion`; generic Serde decoding
-retains its ordinary deserializer error channel.
+of schema envelopes rejects positional sequences and requires the canonical
+four-field object. Existing object output and the V1 version remain unchanged;
+generic Serde decoding retains its ordinary deserializer error channel.
 
 ## Resource and trust boundaries
 

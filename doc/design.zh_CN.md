@@ -44,7 +44,8 @@ Metadata 负责类型化业务属性、schema 校验和条件匹配；配置源�
 
 metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形节点和不支持的版本都会
 被拒绝。Filter limits 是接收端的瞬态策略，不会序列化。有界 decoder 将不支持版本报告为
-`UnsupportedVersion`；泛型 Serde 解码仍使用普通 deserializer 错误通道。
+`UnsupportedVersion`；schema envelope 的泛型 Serde 解码拒绝位置式序列，要求规范四字段对象；
+现有对象输出和 V1 版本保持不变。泛型 Serde 解码仍使用普通 deserializer 错误通道。
 
 ## 资源与信任边界
 

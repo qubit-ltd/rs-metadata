@@ -10,7 +10,7 @@
 mod internal;
 #[cfg(feature = "schema")]
 mod metadata_schema_wire_v1;
-#[cfg(all(feature = "json", feature = "schema"))]
+#[cfg(feature = "schema")]
 mod metadata_schema_wire_v1_seed;
 mod metadata_wire_v1;
 mod metadata_wire_v1_seed;
@@ -23,7 +23,7 @@ mod strict_string_map_value_seed;
 pub(crate) use metadata_schema_wire_v1::METADATA_SCHEMA_WIRE_VERSION_V1;
 #[cfg(feature = "schema")]
 pub(crate) use metadata_schema_wire_v1::MetadataSchemaWireV1;
-#[cfg(all(feature = "json", feature = "schema"))]
+#[cfg(feature = "schema")]
 pub(crate) use metadata_schema_wire_v1_seed::MetadataSchemaWireV1Seed;
 pub(crate) use metadata_wire_v1::METADATA_WIRE_VERSION_V1;
 pub(crate) use metadata_wire_v1::MetadataWireV1;
