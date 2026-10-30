@@ -417,8 +417,10 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns [`MetadataError::UnknownField`] for a rejected undeclared key,
-    /// or [`MetadataError::TypeMismatch`] for a declared type mismatch.
+    /// Returns [`MetadataError::MissingRequiredField`] when a required field
+    /// stores an unset value, before checking its declared type. Returns
+    /// [`MetadataError::UnknownField`] for a rejected undeclared key, or
+    /// [`MetadataError::TypeMismatch`] for a declared type mismatch.
     pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
             Some(field) if field.is_required() && value.is_unset() => Err(MetadataError::MissingRequiredField {
