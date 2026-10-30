@@ -8,12 +8,82 @@
 //! Expression wire tests through a root filter.
 
 use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
 use serde_json::from_str;
 use serde_json::from_value;
 use serde_json::json;
 use serde_json::to_string;
 use serde_json::to_value;
+
+#[test]
+fn test_v1_fixed_comparison_and_membership_contracts() {
+    let cases = [
+        (
+            FilterExpression::builder().ne("k", 1_i64).build(),
+            json!({"kind":"ne","key":"k","value":{"scalar":{"int64":1}}}),
+            [true, false, true, true],
+        ),
+        (
+            FilterExpression::builder().lt("k", 2_i64).build(),
+            json!({"kind":"lt","key":"k","value":{"scalar":{"int64":2}}}),
+            [true, true, false, false],
+        ),
+        (
+            FilterExpression::builder().le("k", 1_i64).build(),
+            json!({"kind":"le","key":"k","value":{"scalar":{"int64":1}}}),
+            [true, true, false, false],
+        ),
+        (
+            FilterExpression::builder().gt("k", 0_i64).build(),
+            json!({"kind":"gt","key":"k","value":{"scalar":{"int64":0}}}),
+            [false, true, true, true],
+        ),
+        (
+            FilterExpression::builder().ge("k", 1_i64).build(),
+            json!({"kind":"ge","key":"k","value":{"scalar":{"int64":1}}}),
+            [false, true, true, true],
+        ),
+        (
+            FilterExpression::builder().in_set("k", [1_i64, 2]).build(),
+            json!({"kind":"in","key":"k","values":[
+                {"scalar":{"int64":1}}, {"scalar":{"int64":2}}]}),
+            [false, true, true, false],
+        ),
+        (
+            FilterExpression::builder().not_in_set("k", [2_i64, 3]).build(),
+            json!({"kind":"not_in","key":"k","values":[
+                {"scalar":{"int64":2}}, {"scalar":{"int64":3}}]}),
+            [true, true, false, false],
+        ),
+    ];
+
+    for (expression, node, outcomes) in cases {
+        let filter = MetadataFilter::builder()
+            .expression(expression.expect("expression should build"))
+            .build()
+            .expect("filter should build");
+        let expected = json!({
+            "version": 1,
+            "expression": node,
+            "options": {"numeric_comparison_policy": "exact"}
+        });
+        assert_eq!(to_value(&filter).expect("filter should encode"), expected);
+        let decoded: MetadataFilter = from_value(expected.clone()).expect("fixed V1 sample should decode");
+        assert_eq!(decoded, filter);
+        for (value, outcome) in (0_i64..4).zip(outcomes) {
+            assert_eq!(decoded.matches(&Metadata::new().with("k", value)), outcome);
+        }
+        assert!(!decoded.matches(&Metadata::new()));
+        #[cfg(feature = "json")]
+        {
+            let input = to_string(&expected).expect("fixed V1 sample should encode as JSON");
+            let bounded = MetadataFilter::decode_json_slice(input.as_bytes())
+                .expect("fixed V1 sample should decode through the JSON API");
+            assert_eq!(bounded, filter);
+        }
+    }
+}
 
 #[test]
 fn test_malformed_expression_nodes_are_rejected() {

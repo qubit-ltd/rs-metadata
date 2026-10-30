@@ -9,6 +9,7 @@
 
 use qubit_datatype::DataType;
 use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
 use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataSchema;
@@ -28,6 +29,33 @@ fn test_schema_accepts_compatible_filter_expression() {
     let expression = FilterExpression::builder().ge("score", 10_i64).build().unwrap();
 
     assert!(schema.validate_filter(&filter(expression)).is_ok());
+}
+
+#[test]
+fn test_numeric_filter_compatibility_does_not_relax_storage_types() {
+    let schema = MetadataSchema::builder()
+        .required("score", DataType::Int64)
+        .build()
+        .unwrap();
+    let expressions = [
+        FilterExpression::builder().eq("score", 10_f64).build(),
+        FilterExpression::builder().ge("score", 10_f64).build(),
+        FilterExpression::builder().in_set("score", [10_f64, 20_f64]).build(),
+        FilterExpression::builder().eq("score", 10_u64).build(),
+        FilterExpression::builder().ge("score", 10_u64).build(),
+        FilterExpression::builder().in_set("score", [10_u64, 20_u64]).build(),
+    ];
+    for expression in expressions {
+        schema.validate_filter(&filter(expression.unwrap())).unwrap();
+    }
+    schema.validate(&Metadata::new().with("score", 10_i64)).unwrap();
+    for metadata in [
+        Metadata::new().with("score", 10_f64),
+        Metadata::new().with("score", 10_u64),
+    ] {
+        let error = schema.validate(&metadata).unwrap_err();
+        assert!(matches!(error.issues(), [MetadataError::TypeMismatch { .. }]));
+    }
 }
 
 #[test]

@@ -7,11 +7,16 @@
 // =============================================================================
 //! Unit tests for [`qubit_metadata::Metadata`].
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
+use std::error::Error;
 
 use qubit_datatype::ConversionLimits;
 use qubit_datatype::ConversionPolicy;
+use qubit_datatype::DataConversionError;
+use qubit_datatype::DataConversionErrorKind;
 use qubit_datatype::DataType;
+use qubit_datatype::NumericConversionLimits;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterLimitKind;
 use qubit_metadata::Metadata;
@@ -800,4 +805,61 @@ fn test_explicit_conversion_retains_budget_failure() {
             source: Box::new(expected)
         }
     );
+}
+
+#[test]
+fn test_conversion_wrappers_preserve_precision_and_budget_errors() {
+    struct CountedDefault<'a>(&'a Cell<usize>);
+    impl IntoValueDefault<i64> for CountedDefault<'_> {
+        fn into_value_default(self) -> i64 {
+            self.0.set(self.0.get() + 1);
+            7
+        }
+    }
+
+    let policy = ConversionPolicy::default_ref();
+    let tight = ConversionLimits::builder()
+        .numeric_limits(NumericConversionLimits::builder().max_text_bytes(2).build())
+        .build();
+    let cases = [
+        (
+            Value::Float64(1.5),
+            ConversionLimits::default_ref(),
+            DataConversionErrorKind::InvalidValue,
+        ),
+        (Value::from("12345"), &tight, DataConversionErrorKind::LimitExceeded),
+    ];
+    for (value, limits, kind) in cases {
+        let expected = value.to_with::<i64>(policy, limits).unwrap_err();
+        let ValueError::Conversion(conversion) = &expected else {
+            panic!("expected a structured conversion error");
+        };
+        assert_eq!(conversion.kind(), kind);
+        let metadata = Metadata::new().with("input", value);
+        let calls = Cell::new(0);
+        let optional = metadata
+            .convert_optional_with::<i64>("input", policy, limits)
+            .unwrap_err();
+        let defaulted = metadata
+            .convert_or_with::<i64>("input", CountedDefault(&calls), policy, limits)
+            .unwrap_err();
+        assert_eq!(calls.get(), 0);
+        for actual in [optional, defaulted] {
+            assert_eq!(
+                actual,
+                MetadataError::ValueAccess {
+                    key: "input".into(),
+                    source: Box::new(expected.clone()),
+                }
+            );
+            let value_source = actual.source().unwrap().downcast_ref::<ValueError>().unwrap();
+            assert_eq!(value_source, &expected);
+            let conversion_source = value_source
+                .source()
+                .unwrap()
+                .downcast_ref::<DataConversionError>()
+                .unwrap();
+            assert_eq!(conversion_source, conversion);
+        }
+    }
 }
