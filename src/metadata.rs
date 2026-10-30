@@ -365,20 +365,66 @@ impl Metadata {
         self.0.contains_key(key)
     }
 
-    /// Strictly reads `key` as `T`, without coercing the stored runtime type.
+    /// Strictly reads `key` as `T` without coercing the stored runtime type.
+    /// Use [`Self::convert`] when the stored value must be explicitly
+    /// converted.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The requested type, which must support strict value reads.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to read.
+    ///
+    /// # Returns
+    ///
+    /// The owned value read as `T`.
     ///
     /// # Errors
-    /// Returns MissingKey for an absent key, or ValueAccess preserving type
-    /// mismatch and unset facts. Use [`Self::convert`] for coercing reads.
+    ///
+    /// Returns [`MetadataError::MissingKey`] when `key` is absent, or
+    /// [`MetadataError::ValueAccess`] when the stored value is unset or its
+    /// runtime type does not match `T`. The value access error preserves the
+    /// underlying type and unset details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_metadata::Metadata;
+    /// use qubit_metadata::MetadataError;
+    ///
+    /// let metadata = Metadata::new().with("port", "8080");
+    /// assert!(matches!(metadata.get::<u16>("port"),
+    ///     Err(MetadataError::ValueAccess { .. })));
+    /// assert_eq!(metadata.convert::<u16>("port").unwrap(), 8080);
+    /// assert_eq!(metadata.get_ref::<str>("port").unwrap(), "8080");
+    /// ```
     pub fn get<T: StrictValueRead>(&self, key: &str) -> MetadataResult<T> {
         T::read_scalar(self.entry(key)?).map_err(|source| Self::map_access_error(key, source))
     }
 
     /// Borrows the concrete payload under `key` without copying it.
     ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The borrowed payload type. Its reference conversion must accept
+    ///   a borrow of the stored value.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to read.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the payload. Its lifetime is tied to the borrow of
+    /// `self`, not to `key`.
+    ///
     /// # Errors
-    /// Returns MissingKey or ValueAccess for unset storage or a type mismatch.
-    /// The returned reference borrows this metadata object, not the key.
+    ///
+    /// Returns [`MetadataError::MissingKey`] when `key` is absent, or
+    /// [`MetadataError::ValueAccess`] when the stored value is unset or cannot
+    /// be borrowed as `T`.
     pub fn get_ref<'a, T: ?Sized>(&'a self, key: &str) -> MetadataResult<&'a T>
     where
         &'a T: TryFrom<&'a Value, Error = ValueError>,
@@ -388,11 +434,40 @@ impl Metadata {
             .map_err(|source| Self::map_access_error(key, source))
     }
 
-    /// Strictly reads `key`, returning None only for absent or matching unset
-    /// storage.
+    /// Strictly reads `key`, returning `None` only for an absent key or unset
+    /// storage declared as `T`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The requested type, which must support strict value reads.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to read.
+    ///
+    /// # Returns
+    ///
+    /// `Some(value)` when a concrete value is read as `T`; `None` when the key
+    /// is absent or stores an unset value declared as `T`.
     ///
     /// # Errors
-    /// Preserves type mismatches, including unset storage of a different type.
+    ///
+    /// Returns [`MetadataError::ValueAccess`] when the stored concrete value
+    /// has a different runtime type, or when unset storage is declared as a
+    /// different type than `T`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_datatype::DataType;
+    /// use qubit_metadata::Metadata;
+    /// use qubit_value::Value;
+    ///
+    /// let metadata = Metadata::new().with("count", Value::Unset(DataType::Int64));
+    /// assert_eq!(metadata.get_optional::<i64>("absent").unwrap(), None);
+    /// assert_eq!(metadata.get_optional::<i64>("count").unwrap(), None);
+    /// assert!(metadata.get_optional::<i32>("count").is_err());
+    /// ```
     pub fn get_optional<T: StrictValueRead>(&self, key: &str) -> MetadataResult<Option<T>> {
         match self.get(key) {
             Ok(value) => Ok(Some(value)),
@@ -401,33 +476,100 @@ impl Metadata {
         }
     }
 
-    /// Strictly reads `key`, adapting `default` only for absent or matching
-    /// unset storage.
+    /// Strictly reads `key`, adapting `default` only for an absent key or
+    /// unset storage declared as `T`.
+    ///
+    /// The default adapter is invoked only when this read permits fallback.
+    /// Rust still evaluates the argument expression before calling this method.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The requested type, which must support strict value reads.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to read.
+    /// * `default` - A value or adapter that can provide a default `T`.
+    ///
+    /// # Returns
+    ///
+    /// The stored value read as `T`, or the adapted default when the key is
+    /// absent or contains matching unset storage.
     ///
     /// # Errors
-    /// Returns the original read error for a type mismatch; never hides invalid
-    /// data.
+    ///
+    /// Returns [`MetadataError::ValueAccess`] for a type mismatch, including
+    /// unset storage declared as a different type. Such errors are propagated
+    /// without using the default.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_datatype::DataType;
+    /// use qubit_metadata::Metadata;
+    /// use qubit_value::Value;
+    ///
+    /// let metadata = Metadata::new()
+    ///     .with("count", Value::Unset(DataType::Int64))
+    ///     .with("text", "invalid");
+    /// assert_eq!(metadata.get_or::<i64>("count", 7_i64).unwrap(), 7);
+    /// assert_eq!(metadata.get_or::<i64>("absent", 7_i64).unwrap(), 7);
+    /// assert!(metadata.get_or::<i64>("text", 7_i64).is_err());
+    /// ```
     pub fn get_or<T: StrictValueRead>(&self, key: &str, default: impl IntoValueDefault<T>) -> MetadataResult<T> {
         self.get_optional(key)
             .map(|value| value.unwrap_or_else(|| default.into_value_default()))
     }
 
-    /// Converts `key` to `T` using the default conversion policy and limits.
+    /// Converts the stored value under `key` to `T` using the default
+    /// conversion policy and limits. For strict reads, see [`Self::get`].
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The conversion target type.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to convert.
+    ///
+    /// # Returns
+    ///
+    /// The stored value converted to `T`.
     ///
     /// # Errors
-    /// Returns MissingKey or ValueAccess with the original missing, invalid,
-    /// unsupported, precision-loss or resource error and its source chain.
+    ///
+    /// Returns [`MetadataError::MissingKey`] when `key` is absent, or
+    /// [`MetadataError::ValueAccess`] when conversion fails. The latter retains
+    /// the underlying missing, invalid, unsupported, precision-loss, or
+    /// resource-limit error and its source chain.
     pub fn convert<T: DataConversionTarget>(&self, key: &str) -> MetadataResult<T> {
         self.convert_with(key, ConversionPolicy::default_ref(), ConversionLimits::default_ref())
     }
 
-    /// Converts `key` to `T` with explicit `policy` and `limits`.
+    /// Converts the stored value under `key` to `T` with an explicit
+    /// [`ConversionPolicy`] and [`ConversionLimits`]. Each call has an
+    /// independent conversion budget and leaves the stored value unchanged.
+    /// For default policy and limits, see [`Self::convert`].
     ///
-    /// Each call owns one conversion budget and leaves stored data unchanged.
+    /// # Type Parameters
+    ///
+    /// * `T` - The conversion target type.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to convert.
+    /// * `policy` - The policy controlling which conversions are allowed.
+    /// * `limits` - The per-call resource limits and budget.
+    ///
+    /// # Returns
+    ///
+    /// The stored value converted to `T`.
     ///
     /// # Errors
-    /// Returns MissingKey or ValueAccess preserving conversion facts and
-    /// limits.
+    ///
+    /// Returns [`MetadataError::MissingKey`] when `key` is absent, or
+    /// [`MetadataError::ValueAccess`] when conversion fails. The latter
+    /// preserves the underlying conversion facts and any exceeded limits.
     pub fn convert_with<T: DataConversionTarget>(
         &self,
         key: &str,
@@ -439,11 +581,30 @@ impl Metadata {
             .map_err(|source| Self::map_access_error(key, source))
     }
 
-    /// Converts `key`, returning None for absent, unset, or policy-missing
-    /// scalars.
+    /// Converts the value under `key`, returning `None` for an absent key,
+    /// unset storage, or a scalar classified as missing by `policy`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The conversion target type.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to convert.
+    /// * `policy` - The policy controlling conversion and missing-value
+    ///   handling.
+    /// * `limits` - The per-call resource limits and budget.
+    ///
+    /// # Returns
+    ///
+    /// `Some(value)` when conversion succeeds; `None` for an absent key, unset
+    /// storage, or a policy-missing scalar.
     ///
     /// # Errors
-    /// All other conversion errors propagate with their source and key.
+    ///
+    /// Propagates all other errors as [`MetadataError::ValueAccess`], retaining
+    /// the key and the underlying conversion error. See [`Self::convert_with`]
+    /// for explicit policy and budget behavior.
     pub fn convert_optional_with<T: DataConversionTarget>(
         &self,
         key: &str,
@@ -457,11 +618,36 @@ impl Metadata {
         }
     }
 
-    /// Converts `key`, adapting `default` only for a defaultable missing
-    /// scalar.
+    /// Converts the value under `key`, adapting `default` only when the result
+    /// is a defaultable missing value. See [`Self::convert_optional_with`] for
+    /// the conditions that produce `None`.
+    ///
+    /// The default adapter is invoked only when this conversion permits
+    /// fallback. Rust still evaluates the argument expression before calling
+    /// this method.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The conversion target type.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - The metadata key to convert.
+    /// * `default` - A value or adapter that can provide a default `T`.
+    /// * `policy` - The policy controlling conversion and missing-value
+    ///   handling.
+    /// * `limits` - The per-call resource limits and budget.
+    ///
+    /// # Returns
+    ///
+    /// The converted value, or the adapted default when the conversion result
+    /// is a defaultable missing value.
     ///
     /// # Errors
-    /// Invalid, unsupported, precision-loss and resource errors never default.
+    ///
+    /// Errors other than defaultable missing values propagate as
+    /// [`MetadataError::ValueAccess`]. Invalid values, unsupported conversions,
+    /// precision loss, and resource-limit errors never use the default.
     pub fn convert_or_with<T: DataConversionTarget>(
         &self,
         key: &str,
