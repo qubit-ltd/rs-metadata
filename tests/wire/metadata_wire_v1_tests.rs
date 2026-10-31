@@ -97,6 +97,28 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
 }
 
 #[test]
+fn test_metadata_deserialization_enforces_hard_entry_boundary() {
+    let template =
+        to_value(Metadata::new().with("sample", 1_i64)).expect("template should serialize")["values"]["sample"].clone();
+    for count in [4_096, 4_097] {
+        let values: serde_json::Map<String, serde_json::Value> = (0..count)
+            .map(|index| (format!("key-{index:04}"), template.clone()))
+            .collect();
+        let input =
+            to_string(&json!({"version": 1, "values": values})).expect("raw JSON should serialize beyond model limits");
+        let decoded = from_str::<Metadata>(&input);
+        if count == 4_096 {
+            let metadata = decoded.expect("4096 entries should decode");
+            assert_eq!(metadata.len(), count, "all entries should survive");
+            assert_eq!(metadata.get::<i64>("key-4095"), Ok(1));
+        } else {
+            let error = decoded.expect_err("4097 entries should exceed the hard limit");
+            assert!(error.to_string().contains("4096 entries"), "wrong limit error: {error}");
+        }
+    }
+}
+
+#[test]
 #[cfg(feature = "json")]
 fn test_metadata_json_decoder_exercises_seed_error_paths() {
     let wrong_values_type = br#"{"version":1,"values":[]}"#;

@@ -101,6 +101,35 @@ fn test_metadata_schema_serialization_enforces_hard_entry_limit() {
 }
 
 #[test]
+fn test_metadata_schema_deserialization_enforces_hard_entry_boundary() {
+    let template_schema = MetadataSchema::builder()
+        .optional("sample", DataType::String)
+        .build()
+        .expect("template schema should build");
+    let envelope = to_value(&template_schema).expect("template should serialize");
+    let field = envelope["fields"]["sample"].clone();
+    for count in [4_096, 4_097] {
+        let fields: serde_json::Map<String, serde_json::Value> = (0..count)
+            .map(|index| (format!("key-{index:04}"), field.clone()))
+            .collect();
+        let mut raw = envelope.clone();
+        raw["fields"] = serde_json::Value::Object(fields);
+        let input = to_string(&raw).expect("raw JSON should serialize beyond model limits");
+        let decoded = from_str::<MetadataSchema>(&input);
+        if count == 4_096 {
+            let schema = decoded.expect("4096 fields should decode");
+            for index in 0..count {
+                assert_eq!(schema.field_type(&format!("key-{index:04}")), Some(DataType::String));
+            }
+            assert!(schema.field("key-4096").is_none(), "no extra field should appear");
+        } else {
+            let error = decoded.expect_err("4097 fields should exceed the hard limit");
+            assert!(error.to_string().contains("4096 entries"), "wrong limit error: {error}");
+        }
+    }
+}
+
+#[test]
 #[cfg(feature = "json")]
 fn test_metadata_schema_json_decoder_rejects_unsupported_version() {
     let input = json!({
