@@ -49,6 +49,12 @@ fn test_metadata_schema_v1_round_trip() {
     let decoded = from_str(&encoded).expect("schema should deserialize");
 
     assert_eq!(schema, decoded);
+
+    #[cfg(feature = "json")]
+    assert_eq!(
+        MetadataSchema::decode_json_slice(encoded.as_bytes()).expect("the bounded JSON schema should decode"),
+        schema
+    );
 }
 
 #[test]

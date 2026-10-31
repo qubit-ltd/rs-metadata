@@ -158,7 +158,7 @@ impl MetadataSchema {
         let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let error_slot = Rc::new(RefCell::new(None));
         let wire = decoder
-            .decode_seed_utf8(
+            .decode_unique_seed_utf8(
                 MetadataSchemaWireV1Seed::new(
                     StrictStringMapSeed::new(limits.max_schema_fields(), limits.max_key_bytes())
                         .with_error_slot(Rc::clone(&error_slot)),

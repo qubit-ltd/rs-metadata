@@ -217,12 +217,13 @@ impl MetadataFilter {
     /// Returns `Budget` or `Quantity` when generic JSON traversal exceeds a
     /// configured budget, `Filter` when seeded traversal detects an AST limit
     /// or the decoded filter violates its contract, `UnsupportedVersion` for a
-    /// version mismatch, `InvalidLimits` for invalid metadata limits, and
-    /// `Syntax` for lexical JSON errors. Shared decoder failures such as empty
-    /// input, invalid UTF-8, unexpected top-level types, or deserialization
-    /// failures return `Decode`. Receiver AST or filter-contract failures
-    /// return `Filter`. Individual JSON strings and embedded value payloads
-    /// remain bounded by the outer input-byte limit.
+    /// version mismatch, and `InvalidLimits` for invalid metadata limits.
+    /// Lexical JSON errors return `Syntax`; shared decoder failures such as
+    /// empty input, invalid UTF-8, unexpected top-level types, or other
+    /// deserialization failures return `Decode`. Receiver AST or filter
+    /// contract failures return `Filter` and do not retain source coordinates.
+    /// Individual JSON strings and embedded value payloads remain bounded by
+    /// the outer input-byte limit.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(
         input: &[u8],
@@ -235,7 +236,7 @@ impl MetadataFilter {
         let mut decoder = JsonDecoder::new(JsonDecodeSession::from_limits(limits.json_decode()));
         let error_slot = Rc::new(RefCell::new(None));
         let wire = decoder
-            .decode_seed_utf8(
+            .decode_unique_seed_utf8(
                 MetadataFilterWireV1Seed::new(receiver_filter_limits, Rc::clone(&error_slot)),
                 input,
             )

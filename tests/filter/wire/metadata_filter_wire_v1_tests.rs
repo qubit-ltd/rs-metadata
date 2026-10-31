@@ -32,6 +32,26 @@ fn filter_for_existing_key(key: &str) -> MetadataFilter {
         .expect("filter should build")
 }
 
+#[cfg(feature = "json")]
+#[test]
+fn test_metadata_filter_json_round_trips_float_and_json_domain_values() {
+    let expression = FilterExpression::builder()
+        .eq("ratio", 1.5_f64)
+        .eq(
+            "payload",
+            qubit_value::Value::Json(json!({"ratio": 1.25, "nested": [2.5, -3.75]})),
+        )
+        .build()
+        .expect("the expression should build");
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .expect("the filter should build");
+    let input = filter.to_json_vec().expect("the filter should encode");
+    let restored = MetadataFilter::decode_json_slice(&input).expect("the JSON decoder should preserve floating values");
+    assert_eq!(restored, filter);
+}
+
 /// Deserializes a filter under explicit receiver limits.
 fn deserialize_with_filter_limits(encoded: &str, limits: FilterLimits) -> Result<MetadataFilter, Error> {
     let mut deserializer = Deserializer::from_str(encoded);

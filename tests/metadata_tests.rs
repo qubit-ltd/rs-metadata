@@ -571,6 +571,22 @@ fn test_metadata_default_json_helpers_round_trip_and_write() {
     assert!(metadata.to_string().contains("name"));
 }
 
+#[cfg(feature = "json")]
+#[test]
+fn test_metadata_json_helpers_round_trip_float_and_json_domain_values() {
+    let metadata = Metadata::new().with("ratio", 1.5_f64).with(
+        "payload",
+        Value::Json(serde_json::json!({"ratio": 1.25, "nested": [2.5, -3.75]})),
+    );
+    let input = metadata.to_json_vec().expect("the metadata should encode");
+    let restored = Metadata::decode_json_slice(&input).expect("the JSON decoder should preserve floating values");
+    assert_eq!(
+        restored.to_json_vec().expect("the restored metadata should encode"),
+        input
+    );
+    assert_eq!(restored, metadata);
+}
+
 #[test]
 fn test_metadata_debug_clone_and_equality_are_stable() {
     let metadata = Metadata::new().with("id", 7_i64);
