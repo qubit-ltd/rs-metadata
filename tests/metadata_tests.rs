@@ -352,6 +352,59 @@ fn test_set_checked_supports_mutable_chaining() {
 
 #[test]
 #[cfg(feature = "schema")]
+fn test_checked_writes_preserve_metadata_on_rejection() {
+    let schema = MetadataSchema::builder()
+        .required("key", DataType::String)
+        .optional("other", DataType::Int64)
+        .build()
+        .expect("schema should build");
+    let baseline = Metadata::new().with("key", "old").with("other", 7_i64);
+    let cases = [
+        (
+            "key",
+            Value::from(1_i64),
+            MetadataError::TypeMismatch {
+                key: "key".to_string(),
+                expected: DataType::String,
+                actual: DataType::Int64,
+                message: format!("expected {}, got {}", DataType::String, DataType::Int64),
+            },
+        ),
+        (
+            "key",
+            Value::Unset(DataType::String),
+            MetadataError::MissingRequiredField {
+                key: "key".to_string(),
+                expected: DataType::String,
+            },
+        ),
+        (
+            "unknown",
+            Value::from("new"),
+            MetadataError::UnknownField {
+                key: "unknown".to_string(),
+            },
+        ),
+    ];
+    for (key, value, expected) in cases {
+        for use_set in [false, true] {
+            let mut metadata = baseline.clone();
+            let result = if use_set {
+                metadata.set_checked(&schema, key, value.clone()).map(|_| ())
+            } else {
+                metadata.insert_checked(&schema, key, value.clone()).map(|_| ())
+            };
+            assert_eq!(result, Err(expected.clone()), "wrong error for {key}, set={use_set}");
+            assert_eq!(
+                metadata, baseline,
+                "rejected write changed data for {key}, set={use_set}"
+            );
+        }
+    }
+}
+
+#[test]
+#[cfg(feature = "schema")]
 fn test_set_checked_rejects_type_mismatch() {
     let schema = MetadataSchema::builder()
         .required("key", DataType::String)
