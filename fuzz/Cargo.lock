@@ -409,6 +409,7 @@ name = "qubit-metadata-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
+ "qubit-budget",
  "qubit-metadata",
  "serde_json",
 ]
