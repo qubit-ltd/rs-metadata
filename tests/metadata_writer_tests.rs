@@ -165,18 +165,49 @@ fn assert_value_budget_failure(
 }
 
 #[cfg(feature = "schema")]
-fn assert_json_rejection(
-    write_with_limits: impl FnOnce(&mut ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+fn assert_schema_domain_rejection(
+    schema: &qubit_metadata::MetadataSchema,
+    expected_kind: MetadataWireLimitKind,
+    expected_value: usize,
+    expected_maximum: usize,
 ) {
-    let mut probe = ProbeWriter::new(None);
-    let error = write_with_limits(&mut probe, default_json_encode_limits())
-        .expect_err("overlong key should be rejected by JSON serialization");
-    assert!(
-        matches!(error, MetadataWireEncodeError::Json(_)),
-        "unexpected error: {error:?}"
-    );
-    assert_eq!(probe.writes, 0);
-    assert_eq!(probe.bytes, PREFIX);
+    let limits = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+        .build();
+    for error in [
+        schema.to_json_vec().expect_err("default vec must reject wire limit"),
+        schema
+            .to_json_vec_with_limits(limits)
+            .expect_err("explicit vec must reject wire limit"),
+    ] {
+        let MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded { kind, value, maximum }) = &error else {
+            panic!("expected domain wire-limit error, got {error:?}");
+        };
+        assert_eq!(*kind, expected_kind);
+        assert_eq!(*value, expected_value);
+        assert_eq!(*maximum, expected_maximum);
+        assert!(Error::source(&error).is_some());
+    }
+
+    for (name, write) in [("default writer", false), ("explicit writer", true)] {
+        let mut probe = ProbeWriter::new(None);
+        let error = if write {
+            schema.to_json_writer_with_limits(&mut probe, limits)
+        } else {
+            schema.to_json_writer(&mut probe)
+        }
+        .expect_err(name);
+        let MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded { kind, value, maximum }) = &error else {
+            panic!("expected domain wire-limit error, got {error:?}");
+        };
+        assert_eq!(*kind, expected_kind);
+        assert_eq!(*value, expected_value);
+        assert_eq!(*maximum, expected_maximum);
+        assert!(Error::source(&error).is_some());
+        assert_eq!(probe.writes, 0);
+        assert_eq!(probe.bytes, PREFIX);
+    }
 }
 
 #[test]
@@ -320,5 +351,65 @@ fn test_schema_json_writers_preserve_buffered_contract() {
         .optional(&"k".repeat(257), DataType::String)
         .build()
         .unwrap();
-    assert_json_rejection(|probe, limits| schema.to_json_writer_with_limits(probe, limits));
+    assert_schema_domain_rejection(&schema, MetadataWireLimitKind::KeyBytes, 257, 256);
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn test_schema_json_wire_contract_boundaries_and_budget_precedence() {
+    let mut builder = qubit_metadata::MetadataSchema::builder();
+    for index in 0..4_096 {
+        builder = builder.optional(&format!("field-{index}"), DataType::Int64);
+    }
+    let schema = builder.build().unwrap();
+    assert!(schema.to_json_vec().is_ok(), "4,096 fields are within the wire limit");
+
+    let mut builder = qubit_metadata::MetadataSchema::builder();
+    for index in 0..4_097 {
+        builder = builder.optional(&format!("field-{index}"), DataType::Int64);
+    }
+    let schema = builder.build().unwrap();
+    assert_schema_domain_rejection(&schema, MetadataWireLimitKind::Entries, 4_097, 4_096);
+
+    let key_ascii_256 = "a".repeat(256);
+    let schema = qubit_metadata::MetadataSchema::builder()
+        .optional(&key_ascii_256, DataType::String)
+        .build()
+        .unwrap();
+    assert!(
+        schema.to_json_vec().is_ok(),
+        "256 ASCII key bytes are within the wire limit"
+    );
+
+    let key_256 = format!("{}a", "界".repeat(85));
+    assert_eq!(key_256.len(), 256);
+    let schema = qubit_metadata::MetadataSchema::builder()
+        .optional(&key_256, DataType::String)
+        .build()
+        .unwrap();
+    assert!(
+        schema.to_json_vec().is_ok(),
+        "256 UTF-8 key bytes are within the wire limit"
+    );
+
+    let key_257 = format!("{}ab", "界".repeat(85));
+    assert_eq!(key_257.len(), 257);
+    let schema = qubit_metadata::MetadataSchema::builder()
+        .optional(&key_257, DataType::String)
+        .build()
+        .unwrap();
+    assert_schema_domain_rejection(&schema, MetadataWireLimitKind::KeyBytes, 257, 256);
+
+    let schema = qubit_metadata::MetadataSchema::builder()
+        .optional("valid", DataType::String)
+        .build()
+        .unwrap();
+    let tiny_budget = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+        .build();
+    assert!(matches!(
+        schema.to_json_vec_with_limits(tiny_budget),
+        Err(MetadataWireEncodeError::Budget(_))
+    ));
 }

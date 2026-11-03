@@ -185,6 +185,11 @@ impl MetadataSchema {
     }
 
     /// Encodes this schema with the default JSON budget profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError::Domain`] when the schema
+    /// exceeds a V1 wire limit before JSON output budgets are checked.
     #[cfg(feature = "json")]
     pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
@@ -198,10 +203,14 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
-    /// budget or serialization fails.
+    /// Returns [`crate::MetadataWireEncodeError`] when a schema field count or
+    /// key exceeds the V1 wire limit, encoding exceeds a JSON budget, or
+    /// serialization fails. Schema wire-limit errors are reported as
+    /// `Domain(MetadataError::WireLimitExceeded { .. })` before JSON budgets.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.validate_wire_contract()
+            .map_err(crate::MetadataWireEncodeError::Domain)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
@@ -223,9 +232,11 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when a budget or
-    /// serialization failure occurs before writing, or when a destination
-    /// writer rejects bytes.
+    /// Returns [`crate::MetadataWireEncodeError`] when a schema field count or
+    /// key exceeds the V1 wire limit, a JSON budget or serialization failure
+    /// occurs before writing, or the destination writer rejects bytes. Schema
+    /// wire-limit errors are reported as
+    /// `Domain(MetadataError::WireLimitExceeded { .. })` before JSON budgets.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -266,6 +277,8 @@ impl MetadataSchema {
     where
         W: Write,
     {
+        self.validate_wire_contract()
+            .map_err(crate::MetadataWireEncodeError::Domain)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session)
             .write_buffered(&mut writer, self)

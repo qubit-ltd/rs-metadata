@@ -339,14 +339,22 @@ qubit-metadata = { version = "0.7", features = ["json"] }
 qubit-budget = { version = "0.10", features = ["json"] }
 ```
 
+<!-- bounded-json-encoding-example:start -->
 ```rust
-use qubit_budget::json::JsonResource;
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use qubit_budget::ResourceLimit;
-use qubit_metadata::default_json_encode_limits;
+use qubit_budget::json::JsonResource;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataLimits;
+use qubit_metadata::default_json_encode_limits;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let encode = default_json_encode_limits()
         .into_builder()
         .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
@@ -358,7 +366,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with("chunk_index", 3_i64);
 
     let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
-    // 应用在此处把字节交给自己的存储或传输层。
+    // The application passes these bytes to its own storage or transport layer.
     let restored = Metadata::decode_json_slice_with_limits(&bytes, limits)?;
     assert_eq!(restored, metadata);
 
@@ -368,12 +376,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+<!-- bounded-json-encoding-example:end -->
 
 这只是帮助熟悉 API 的入门练习，并未实现存储。真实应用仍需负责事务、发送、重试，以及
 I/O 失败后的补偿。`to_json_vec` 和 `to_json_writer` 使用默认输出预算；若
 `MetadataLimits` 配置了自定义编码 profile，调用时要显式传入 `limits.json_encode()`。
 修改 `json_decode` 不会改变输出 profile。启用 `schema` feature 后，`MetadataSchema`
-也提供同一组 `to_json_vec*` 和 `to_json_writer*` 方法。
+也提供同一组 `to_json_vec*` 和 `to_json_writer*` 方法。 Metadata 和 schema 的有界编码遇到 V1 wire 限额时都会返回 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`，并优先于 JSON 输出预算检查。原先针对 schema 限额匹配 `Json` 的调用方应改为匹配 `Domain` 并读取这些字段；普通 Serde 序列化错误仍为 `Json`。
 
 编码器会先检查值是否可表示以及预算是否足够，再生成完整的紧凑 JSON 缓冲区；writer API
 随后写出缓冲结果。若目标 writer 写入失败，目标端仍可能已经收到部分字节，因此不能据此
@@ -397,8 +406,8 @@ assert!(matches!(
 ```
 
 遇到预算错误时，应缩减输出，或按应用策略调整预算；不要对同一载荷改用无限额配置重试。
-`MetadataWireEncodeError` 还会区分 `Quantity`、`Syntax`、`Json` 和 `Io`。Metadata wire
-契约错误使用 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`，保留限制类别和实际测量值。迁移原先将此类错误视为 `Json` 的代码时，应改为匹配 `Domain` 并读取这些字段；普通 Serde 序列化错误仍为 `Json`。该枚举标记为 `non_exhaustive`，穷举匹配时应保留兜底分支。
+`MetadataWireEncodeError` 还会区分 `Quantity`、`Syntax`、`Json` 和 `Io`。Metadata 与 schema
+wire 契约错误使用 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`，保留限制类别和实际测量值。schema 编码会先执行领域限制 preflight，再检查 JSON 输出预算。迁移原先将 schema 限额错误视为 `Json` 的代码时，应改为匹配 `Domain` 并读取这些字段；普通 Serde 序列化错误仍为 `Json`。该枚举标记为 `non_exhaustive`，穷举匹配时应保留兜底分支。
 
 ### 严格的 V1 wire format
 
@@ -409,7 +418,7 @@ Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知�
 除非版本化格式本身是集成契约，否则不要手写这些结构，优先使用公开的 Serde 实现。
 
 `Metadata` 和 `MetadataSchema` 在内存模型中不限制条目数和 key 长度。序列化器只在 V1
-wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 字节 key 的 map；metadata 编码通过 `MetadataWireEncodeError::Domain` 返回结构化的 `MetadataError::WireLimitExceeded`。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
+wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 字节 key 的 map；metadata 和 schema 编码通过 `MetadataWireEncodeError::Domain` 返回结构化的 `MetadataError::WireLimitExceeded`，且 schema 会先检查领域限制，再检查 JSON 输出预算。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
 在限制以内。针对特定边界时，接收方控制的 JSON 限制可以进一步降低资源上限。
 
 ## 错误与诊断

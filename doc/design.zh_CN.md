@@ -67,7 +67,7 @@ metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形
 ## 错误分类与脱敏
 
 `MetadataError` 覆盖 metadata 读取和 schema 校验，校验结果可以暴露多个相互独立的问题。Filter
-builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语法/envelope 失败和不支持版本。有界 metadata 编码通过 `MetadataWireEncodeError::Domain` 保留 `MetadataError::WireLimitExceeded`；普通 Serde 序列化错误仍使用 `Json`。诊断
+builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语法/envelope 失败和不支持版本。有界 metadata 与 schema 编码通过 `MetadataWireEncodeError::Domain` 保留 `MetadataError::WireLimitExceeded`；schema wire preflight 优先于 JSON 输出预算。原先针对 schema wire 限额匹配 `Json` 的调用方应改为匹配 `Domain` 并读取 `kind`、`value` 和 `maximum`；普通 Serde 序列化错误仍使用 `Json`。诊断
 保留有用的类型、数量和版本号，但不嵌入被拒绝的 metadata 值；这属于诊断脱敏，不承诺隐藏任意
 用户 key 或错误文本。
 

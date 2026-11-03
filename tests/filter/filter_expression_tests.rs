@@ -43,6 +43,124 @@ fn test_and_or_and_not_are_expression_operations() {
 }
 
 #[test]
+fn test_public_composition_preserves_wide_groups_constants_and_double_not() {
+    let leaves: Vec<_> = (0..255)
+        .map(|index| {
+            FilterExpression::builder()
+                .exists(&format!("key_{index}"))
+                .build()
+                .expect("leaf should build")
+        })
+        .collect();
+
+    for is_or in [false, true] {
+        let mut items = leaves.iter().cloned();
+        let first = items.next().expect("leaves are nonempty");
+        let expression = items.fold(first, |left, right| {
+            if is_or {
+                left.try_or(right).expect("wide OR group should fit")
+            } else {
+                left.try_and(right).expect("wide AND group should fit")
+            }
+        });
+        match expression.view() {
+            FilterExpressionView::Or(children) if is_or => assert_eq!(children.len(), 255),
+            FilterExpressionView::And(children) if !is_or => assert_eq!(children.len(), 255),
+            _ => panic!("wide composition should remain the selected group"),
+        }
+
+        if is_or {
+            assert_eq!(
+                FilterExpression::match_none().try_or(expression.clone()),
+                Ok(expression.clone())
+            );
+        } else {
+            assert_eq!(
+                FilterExpression::match_all().try_and(expression.clone()),
+                Ok(expression.clone())
+            );
+        }
+    }
+
+    let leaf = leaves[0].clone();
+    assert_eq!(
+        leaf.clone().try_not().expect("first NOT should fit").try_not(),
+        Ok(leaf),
+    );
+}
+
+#[test]
+fn test_public_not_reports_depth_boundary() {
+    let mut expression = FilterExpression::builder()
+        .exists("leaf")
+        .build()
+        .expect("leaf should build");
+    for index in 1..FilterLimits::MAX.max_depth() {
+        let leaf = FilterExpression::builder()
+            .exists(&format!("key_{index}"))
+            .build()
+            .expect("leaf should build");
+        expression = if matches!(expression.view(), FilterExpressionView::And(_)) {
+            expression.try_or(leaf)
+        } else {
+            expression.try_and(leaf)
+        }
+        .expect("expression should build at the depth boundary");
+    }
+    assert_eq!(
+        expression.try_not(),
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::Depth,
+            value: FilterLimits::MAX.max_depth() + 1,
+            maximum: FilterLimits::MAX.max_depth(),
+        }),
+    );
+}
+
+#[test]
+fn test_public_composition_preserves_depth_first_error_when_depth_and_nodes_overflow() {
+    let mut deep = FilterExpression::builder()
+        .exists("key_0")
+        .build()
+        .expect("first leaf should build");
+    for index in 1..FilterLimits::MAX.max_depth() {
+        let leaf = FilterExpression::builder()
+            .exists(&format!("key_{index}"))
+            .build()
+            .expect("leaf should build");
+        deep = if matches!(deep.view(), FilterExpressionView::And(_)) {
+            deep.try_or(leaf)
+        } else {
+            deep.try_and(leaf)
+        }
+        .expect("deep expression should build at the depth boundary");
+    }
+    let wide = (0..255)
+        .map(|index| {
+            FilterExpression::builder()
+                .exists(&format!("wide_{index}"))
+                .build()
+                .expect("wide leaf should build")
+        })
+        .reduce(|left, right| left.try_and(right).expect("wide expression should fit"))
+        .expect("wide expression should be nonempty");
+
+    let result = if matches!(deep.view(), FilterExpressionView::And(_)) {
+        deep.try_or(wide)
+    } else {
+        deep.try_and(wide)
+    };
+    assert_eq!(
+        result,
+        Err(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::Depth,
+            value: FilterLimits::MAX.max_depth() + 1,
+            maximum: FilterLimits::MAX.max_depth(),
+        }),
+    );
+}
+
+#[test]
 fn test_and_or_follow_three_valued_logic_for_missing_and_unset_values() {
     // Each row is (left, right, AND, OR); None represents Unknown.
     let cases = [

@@ -174,6 +174,73 @@ fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmarks public expression composition separately from builder
+/// construction.
+fn benchmark_public_expression_composition(criterion: &mut Criterion) {
+    let mut group = criterion.benchmark_group("metadata/public_expression_composition");
+    for condition_count in [16, 64, 128, 255] {
+        let leaves: Vec<_> = (0..condition_count)
+            .map(|index| {
+                FilterExpression::builder()
+                    .exists(&format!("key_{index}"))
+                    .build()
+                    .expect("benchmark leaf should build")
+            })
+            .collect();
+        for operator in ["and", "or"] {
+            group.bench_function(BenchmarkId::new(operator, condition_count), |bencher| {
+                bencher.iter_batched(
+                    || leaves.clone(),
+                    |leaves| {
+                        let mut items = leaves.into_iter();
+                        let first = items.next().expect("nonempty benchmark input");
+                        let expression = items.fold(first, |left, right| {
+                            if operator == "and" {
+                                left.try_and(right).expect("bounded public AND composition")
+                            } else {
+                                left.try_or(right).expect("bounded public OR composition")
+                            }
+                        });
+                        black_box(expression)
+                    },
+                    BatchSize::SmallInput,
+                );
+            });
+        }
+
+        // A 255-condition AND already uses all 256 nodes, so NOT must stop at 254.
+        let not_count = condition_count.min(254);
+        let mut not_items = leaves.iter().take(not_count).cloned();
+        let not_first = not_items.next().expect("nonempty benchmark input");
+        let not_input = not_items.fold(not_first, |left, right| {
+            left.try_and(right).expect("bounded public AND composition")
+        });
+        group.bench_function(BenchmarkId::new("not", not_count), |bencher| {
+            bencher.iter_batched(
+                || not_input.clone(),
+                |expression| black_box(expression.try_not().expect("bounded public NOT composition")),
+                BatchSize::SmallInput,
+            );
+        });
+        group.bench_function(BenchmarkId::new("double_not", not_count), |bencher| {
+            bencher.iter_batched(
+                || not_input.clone(),
+                |expression| {
+                    black_box(
+                        expression
+                            .try_not()
+                            .expect("bounded first public NOT composition")
+                            .try_not()
+                            .expect("bounded second public NOT composition"),
+                    )
+                },
+                BatchSize::SmallInput,
+            );
+        });
+    }
+    group.finish();
+}
+
 /// Benchmarks bounded JSON decoding of a prepared metadata filter envelope.
 #[cfg(feature = "json")]
 fn benchmark_filter_json_decode(criterion: &mut Criterion) {
@@ -283,6 +350,7 @@ criterion_group!(
     benchmark_metadata_json_decode,
     benchmark_metadata_json_encode,
     benchmark_filter_expression_construction,
+    benchmark_public_expression_composition,
     benchmark_filter_match,
     benchmark_filter_json_decode,
     benchmark_schema_json_decode,

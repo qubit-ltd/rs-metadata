@@ -94,10 +94,12 @@ appropriate for ordering or grouping.
 `MetadataError` covers metadata access and schema validation; validation results
 can expose multiple independent issues. Filter builders report malformed or
 incompatible expressions. Wire errors distinguish domain-limit failures,
-syntax/envelope failures, and unsupported versions. Bounded metadata encoding
-preserves `MetadataError::WireLimitExceeded` in
-`MetadataWireEncodeError::Domain`; ordinary Serde serialization failures remain
-in `Json`. Diagnostics preserve useful
+syntax/envelope failures, and unsupported versions. Bounded metadata and schema
+encoding preserve `MetadataError::WireLimitExceeded` in
+`MetadataWireEncodeError::Domain`, with schema wire preflight preceding JSON
+output budgets; ordinary Serde serialization failures remain in `Json`. Callers
+that previously matched `Json` for schema wire limits should match `Domain` and
+inspect `kind`, `value`, and `maximum`. Diagnostics preserve useful
 types, counts, and versions without embedding rejected metadata values. This is
 diagnostic redaction, not a promise to hide arbitrary user keys or error text.
 

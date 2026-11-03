@@ -378,14 +378,22 @@ qubit-metadata = { version = "0.7", features = ["json"] }
 qubit-budget = { version = "0.10", features = ["json"] }
 ```
 
+<!-- bounded-json-encoding-example:start -->
 ```rust
-use qubit_budget::json::JsonResource;
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use qubit_budget::ResourceLimit;
-use qubit_metadata::default_json_encode_limits;
+use qubit_budget::json::JsonResource;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataLimits;
+use qubit_metadata::default_json_encode_limits;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let encode = default_json_encode_limits()
         .into_builder()
         .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
@@ -407,6 +415,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+<!-- bounded-json-encoding-example:end -->
 
 This is an entry-level exercise, not a storage implementation. The application
 still owns transactions, sending, retries, and compensation for I/O failures.
@@ -414,7 +423,7 @@ still owns transactions, sending, retries, and compensation for I/O failures.
 `MetadataLimits` value contains a custom encode profile, pass
 `limits.json_encode()` explicitly. Changing `json_decode` does not change that
 output profile. `MetadataSchema` has the same `to_json_vec*` and
-`to_json_writer*` family when the `schema` feature is enabled.
+`to_json_writer*` family when the `schema` feature is enabled. Both metadata and schema bounded encoders return `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })` for V1 wire-limit violations, before checking JSON output budgets. Callers that previously matched `Json` for schema limits should match `Domain` and inspect those fields; ordinary Serde serialization failures remain `Json`.
 
 The encoder checks value representability and budgets before producing the
 compact JSON buffer. The writer API then writes that buffered output; a writer
@@ -442,10 +451,11 @@ assert!(matches!(
 Handle the budget failure by reducing the output or changing the configured
 budget according to application policy; do not retry the same payload with an
 unbounded profile. `MetadataWireEncodeError` also distinguishes `Quantity`, `Syntax`, `Json`, and
-`Io`. Metadata wire-contract failures use `Domain(MetadataError::WireLimitExceeded
-{ kind, value, maximum })`, preserving the limit category and measurements. Migrate
-code that previously treated these as `Json` by matching `Domain` and inspecting
-those fields; ordinary Serde serialization failures remain `Json`. The enum is `non_exhaustive`, so callers should keep
+`Io`. Metadata and schema wire-contract failures use
+`Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`, preserving
+the limit category and measurements. Migrate code that previously treated
+schema wire-limit failures as `Json` by matching `Domain` and inspecting those
+fields; ordinary Serde serialization failures remain `Json`. The enum is `non_exhaustive`, so callers should keep
 a fallback arm when matching all variants.
 
 ### Strict V1 wire formats
@@ -461,8 +471,9 @@ integration contract; prefer the public Serde implementations.
 `Metadata` and `MetadataSchema` are unbounded in memory. Their serializers
 reject maps larger than 4,096 entries or keys longer than 256 UTF-8 bytes only
 at the V1 wire boundary, returning `MetadataWireEncodeError::Domain` with the
-structured `MetadataError::WireLimitExceeded` details for metadata encoding. These hard wire
-bounds are shared with the default strict decoders; keep them in producer-side
+structured `MetadataError::WireLimitExceeded` details for metadata and schema encoding. Schema
+encoding checks these domain limits before JSON output budgets. These hard wire bounds are shared
+with the default strict decoders; keep them in producer-side
 validation when generating interchange data. Receiver-controlled JSON limits
 may be lowered for a particular boundary.
 

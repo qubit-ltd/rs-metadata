@@ -75,33 +75,51 @@ qubit-datatype = "0.15"
 
 解码和编码策略刻意保持方向独立。例如，接收端可以收紧输入准入，而不意外改变输出额度：
 
+<!-- directional-json-limits-example:start -->
 ```rust
-use qubit_budget::json::JsonResource;
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use qubit_budget::ResourceLimit;
+use qubit_budget::json::JsonResource;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
-use qubit_metadata::MetadataLimits;
-use qubit_metadata::Metadata;
 
-let decode = default_json_decode_limits()
-    .into_builder()
-    .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
-    .build();
-let encode = default_json_encode_limits()
-    .into_builder()
-    .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
-    .build();
-let limits = MetadataLimits::builder()
-    .json_decode(decode)
-    .json_encode(encode)
-    .build()?;
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let decode = default_json_decode_limits()
+        .into_builder()
+        .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
+        .build();
+    let encode = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+        .build();
+    let limits = MetadataLimits::builder()
+        .json_decode(decode)
+        .json_encode(encode)
+        .build()?;
+    assert_eq!(limits.json_decode().max_input_bytes(), Some(64 * 1024));
+    assert_eq!(limits.json_encode().max_output_bytes(), Some(128 * 1024));
 
-let metadata = Metadata::new().with("tenant_id", "acme");
-let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
-assert!(!bytes.is_empty());
+    let metadata = Metadata::new().with("tenant_id", "acme");
+    let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+    assert!(!bytes.is_empty());
+    Ok(())
+}
 ```
+<!-- directional-json-limits-example:end -->
 
-这段调用需要启用 `json` feature，并直接依赖 `qubit-budget = { version = "0.10", features = ["json"] }`。完整往返与 writer 示例见[中文用户手册](doc/user_guide.zh_CN.md#有界-json-编码)。
+这段调用需要依赖 `qubit-metadata = { version = "0.7", features = ["json"] }`，并直接依赖 `qubit-budget = { version = "0.10", features = ["json"] }`。完整往返与 writer 示例见[中文用户手册](doc/user_guide.zh_CN.md#有界-json-编码)。
+
+Metadata 和 schema 的有界 JSON 编码遇到 V1 wire 限额时，会返回
+`Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`。原先针对 schema 限额匹配
+`Json` 的调用方应改为匹配 `Domain` 并读取结构化字段；普通 Serde 序列化错误仍为 `Json`。
 
 `decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
 让它同时负责完整输入准入和整个 seed wire 遍历；encode profile 则单独交给有界序列化

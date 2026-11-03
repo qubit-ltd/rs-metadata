@@ -103,7 +103,9 @@ impl FilterExpression {
     #[inline]
     pub fn try_and(self, other: Self) -> MetadataResult<Self> {
         let expression = Self::and_unchecked(self, other);
-        expression.validate_limits(FilterLimits::MAX)?;
+        if expression.validate_structure_limits(FilterLimits::MAX).is_err() {
+            expression.validate_limits(FilterLimits::MAX)?;
+        }
         Ok(expression)
     }
 
@@ -120,7 +122,9 @@ impl FilterExpression {
     #[inline]
     pub fn try_or(self, other: Self) -> MetadataResult<Self> {
         let expression = Self::or_unchecked(self, other);
-        expression.validate_limits(FilterLimits::MAX)?;
+        if expression.validate_structure_limits(FilterLimits::MAX).is_err() {
+            expression.validate_limits(FilterLimits::MAX)?;
+        }
         Ok(expression)
     }
 
@@ -133,7 +137,9 @@ impl FilterExpression {
     #[inline]
     pub fn try_not(self) -> MetadataResult<Self> {
         let expression = self.negated_unchecked();
-        expression.validate_limits(FilterLimits::MAX)?;
+        if expression.validate_structure_limits(FilterLimits::MAX).is_err() {
+            expression.validate_limits(FilterLimits::MAX)?;
+        }
         Ok(expression)
     }
 
