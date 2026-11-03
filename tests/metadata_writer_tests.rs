@@ -19,6 +19,7 @@ use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 #[cfg(feature = "schema")]
 use qubit_datatype::DataType;
+use qubit_json::encode::JsonSerializationErrorKind;
 #[cfg(feature = "filter")]
 use qubit_metadata::FilterExpression;
 use qubit_metadata::Metadata;
@@ -196,6 +197,39 @@ fn test_metadata_json_writers_preserve_buffered_contract() {
 
     let metadata = Metadata::new().with(&"k".repeat(257), 1_i64);
     assert_json_rejection(|probe, limits| metadata.to_json_writer_with_limits(probe, limits));
+}
+
+#[test]
+fn test_metadata_wire_contract_precedes_value_preflight() {
+    let limits = JsonEncodeLimits::builder().max_number_bytes(2).build();
+    let scenarios = [Metadata::new().with(&"k".repeat(257), 123_i64), {
+        let mut metadata = Metadata::new();
+        for index in 0..4_097 {
+            metadata.insert(&format!("k{index}"), 123_i64);
+        }
+        metadata
+    }];
+
+    for metadata in scenarios {
+        let error = metadata
+            .to_json_vec_with_limits(limits)
+            .expect_err("wire contract should take precedence over value budget");
+        let MetadataWireEncodeError::Json(error) = error else {
+            panic!("expected wire JSON error, got {error:?}");
+        };
+        assert_eq!(error.kind(), JsonSerializationErrorKind::CustomSerialization);
+
+        let mut probe = ProbeWriter::new(None);
+        let error = metadata
+            .to_json_writer_with_limits(&mut probe, limits)
+            .expect_err("wire contract should reject before writing");
+        let MetadataWireEncodeError::Json(error) = error else {
+            panic!("expected wire JSON error, got {error:?}");
+        };
+        assert_eq!(error.kind(), JsonSerializationErrorKind::CustomSerialization);
+        assert_eq!(probe.writes, 0);
+        assert_eq!(probe.bytes, PREFIX);
+    }
 }
 
 #[cfg(feature = "filter")]

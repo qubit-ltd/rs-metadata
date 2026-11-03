@@ -238,8 +238,14 @@ impl Metadata {
     ///
     /// Returns [`crate::MetadataWireEncodeError`] when the JSON value or
     /// output exceeds a configured budget, or serialization fails.
+    /// The outer metadata wire contract is checked before value budgets.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+        self.validate_wire_contract().map_err(|_| {
+            crate::MetadataWireEncodeError::Json(qubit_json::encode::JsonSerializationError::new(
+                qubit_json::encode::JsonSerializationErrorKind::CustomSerialization,
+            ))
+        })?;
         let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
         for value in self.0.values() {
             preflight
@@ -275,6 +281,7 @@ impl Metadata {
     ///
     /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
     /// budget, serialization fails, or `writer` rejects the output.
+    /// The outer metadata wire contract is checked before value budgets.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -315,6 +322,11 @@ impl Metadata {
     where
         W: Write,
     {
+        self.validate_wire_contract().map_err(|_| {
+            crate::MetadataWireEncodeError::Json(qubit_json::encode::JsonSerializationError::new(
+                qubit_json::encode::JsonSerializationErrorKind::CustomSerialization,
+            ))
+        })?;
         let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
         for value in self.0.values() {
             preflight
@@ -1111,6 +1123,9 @@ impl Metadata {
 
 impl From<BTreeMap<String, Value>> for Metadata {
     #[inline]
+    /// Takes ownership of a sorted map without validating schema or wire
+    /// limits. Wire encoding can still reject keys or entry counts outside
+    /// the V1 contract.
     fn from(map: BTreeMap<String, Value>) -> Self {
         Self(map)
     }
@@ -1118,6 +1133,7 @@ impl From<BTreeMap<String, Value>> for Metadata {
 
 impl From<Metadata> for BTreeMap<String, Value> {
     #[inline]
+    /// Consumes metadata and returns its owned sorted map.
     fn from(meta: Metadata) -> Self {
         meta.0
     }
@@ -1125,26 +1141,37 @@ impl From<Metadata> for BTreeMap<String, Value> {
 
 impl FromIterator<(String, Value)> for Metadata {
     #[inline]
+    /// Collects entries into metadata using `BTreeMap` duplicate-key
+    /// replacement. The resulting keys are sorted; collection does not
+    /// validate schema or wire limits.
     fn from_iter<I: IntoIterator<Item = (String, Value)>>(iter: I) -> Self {
         Self(iter.into_iter().collect())
     }
 }
 
 impl IntoIterator for Metadata {
+    /// Owning B-tree iterator, yielding entries in key order.
     type IntoIter = std::collections::btree_map::IntoIter<String, Value>;
+    /// Owned key-value pair moved from the consumed metadata.
     type Item = (String, Value);
 
     #[inline]
+    /// Consumes metadata and moves its sorted entries without cloning.
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
 impl<'a> IntoIterator for &'a Metadata {
+    /// Borrowed B-tree iterator tied to the metadata borrow.
     type IntoIter = std::collections::btree_map::Iter<'a, String, Value>;
+    /// References to an entry's key and value; neither is cloned.
     type Item = (&'a String, &'a Value);
 
     #[inline]
+    /// Borrows sorted entries for the lifetime of the metadata borrow without
+    /// cloning. This yields `(&String, &Value)`, unlike [`Metadata::iter`]
+    /// which yields `(&str, &Value)`.
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
     }
@@ -1152,6 +1179,8 @@ impl<'a> IntoIterator for &'a Metadata {
 
 impl Extend<(String, Value)> for Metadata {
     #[inline]
+    /// Adds entries, replacing duplicate keys according to `BTreeMap` behavior.
+    /// The resulting keys remain sorted; no input iteration order is promised.
     fn extend<I: IntoIterator<Item = (String, Value)>>(&mut self, iter: I) {
         self.0.extend(iter);
     }
