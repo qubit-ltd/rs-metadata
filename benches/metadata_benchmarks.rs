@@ -14,6 +14,10 @@ use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::criterion_group;
 use criterion::criterion_main;
+#[cfg(feature = "json")]
+use qubit_budget::ResourceLimit;
+#[cfg(feature = "json")]
+use qubit_budget::json::JsonResource;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
@@ -21,6 +25,10 @@ use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataLimits;
 #[cfg(all(feature = "json", feature = "schema"))]
 use qubit_metadata::MetadataSchema;
+#[cfg(feature = "json")]
+use qubit_metadata::MetadataWireEncodeError;
+#[cfg(feature = "json")]
+use qubit_metadata::default_json_encode_limits;
 
 /// Benchmarks constructing a small metadata object through the fluent API.
 fn benchmark_metadata_construction(criterion: &mut Criterion) {
@@ -79,6 +87,47 @@ fn benchmark_metadata_json_decode(criterion: &mut Criterion) {
 
 #[cfg(not(feature = "json"))]
 fn benchmark_metadata_json_decode(_criterion: &mut Criterion) {}
+
+/// Measures bounded encoding and output-budget rejection for request metadata.
+#[cfg(feature = "json")]
+fn benchmark_metadata_json_encode(criterion: &mut Criterion) {
+    let mut group = criterion.benchmark_group("metadata/json_encode");
+    for count in [8, 64, 256] {
+        let mut metadata = Metadata::new();
+        for index in 0..count {
+            metadata.set(&format!("field_{index:03}"), "representative request metadata value");
+        }
+        let success_limits = default_json_encode_limits();
+        let rejection_limits = success_limits
+            .into_builder()
+            .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
+            .build();
+        metadata
+            .to_json_vec_with_limits(success_limits)
+            .expect("benchmark metadata should encode");
+        assert!(matches!(
+            metadata.to_json_vec_with_limits(rejection_limits),
+            Err(MetadataWireEncodeError::Budget(ref source))
+                if *source.resource() == JsonResource::OutputBytes
+        ));
+        group.bench_function(BenchmarkId::new("success", count), |bencher| {
+            bencher.iter(|| {
+                black_box(
+                    black_box(&metadata)
+                        .to_json_vec_with_limits(success_limits)
+                        .expect("benchmark metadata should encode"),
+                )
+            });
+        });
+        group.bench_function(BenchmarkId::new("output_limit_rejection", count), |bencher| {
+            bencher.iter(|| black_box(black_box(&metadata).to_json_vec_with_limits(rejection_limits)));
+        });
+    }
+    group.finish();
+}
+
+#[cfg(not(feature = "json"))]
+fn benchmark_metadata_json_encode(_criterion: &mut Criterion) {}
 
 /// Benchmarks evaluating a prepared four-condition metadata filter.
 fn benchmark_filter_match(criterion: &mut Criterion) {
@@ -232,6 +281,7 @@ criterion_group!(
     benchmark_downstream_metadata_paths,
     benchmark_metadata_typed_get,
     benchmark_metadata_json_decode,
+    benchmark_metadata_json_encode,
     benchmark_filter_expression_construction,
     benchmark_filter_match,
     benchmark_filter_json_decode,
