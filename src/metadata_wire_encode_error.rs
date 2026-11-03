@@ -18,6 +18,8 @@ use qubit_json::encode::JsonEncodeError;
 use qubit_json::encode::JsonEncodeErrorSource;
 use qubit_json::encode::JsonSerializationError;
 
+use crate::MetadataError;
+
 /// Failure returned by bounded metadata JSON encoding APIs.
 ///
 /// # Examples
@@ -42,6 +44,10 @@ pub enum MetadataWireEncodeError {
         /// Native measurement conversion failure.
         source: QuantityConversionError,
     },
+    /// The metadata value exceeds the strict V1 metadata wire contract.
+    ///
+    /// The original domain error is preserved as the source.
+    Domain(MetadataError),
     /// The encoded value contains invalid JSON syntax.
     Syntax(JsonSyntaxError),
     /// Strict JSON serialization rejected the value during bounded encoding.
@@ -61,6 +67,9 @@ impl fmt::Display for MetadataWireEncodeError {
                 formatter,
                 "JSON resource quantity conversion failed for {resource:?}: {source}",
             ),
+            Self::Domain(error) => {
+                write!(formatter, "metadata wire contract rejected: {error}")
+            }
             Self::Syntax(error) => {
                 write!(formatter, "invalid JSON wire syntax: {error}")
             }
@@ -75,11 +84,12 @@ impl fmt::Display for MetadataWireEncodeError {
 }
 
 impl std::error::Error for MetadataWireEncodeError {
-    /// Returns the underlying budget, syntax, JSON, or I/O error.
+    /// Returns the underlying budget, domain, syntax, JSON, or I/O error.
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Budget(error) => Some(error),
             Self::Quantity { source, .. } => Some(source),
+            Self::Domain(error) => Some(error),
             Self::Syntax(error) => Some(error),
             Self::Json(error) => Some(error),
             Self::Io(error) => Some(error),

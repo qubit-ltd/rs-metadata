@@ -441,8 +441,11 @@ assert!(matches!(
 
 Handle the budget failure by reducing the output or changing the configured
 budget according to application policy; do not retry the same payload with an
-unbounded profile. `MetadataWireEncodeError` also distinguishes `Quantity`,
-`Syntax`, `Json`, and `Io`. The enum is `non_exhaustive`, so callers should keep
+unbounded profile. `MetadataWireEncodeError` also distinguishes `Quantity`, `Syntax`, `Json`, and
+`Io`. Metadata wire-contract failures use `Domain(MetadataError::WireLimitExceeded
+{ kind, value, maximum })`, preserving the limit category and measurements. Migrate
+code that previously treated these as `Json` by matching `Domain` and inspecting
+those fields; ordinary Serde serialization failures remain `Json`. The enum is `non_exhaustive`, so callers should keep
 a fallback arm when matching all variants.
 
 ### Strict V1 wire formats
@@ -457,7 +460,8 @@ integration contract; prefer the public Serde implementations.
 
 `Metadata` and `MetadataSchema` are unbounded in memory. Their serializers
 reject maps larger than 4,096 entries or keys longer than 256 UTF-8 bytes only
-at the V1 wire boundary, returning a readable serializer error. These hard wire
+at the V1 wire boundary, returning `MetadataWireEncodeError::Domain` with the
+structured `MetadataError::WireLimitExceeded` details for metadata encoding. These hard wire
 bounds are shared with the default strict decoders; keep them in producer-side
 validation when generating interchange data. Receiver-controlled JSON limits
 may be lowered for a particular boundary.

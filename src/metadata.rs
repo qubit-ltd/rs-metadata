@@ -217,8 +217,10 @@ impl Metadata {
     /// # Errors
     ///
     /// Returns [`crate::MetadataWireEncodeError`] when the JSON value or
-    /// output exceeds a configured budget, serialization fails, or the
-    /// destination writer rejects bytes.
+    /// metadata wire contract rejects the value, output exceeds a configured
+    /// budget, serialization fails, or the destination writer rejects bytes.
+    /// Wire-contract failures preserve their
+    /// [`MetadataError::WireLimitExceeded`] source in the `Domain` variant.
     #[cfg(feature = "json")]
     pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
@@ -236,16 +238,16 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when the JSON value or
-    /// output exceeds a configured budget, or serialization fails.
-    /// The outer metadata wire contract is checked before value budgets.
+    /// Returns [`crate::MetadataWireEncodeError`] when the metadata wire
+    /// contract rejects the value, the JSON value or output exceeds a
+    /// configured budget, or serialization fails. Wire-contract failures
+    /// preserve their [`MetadataError::WireLimitExceeded`] source in the
+    /// `Domain` variant. The outer metadata wire contract is checked before
+    /// value budgets.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.validate_wire_contract().map_err(|_| {
-            crate::MetadataWireEncodeError::Json(qubit_json::encode::JsonSerializationError::new(
-                qubit_json::encode::JsonSerializationErrorKind::CustomSerialization,
-            ))
-        })?;
+        self.validate_wire_contract()
+            .map_err(crate::MetadataWireEncodeError::Domain)?;
         let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
         for value in self.0.values() {
             preflight
@@ -279,9 +281,12 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
-    /// budget, serialization fails, or `writer` rejects the output.
-    /// The outer metadata wire contract is checked before value budgets.
+    /// Returns [`crate::MetadataWireEncodeError`] when the metadata wire
+    /// contract rejects the value, encoding exceeds a budget, serialization
+    /// fails, or `writer` rejects the output. Wire-contract failures
+    /// preserve their [`MetadataError::WireLimitExceeded`] source in the
+    /// `Domain` variant. The outer metadata wire contract is checked before
+    /// value budgets.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -311,8 +316,11 @@ impl Metadata {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
-    /// budget, serialization fails, or `writer` rejects the output.
+    /// Returns [`crate::MetadataWireEncodeError`] when the metadata wire
+    /// contract rejects the value, encoding exceeds a budget, serialization
+    /// fails, or `writer` rejects the output. Wire-contract failures
+    /// preserve their [`MetadataError::WireLimitExceeded`] source in the
+    /// `Domain` variant.
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
@@ -322,11 +330,8 @@ impl Metadata {
     where
         W: Write,
     {
-        self.validate_wire_contract().map_err(|_| {
-            crate::MetadataWireEncodeError::Json(qubit_json::encode::JsonSerializationError::new(
-                qubit_json::encode::JsonSerializationErrorKind::CustomSerialization,
-            ))
-        })?;
+        self.validate_wire_contract()
+            .map_err(crate::MetadataWireEncodeError::Domain)?;
         let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
         for value in self.0.values() {
             preflight

@@ -397,8 +397,8 @@ assert!(matches!(
 ```
 
 遇到预算错误时，应缩减输出，或按应用策略调整预算；不要对同一载荷改用无限额配置重试。
-`MetadataWireEncodeError` 还会区分 `Quantity`、`Syntax`、`Json` 和 `Io`。该枚举标记为
-`non_exhaustive`，穷举匹配时应保留兜底分支。
+`MetadataWireEncodeError` 还会区分 `Quantity`、`Syntax`、`Json` 和 `Io`。Metadata wire
+契约错误使用 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`，保留限制类别和实际测量值。迁移原先将此类错误视为 `Json` 的代码时，应改为匹配 `Domain` 并读取这些字段；普通 Serde 序列化错误仍为 `Json`。该枚举标记为 `non_exhaustive`，穷举匹配时应保留兜底分支。
 
 ### 严格的 V1 wire format
 
@@ -409,8 +409,7 @@ Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知�
 除非版本化格式本身是集成契约，否则不要手写这些结构，优先使用公开的 Serde 实现。
 
 `Metadata` 和 `MetadataSchema` 在内存模型中不限制条目数和 key 长度。序列化器只在 V1
-wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 字节 key 的 map，并返回
-可读的序列化错误。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
+wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 字节 key 的 map；metadata 编码通过 `MetadataWireEncodeError::Domain` 返回结构化的 `MetadataError::WireLimitExceeded`。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
 在限制以内。针对特定边界时，接收方控制的 JSON 限制可以进一步降低资源上限。
 
 ## 错误与诊断

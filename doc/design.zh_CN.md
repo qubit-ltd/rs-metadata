@@ -34,7 +34,7 @@ Serde 格式。它不绑定存储 provider，不负责定义 provider 的索引�
 `get`、`get_ref`、`get_optional` 和 `get_or` 使用值层的类型契约严格读取，全部返回
 `MetadataResult`；可选读取只吸收缺失，不隐藏类型不匹配。借用读取不克隆载荷。
 `convert`、`convert_with`、`convert_optional_with` 和 `convert_or_with` 显式请求转换，
-后几种方法接收策略与限额。默认值复用 `IntoValueDefault`，仅在需要时适配。
+后几种方法接收策略与限额。默认值复用 `IntoValueDefault`。Rust 会在方法调用前求值参数表达式；只有允许且需要回退时，才调用默认值适配器。例如，`metadata.get_or::<String>("tenant", expensive_default())` 会在调用前执行 `expensive_default()`，无论是否需要回退。传入借用字符串时，只有转换为 owned `String` 的适配工作会延迟到允许且需要回退时执行。若要延迟自定义计算，应将计算放入 `IntoValueDefault` 适配器；这里不表示可以直接传入 `FnOnce` 闭包。
 删除旧 `try_get*` 别名和 `get_str`。
 
 Metadata 负责类型化业务属性、schema 校验和条件匹配；配置源组合、作用域、插值和业务结构体
@@ -67,7 +67,7 @@ metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形
 ## 错误分类与脱敏
 
 `MetadataError` 覆盖 metadata 读取和 schema 校验，校验结果可以暴露多个相互独立的问题。Filter
-builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语法/envelope 失败和不支持版本。诊断
+builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语法/envelope 失败和不支持版本。有界 metadata 编码通过 `MetadataWireEncodeError::Domain` 保留 `MetadataError::WireLimitExceeded`；普通 Serde 序列化错误仍使用 `Json`。诊断
 保留有用的类型、数量和版本号，但不嵌入被拒绝的 metadata 值；这属于诊断脱敏，不承诺隐藏任意
 用户 key 或错误文本。
 

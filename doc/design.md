@@ -44,7 +44,7 @@ the value layer's type contract. All return `MetadataResult`; optional reads
 hide absence, not type mismatches. Borrowed reads do not clone payloads.
 `convert`, `convert_with`, `convert_optional_with`, and `convert_or_with`
 explicitly request conversion, with the latter methods accepting policy and
-limits. Default parameters reuse `IntoValueDefault`, evaluated only when needed.
+limits. Default values reuse `IntoValueDefault`. Rust evaluates argument expressions before the method call; the adapter is invoked only when fallback is permitted and needed. For example, `metadata.get_or::<String>("tenant", expensive_default())` calls `expensive_default()` before the call whether or not fallback is needed. When passing a borrowed string, only its adaptation to an owned `String` is deferred until fallback is permitted and needed. To defer custom computation, put it in an `IntoValueDefault` adapter; passing a `FnOnce` closure directly is not implied.
 The old `try_get*` aliases and `get_str` are removed.
 
 Metadata owns typed application attributes, schema validation, and filter
@@ -94,7 +94,10 @@ appropriate for ordering or grouping.
 `MetadataError` covers metadata access and schema validation; validation results
 can expose multiple independent issues. Filter builders report malformed or
 incompatible expressions. Wire errors distinguish domain-limit failures,
-syntax/envelope failures, and unsupported versions. Diagnostics preserve useful
+syntax/envelope failures, and unsupported versions. Bounded metadata encoding
+preserves `MetadataError::WireLimitExceeded` in
+`MetadataWireEncodeError::Domain`; ordinary Serde serialization failures remain
+in `Json`. Diagnostics preserve useful
 types, counts, and versions without embedding rejected metadata values. This is
 diagnostic redaction, not a promise to hide arbitrary user keys or error text.
 

@@ -25,7 +25,9 @@ use qubit_json::encode::JsonEncoder;
 use qubit_json::encode::JsonSerializationError;
 use qubit_json::encode::JsonSerializationErrorKind;
 use qubit_json::encode::JsonSerializerStateError;
+use qubit_metadata::MetadataError;
 use qubit_metadata::MetadataWireEncodeError;
+use qubit_metadata::MetadataWireLimitKind;
 use serde::Serialize;
 use serde::Serializer;
 use serde::ser::SerializeMap;
@@ -68,6 +70,28 @@ impl Write for RejectingWriter {
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
+}
+
+#[test]
+fn test_domain_error_preserves_wire_limit_source() {
+    let error = MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
+        kind: MetadataWireLimitKind::KeyBytes,
+        value: 257,
+        maximum: 256,
+    });
+    assert!(error.to_string().contains("wire"));
+    let source = error
+        .source()
+        .and_then(|source| source.downcast_ref::<MetadataError>())
+        .expect("source should preserve MetadataError");
+    assert!(matches!(
+        source,
+        MetadataError::WireLimitExceeded {
+            kind: MetadataWireLimitKind::KeyBytes,
+            value: 257,
+            maximum: 256,
+        }
+    ));
 }
 
 #[test]
