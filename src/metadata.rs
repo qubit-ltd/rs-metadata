@@ -700,7 +700,6 @@ impl Metadata {
     ///
     /// The stored value, or `None` when `key` is absent.
     #[inline]
-    #[must_use]
     pub fn get_raw(&self, key: &str) -> Option<&Value> {
         self.0.get(key)
     }
@@ -715,7 +714,6 @@ impl Metadata {
     ///
     /// The stored value's data type, or `None` when `key` is absent.
     #[inline]
-    #[must_use]
     pub fn data_type(&self, key: &str) -> Option<DataType> {
         self.0.get(key).map(Value::data_type)
     }

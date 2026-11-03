@@ -18,6 +18,10 @@ use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::default_json_decode_limits;
 use qubit_metadata::default_json_encode_limits;
 
+mod support {
+    pub mod user_guide_bounded_decode;
+}
+
 #[test]
 fn test_readme_directional_limits_example() {
     let decode = default_json_decode_limits()
@@ -39,20 +43,30 @@ fn test_readme_directional_limits_example() {
 
 #[test]
 fn test_user_guide_domain_limits_example() -> Result<(), MetadataWireDecodeError> {
-    let limits = MetadataLimits::builder()
-        .max_metadata_entries(128)
-        .max_key_bytes(128)
-        .build()
-        .map_err(MetadataWireDecodeError::InvalidLimits)?;
-    let metadata = Metadata::decode_json_slice_with_limits(
-        br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
-        limits,
-    )?;
-    assert_eq!(
-        metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"),
-        "acme"
-    );
-    Ok(())
+    support::user_guide_bounded_decode::main()
+}
+
+#[test]
+fn test_user_guide_bounded_decode_source_matches() {
+    let expected = include_str!("support/user_guide_bounded_decode.rs").trim();
+    let start = "<!-- bounded-json-decoding-example:start -->";
+    let end = "<!-- bounded-json-decoding-example:end -->";
+    for (name, guide) in [
+        ("English", include_str!("../doc/user_guide.md")),
+        ("Chinese", include_str!("../doc/user_guide.zh_CN.md")),
+    ] {
+        assert_eq!(guide.matches(start).count(), 1, "{name}: start marker");
+        assert_eq!(guide.matches(end).count(), 1, "{name}: end marker");
+        let (_, after_start) = guide.split_once(start).expect("start marker");
+        let (block, _) = after_start.split_once(end).expect("end marker after start");
+        let code = block
+            .trim()
+            .strip_prefix("```rust")
+            .and_then(|value| value.strip_suffix("```"))
+            .expect("one fenced Rust block")
+            .trim();
+        assert_eq!(code, expected, "{name}: guide must match compiled example");
+    }
 }
 
 #[test]

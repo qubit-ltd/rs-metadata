@@ -279,23 +279,37 @@ for expression in expressions {
 
 启用 `json` 后，对于完整的不可信 JSON 输入使用 slice 解码方法：
 
+<!-- bounded-json-decoding-example:start -->
 ```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataWireDecodeError;
 
-let limits = MetadataLimits::builder()
-    .max_metadata_entries(128)
-    .max_key_bytes(128)
-    .build()
-    .map_err(MetadataWireDecodeError::InvalidLimits)?;
-let metadata = Metadata::decode_json_slice_with_limits(
-    br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
-    limits,
-)?;
-assert_eq!(metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"), "acme");
-# Ok::<(), MetadataWireDecodeError>(())
+pub fn main() -> Result<(), MetadataWireDecodeError> {
+    let limits = MetadataLimits::builder()
+        .max_metadata_entries(128)
+        .max_key_bytes(128)
+        .build()
+        .map_err(MetadataWireDecodeError::InvalidLimits)?;
+    let metadata = Metadata::decode_json_slice_with_limits(
+        br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#,
+        limits,
+    )?;
+    assert_eq!(
+        metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"),
+        "acme"
+    );
+    Ok(())
+}
 ```
+<!-- bounded-json-decoding-example:end -->
 
 默认限制是输入 1,048,576 字节、4,096 个 metadata 条目、4,096 个 schema 字段，以及每个
 key 256 个 UTF-8 字节。`MetadataLimits` 将这些 metadata 领域限制与内部的
