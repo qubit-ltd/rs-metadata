@@ -74,7 +74,9 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 `MetadataWireDecodeError::Decode` 保留共享 decoder 对空输入、非法 UTF-8、顶层类型不符和
 反序列化失败的分类，包括 `kind()` 与结构化 accessor。`Read`、`Budget`、`Quantity` 和
 `Syntax` 继续使用原有的独立映射。标准 metadata 入口采用 `Redacted` 诊断；只有调用方在
-转换前选择了 `Detailed`，才会保留详细来源。旧的 `InvalidJson` 变体仍可手工构造。若调用方
+转换前选择了 `Detailed`，才会保留详细来源。`InvalidJson` 变体仍可手工构造；标准 metadata
+slice 解码入口也会在 wire 物化后的 payload 无法转换为 scalar metadata 值时返回该变体，例如
+条目包含 collection payload。此转换发生在 wire 物化后，可能已不再保留原始源坐标。若调用方
 原先将它视为 JSON 失败的完整集合，应增加 `Decode` 分支。展示文本和来源链深度不属于兼容性
 契约。
 

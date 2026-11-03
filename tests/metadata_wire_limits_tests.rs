@@ -41,6 +41,13 @@ use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::MetadataWireLimitKind;
 use qubit_value::Value;
 
+#[test]
+fn test_metadata_collection_payload_reports_invalid_json() {
+    let input = br#"{"version":1,"values":{"x":{"collection":{"int64":[1]}}}}"#;
+    let error = Metadata::decode_json_slice(input).expect_err("collection payload is not a scalar metadata value");
+    assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
+}
+
 #[cfg(feature = "filter")]
 fn filter_input(expression: &str) -> Vec<u8> {
     format!(r#"{{"version":1,"expression":{expression},"options":{{"numeric_comparison_policy":"exact"}}}}"#,)
