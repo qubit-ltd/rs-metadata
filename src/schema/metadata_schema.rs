@@ -184,12 +184,15 @@ impl MetadataSchema {
         ))
     }
 
-    /// Encodes this schema with the default JSON budget profile.
+    /// Encodes this schema with the default JSON budget profile
+    /// ([`crate::default_json_encode_limits`]).
     ///
     /// # Errors
     ///
     /// Returns [`crate::MetadataWireEncodeError::Domain`] when the schema
-    /// exceeds a V1 wire limit before JSON output budgets are checked.
+    /// exceeds a V1 wire limit, before checking JSON output budgets.
+    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
+    /// default JSON budget or serialization fails.
     #[cfg(feature = "json")]
     pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
