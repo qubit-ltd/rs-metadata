@@ -110,6 +110,8 @@ that previously matched `Json` for schema wire limits should match `Domain` and
 inspect `kind`, `value`, and `maximum`. Diagnostics preserve useful
 types, counts, and versions without embedding rejected metadata values. This is
 diagnostic redaction, not a promise to hide arbitrary user keys or error text.
+Composite expression, filter, and schema diagnostics share one cumulative
+resource budget; output that exceeds it uses an incomplete marker.
 
 `MetadataWireDecodeError::Decode` preserves shared decoder failures for empty input,
 invalid UTF-8, unexpected top-level types, and deserialization, including their
