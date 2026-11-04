@@ -61,6 +61,18 @@
         "schema",
         "serde_json/arbitrary_precision"
       ]
+    },
+    {
+      "name": "json-filter-only",
+      "commands": [
+        "test",
+        "clippy"
+      ],
+      "defaultFeatures": false,
+      "features": [
+        "json",
+        "filter"
+      ]
     }
   ]
 }
