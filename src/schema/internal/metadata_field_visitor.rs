@@ -11,7 +11,6 @@ use std::fmt;
 
 use qubit_datatype::DataType;
 use serde::Deserializer;
-use serde::de::IgnoredAny;
 use serde::de::MapAccess;
 use serde::de::Visitor;
 
@@ -65,7 +64,6 @@ impl<'de> Visitor<'de> for MetadataFieldVisitor {
                     required = Some(map.next_value::<bool>()?);
                 }
                 _ => {
-                    let _ = map.next_value::<IgnoredAny>()?;
                     return Err(serde::de::Error::unknown_field(&key, FIELD_NAMES));
                 }
             }

@@ -93,3 +93,16 @@ fn test_metadata_field_requires_complete_known_object_fields() {
         field
     );
 }
+
+#[test]
+fn test_metadata_field_rejects_unknown_key_before_reading_value() {
+    let inputs = [
+        r#"{"extra": ["#.to_owned(),
+        format!(r#"{{"extra": {}0{}}}"#, "[".repeat(256), "]".repeat(256)),
+    ];
+
+    for input in inputs {
+        let error = from_str::<MetadataField>(&input).expect_err("unknown key must fail");
+        assert!(error.to_string().contains("unknown field"), "{error}");
+    }
+}
