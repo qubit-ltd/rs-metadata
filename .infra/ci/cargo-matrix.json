@@ -73,6 +73,36 @@
         "json",
         "filter"
       ]
+    },
+    {
+      "name": "chrono-only",
+      "commands": ["test", "clippy"],
+      "defaultFeatures": false,
+      "features": ["chrono"]
+    },
+    {
+      "name": "big-integer-only",
+      "commands": ["test", "clippy"],
+      "defaultFeatures": false,
+      "features": ["big-integer"]
+    },
+    {
+      "name": "big-decimal-only",
+      "commands": ["test", "clippy"],
+      "defaultFeatures": false,
+      "features": ["big-decimal"]
+    },
+    {
+      "name": "big-number-only",
+      "commands": ["test", "clippy"],
+      "defaultFeatures": false,
+      "features": ["big-number"]
+    },
+    {
+      "name": "url-only",
+      "commands": ["test", "clippy"],
+      "defaultFeatures": false,
+      "features": ["url"]
     }
   ]
 }

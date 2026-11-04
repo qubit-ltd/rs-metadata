@@ -524,7 +524,10 @@ dependencies = [
 name = "qubit-metadata"
 version = "0.7.0"
 dependencies = [
+ "bigdecimal",
+ "chrono",
  "criterion",
+ "num-bigint",
  "qubit-budget",
  "qubit-datatype",
  "qubit-json",
@@ -533,6 +536,7 @@ dependencies = [
  "qubit-value",
  "serde",
  "serde_json",
+ "url",
 ]
 
 [[package]]
