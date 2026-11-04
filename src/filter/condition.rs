@@ -457,7 +457,9 @@ fn concrete_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a Value> {
 ///
 /// # Returns
 ///
-/// `true` when both values compare equal under the supplied policy.
+/// `Some(true)` when comparable values are equal, `Some(false)` when they are
+/// comparable but unequal, or `None` when concrete types are incompatible or
+/// numeric comparison fails. Callers interpret `None` as an unknown outcome.
 #[inline]
 fn values_equal(left: &Value, right: &Value, numeric_comparison_policy: NumericComparisonPolicy) -> Option<bool> {
     if left.is_numeric() && right.is_numeric() {
