@@ -21,7 +21,7 @@ use qubit_budget::json::JsonResource;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
-#[cfg(feature = "json")]
+#[cfg(all(feature = "json", feature = "schema"))]
 use qubit_metadata::MetadataLimits;
 #[cfg(all(feature = "json", feature = "schema"))]
 use qubit_metadata::MetadataSchema;
@@ -125,6 +125,95 @@ fn benchmark_metadata_json_encode(criterion: &mut Criterion) {
     }
     group.finish();
 }
+
+/// Investigates local costs represented by downstream request validation and
+/// persistence.
+#[cfg(feature = "json")]
+fn benchmark_request_encode_investigation(criterion: &mut Criterion) {
+    let mut group = criterion.benchmark_group("metadata/request_encode_investigation");
+    let mut samples = Vec::new();
+    for count in [1, 8, 32] {
+        let mut metadata = Metadata::new();
+        for index in 0..count {
+            metadata.set(&format!("k{index:02}"), "v");
+        }
+        samples.push((format!("short_{count}_entries"), metadata));
+    }
+
+    let mut near_limit = Metadata::new();
+    for index in 0..32 {
+        near_limit.set(&format!("field_{index:02}"), "x".repeat(470));
+    }
+    samples.push(("near_16k_32_entries".to_owned(), near_limit));
+
+    let limits = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 16 * 1024))
+        .build();
+
+    for (sample_name, metadata) in samples {
+        let encoded = metadata
+            .to_json_vec_with_limits(limits)
+            .expect("benchmark metadata sample should encode within the request limit");
+        let encoded_len = encoded.len();
+        assert!(encoded_len <= 16 * 1024, "sample exceeds the request byte limit");
+        drop(encoded);
+
+        group.bench_function(BenchmarkId::new("encode_and_drop", &sample_name), |bencher| {
+            bencher.iter_batched(
+                || metadata.clone(),
+                |metadata| {
+                    let encoded = metadata
+                        .to_json_vec_with_limits(limits)
+                        .expect("benchmark metadata should encode");
+                    black_box(encoded.len());
+                    drop(encoded);
+                },
+                BatchSize::SmallInput,
+            );
+        });
+        group.bench_function(BenchmarkId::new("clone", &sample_name), |bencher| {
+            bencher.iter_batched(
+                || metadata.clone(),
+                |metadata| black_box(metadata.clone()),
+                BatchSize::SmallInput,
+            );
+        });
+        group.bench_function(BenchmarkId::new("serde_reencode", &sample_name), |bencher| {
+            bencher.iter_batched(
+                || metadata.clone(),
+                |metadata| {
+                    let encoded = serde_json::to_vec(&metadata).expect("benchmark metadata should serialize");
+                    black_box(encoded.len());
+                    drop(encoded);
+                },
+                BatchSize::SmallInput,
+            );
+        });
+        group.bench_function(BenchmarkId::new("validation_clone_reencode", &sample_name), |bencher| {
+            bencher.iter_batched(
+                || metadata.clone(),
+                |metadata| {
+                    let validated = metadata
+                        .to_json_vec_with_limits(limits)
+                        .expect("benchmark metadata should pass the request limit");
+                    black_box(validated.len());
+                    drop(validated);
+                    let metadata_for_storage = metadata.clone();
+                    let persisted =
+                        serde_json::to_vec(&metadata_for_storage).expect("benchmark metadata should serialize");
+                    black_box(persisted.len());
+                    drop(persisted);
+                },
+                BatchSize::SmallInput,
+            );
+        });
+    }
+    group.finish();
+}
+
+#[cfg(not(feature = "json"))]
+fn benchmark_request_encode_investigation(_criterion: &mut Criterion) {}
 
 #[cfg(not(feature = "json"))]
 fn benchmark_metadata_json_encode(_criterion: &mut Criterion) {}
@@ -349,6 +438,7 @@ criterion_group!(
     benchmark_metadata_typed_get,
     benchmark_metadata_json_decode,
     benchmark_metadata_json_encode,
+    benchmark_request_encode_investigation,
     benchmark_filter_expression_construction,
     benchmark_public_expression_composition,
     benchmark_filter_match,
