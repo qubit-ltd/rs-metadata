@@ -145,73 +145,100 @@ its declared type, but it does not contain a concrete value. `get` reports
 `ValueAccess` containing `ValueError::Missing`; a mismatched declared type is
 still a type error. Optional/default reads absorb only eligible missing states.
 
-### 3. Define a schema at the storage boundary
+### 3. Validate and index a chunk
 
-Use `MetadataSchema::builder()` when a backend requires a known field layout or
-when records must be validated before insertion. Required fields must exist and
-contain a concrete value; optional fields may be omitted. Stored values must
-match the concrete `DataType` declared by the field.
+The schema and query below use the same chunk fields: `tenant_id`,
+`chunk_index`, and optional `language`. Validate each record before calling the
+application's store. `build_checked(&schema)` separately checks query fields
+and operand types before a query is used. A successful local check does not
+replace authorization or tenant isolation in the storage layer.
 
+<!-- chunk-workflow-example:start -->
 ```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataSchema};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataSchema;
 
-let schema = MetadataSchema::builder()
-    .required("tenant_id", DataType::String)
-    .required("chunk_index", DataType::Int64)
-    .optional("language", DataType::String)
-    .build()
-    .expect("schema should be valid");
+pub trait ChunkStore {
+    fn insert(&mut self, metadata: Metadata) -> Result<(), Box<dyn std::error::Error>>;
+}
 
-let metadata = Metadata::new()
-    .with("tenant_id", "acme")
-    .with("chunk_index", 3_i64)
-    .with("language", "en");
+fn ingest(
+    store: &mut impl ChunkStore,
+    schema: &MetadataSchema,
+    metadata: Metadata,
+) -> Result<(), Box<dyn std::error::Error>> {
+    schema.validate(&metadata)?;
+    store.insert(metadata)
+}
 
-schema.validate(&metadata).expect("metadata should match schema");
+#[derive(Default)]
+struct RecordingStore(Vec<Metadata>);
+
+impl ChunkStore for RecordingStore {
+    fn insert(&mut self, metadata: Metadata) -> Result<(), Box<dyn std::error::Error>> {
+        self.0.push(metadata);
+        Ok(())
+    }
+}
+
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let schema = MetadataSchema::builder()
+        .required("tenant_id", DataType::String)
+        .required("chunk_index", DataType::Int64)
+        .optional("language", DataType::String)
+        .build()?;
+    let record = Metadata::new()
+        .with("tenant_id", "acme")
+        .with("chunk_index", 3_i64)
+        .with("language", "en");
+    let mut store = RecordingStore::default();
+    ingest(&mut store, &schema, record.clone())?;
+    assert_eq!(store.0.len(), 1);
+    assert!(ingest(&mut store, &schema, Metadata::new().with("tenant_id", "acme")).is_err());
+    assert_eq!(store.0.len(), 1);
+
+    let filter = MetadataFilter::builder()
+        .expression(
+            FilterExpression::builder()
+                .eq("tenant_id", "acme")
+                .ge("chunk_index", 2_i64)
+                .build()?,
+        )
+        .build_checked(&schema)?;
+    assert!(filter.matches(&record));
+    assert!(!filter.matches(&Metadata::new().with("tenant_id", "other").with("chunk_index", 3_i64)));
+
+    let invalid_query = FilterExpression::builder().ge("chunk_index", "two").build()?;
+    assert!(
+        MetadataFilter::builder()
+            .expression(invalid_query)
+            .build_checked(&schema)
+            .is_err()
+    );
+    Ok(())
+}
 ```
+<!-- chunk-workflow-example:end -->
 
-Unknown metadata fields and unknown filter fields have independent policies.
-The default policy rejects unknown names. Allowing an undeclared metadata key
-does not automatically allow an unchecked filter key.
+The valid record is accepted, while the record missing `chunk_index` is
+rejected before `insert`; the store count stays at one. The checked query
+matches the same tenant and does not match another tenant. A query with a
+string range operand for the integer field is rejected during
+`build_checked`. `RecordingStore` is only a test stand-in that makes these
+paths runnable. Implement `ChunkStore` with your persistence layer, including
+its transaction, retry, and query translation behavior.
 
-### 4. Build and evaluate a filter
-
-`FilterExpression::builder()` describes Boolean structure. The resulting
-expression is bound to matching options and limits by `MetadataFilter::builder()`.
-Use `build_checked(&schema)` when filter fields and operand types should be
-validated before the filter is sent to a backend.
-
-```rust
-use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataFilter,
-    MetadataSchema,
-};
-
-let schema = MetadataSchema::builder()
-    .required("status", DataType::String)
-    .required("score", DataType::Int64)
-    .build()
-    .unwrap();
-
-let expression = FilterExpression::builder()
-    .eq("status", "ready")
-    .ge("score", 80_i64)
-    .build()
-    .unwrap();
-let filter = MetadataFilter::builder()
-    .expression(expression)
-    .build_checked(&schema)
-    .unwrap();
-
-let metadata = Metadata::new()
-    .with("status", "ready")
-    .with("score", 92_i64);
-assert!(filter.matches(&metadata));
-```
+### 4. Group predicates for a separate query
 
 Predicates added without a group connector are joined with AND. Use
 `and_group` and `or_group` for nested expressions:

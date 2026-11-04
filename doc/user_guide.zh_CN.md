@@ -132,70 +132,96 @@ match metadata.get::<String>("chunk_index") {
 `get` 返回 `MissingKey`。类型符合要求的 unset 返回包含 `ValueError::Missing` 的
 `ValueAccess`；声明类型不匹配仍然是类型错误。可选/默认值读取只吸收允许回退的缺失状态。
 
-### 3. 在存储边界定义 schema
+### 3. 校验并索引分片
 
-当后端要求固定字段布局，或记录必须在写入前校验时，使用
-`MetadataSchema::builder()`。required 字段必须存在且有具体值；optional 字段可以省略。
-已存值必须匹配字段声明的具体 `DataType`。
+下面的 schema 和查询使用同一组分片字段：`tenant_id`、`chunk_index` 和可选的
+`language`。调用应用的存储接口前，先校验每条记录。使用
+`build_checked(&schema)` 会另外检查查询字段和操作数类型，再执行查询。这里的本地校验
+不能替代存储层的授权或租户隔离。
 
+<!-- chunk-workflow-example:start -->
 ```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use qubit_datatype::DataType;
-use qubit_metadata::{Metadata, MetadataSchema};
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::MetadataSchema;
 
-let schema = MetadataSchema::builder()
-    .required("tenant_id", DataType::String)
-    .required("chunk_index", DataType::Int64)
-    .optional("language", DataType::String)
-    .build()
-    .expect("schema should be valid");
+pub trait ChunkStore {
+    fn insert(&mut self, metadata: Metadata) -> Result<(), Box<dyn std::error::Error>>;
+}
 
-let metadata = Metadata::new()
-    .with("tenant_id", "acme")
-    .with("chunk_index", 3_i64)
-    .with("language", "en");
+fn ingest(
+    store: &mut impl ChunkStore,
+    schema: &MetadataSchema,
+    metadata: Metadata,
+) -> Result<(), Box<dyn std::error::Error>> {
+    schema.validate(&metadata)?;
+    store.insert(metadata)
+}
 
-schema.validate(&metadata).expect("metadata should match schema");
+#[derive(Default)]
+struct RecordingStore(Vec<Metadata>);
+
+impl ChunkStore for RecordingStore {
+    fn insert(&mut self, metadata: Metadata) -> Result<(), Box<dyn std::error::Error>> {
+        self.0.push(metadata);
+        Ok(())
+    }
+}
+
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let schema = MetadataSchema::builder()
+        .required("tenant_id", DataType::String)
+        .required("chunk_index", DataType::Int64)
+        .optional("language", DataType::String)
+        .build()?;
+    let record = Metadata::new()
+        .with("tenant_id", "acme")
+        .with("chunk_index", 3_i64)
+        .with("language", "en");
+    let mut store = RecordingStore::default();
+    ingest(&mut store, &schema, record.clone())?;
+    assert_eq!(store.0.len(), 1);
+    assert!(ingest(&mut store, &schema, Metadata::new().with("tenant_id", "acme")).is_err());
+    assert_eq!(store.0.len(), 1);
+
+    let filter = MetadataFilter::builder()
+        .expression(
+            FilterExpression::builder()
+                .eq("tenant_id", "acme")
+                .ge("chunk_index", 2_i64)
+                .build()?,
+        )
+        .build_checked(&schema)?;
+    assert!(filter.matches(&record));
+    assert!(!filter.matches(&Metadata::new().with("tenant_id", "other").with("chunk_index", 3_i64)));
+
+    let invalid_query = FilterExpression::builder().ge("chunk_index", "two").build()?;
+    assert!(
+        MetadataFilter::builder()
+            .expression(invalid_query)
+            .build_checked(&schema)
+            .is_err()
+    );
+    Ok(())
+}
 ```
+<!-- chunk-workflow-example:end -->
 
-未知 metadata 字段和未知 filter 字段使用相互独立的策略。默认策略拒绝未知名称；允许未
-声明的 metadata key，不会自动允许未经检查的 filter key。
+合法记录会被接收；缺少 `chunk_index` 的记录会在调用 `insert` 前被拒绝，因此存储计数仍为
+1。已检查的查询匹配同一租户，不匹配其他租户。若整数范围条件使用字符串操作数，查询会在
+`build_checked` 阶段被拒绝。`RecordingStore` 只是让这些路径可运行的测试替身。应用应使用
+自己的持久化实现接入 `ChunkStore`，并负责事务、重试和查询翻译。
 
-### 4. 构造并执行 filter
-
-`FilterExpression::builder()` 描述布尔结构。构造出的 expression 再由
-`MetadataFilter::builder()` 绑定匹配选项和资源限制。如果希望在 filter 发送到后端前
-校验字段和操作数类型，使用 `build_checked(&schema)`。
-
-```rust
-use qubit_datatype::DataType;
-use qubit_metadata::{
-    FilterExpression,
-    Metadata,
-    MetadataFilter,
-    MetadataSchema,
-};
-
-let schema = MetadataSchema::builder()
-    .required("status", DataType::String)
-    .required("score", DataType::Int64)
-    .build()
-    .unwrap();
-
-let expression = FilterExpression::builder()
-    .eq("status", "ready")
-    .ge("score", 80_i64)
-    .build()
-    .unwrap();
-let filter = MetadataFilter::builder()
-    .expression(expression)
-    .build_checked(&schema)
-    .unwrap();
-
-let metadata = Metadata::new()
-    .with("status", "ready")
-    .with("score", 92_i64);
-assert!(filter.matches(&metadata));
-```
+### 4. 为另一个查询组合谓词
 
 未指定分组连接词的谓词按 AND 连接。需要嵌套表达式时使用 `and_group` 和 `or_group`：
 

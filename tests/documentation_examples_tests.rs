@@ -7,33 +7,48 @@
 // =============================================================================
 //! Integration tests for examples documented in the README and user guide.
 
-#![cfg(feature = "json")]
+#![cfg(any(feature = "json", feature = "schema"))]
 
+#[cfg(feature = "json")]
 use qubit_budget::ResourceLimit;
+#[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
+#[cfg(feature = "json")]
 use qubit_metadata::Metadata;
+#[cfg(feature = "json")]
 use qubit_metadata::MetadataWireDecodeError;
+#[cfg(feature = "json")]
 use qubit_metadata::MetadataWireEncodeError;
+#[cfg(feature = "json")]
 use qubit_metadata::default_json_encode_limits;
 
 mod support {
+    #[cfg(feature = "json")]
     pub mod readme_directional_limits;
+    #[cfg(feature = "json")]
     pub mod user_guide_bounded_decode;
+    #[cfg(feature = "json")]
     pub mod user_guide_bounded_encode;
+    #[cfg(feature = "schema")]
+    pub mod user_guide_chunk_workflow;
     #[cfg(feature = "filter")]
+    #[cfg(feature = "json")]
     pub mod user_guide_filter_bounded_encode;
 }
 
+#[cfg(feature = "json")]
 #[test]
 fn test_readme_directional_limits_example() {
     support::readme_directional_limits::main().expect("README example should run");
 }
 
+#[cfg(feature = "json")]
 #[test]
 fn test_user_guide_domain_limits_example() -> Result<(), MetadataWireDecodeError> {
     support::user_guide_bounded_decode::main()
 }
 
+#[cfg(feature = "json")]
 #[test]
 fn test_user_guide_bounded_decode_source_matches() {
     let package_manifest = include_str!("../Cargo.toml");
@@ -84,9 +99,27 @@ fn test_user_guide_bounded_decode_source_matches() {
 }
 
 #[cfg(feature = "filter")]
+#[cfg(feature = "json")]
 #[test]
 fn test_user_guide_filter_bounded_json_encoding_example() {
     support::user_guide_filter_bounded_encode::main().expect("filter encoding guide example should run");
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn test_user_guide_chunk_workflow_example() {
+    support::user_guide_chunk_workflow::main().expect("chunk workflow should run");
+    for (name, text) in [
+        ("English guide", include_str!("../doc/user_guide.md")),
+        ("Chinese guide", include_str!("../doc/user_guide.zh_CN.md")),
+    ] {
+        assert_documented_example(
+            name,
+            text,
+            "chunk-workflow-example",
+            include_str!("support/user_guide_chunk_workflow.rs"),
+        );
+    }
 }
 
 fn assert_documented_example(name: &str, document: &str, marker: &str, expected: &str) {
@@ -117,11 +150,13 @@ fn assert_documented_example(name: &str, document: &str, marker: &str, expected:
     assert_eq!(code, expected.trim(), "{name}: {marker} must match compiled example");
 }
 
+#[cfg(feature = "json")]
 #[test]
 fn test_user_guide_bounded_json_encoding_example() {
     support::user_guide_bounded_encode::main().expect("encoding guide example should run");
 }
 
+#[cfg(feature = "json")]
 #[test]
 fn test_user_guide_output_budget_rejects_metadata() {
     let limits = default_json_encode_limits()
