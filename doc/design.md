@@ -21,14 +21,17 @@ versioned Serde envelopes and bounded traversal. JSON budget profiles are
 directional: decode and encode policies are configured independently.
 
 With the `json` feature, bounded JSON encoding is available for metadata and,
-with `schema`, schemas as well. Encoders check value representability and the
-configured resource profile before producing compact JSON output. Vector APIs
-return that buffer; writer APIs buffer the complete document before writing,
-but a destination I/O error can still leave partial bytes at the destination.
-Applications own persistence, transaction, transport, retry, and compensation
-semantics. A custom `MetadataLimits` encode profile is used only when the
-caller passes `limits.json_encode()` to the encoding method; decode settings do
-not alter output budgets.
+with `schema`, schemas as well. Enabling both `json` and `filter` also provides
+bounded encoding for filters; this does not change the fact that `schema`
+includes `filter`. Encoders check value representability and the configured
+resource profile before producing compact JSON output. Vector APIs return that
+buffer; writer APIs buffer the complete document before writing, but a
+destination I/O error can still leave partial bytes at the destination.
+Receiver-side filter limits are transient and are not serialized. Applications
+own persistence, transaction, transport, retry, and compensation semantics. A
+custom `MetadataLimits` encode profile is used only when the caller passes
+`limits.json_encode()` to the encoding method; decode settings do not alter
+output budgets.
 
 ## Core data model
 

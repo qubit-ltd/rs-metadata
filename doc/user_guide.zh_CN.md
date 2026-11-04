@@ -409,6 +409,48 @@ assert!(matches!(
 `MetadataWireEncodeError` 还会区分 `Quantity`、`Syntax`、`Json` 和 `Io`。Metadata 与 schema
 wire 契约错误使用 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`，保留限制类别和实际测量值。schema 编码会先执行领域限制 preflight，再检查 JSON 输出预算。迁移原先将 schema 限额错误视为 `Json` 的代码时，应改为匹配 `Domain` 并读取这些字段；普通 Serde 序列化错误仍为 `Json`。该枚举标记为 `non_exhaustive`，穷举匹配时应保留兜底分支。
 
+启用 `json` 和 `filter` 后，`MetadataFilter` 也支持有界 JSON 编码。`to_json_vec` 和
+`to_json_writer` 使用默认 JSON 输出预算；`to_json_vec_with_limits` 和
+`to_json_writer_with_limits` 接收显式的 `JsonEncodeLimits`。这些限制约束编码输出。
+接收端的 `FilterLimits` 是瞬态策略，不会序列化。编码器会在 writer 写入首字节前完成文档
+编码和预算检查，因此预算失败不会写入目标；目标 I/O 失败仍可能留下部分前缀。
+
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json", "filter"] }
+```
+
+下面的示例构造 tenant filter，编码并解码后检查匹配结果，同时验证 writer 和 Vec API
+生成相同的字节：
+
+<!-- bounded-filter-json-encoding-example:start -->
+```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+use qubit_metadata::default_json_encode_limits;
+
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let expression = FilterExpression::builder().eq("tenant", "acme").build()?;
+    let filter = MetadataFilter::builder().expression(expression).build()?;
+    let bytes = filter.to_json_vec_with_limits(default_json_encode_limits())?;
+    let restored = MetadataFilter::decode_json_slice(&bytes)?;
+    assert!(restored.matches(&Metadata::new().with("tenant", "acme")));
+    let mut output = Vec::new();
+    filter.to_json_writer_with_limits(&mut output, default_json_encode_limits())?;
+    assert_eq!(output, bytes);
+    Ok(())
+}
+```
+<!-- bounded-filter-json-encoding-example:end -->
+
 ### 严格的 V1 wire format
 
 Metadata、schema 和 filter 都通过严格的 V1 envelope 序列化。未知字段、畸形节点和不支持

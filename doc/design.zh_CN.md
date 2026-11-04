@@ -18,11 +18,12 @@ Serde 格式。它不绑定存储 provider，不负责定义 provider 的索引�
 遍历。JSON budget profile 按方向独立配置，解码和编码策略互不替换。
 
 启用 `json` 后，metadata 可以使用有界 JSON 编码；启用 `schema` 后，schema 也提供相同
-能力。编码器先检查值能否表示以及资源 profile 是否允许，再生成完整的紧凑 JSON 输出。
-返回 Vec 的 API 会返回该缓冲区；writer API 会先缓冲完整文档再写入，但目标 I/O 出错时
-仍可能已经写出部分字节。持久化、事务、传输、重试和补偿由应用负责。只有在编码 API
-显式接收 `limits.json_encode()` 时，自定义 `MetadataLimits` 编码 profile 才会生效；解码
-设置不会改变输出预算。
+能力。`json` 和 `filter` 同时启用时，filter 也支持有界编码；这不改变 `schema` 包含
+`filter` 的关系。编码器先检查值能否表示以及资源 profile 是否允许，再生成完整的紧凑
+JSON 输出。返回 Vec 的 API 会返回该缓冲区；writer API 会先缓冲完整文档再写入，但目标
+I/O 出错时仍可能已经写出部分字节。Filter 接收端限制是瞬态策略，不会序列化。持久化、
+事务、传输、重试和补偿由应用负责。只有在编码 API 显式接收 `limits.json_encode()` 时，
+自定义 `MetadataLimits` 编码 profile 才会生效；解码设置不会改变输出预算。
 
 ## 核心数据模型
 

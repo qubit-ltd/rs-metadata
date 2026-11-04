@@ -20,6 +20,8 @@ mod support {
     pub mod readme_directional_limits;
     pub mod user_guide_bounded_decode;
     pub mod user_guide_bounded_encode;
+    #[cfg(feature = "filter")]
+    pub mod user_guide_filter_bounded_encode;
 }
 
 #[test]
@@ -70,8 +72,21 @@ fn test_user_guide_bounded_decode_source_matches() {
                 "bounded-json-encoding-example",
                 include_str!("support/user_guide_bounded_encode.rs"),
             );
+            #[cfg(feature = "filter")]
+            assert_documented_example(
+                name,
+                document,
+                "bounded-filter-json-encoding-example",
+                include_str!("support/user_guide_filter_bounded_encode.rs"),
+            );
         }
     }
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_user_guide_filter_bounded_json_encoding_example() {
+    support::user_guide_filter_bounded_encode::main().expect("filter encoding guide example should run");
 }
 
 fn assert_documented_example(name: &str, document: &str, marker: &str, expected: &str) {
