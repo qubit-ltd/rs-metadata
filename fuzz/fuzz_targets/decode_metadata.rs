@@ -11,6 +11,9 @@
 
 #![no_main]
 
+#[path = "../support/bounded_encode.rs"]
+mod bounded_encode;
+
 use libfuzzer_sys::fuzz_target;
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
@@ -37,5 +40,11 @@ fuzz_target!(|data: &[u8]| {
         let decoded = Metadata::decode_json_slice_with_limits(&encoded, decode_limits)
             .expect("metadata should round trip within its encoded size");
         assert_eq!(decoded, value);
+        bounded_encode::check(
+            &encoded,
+            bounded_encode::caps(encoded.len(), data.first().copied().unwrap_or(0)),
+            |limits| value.to_json_vec_with_limits(limits),
+            |writer, limits| value.to_json_writer_with_limits(writer, limits),
+        );
     }
 });

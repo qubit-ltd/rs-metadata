@@ -12,3 +12,7 @@ pub mod counting_writer;
 #[allow(dead_code)]
 pub mod port;
 pub mod test_support;
+
+#[cfg(feature = "json")]
+#[allow(dead_code)]
+pub mod bounded_encode;

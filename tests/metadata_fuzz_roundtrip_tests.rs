@@ -9,7 +9,9 @@
 
 #![cfg(feature = "json")]
 
+mod support;
 use qubit_budget::ResourceLimit;
+use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 #[cfg(feature = "filter")]
 use qubit_metadata::DEFAULT_MAX_JSON_BYTES;
@@ -22,6 +24,104 @@ use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataWireDecodeError;
+use qubit_metadata::MetadataWireEncodeError;
+use qubit_metadata::default_json_encode_limits;
+use support::bounded_encode::shared as bounded_encode;
+
+fn assert_bounded(
+    canonical: &[u8],
+    encode_vec: impl Fn(JsonEncodeLimits) -> Result<Vec<u8>, MetadataWireEncodeError>,
+    encode_writer: impl FnMut(&mut bounded_encode::ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+) {
+    let length = canonical.len();
+    bounded_encode::check(
+        canonical,
+        [1, length.saturating_sub(1).max(1), length, length.saturating_add(1)],
+        encode_vec,
+        encode_writer,
+    );
+}
+
+#[test]
+fn test_bounded_metadata_encode_oracle_covers_output_and_value_budgets() {
+    let empty = Metadata::new();
+    let empty_canonical = serde_json::to_vec(&empty).unwrap();
+    assert_bounded(
+        &empty_canonical,
+        |limits| empty.to_json_vec_with_limits(limits),
+        |writer, limits| empty.to_json_writer_with_limits(writer, limits),
+    );
+
+    let metadata = Metadata::new().with("tenant", "acme \"北\"").with("empty", "");
+    let canonical = serde_json::to_vec(&metadata).unwrap();
+    assert_bounded(
+        &canonical,
+        |limits| metadata.to_json_vec_with_limits(limits),
+        |writer, limits| metadata.to_json_writer_with_limits(writer, limits),
+    );
+
+    let nested = Metadata::new().with(
+        "document",
+        qubit_value::Value::Json(serde_json::json!({"nested": [{"ratio": 1.25}, true]})),
+    );
+    let canonical = serde_json::to_vec(&nested).unwrap();
+    assert_bounded(
+        &canonical,
+        |limits| nested.to_json_vec_with_limits(limits),
+        |writer, limits| nested.to_json_writer_with_limits(writer, limits),
+    );
+
+    for limits in [
+        default_json_encode_limits().into_builder().max_depth(1).build(),
+        default_json_encode_limits().into_builder().max_string_bytes(1).build(),
+    ] {
+        let error = metadata
+            .to_json_vec_with_limits(limits)
+            .expect_err("small value budget must reject");
+        assert!(matches!(error, MetadataWireEncodeError::Budget(_)));
+        let mut writer = bounded_encode::ProbeWriter::new();
+        let writer_error = metadata
+            .to_json_writer_with_limits(&mut writer, limits)
+            .expect_err("writer must reject same value budget");
+        assert!(matches!(writer_error, MetadataWireEncodeError::Budget(_)));
+        assert_eq!(writer.writes, 0);
+        assert_eq!(writer.bytes, bounded_encode::PREFIX);
+    }
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn test_bounded_schema_encode_oracle() {
+    use qubit_datatype::DataType;
+    use qubit_metadata::MetadataSchema;
+    let schema = MetadataSchema::builder()
+        .required("tenant", DataType::String)
+        .build()
+        .unwrap();
+    let canonical = serde_json::to_vec(&schema).unwrap();
+    assert_bounded(
+        &canonical,
+        |limits| schema.to_json_vec_with_limits(limits),
+        |writer, limits| schema.to_json_writer_with_limits(writer, limits),
+    );
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_bounded_filter_encode_oracle() {
+    let expression = FilterExpression::builder()
+        .in_set("region", ["north", "s\"outh", "東京"])
+        .eq("enabled", true)
+        .build()
+        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    let canonical = serde_json::to_vec(&filter).unwrap();
+    assert_bounded(
+        &canonical,
+        |limits| filter.to_json_vec_with_limits(limits),
+        |writer, limits| filter.to_json_writer_with_limits(writer, limits),
+    );
+}
 
 #[test]
 fn test_metadata_roundtrip_oracle_allows_number_normalization_growth() {
