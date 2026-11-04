@@ -32,10 +32,10 @@ mod support {
     #[cfg(feature = "schema")]
     pub mod user_guide_chunk_workflow;
     #[cfg(feature = "filter")]
+    pub mod user_guide_empty_sets;
+    #[cfg(feature = "filter")]
     #[cfg(feature = "json")]
     pub mod user_guide_filter_bounded_encode;
-    #[cfg(feature = "filter")]
-    pub mod user_guide_empty_sets;
 }
 
 #[cfg(feature = "filter")]

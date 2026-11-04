@@ -335,10 +335,18 @@ use qubit_value::Value;
 
 pub fn main() -> qubit_metadata::MetadataResult<()> {
     let included = MetadataFilter::builder()
-        .expression(FilterExpression::builder().in_set("key", std::iter::empty::<i64>()).build()?)
+        .expression(
+            FilterExpression::builder()
+                .in_set("key", std::iter::empty::<i64>())
+                .build()?,
+        )
         .build()?;
     let excluded = MetadataFilter::builder()
-        .expression(FilterExpression::builder().not_in_set("key", std::iter::empty::<i64>()).build()?)
+        .expression(
+            FilterExpression::builder()
+                .not_in_set("key", std::iter::empty::<i64>())
+                .build()?,
+        )
         .build()?;
     let concrete = Metadata::new().with("key", 1_i64);
     assert!(!included.matches(&concrete));
