@@ -75,3 +75,23 @@ The local measurements show that the two encodings and the intervening clone hav
 Allocation counts/bytes were **not measured**; no reliable allocation profiler was used. No `to_json_writer(io::sink())` comparison was made, since that would not establish removal of the encoder's internal buffering.
 
 **Disposition:** retain the current API and leave the performance question open. These results do not justify adding a public size-validation API, changing downstream production calls, or claiming an optimization benefit. If the question becomes decision-critical, measure typed request submission through the real SQLite store under a controlled host, including request composition and database conditions, before designing an optimization.
+
+## Current call-path review (2026-11-04)
+
+This review rechecked the downstream implementation without rerunning any
+benchmark. The `rs-task` checkout was clean on `dev-starfish`. In
+`src/service/typed_task_execution_service.rs`, `submit` calls
+`TaskRequest::encode` before ID generation and store acceptance. The encoder
+still checks the 32-entry metadata cap and encodes metadata with a 16 KiB JSON
+output budget, dropping the returned vector after validation. The SQLite
+`accept_encoded` path still constructs `StoredRequestInfo` from the stored
+request, cloning metadata, then serializes that full information object with
+`serde_json::to_string` for `request_info_json`. These are the same operations
+and limits described in this investigation; the second serialization also
+contains the other stored request fields.
+
+This is a source review, not a new measurement. The three historical benchmark
+runs and their timings above remain the only recorded measurements. The review
+confirms repeated local metadata work, but does not establish an end-to-end
+SQLite submission bottleneck. Retain the current API; RM-003 is closed for
+this review with no optimization claim or production change.
