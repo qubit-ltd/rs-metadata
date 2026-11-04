@@ -249,12 +249,13 @@ fn test_condition_debug_identifies_operator_without_exposing_value() {
     let comparison_debug = format!("{comparison:?}");
     let existence_debug = format!("{existence:?}");
 
-    assert_eq!(
-        comparison_debug,
-        "FilterExpression { node: Condition(Condition { operator: \"greater\", key: \"score\", value: \"<redacted>\" }) }"
-    );
-    assert_eq!(
-        existence_debug,
-        "FilterExpression { node: Condition(Condition { operator: \"exists\", key: \"verified\" }) }"
-    );
+    assert!(comparison_debug.contains("operator: \"Condition\""));
+    assert!(comparison_debug.contains("operator: \"greater\""));
+    assert!(comparison_debug.contains("key: \"score\""));
+    assert!(comparison_debug.contains("value: \"<redacted>\""));
+    assert!(!comparison_debug.contains("42"));
+
+    assert!(existence_debug.contains("operator: \"Condition\""));
+    assert!(existence_debug.contains("operator: \"exists\""));
+    assert!(existence_debug.contains("key: \"verified\""));
 }

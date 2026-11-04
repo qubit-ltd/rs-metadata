@@ -52,6 +52,7 @@ fn policy_with_domain_limits(max_nodes: usize, max_collection_items: usize) -> R
 }
 
 /// Builds a policy with exact structural and output ceilings.
+#[cfg(any(feature = "filter", feature = "schema"))]
 fn policy_with_exact_limits(
     max_nodes: usize,
     max_collection_items: usize,
@@ -73,6 +74,7 @@ fn policy_with_exact_limits(
 }
 
 /// Verifies that each diagnostic resource ceiling is shared by nested values.
+#[cfg(any(feature = "filter", feature = "schema"))]
 fn assert_exact_diagnostic_budget_boundaries<T: Redact>(value: &T) {
     let generous = policy_with_exact_limits(512, 512, 64, 65_536);
     let complete = redacted_output(value, &generous);
@@ -281,10 +283,7 @@ fn test_composite_filter_types_implement_redact_and_share_budgets() {
     let adequate = policy_with_domain_limits(64, 64);
     let expression_text = complete_redacted_text(&expression, &adequate);
     assert!(expression_text.contains("And"), "{expression_text}");
-    assert!(
-        !expression_text.contains("operand-secret"),
-        "{expression_text}"
-    );
+    assert!(!expression_text.contains("operand-secret"), "{expression_text}");
 
     let restrictive = policy_with_domain_limits(2, 64);
     let output = redacted_output(&expression, &restrictive);
@@ -347,10 +346,7 @@ fn test_filter_expression_diagnostics_cover_every_operator_branch() {
         .map(|expression| complete_redacted_text(expression, &policy_with_domain_limits(128, 128)))
         .collect::<Vec<_>>();
 
-    for (output, expected) in outputs
-        .iter()
-        .zip(["True", "False", "And", "Or", "Not", "Condition"])
-    {
+    for (output, expected) in outputs.iter().zip(["True", "False", "And", "Or", "Not", "Condition"]) {
         assert!(output.contains(expected), "expected {expected} in {output}");
     }
 }
