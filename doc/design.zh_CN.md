@@ -58,6 +58,11 @@ deserializer 错误通道。
 默认 profile 包含 byte、depth、node、sequence/map、string/key/number/payload 以及领域限制。
 内存中的 metadata 本身不设这些 wire 上限；V1 wire map 会执行规范的条目数和 key 长度限制。
 
+专用 filter JSON decoder 首先在共享 JSON 解码预算下扫描并物化完整的唯一键 JSON 源树，然后
+由领域 seed 在构造 filter 时检查接收方 AST 和 membership 限制。收紧 `FilterLimits` 不会停止
+源树物化，因此应同时配置通用 JSON budget 和领域限制。该物化契约只适用于专用 JSON decoder，
+不适用于任意 `serde::Deserialize` deserializer。
+
 ## 三值过滤语义
 
 对缺失 key 或 unset 值进行相等、范围和集合比较会得到 unknown。具体值无法比较或数值比较失败时也会

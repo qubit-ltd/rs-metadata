@@ -386,8 +386,10 @@ key 256 个 UTF-8 字节。`MetadataLimits` 将这些 metadata 领域限制与�
 硬上限。输入字节数会在 JSON 解析前检查。
 
 `MetadataSchema` 和 `MetadataFilter` 也提供对应的有界 JSON 解码器。Filter 解码还接受由
-接收方控制的 `FilterLimits`。显式 filter JSON decoder 会在读取 expression tree 时执行接收方
-AST 限制和共享 JSON budget。Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
+接收方控制的 `FilterLimits`。显式 filter JSON decoder 首先在共享 JSON 解码预算下物化完整的
+唯一键 JSON 源树，然后由领域 seed 在构造 filter 时检查接收方 AST 和 membership 限制。收紧
+`FilterLimits` 不会停止前一阶段的源树物化，因此应同时配置通用 JSON budget 和领域限制。
+Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
 字符串和嵌套 value 仍可能产生临时分配，但会受到外层输入字节上限约束。通用
 `serde::Deserialize` 适用于外层已经受控的协议。
 

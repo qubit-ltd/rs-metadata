@@ -423,9 +423,12 @@ before JSON parsing.
 
 `MetadataSchema` and `MetadataFilter` provide corresponding bounded JSON
 decoders. Filter decoding additionally accepts receiver-controlled
-`FilterLimits`. The explicit filter JSON decoder enforces receiver AST limits
-and the shared JSON budget while reading the expression tree. Filter limits are
-transient receiver-side policy and are not serialized. Individual JSON strings
+`FilterLimits`. The explicit filter JSON decoder first materializes the
+complete unique-key JSON source tree under the shared JSON decode budgets. Its
+domain seed then checks receiver AST and membership limits while constructing
+the filter. Tightening `FilterLimits` does not stop the preceding source-tree
+materialization, so configure both the generic JSON budgets and domain limits.
+Filter limits are transient receiver-side policy and are not serialized. Individual JSON strings
 and embedded value payloads may still require temporary allocations bounded by
 the outer input-byte limit. Generic `serde::Deserialize` remains intended for
 an already-bounded outer protocol.

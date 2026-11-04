@@ -213,8 +213,12 @@ impl MetadataFilter {
     /// `InvalidLimits` for invalid metadata limits, and `Syntax` for lexical
     /// JSON errors. Shared decoder failures such as empty input, invalid UTF-8,
     /// unexpected top-level types, or deserialization failures return `Decode`.
-    /// Receiver AST or filter-contract failures return `Filter`; receiver AST
-    /// limits are charged during incremental decoding.
+    /// The complete unique-key JSON source tree is first materialized under
+    /// the shared JSON decode budgets. The domain seed then checks receiver AST
+    /// and membership limits while constructing the filter. Receiver AST or
+    /// filter-contract failures return `Filter`; tightening `FilterLimits`
+    /// does not stop the preceding source-tree materialization, so configure
+    /// both the generic JSON budgets and domain limits.
     #[cfg(feature = "json")]
     #[inline]
     pub fn decode_json_slice(input: &[u8]) -> Result<Self, crate::MetadataWireDecodeError> {
@@ -222,8 +226,12 @@ impl MetadataFilter {
     }
 
     /// Decodes a strict metadata-filter JSON envelope after validating the
-    /// shared metadata limits. Receiver-controlled AST limits are charged
-    /// during incremental decoding.
+    /// shared metadata limits. The complete unique-key JSON source tree is
+    /// first materialized under the shared JSON decode budgets. The domain
+    /// seed then checks receiver AST and membership limits while constructing
+    /// the filter. Tightening `receiver_filter_limits` does not stop the
+    /// preceding source-tree materialization, so configure both the generic
+    /// JSON budgets and domain limits.
     ///
     /// # Parameters
     ///
@@ -239,7 +247,7 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns `Budget` or `Quantity` when generic JSON traversal exceeds a
-    /// configured budget, `Filter` when seeded traversal detects an AST limit
+    /// configured budget, `Filter` when domain traversal detects an AST limit
     /// or the decoded filter violates its contract, `UnsupportedVersion` for a
     /// version mismatch, and `InvalidLimits` for invalid metadata limits.
     /// Lexical JSON errors return `Syntax`; shared decoder failures such as

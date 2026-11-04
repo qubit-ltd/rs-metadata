@@ -80,6 +80,14 @@ depth, node, sequence/map, string/key/number/payload, and domain limits.
 In-memory metadata is not intrinsically bounded; V1 wire maps enforce their
 canonical entry and key limits.
 
+The dedicated filter JSON decoder first scans and materializes the complete
+unique-key JSON source tree under the shared JSON decode budgets. Its domain
+seed then checks receiver AST and membership limits while constructing the
+filter. Tightening `FilterLimits` does not stop source-tree materialization;
+configure both the generic JSON budgets and domain limits. This materialization
+contract applies to the dedicated JSON decoder, not to arbitrary
+`serde::Deserialize` deserializers.
+
 ## Three-valued filter semantics
 
 Equality, range, and membership comparisons against missing keys or unset
