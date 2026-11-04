@@ -7,7 +7,7 @@
 // =============================================================================
 //! Integration tests for examples documented in the README and user guide.
 
-#![cfg(any(feature = "json", feature = "schema"))]
+#![cfg(any(feature = "json", feature = "schema", feature = "filter"))]
 
 #[cfg(feature = "json")]
 use qubit_budget::ResourceLimit;
@@ -34,6 +34,30 @@ mod support {
     #[cfg(feature = "filter")]
     #[cfg(feature = "json")]
     pub mod user_guide_filter_bounded_encode;
+    #[cfg(feature = "filter")]
+    pub mod user_guide_empty_sets;
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_user_guide_empty_sets_example() {
+    support::user_guide_empty_sets::main().expect("empty set guide example should run");
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_user_guide_empty_sets_source_matches() {
+    for (name, document) in [
+        ("English guide", include_str!("../doc/user_guide.md")),
+        ("Chinese guide", include_str!("../doc/user_guide.zh_CN.md")),
+    ] {
+        assert_documented_example(
+            name,
+            document,
+            "empty-set-example",
+            include_str!("support/user_guide_empty_sets.rs"),
+        );
+    }
 }
 
 #[cfg(feature = "json")]

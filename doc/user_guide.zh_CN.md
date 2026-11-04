@@ -288,7 +288,41 @@ for expression in expressions {
 }
 ```
 
-空集合是合法的：`in_set("key", [])` 什么都不匹配；`not_in_set("key", [])` 只匹配具体值。
+空集合是合法的。请为 empty iterator 指定元素类型，因为空数组无法为 `in_set` 或
+`not_in_set` 推断值类型。此示例需要启用 `filter` feature：
+
+<!-- empty-set-example:start -->
+```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+use qubit_datatype::DataType;
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+use qubit_value::Value;
+
+pub fn main() -> qubit_metadata::MetadataResult<()> {
+    let included = MetadataFilter::builder()
+        .expression(FilterExpression::builder().in_set("key", std::iter::empty::<i64>()).build()?)
+        .build()?;
+    let excluded = MetadataFilter::builder()
+        .expression(FilterExpression::builder().not_in_set("key", std::iter::empty::<i64>()).build()?)
+        .build()?;
+    let concrete = Metadata::new().with("key", 1_i64);
+    assert!(!included.matches(&concrete));
+    assert!(excluded.matches(&concrete));
+    assert!(!excluded.matches(&Metadata::new()));
+    assert!(!excluded.matches(&Metadata::new().with("key", Value::Unset(DataType::Int64))));
+    Ok(())
+}
+```
+<!-- empty-set-example:end -->
+
 空分组会被 `build()` 拒绝，因为它通常说明查询构造过程遗漏了条件。
 
 数值比较使用配置的 `NumericComparisonPolicy`。filter 的 schema 校验会把非 NaN 数值表示
