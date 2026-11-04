@@ -652,4 +652,110 @@ mod tests {
             .expect("constant negation should simplify")
             .assert_cached_metrics_consistent();
     }
+
+    #[test]
+    fn test_cached_metrics_combination_matrix() {
+        use crate::FilterLimitKind;
+        use crate::FilterLimits;
+        use crate::MetadataError;
+
+        let leaf = FilterExpression::builder()
+            .exists("chunk_index")
+            .build()
+            .expect("leaf expression should build");
+        let and = leaf.clone().try_and(leaf.clone()).expect("AND expression should build");
+        let or = leaf.clone().try_or(leaf.clone()).expect("OR expression should build");
+        let deep = and
+            .clone()
+            .try_or(leaf.clone())
+            .expect("nested OR expression should build")
+            .try_not()
+            .expect("NOT expression should build");
+        let tall_and = and
+            .clone()
+            .try_and(or.clone().try_not().expect("NOT expression should build"))
+            .expect("taller AND expression should build");
+        let tall_or = or
+            .clone()
+            .try_or(and.clone().try_not().expect("NOT expression should build"))
+            .expect("taller OR expression should build");
+        let roots = [leaf, and, or, deep, tall_and, tall_or];
+
+        for left in &roots {
+            for right in &roots {
+                for expression in [
+                    left.clone()
+                        .try_and(right.clone())
+                        .expect("AND combination should build"),
+                    left.clone().try_or(right.clone()).expect("OR combination should build"),
+                ] {
+                    expression.assert_cached_metrics_consistent();
+                    let (nodes, depth) = expression.recursive_metrics();
+                    let exact = FilterLimits::builder()
+                        .max_nodes(nodes)
+                        .max_depth(depth)
+                        .build()
+                        .expect("exact limits should build");
+                    assert!(expression.validate_limits(exact).is_ok());
+
+                    if nodes > 1 {
+                        let low_nodes = FilterLimits::builder()
+                            .max_nodes(nodes - 1)
+                            .build()
+                            .expect("lower node limit should build");
+                        assert!(matches!(
+                            expression.validate_limits(low_nodes),
+                            Err(MetadataError::FilterLimitExceeded {
+                                kind: FilterLimitKind::Nodes,
+                                ..
+                            })
+                        ));
+                    }
+
+                    if depth > 1 {
+                        let low_depth = FilterLimits::builder()
+                            .max_depth(depth - 1)
+                            .build()
+                            .expect("lower depth limit should build");
+                        assert!(matches!(
+                            expression.validate_limits(low_depth),
+                            Err(MetadataError::FilterLimitExceeded {
+                                kind: FilterLimitKind::Depth,
+                                ..
+                            })
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_cached_metrics_after_combination_and_simplification_sequence() {
+        let leaf = FilterExpression::builder()
+            .exists("chunk_index")
+            .build()
+            .expect("leaf expression should build");
+        leaf.assert_cached_metrics_consistent();
+
+        let and = leaf.clone().try_and(leaf.clone()).expect("AND should build");
+        and.assert_cached_metrics_consistent();
+        let or = and.try_or(leaf.clone()).expect("OR should build");
+        or.assert_cached_metrics_consistent();
+        let negated = or.try_not().expect("NOT should build");
+        negated.assert_cached_metrics_consistent();
+        let and_true = negated
+            .clone()
+            .try_and(FilterExpression::match_all())
+            .expect("true AND should simplify");
+        and_true.assert_cached_metrics_consistent();
+        let or_false = and_true
+            .try_or(FilterExpression::match_none())
+            .expect("false OR should simplify");
+        or_false.assert_cached_metrics_consistent();
+        let once_negated = or_false.try_not().expect("first NOT should build");
+        once_negated.assert_cached_metrics_consistent();
+        let twice_negated = once_negated.try_not().expect("second NOT should build");
+        twice_negated.assert_cached_metrics_consistent();
+    }
 }
