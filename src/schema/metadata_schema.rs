@@ -14,10 +14,6 @@ mod filter_validation;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
-
-use qubit_redact::Redact;
-use qubit_redact::RedactionWriter;
-use qubit_redact::Redactor;
 #[cfg(feature = "json")]
 use std::io::Write;
 #[cfg(feature = "json")]
@@ -34,6 +30,9 @@ use qubit_datatype::DataType;
 use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
 use qubit_json::encode::JsonEncoder;
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 use qubit_value::Value;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -110,12 +109,8 @@ impl Redact for MetadataSchema {
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("MetadataSchema", |fields| {
             fields.nested("fields", &SchemaFields(&self.fields));
-            fields.unmarked("unknown_metadata_field_policy", || {
-                self.unknown_metadata_field_policy
-            });
-            fields.unmarked("unknown_filter_field_policy", || {
-                self.unknown_filter_field_policy
-            });
+            fields.unmarked("unknown_metadata_field_policy", || self.unknown_metadata_field_policy);
+            fields.unmarked("unknown_filter_field_policy", || self.unknown_filter_field_policy);
         });
     }
 }

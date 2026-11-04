@@ -13,10 +13,6 @@ use std::fmt;
 use std::io::Write;
 use std::rc::Rc;
 
-use qubit_redact::Redact;
-use qubit_redact::RedactionWriter;
-use qubit_redact::Redactor;
-
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonDecodeSession;
 #[cfg(feature = "json")]
@@ -27,6 +23,9 @@ use qubit_budget::json::JsonEncodeSession;
 use qubit_json::decode::JsonDecoder;
 #[cfg(feature = "json")]
 use qubit_json::encode::JsonEncoder;
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 use qubit_utils::Transient;
 #[cfg(feature = "json")]
 use qubit_value::ValueWireEncodePreflight;
