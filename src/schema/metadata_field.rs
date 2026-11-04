@@ -9,9 +9,13 @@
 
 use qubit_datatype::DataType;
 use serde::Deserialize;
+use serde::Deserializer;
 use serde::Serialize;
 
 /// Definition of one metadata field in a [`crate::MetadataSchema`].
+///
+/// Its V1 wire representation is an object with exactly the `data_type` and
+/// `required` fields. Positional arrays are rejected by deserialization.
 ///
 /// # Examples
 ///
@@ -22,13 +26,23 @@ use serde::Serialize;
 /// let field = MetadataField::new(DataType::String, true);
 /// assert!(field.is_required());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MetadataField {
     /// Runtime data type of this field.
     data_type: DataType,
     /// Whether this field must be present when validating metadata.
     required: bool,
+}
+
+impl<'de> Deserialize<'de> for MetadataField {
+    /// Deserializes a field definition from its strict object representation.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let (data_type, required) = super::internal::deserialize_metadata_field(deserializer)?;
+        Ok(Self::new(data_type, required))
+    }
 }
 
 impl MetadataField {

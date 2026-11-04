@@ -14,6 +14,7 @@ use qubit_budget::json::JsonDecodeLimits;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
 use qubit_datatype::DataType;
+use qubit_metadata::MetadataField;
 #[cfg(feature = "json")]
 use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
@@ -69,6 +70,194 @@ fn test_metadata_schema_rejects_positional_envelope() {
     assert!(
         MetadataSchema::decode_json_slice(input.as_bytes()).is_err(),
         "the bounded decoder must reject positional input"
+    );
+}
+
+#[test]
+fn test_metadata_schema_rejects_positional_field_array() {
+    let schema = MetadataSchema::builder()
+        .required("tenant", DataType::String)
+        .build()
+        .expect("schema should build");
+    let mut input = to_value(&schema).expect("schema should serialize");
+    let field = input["fields"]["tenant"].clone();
+    input["fields"]["tenant"] = json!([field["data_type"], field["required"]]);
+    #[cfg(feature = "json")]
+    let bytes = to_vec(&input).expect("schema with positional field should serialize");
+    let encoded = to_string(&input).expect("schema with positional field should serialize");
+
+    let from_value_result = from_value::<MetadataSchema>(input);
+    let from_str_result = from_str::<MetadataSchema>(&encoded);
+    #[cfg(feature = "json")]
+    let bounded_result = MetadataSchema::decode_json_slice(&bytes);
+
+    assert!(
+        from_value_result.is_err() && from_str_result.is_err() && {
+            #[cfg(feature = "json")]
+            {
+                bounded_result.is_err()
+            }
+            #[cfg(not(feature = "json"))]
+            {
+                true
+            }
+        },
+        "schema positional-field outcomes: from_value={from_value_result:?}, \
+         from_str={from_str_result:?}, \
+         decode_json_slice={:?}",
+        {
+            #[cfg(feature = "json")]
+            {
+                &bounded_result
+            }
+            #[cfg(not(feature = "json"))]
+            {
+                &None::<()>
+            }
+        }
+    );
+}
+
+#[test]
+fn test_metadata_schema_rejects_invalid_field_shapes() {
+    let field = MetadataField::new(DataType::String, true);
+    let encoded_field = to_value(&field).expect("field should serialize");
+    let invalid_shapes = [
+        ("missing data_type", json!({"required": true})),
+        ("missing required", json!({"data_type": encoded_field["data_type"]})),
+        (
+            "unknown field",
+            json!({"data_type": encoded_field["data_type"], "required": true, "extra": false}),
+        ),
+        ("null", json!(null)),
+        ("scalar", json!(true)),
+        ("empty array", json!([])),
+        ("short array", json!([encoded_field["data_type"]])),
+        (
+            "long array",
+            json!([encoded_field["data_type"], encoded_field["required"], "extra"]),
+        ),
+    ];
+
+    for (shape, field_value) in invalid_shapes {
+        let schema = MetadataSchema::builder()
+            .required("tenant", DataType::String)
+            .build()
+            .expect("schema should build");
+        let mut input = to_value(&schema).expect("schema should serialize");
+        input["fields"]["tenant"] = field_value;
+        let encoded = to_string(&input).expect("invalid schema field shape should serialize");
+        #[cfg(feature = "json")]
+        let bytes = to_vec(&input).expect("invalid schema field shape should serialize");
+        let from_value_result = from_value::<MetadataSchema>(input);
+        let from_str_result = from_str::<MetadataSchema>(&encoded);
+        #[cfg(feature = "json")]
+        let bounded_result = MetadataSchema::decode_json_slice(&bytes);
+
+        assert!(
+            from_value_result.is_err() && from_str_result.is_err() && {
+                #[cfg(feature = "json")]
+                {
+                    bounded_result.is_err()
+                }
+                #[cfg(not(feature = "json"))]
+                {
+                    true
+                }
+            },
+            "schema should reject {shape}; from_value={from_value_result:?}, \
+             from_str={from_str_result:?}, decode_json_slice={:?}",
+            {
+                #[cfg(feature = "json")]
+                {
+                    &bounded_result
+                }
+                #[cfg(not(feature = "json"))]
+                {
+                    &None::<()>
+                }
+            }
+        );
+    }
+}
+
+#[test]
+fn test_metadata_schema_rejects_duplicate_field_member() {
+    let field = MetadataField::new(DataType::String, true);
+    let encoded_field = to_value(&field).expect("field should serialize");
+    let encoded_type = to_string(&encoded_field["data_type"]).expect("data type should serialize");
+    let duplicate_fields = [
+        (
+            "data_type",
+            format!(r#"{{"data_type":{encoded_type},"data_type":{encoded_type},"required":true}}"#),
+        ),
+        (
+            "required",
+            format!(r#"{{"data_type":{encoded_type},"required":true,"required":false}}"#),
+        ),
+    ];
+
+    for (field_name, field_object) in duplicate_fields {
+        let input = format!(
+            r#"{{"version":1,"fields":{{"tenant":{field_object}}},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}}"#
+        );
+        let from_str_result = from_str::<MetadataSchema>(&input);
+        #[cfg(feature = "json")]
+        let bounded_result = MetadataSchema::decode_json_slice(input.as_bytes());
+
+        assert!(
+            from_str_result.is_err() && {
+                #[cfg(feature = "json")]
+                {
+                    bounded_result.is_err()
+                }
+                #[cfg(not(feature = "json"))]
+                {
+                    true
+                }
+            },
+            "schema should reject duplicate {field_name}; from_str={from_str_result:?}, \
+             decode_json_slice={:?}",
+            {
+                #[cfg(feature = "json")]
+                {
+                    &bounded_result
+                }
+                #[cfg(not(feature = "json"))]
+                {
+                    &None::<()>
+                }
+            }
+        );
+    }
+}
+
+#[test]
+fn test_metadata_schema_accepts_reordered_field_object() {
+    let schema = MetadataSchema::builder()
+        .required("tenant", DataType::String)
+        .build()
+        .expect("schema should build");
+    let field = to_value(MetadataField::new(DataType::String, true)).expect("field should serialize");
+    let data_type = to_string(&field["data_type"]).expect("data type should serialize");
+    let input = format!(
+        r#"{{"version":1,"fields":{{"tenant":{{"required":true,"data_type":{data_type}}}}},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}}"#
+    );
+    let value = serde_json::from_str(&input).expect("reordered schema should parse as a value");
+
+    assert_eq!(
+        from_value::<MetadataSchema>(value).expect("schema object order should be flexible"),
+        schema
+    );
+    assert_eq!(
+        from_str::<MetadataSchema>(&input).expect("schema object order should be flexible"),
+        schema
+    );
+    #[cfg(feature = "json")]
+    assert_eq!(
+        MetadataSchema::decode_json_slice(input.as_bytes())
+            .expect("bounded schema should accept reordered object fields"),
+        schema
     );
 }
 

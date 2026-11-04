@@ -512,6 +512,12 @@ as `eq`, `ge`, `in`, `and`, `or`, `not`, `all`, and `none`.
 Do not hand-author these structures unless the versioned format is part of your
 integration contract; prefer the public Serde implementations.
 
+Each value in a schema's `fields` map must be an object containing exactly
+`data_type` and `required`; positional field arrays are rejected. If stored V1
+schemas use positional field arrays, read them with the previous library
+version and re-serialize them as canonical objects before upgrading. The new
+decoder has no array fallback.
+
 `Metadata` and `MetadataSchema` are unbounded in memory. Their serializers
 reject maps larger than 4,096 entries or keys longer than 256 UTF-8 bytes only
 at the V1 wire boundary, returning `MetadataWireEncodeError::Domain` with the

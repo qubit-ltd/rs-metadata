@@ -64,6 +64,11 @@ report unsupported versions as `UnsupportedVersion`; generic Serde decoding
 of schema envelopes rejects positional sequences and requires the canonical
 four-field object. Existing object output and the V1 version remain unchanged;
 generic Serde decoding retains its ordinary deserializer error channel.
+Each value in the schema `fields` map must itself be an object containing
+exactly `data_type` and `required`; positional field arrays are rejected.
+Consumers with stored V1 schemas that use positional field arrays must read
+them with the previous library version and re-serialize them as canonical
+objects before upgrading. The new decoder does not provide an array fallback.
 
 ## Resource and trust boundaries
 
