@@ -9,6 +9,10 @@
 
 use std::fmt;
 
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
+
 use crate::Condition;
 use crate::FilterExpressionBuilder;
 use crate::FilterExpressionView;
@@ -18,6 +22,7 @@ use crate::FilterMatchOptions;
 use crate::Metadata;
 use crate::MetadataError;
 use crate::MetadataResult;
+use crate::filter::internal::ExpressionChildren;
 use crate::filter::internal::FilterExpressionNode;
 use crate::filter::internal::MatchOutcome;
 
@@ -61,10 +66,39 @@ impl fmt::Debug for FilterExpression {
     /// Formats the expression without exposing its cached implementation
     /// metrics.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter
-            .debug_struct("FilterExpression")
-            .field("node", &self.node)
-            .finish()
+        let output = Redactor::strict().redact_text(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
+    }
+}
+
+impl Redact for FilterExpression {
+    /// Writes the expression tree through the caller's cumulative budget.
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.record("FilterExpression", |fields| match &self.node {
+            FilterExpressionNode::Condition(condition) => {
+                fields.unmarked("operator", || "Condition");
+                fields.nested("condition", condition);
+            }
+            FilterExpressionNode::And(children) => {
+                fields.unmarked("operator", || "And");
+                fields.nested("children", &ExpressionChildren(children));
+            }
+            FilterExpressionNode::Or(children) => {
+                fields.unmarked("operator", || "Or");
+                fields.nested("children", &ExpressionChildren(children));
+            }
+            FilterExpressionNode::Not(inner) => {
+                fields.unmarked("operator", || "Not");
+                fields.nested("inner", inner.as_ref());
+            }
+            FilterExpressionNode::True => {
+                fields.unmarked("operator", || "True");
+            }
+            FilterExpressionNode::False => {
+                fields.unmarked("operator", || "False");
+            }
+        });
     }
 }
 

@@ -8,9 +8,14 @@
 //! [`MetadataFilter`].
 
 use std::cell::RefCell;
+use std::fmt;
 #[cfg(feature = "json")]
 use std::io::Write;
 use std::rc::Rc;
+
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonDecodeSession;
@@ -73,7 +78,7 @@ use crate::metadata_limits::MetadataLimits;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct MetadataFilter {
     /// Root Boolean expression.
     expression: FilterExpression,
@@ -81,6 +86,26 @@ pub struct MetadataFilter {
     options: FilterMatchOptions,
     /// Bounds that the expression satisfies.
     limits: Transient<FilterLimits>,
+}
+
+impl fmt::Debug for MetadataFilter {
+    /// Writes the strict-policy diagnostic representation.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let output = Redactor::strict().redact_text(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
+    }
+}
+
+impl Redact for MetadataFilter {
+    /// Writes the filter through one cumulative diagnostic budget.
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.record("MetadataFilter", |fields| {
+            fields.nested("expression", &self.expression);
+            fields.unmarked("options", || self.options);
+            fields.unmarked("limits", || self.limits());
+        });
+    }
 }
 
 impl MetadataFilter {

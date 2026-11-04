@@ -13,6 +13,11 @@ mod filter_validation;
 #[cfg(feature = "json")]
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::fmt;
+
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 #[cfg(feature = "json")]
 use std::io::Write;
 #[cfg(feature = "json")]
@@ -50,6 +55,7 @@ use crate::schema::MetadataField;
 use crate::schema::MetadataSchemaBuilder;
 use crate::schema::UnknownFilterFieldPolicy;
 use crate::schema::UnknownMetadataFieldPolicy;
+use crate::schema::internal::SchemaFields;
 use crate::wire::METADATA_SCHEMA_WIRE_VERSION_V1;
 use crate::wire::MetadataSchemaWireV1;
 #[cfg(feature = "json")]
@@ -80,7 +86,7 @@ use crate::wire::StrictStringMapSeed;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct MetadataSchema {
     /// Field definitions keyed by metadata key.
     fields: BTreeMap<String, MetadataField>,
@@ -88,6 +94,30 @@ pub struct MetadataSchema {
     unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
     /// How validation handles unknown filter keys.
     unknown_filter_field_policy: UnknownFilterFieldPolicy,
+}
+
+impl fmt::Debug for MetadataSchema {
+    /// Writes the strict-policy diagnostic representation.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let output = Redactor::strict().redact_text(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
+    }
+}
+
+impl Redact for MetadataSchema {
+    /// Writes schema fields through one cumulative diagnostic budget.
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.record("MetadataSchema", |fields| {
+            fields.nested("fields", &SchemaFields(&self.fields));
+            fields.unmarked("unknown_metadata_field_policy", || {
+                self.unknown_metadata_field_policy
+            });
+            fields.unmarked("unknown_filter_field_policy", || {
+                self.unknown_filter_field_policy
+            });
+        });
+    }
 }
 
 impl MetadataSchema {

@@ -7,8 +7,10 @@
 // =============================================================================
 //! Internal filter implementation types.
 
+mod expression_children;
 mod filter_expression_node;
 mod match_outcome;
 
+pub(crate) use expression_children::ExpressionChildren;
 pub(crate) use filter_expression_node::FilterExpressionNode;
 pub(crate) use match_outcome::MatchOutcome;
