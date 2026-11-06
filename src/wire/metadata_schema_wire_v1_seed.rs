@@ -10,10 +10,14 @@
 use serde::de::DeserializeSeed;
 use serde::de::Deserializer;
 
-use super::internal::MetadataSchemaWireVisitor;
+use super::internal::MetadataSchemaWireV1Visitor;
 use super::metadata_schema_wire_v1::MetadataSchemaWireV1;
 
 /// Deserializes a schema envelope with a bounded fields seed.
+///
+/// # Type Parameters
+///
+/// * `S` - Seed used to decode the schema fields map.
 pub(crate) struct MetadataSchemaWireV1Seed<S> {
     /// Seed used to decode the schema fields map.
     fields: S,
@@ -21,6 +25,14 @@ pub(crate) struct MetadataSchemaWireV1Seed<S> {
 
 impl<S> MetadataSchemaWireV1Seed<S> {
     /// Creates a schema-envelope seed.
+    ///
+    /// # Parameters
+    ///
+    /// * `fields` - Seed used to decode the schema fields map.
+    ///
+    /// # Returns
+    ///
+    /// A seed configured with the supplied fields decoder.
     #[inline]
     pub(crate) const fn new(fields: S) -> Self {
         Self { fields }
@@ -31,10 +43,19 @@ impl<'de, S> DeserializeSeed<'de> for MetadataSchemaWireV1Seed<S>
 where
     S: DeserializeSeed<'de>,
 {
+    /// The decoded schema envelope, with fields produced by `S`.
     type Value = MetadataSchemaWireV1<S::Value>;
 
     /// Deserializes the strict schema envelope and delegates fields to its
     /// seed.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the schema envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized schema envelope.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
@@ -47,7 +68,7 @@ where
                 "unknown_metadata_field_policy",
                 "unknown_filter_field_policy",
             ],
-            MetadataSchemaWireVisitor {
+            MetadataSchemaWireV1Visitor {
                 fields: Some(self.fields),
             },
         )

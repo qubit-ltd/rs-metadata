@@ -89,6 +89,9 @@ pub struct MetadataFilter {
 
 impl fmt::Debug for MetadataFilter {
     /// Writes the strict-policy diagnostic representation.
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter that receives the output.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
@@ -98,6 +101,9 @@ impl fmt::Debug for MetadataFilter {
 
 impl Redact for MetadataFilter {
     /// Writes the filter through one cumulative diagnostic budget.
+    /// # Parameters
+    ///
+    /// * `writer` - Destination that receives the encoded or redacted output.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("MetadataFilter", |fields| {
             fields.nested("expression", &self.expression);
@@ -148,6 +154,11 @@ impl MetadataFilter {
     }
 
     /// Creates a filter from already validated parts.
+    /// # Parameters
+    ///
+    /// * `expression` - Filter expression stored by the filter.
+    /// * `options` - Options used when matching.
+    /// * `limits` - Resource limits applied by this operation.
     #[inline]
     pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
         Self {
@@ -175,6 +186,9 @@ impl MetadataFilter {
     /// structured filter-limit or policy failure through `D::Error::custom`;
     /// this generic API cannot return `MetadataWireDecodeError`
     /// directly.
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that provides the encoded representation.
     pub fn deserialize_with_filter_limits<'de, D>(
         deserializer: D,
         receiver_limits: FilterLimits,
@@ -336,6 +350,9 @@ impl MetadataFilter {
     /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
     /// budget checks, serialization, or destination I/O fails. Only destination
     /// I/O errors can occur after writing has started.
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer that receives the encoded representation.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -369,6 +386,9 @@ impl MetadataFilter {
     /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
     /// budget checks, serialization, or destination I/O fails. Only destination
     /// I/O errors can occur after writing has started.
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer that receives the encoded representation.
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
@@ -407,9 +427,16 @@ impl MetadataFilter {
     }
 
     /// Preflights every operand against the shared JSON encoding budget.
+    /// # Parameters
+    ///
+    /// * `limits` - Resource limits applied by this operation.
     #[cfg(feature = "json")]
     fn preflight_wire_values(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
         /// Checks every value operand in one expression subtree.
+        /// # Parameters
+        ///
+        /// * `expression` - Filter expression stored by the filter.
+        /// * `checker` - Shared preflight checker for encoded values.
         fn visit(
             expression: &FilterExpression,
             checker: &mut ValueWireEncodePreflight,
@@ -433,6 +460,9 @@ impl MetadataFilter {
     }
 
     /// Returns whether `metadata` satisfies this filter.
+    /// # Parameters
+    ///
+    /// * `metadata` - Metadata inspected by the filter.
     #[inline]
     #[must_use]
     pub fn matches(&self, metadata: &Metadata) -> bool {
@@ -444,6 +474,12 @@ impl MetadataFilter {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor`.
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
+    /// # Parameters
+    ///
+    /// * `visitor` - Callback invoked for each visited item.
     #[cfg(feature = "schema")]
     #[inline]
     pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
@@ -456,6 +492,12 @@ impl MetadataFilter {
 
 impl Serialize for MetadataFilter {
     /// Serializes this filter through its versioned wire representation.
+    /// # Type Parameters
+    ///
+    /// * `S` - Serializer that receives the encoded representation.
+    /// # Parameters
+    ///
+    /// * `serializer` - Serializer receiving the filter representation.
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -469,6 +511,12 @@ impl Serialize for MetadataFilter {
 
 impl<'de> Deserialize<'de> for MetadataFilter {
     /// Deserializes a filter using library hard limits as receiver limits.
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that provides the encoded representation.
+    /// # Parameters
+    ///
+    /// * `deserializer` - Deserializer providing the filter representation.
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

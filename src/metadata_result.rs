@@ -11,4 +11,8 @@ use crate::metadata_error::MetadataError;
 
 /// Result type used by explicit `Metadata` operations that report failure
 /// reasons instead of collapsing them into `None`.
+///
+/// # Type Parameters
+///
+/// * `T` - Success value returned by the metadata operation.
 pub type MetadataResult<T> = Result<T, MetadataError>;

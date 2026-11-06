@@ -18,6 +18,10 @@ use qubit_value::Value;
 ///
 /// This view keeps the storage private while allowing [`crate::Metadata`] to
 /// delegate its diagnostic map traversal to the shared redaction machinery.
+///
+/// # Type Parameters
+///
+/// * `'a` - Lifetime of the borrowed metadata values.
 pub(crate) struct MetadataValues<'a>(
     /// Values borrowed from the metadata object being rendered.
     pub(crate) &'a BTreeMap<String, Value>,
@@ -25,6 +29,10 @@ pub(crate) struct MetadataValues<'a>(
 
 impl Redact for MetadataValues<'_> {
     /// Writes every admitted entry using low-sensitivity key classification.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination that applies the redaction policy.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.map(|entries| {
             entries.for_each(self.0, |entries, (name, value)| {

@@ -18,6 +18,9 @@ use crate::FilterLimits;
 use crate::MetadataError;
 
 /// Converts shared budget facts to the established metadata filter error.
+/// # Parameters
+///
+/// * `error` - Input error used by this operation.
 pub(in crate::filter::wire) fn filter_limit_error(
     error: InsufficientBudgetError<FilterLimitKind, usize>,
 ) -> MetadataError {
@@ -35,6 +38,10 @@ pub(in crate::filter::wire) fn filter_limit_error(
 }
 
 /// Stores the first receiver-limit error produced during one decode call.
+/// # Parameters
+///
+/// * `error_slot` - Input error_slot used by this operation.
+/// * `error` - Input error used by this operation.
 pub(in crate::filter::wire) fn capture_filter_error(
     error_slot: &Rc<RefCell<Option<MetadataError>>>,
     error: MetadataError,
@@ -46,6 +53,14 @@ pub(in crate::filter::wire) fn capture_filter_error(
 }
 
 /// Checks one decoded key against receiver filter limits.
+/// # Type Parameters
+///
+/// * `E` - Type used by this operation.
+/// # Parameters
+///
+/// * `key` - Metadata key used by the condition.
+/// * `receiver_limits` - Local limits applied while decoding.
+/// * `error_slot` - Input error_slot used by this operation.
 pub(in crate::filter::wire) fn check_key<E>(
     key: &str,
     receiver_limits: FilterLimits,
@@ -67,11 +82,25 @@ where
 }
 
 /// Returns a required field or a missing-field message.
+/// # Type Parameters
+///
+/// * `T` - Type used by this operation.
+/// # Parameters
+///
+/// * `value` - Value supplied for the condition.
+/// * `field` - Input field used by this operation.
 pub(super) fn required<T>(value: Option<T>, field: &str) -> Result<T, String> {
     value.ok_or_else(|| format!("missing field `{field}`"))
 }
 
 /// Rejects a field that is not valid for the selected expression kind.
+/// # Type Parameters
+///
+/// * `T` - Type used by this operation.
+/// # Parameters
+///
+/// * `value` - Value supplied for the condition.
+/// * `field` - Input field used by this operation.
 pub(super) fn ensure_absent<T>(value: Option<T>, field: &str) -> Result<(), String> {
     if value.is_some() {
         Err(format!("unknown field `{field}` for this expression kind"))

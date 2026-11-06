@@ -152,6 +152,15 @@ impl MetadataSchemaBuilder {
     }
 
     /// Declares a field unless the key has already been declared.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Name assigned to the field.
+    /// * `field` - Definition stored for the key.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder, retaining the first duplicate-key error if present.
     fn declare_field(mut self, key: &str, field: MetadataField) -> Self {
         if self.fields.contains_key(key) {
             if self.error.is_none() {

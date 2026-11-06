@@ -24,6 +24,10 @@ use crate::FilterLimits;
 use crate::MetadataError;
 
 /// Seed that decodes one expression while charging filter-domain budgets.
+///
+/// # Type Parameters
+///
+/// * `'a` - Lifetime of the mutable node budget borrowed by this seed.
 pub(crate) struct FilterExpressionWireV1Seed<'a> {
     /// Receiver-side AST limits.
     receiver_limits: FilterLimits,
@@ -37,6 +41,13 @@ pub(crate) struct FilterExpressionWireV1Seed<'a> {
 
 impl<'a> FilterExpressionWireV1Seed<'a> {
     /// Creates a seed for one expression at `depth`.
+    ///
+    /// # Parameters
+    ///
+    /// * `receiver_limits` - Bounds applied to the decoded expression.
+    /// * `node_budget` - Remaining budget charged for each decoded node.
+    /// * `depth` - Depth assigned to the expression being decoded.
+    /// * `error_slot` - Slot for retaining the first structured limit error.
     pub(crate) const fn new(
         receiver_limits: FilterLimits,
         node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
@@ -52,6 +63,10 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
     }
 
     /// Charges one expression node before reading its map body.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `E` - Deserializer error type used to report limit failures.
     fn enter_node<E>(&mut self) -> Result<(), E>
     where
         E: de::Error,
@@ -77,9 +92,18 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
 }
 
 impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
+    /// Decoded V1 expression node.
     type Value = FilterExpressionWireV1;
 
     /// Decodes one expression map after charging its depth and node budget.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that supplies the expression map.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the encoded expression map.
     fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

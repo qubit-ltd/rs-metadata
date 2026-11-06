@@ -28,18 +28,23 @@ use crate::UnknownMetadataFieldPolicy;
 /// # Type Parameters
 ///
 /// * `S` - Seed that decodes the fields map under the caller's limits.
-pub(in crate::wire) struct MetadataSchemaWireVisitor<S> {
+pub(in crate::wire) struct MetadataSchemaWireV1Visitor<S> {
     /// Fields-map seed, consumed only when the fields entry is first decoded.
     pub(in crate::wire) fields: Option<S>,
 }
 
-impl<'de, S> Visitor<'de> for MetadataSchemaWireVisitor<S>
+impl<'de, S> Visitor<'de> for MetadataSchemaWireV1Visitor<S>
 where
     S: DeserializeSeed<'de>,
 {
+    /// The decoded strict schema envelope.
     type Value = MetadataSchemaWireV1<S::Value>;
 
     /// Describes the strict metadata-schema envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the expected shape.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a strict metadata schema V1 envelope")
     }
@@ -48,6 +53,14 @@ where
     ///
     /// Errors from key or value decoding, duplicate or unknown fields, and
     /// missing required fields are returned to the deserializer caller.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `A` - Map access implementation supplying the envelope fields.
+    ///
+    /// # Parameters
+    ///
+    /// * `map` - Access to the serialized envelope fields.
     fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,

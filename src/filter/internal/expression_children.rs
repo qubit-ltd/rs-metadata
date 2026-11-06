@@ -13,10 +13,17 @@ use qubit_redact::RedactionWriter;
 use crate::FilterExpression;
 
 /// A borrowed set of expression children written under one redaction session.
-pub(crate) struct ExpressionChildren<'a>(pub(crate) &'a [FilterExpression]);
+/// Borrows the expression children written in one redaction session.
+pub(crate) struct ExpressionChildren<'a>(
+    /// Expression children written in one redaction session.
+    pub(crate) &'a [FilterExpression],
+);
 
 impl Redact for ExpressionChildren<'_> {
     /// Writes admitted children without cloning them or resetting the budget.
+    /// # Parameters
+    ///
+    /// * `writer` - Destination that receives the encoded or redacted output.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.sequence(|items| {
             items.for_each(self.0, |items, child| {

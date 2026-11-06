@@ -80,6 +80,7 @@ impl<'de, S> DeserializeSeed<'de> for StrictStringMapValueSeed<S>
 where
     S: DeserializeSeed<'de> + Clone,
 {
+    /// The decoded strict map with values produced by `S`.
     type Value = StrictStringMap<S::Value>;
 
     /// Deserializes a map while applying the supplied seed to every value.
@@ -88,6 +89,14 @@ where
     ///
     /// Returns the deserializer error if a key or value cannot be decoded, a
     /// key is repeated, or either configured map limit is exceeded.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the map.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized map.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

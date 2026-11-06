@@ -14,6 +14,10 @@ use serde::Serialize;
 pub(crate) const METADATA_WIRE_VERSION_V1: u8 = 1;
 
 /// Strict metadata envelope with a generic borrowed or owned value map.
+///
+/// # Type Parameters
+///
+/// * `T` - Borrowed or owned map of metadata values.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct MetadataWireV1<T> {

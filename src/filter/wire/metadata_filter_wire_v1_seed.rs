@@ -34,6 +34,11 @@ pub(crate) struct MetadataFilterWireV1Seed {
 
 impl MetadataFilterWireV1Seed {
     /// Creates a bounded filter-envelope seed.
+    ///
+    /// # Parameters
+    ///
+    /// * `receiver_limits` - Resource bounds applied during decoding.
+    /// * `error_slot` - Slot for retaining the first structured limit error.
     #[must_use]
     #[inline]
     pub(crate) fn new(receiver_limits: FilterLimits, error_slot: Rc<RefCell<Option<crate::MetadataError>>>) -> Self {
@@ -45,9 +50,18 @@ impl MetadataFilterWireV1Seed {
 }
 
 impl<'de> DeserializeSeed<'de> for MetadataFilterWireV1Seed {
+    /// Decoded V1 metadata-filter envelope.
     type Value = MetadataFilterWireV1;
 
     /// Decodes the strict envelope and delegates expression decoding to a seed.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that supplies the envelope map.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the encoded envelope map.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
@@ -68,14 +82,27 @@ struct MetadataFilterWireVisitor {
 }
 
 impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
+    /// Decoded V1 metadata-filter envelope.
     type Value = MetadataFilterWireV1;
 
     /// Describes the strict metadata-filter envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the expected input description.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a strict metadata-filter V1 envelope")
     }
 
     /// Decodes envelope fields in any order and rejects duplicates or unknowns.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `A` - Map accessor used to read envelope fields.
+    ///
+    /// # Parameters
+    ///
+    /// * `map` - Accessor for the serialized envelope fields.
     fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,

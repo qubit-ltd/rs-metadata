@@ -187,6 +187,13 @@ impl FilterExpressionWireV1 {
     }
 
     /// Recursively validates one raw wire node at `depth`.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Resource bounds applied to this node and its descendants.
+    /// * `depth` - Current one-based depth of this node in the wire tree.
+    /// * `node_count` - Running count of visited nodes, updated during
+    ///   traversal.
     fn validate_limits_at(&self, limits: FilterLimits, depth: usize, node_count: &mut usize) -> MetadataResult<()> {
         if depth > limits.max_depth() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -235,6 +242,11 @@ impl FilterExpressionWireV1 {
     }
 
     /// Validates one condition key against `limits`.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key whose encoded byte length is checked.
+    /// * `limits` - Resource bounds applied to the key.
     fn validate_key(key: &str, limits: FilterLimits) -> MetadataResult<()> {
         if key.len() > limits.max_key_bytes() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -247,6 +259,10 @@ impl FilterExpressionWireV1 {
     }
 
     /// Extracts the scalar required by a metadata filter condition.
+    ///
+    /// # Parameters
+    ///
+    /// * `value` - Encoded value that must contain a scalar.
     fn into_scalar_value(value: ValueWirePayloadV1) -> MetadataResult<Value> {
         value
             .into_container()
@@ -257,11 +273,21 @@ impl FilterExpressionWireV1 {
     }
 
     /// Extracts condition values while rejecting collection-shaped payloads.
+    ///
+    /// # Parameters
+    ///
+    /// * `values` - Encoded condition values, each of which must be scalar.
     fn into_scalar_values(values: Vec<ValueWirePayloadV1>) -> MetadataResult<Vec<Value>> {
         values.into_iter().map(Self::into_scalar_value).collect()
     }
 
     /// Folds a non-trivial Boolean group into an expression.
+    ///
+    /// # Parameters
+    ///
+    /// * `children` - Wire nodes to fold; at least two are required.
+    /// * `combine` - Operation that combines two converted expressions.
+    /// * `operator` - Operator name used in invalid-group errors.
     fn combine(
         children: Vec<Self>,
         combine: fn(FilterExpression, FilterExpression) -> FilterExpression,

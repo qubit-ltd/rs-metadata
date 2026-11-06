@@ -19,6 +19,14 @@ const FIELD_NAMES: &[&str] = &["data_type", "required"];
 
 /// Deserializes a metadata field's two required values from a strict object.
 ///
+/// # Type Parameters
+///
+/// * `D` - Deserializer providing the field object.
+///
+/// # Parameters
+///
+/// * `deserializer` - Source of the serialized field definition.
+///
 /// # Errors
 ///
 /// Returns the deserializer error when the input is not an object, a required
@@ -34,14 +42,31 @@ where
 struct MetadataFieldVisitor;
 
 impl<'de> Visitor<'de> for MetadataFieldVisitor {
+    /// The decoded data type and required flag.
     type Value = (DataType, bool);
 
     /// Describes the required wire shape in deserializer diagnostics.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the description.
+    ///
+    /// # Returns
+    ///
+    /// A formatting result indicating whether the description was written.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a metadata field object")
     }
 
     /// Reads exactly one `data_type` and one `required` member.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `A` - Map access implementation supplying the fields.
+    ///
+    /// # Parameters
+    ///
+    /// * `map` - Access to the serialized field members.
     fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,

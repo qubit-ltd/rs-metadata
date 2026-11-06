@@ -165,6 +165,7 @@ impl FilterLimits {
 }
 
 impl Default for FilterLimits {
+    /// Returns the maximum filter limits.
     #[inline]
     fn default() -> Self {
         Self::MAX

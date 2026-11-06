@@ -137,6 +137,9 @@ impl Condition {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor` and stops visiting.
+    /// # Type Parameters
+    ///
+    /// * `E` - Error type returned by the visitor callback.
     #[cfg(feature = "json")]
     pub(crate) fn visit_operands<E>(&self, visitor: &mut impl FnMut(&Value) -> Result<(), E>) -> Result<(), E> {
         match self {
@@ -368,6 +371,9 @@ impl Redact for Condition {
 
 impl fmt::Debug for Condition {
     /// Writes the strict-policy diagnostic representation.
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter that receives the output.
     #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
@@ -388,6 +394,9 @@ impl fmt::Debug for Condition {
 ///
 /// The predicate result, or [`MatchOutcome::Unknown`] when the key is absent
 /// or stores [`Value::Unset`].
+/// # Type Parameters
+///
+/// * `F` - Type used by this operation.
 #[inline]
 fn evaluate_concrete<F>(meta: &Metadata, key: &str, predicate: F) -> MatchOutcome
 where

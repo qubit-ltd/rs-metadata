@@ -61,6 +61,9 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the required root expression.
+    /// # Parameters
+    ///
+    /// * `expression` - Filter expression stored by the filter.
     #[inline]
     #[must_use]
     pub fn expression(mut self, expression: FilterExpression) -> Self {
@@ -69,6 +72,9 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the match options.
+    /// # Parameters
+    ///
+    /// * `options` - Options used when matching.
     #[inline]
     #[must_use]
     pub fn options(mut self, options: FilterMatchOptions) -> Self {
@@ -77,6 +83,9 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the resource limits.
+    /// # Parameters
+    ///
+    /// * `limits` - Resource limits applied by this operation.
     #[inline]
     #[must_use]
     pub fn limits(mut self, limits: FilterLimits) -> Self {
@@ -103,6 +112,9 @@ impl MetadataFilterBuilder {
     /// # Errors
     ///
     /// Returns construction errors or aggregate schema-validation errors.
+    /// # Parameters
+    ///
+    /// * `schema` - Input schema used by this operation.
     #[cfg(feature = "schema")]
     #[inline]
     pub fn build_checked(self, schema: &MetadataSchema) -> MetadataValidationResult<MetadataFilter> {

@@ -16,7 +16,7 @@ mod chrono_values {
     use qubit_metadata::Metadata;
 
     #[test]
-    fn strict_reads_preserve_chrono_types() {
+    fn test_strict_reads_preserve_chrono_types() {
         let date = NaiveDate::from_ymd_opt(2024, 2, 29).unwrap();
         let time = NaiveTime::from_hms_opt(12, 34, 56).unwrap();
         let datetime = NaiveDateTime::new(date, time);
@@ -83,7 +83,7 @@ mod big_integer_values {
     use qubit_metadata::Metadata;
 
     #[test]
-    fn strict_reads_preserve_wide_integers() {
+    fn test_strict_reads_preserve_wide_integers() {
         let positive = BigInt::from_str("170141183460469231731687303715884105728").unwrap();
         let negative = BigInt::from_str("-170141183460469231731687303715884105729").unwrap();
         let metadata = Metadata::new()
@@ -167,7 +167,7 @@ mod big_decimal_values {
     use qubit_metadata::Metadata;
 
     #[test]
-    fn strict_reads_preserve_wide_decimals() {
+    fn test_strict_reads_preserve_wide_decimals() {
         let decimal = BigDecimal::from_str("9007199254740993.1234567890123456789").unwrap();
         let metadata = Metadata::new().with("decimal", decimal.clone());
 
@@ -244,7 +244,7 @@ mod url_values {
     use url::Url;
 
     #[test]
-    fn strict_reads_preserve_url_values() {
+    fn test_strict_reads_preserve_url_values() {
         let url = Url::parse("https://example.com/café/items?tag=rust&mode=full").unwrap();
         let metadata = Metadata::new().with("url", url.clone());
 

@@ -15,6 +15,10 @@ use super::metadata_filter_wire_v1::METADATA_FILTER_WIRE_VERSION_V1;
 use crate::MetadataFilter;
 
 /// Borrowed V1 metadata-filter envelope used only for serialization.
+///
+/// # Type Parameters
+///
+/// * `'a` - Lifetime of the filter data borrowed by this envelope.
 #[derive(Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct MetadataFilterWireV1Ref<'a> {
@@ -27,9 +31,14 @@ pub(crate) struct MetadataFilterWireV1Ref<'a> {
 }
 
 impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
+    /// Error returned when an expression value cannot be represented in V1.
     type Error = ValueWireEncodeError;
 
     /// Converts a filter into a borrowed strict V1 envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `filter` - Filter whose expression and options are serialized.
     fn try_from(filter: &'a MetadataFilter) -> Result<Self, Self::Error> {
         Ok(Self {
             version: METADATA_FILTER_WIRE_VERSION_V1,

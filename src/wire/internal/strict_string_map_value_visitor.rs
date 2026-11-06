@@ -74,9 +74,14 @@ impl<'de, S> Visitor<'de> for StrictStringMapValueVisitor<S>
 where
     S: DeserializeSeed<'de> + Clone,
 {
+    /// The decoded strict map with values produced by `S`.
     type Value = StrictStringMap<S::Value>;
 
     /// Describes the expected input shape.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the expected shape.
     ///
     /// # Returns
     ///
@@ -86,6 +91,14 @@ where
     }
 
     /// Decodes entries while enforcing key, count, and value bounds.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `A` - Map access implementation supplying the entries.
+    ///
+    /// # Parameters
+    ///
+    /// * `map` - Access to the serialized map entries.
     ///
     /// # Errors
     ///

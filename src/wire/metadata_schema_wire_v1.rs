@@ -22,6 +22,10 @@ use crate::UnknownMetadataFieldPolicy;
 pub(crate) const METADATA_SCHEMA_WIRE_VERSION_V1: u8 = 1;
 
 /// Strict schema envelope with a generic borrowed or owned field map.
+///
+/// # Type Parameters
+///
+/// * `F` - Borrowed or owned map of metadata field definitions.
 #[derive(Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct MetadataSchemaWireV1<F> {
@@ -40,6 +44,14 @@ where
     F: Deserialize<'de>,
 {
     /// Deserializes the strict envelope through its map-only seed.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the schema envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized schema envelope.
     ///
     /// # Errors
     ///

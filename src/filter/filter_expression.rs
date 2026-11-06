@@ -65,6 +65,9 @@ pub struct FilterExpression {
 impl fmt::Debug for FilterExpression {
     /// Formats the expression without exposing its cached implementation
     /// metrics.
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter that receives the output.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
@@ -74,6 +77,9 @@ impl fmt::Debug for FilterExpression {
 
 impl Redact for FilterExpression {
     /// Writes the expression tree through the caller's cumulative budget.
+    /// # Parameters
+    ///
+    /// * `writer` - Destination that receives the encoded or redacted output.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("FilterExpression", |fields| match &self.node {
             FilterExpressionNode::Condition(condition) => {
@@ -396,6 +402,9 @@ impl FilterExpression {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor`.
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
     #[cfg(feature = "schema")]
     pub(crate) fn visit_conditions<F>(&self, visitor: &mut F) -> MetadataResult<()>
     where
@@ -552,6 +561,10 @@ impl FilterExpression {
 
     /// Combines two non-constant expressions with logical AND while reusing a
     /// left AND group.
+    /// # Parameters
+    ///
+    /// * `left` - Left expression operand.
+    /// * `right` - Right expression operand.
     fn combine_and(left: Self, right: Self) -> Self {
         let left_same_kind = matches!(&left.node, FilterExpressionNode::And(_));
         let right_same_kind = matches!(&right.node, FilterExpressionNode::And(_));
@@ -579,6 +592,10 @@ impl FilterExpression {
 
     /// Combines two non-constant expressions with logical OR while reusing a
     /// left OR group.
+    /// # Parameters
+    ///
+    /// * `left` - Left expression operand.
+    /// * `right` - Right expression operand.
     fn combine_or(left: Self, right: Self) -> Self {
         let left_same_kind = matches!(&left.node, FilterExpressionNode::Or(_));
         let right_same_kind = matches!(&right.node, FilterExpressionNode::Or(_));

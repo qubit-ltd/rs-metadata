@@ -47,6 +47,14 @@ pub struct MetadataLimitsBuilder {
 
 impl MetadataLimitsBuilder {
     /// Replaces the JSON decoding profile.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - JSON decoding budgets to apply.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
     #[inline(always)]
     pub fn json_decode(mut self, limits: JsonDecodeLimits) -> Self {
         self.json_decode = limits;
@@ -54,6 +62,14 @@ impl MetadataLimitsBuilder {
     }
 
     /// Replaces the JSON encoding profile.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - JSON encoding budgets to apply.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
     #[inline(always)]
     pub fn json_encode(mut self, limits: JsonEncodeLimits) -> Self {
         self.json_encode = limits;
@@ -61,6 +77,14 @@ impl MetadataLimitsBuilder {
     }
 
     /// Sets the metadata-entry domain limit.
+    ///
+    /// # Parameters
+    ///
+    /// * `maximum` - Maximum number of metadata entries.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
     #[inline(always)]
     pub const fn max_metadata_entries(mut self, maximum: usize) -> Self {
         self.max_metadata_entries = maximum;
@@ -68,6 +92,14 @@ impl MetadataLimitsBuilder {
     }
 
     /// Sets the schema-field domain limit.
+    ///
+    /// # Parameters
+    ///
+    /// * `maximum` - Maximum number of schema fields.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
     #[inline(always)]
     pub const fn max_schema_fields(mut self, maximum: usize) -> Self {
         self.max_schema_fields = maximum;
@@ -75,6 +107,14 @@ impl MetadataLimitsBuilder {
     }
 
     /// Sets the metadata/schema key-byte domain limit.
+    ///
+    /// # Parameters
+    ///
+    /// * `maximum` - Maximum UTF-8 byte length of a key.
+    ///
+    /// # Returns
+    ///
+    /// The updated builder.
     #[inline(always)]
     pub const fn max_key_bytes(mut self, maximum: usize) -> Self {
         self.max_key_bytes = maximum;
@@ -96,6 +136,7 @@ impl MetadataLimitsBuilder {
 }
 
 impl Default for MetadataLimitsBuilder {
+    /// Creates a builder with default JSON budgets and domain limits.
     fn default() -> Self {
         Self {
             json_decode: default_json_decode_limits(),

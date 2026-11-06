@@ -79,6 +79,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key == value` with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `value` - Value supplied for the condition.
     #[inline]
     #[must_use]
     pub fn eq<T>(self, key: &str, value: T) -> Self
@@ -96,6 +103,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key != value` with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `value` - Value supplied for the condition.
     #[inline]
     #[must_use]
     pub fn ne<T>(self, key: &str, value: T) -> Self
@@ -113,6 +127,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key < value` with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `value` - Value supplied for the condition.
     #[inline]
     #[must_use]
     pub fn lt<T>(self, key: &str, value: T) -> Self
@@ -130,6 +151,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key <= value` with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `value` - Value supplied for the condition.
     #[inline]
     #[must_use]
     pub fn le<T>(self, key: &str, value: T) -> Self
@@ -147,6 +175,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key > value` with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `value` - Value supplied for the condition.
     #[inline]
     #[must_use]
     pub fn gt<T>(self, key: &str, value: T) -> Self
@@ -164,6 +199,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key >= value` with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `value` - Value supplied for the condition.
     #[inline]
     #[must_use]
     pub fn ge<T>(self, key: &str, value: T) -> Self
@@ -181,6 +223,14 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a membership predicate with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `I` - Iterator that supplies candidate values.
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `values` - Candidate values used by the condition.
     #[inline]
     #[must_use]
     pub fn in_set<I, T>(mut self, key: &str, values: I) -> Self
@@ -217,6 +267,14 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-membership predicate with logical AND.
+    /// # Type Parameters
+    ///
+    /// * `I` - Iterator that supplies candidate values.
+    /// * `T` - Value type converted into the stored representation.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `values` - Candidate values used by the condition.
     #[inline]
     #[must_use]
     pub fn not_in_set<I, T>(mut self, key: &str, values: I) -> Self
@@ -253,6 +311,9 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends an existence predicate with logical AND.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
     #[inline]
     #[must_use]
     pub fn exists(self, key: &str) -> Self {
@@ -264,6 +325,9 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-existence predicate with logical AND.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
     #[inline]
     #[must_use]
     pub fn not_exists(self, key: &str) -> Self {
@@ -287,6 +351,12 @@ impl FilterExpressionBuilder {
     ///     .build()?;
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
+    /// # Parameters
+    ///
+    /// * `build` - Callback that constructs the nested group.
     #[inline]
     #[must_use]
     pub fn and_group<F>(self, build: F) -> Self
@@ -328,6 +398,12 @@ impl FilterExpressionBuilder {
     /// assert!(filter.matches(&metadata));
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
+    /// # Parameters
+    ///
+    /// * `build` - Callback that constructs the nested group.
     #[inline]
     #[must_use]
     pub fn or_group<F>(self, build: F) -> Self
@@ -375,6 +451,12 @@ impl FilterExpressionBuilder {
 
     /// Adds a lazily constructed condition and enforces hard limits
     /// immediately.
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key used by the condition.
+    /// * `condition` - Input condition used by this operation.
+    /// * `combine` - Function that combines the existing expression with the
+    ///   new condition.
     fn append(
         mut self,
         key: &str,
@@ -421,6 +503,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Combines a non-empty nested group and immediately enforces hard limits.
+    /// # Parameters
+    ///
+    /// * `operator` - Filter operator used for validation.
+    /// * `group` - Input group used by this operation.
+    /// * `combine` - Input combine used by this operation.
     fn combine_group(
         mut self,
         operator: &'static str,
@@ -473,6 +560,12 @@ fn empty_group_error(operator: &'static str) -> MetadataError {
 }
 
 /// Converts a typed value into its stored representation.
+/// # Type Parameters
+///
+/// * `T` - Type used by this operation.
+/// # Parameters
+///
+/// * `value` - Value supplied for the condition.
 #[inline]
 fn to_value<T>(value: T) -> Value
 where
@@ -498,6 +591,10 @@ where
 /// If all preceding operands are valid, returns
 /// [`MetadataError::FilterLimitExceeded`] when a 129th item is requested; that
 /// item is consumed from the iterator but not converted.
+/// # Type Parameters
+///
+/// * `I` - Type used by this operation.
+/// * `T` - Type used by this operation.
 fn collect_values<I, T>(operator: &'static str, values: I) -> MetadataResult<Vec<Value>>
 where
     I: IntoIterator<Item = T>,

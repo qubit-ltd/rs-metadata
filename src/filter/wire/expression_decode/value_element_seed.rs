@@ -32,9 +32,16 @@ pub(in crate::filter::wire) struct ValueElementSeed {
 }
 
 impl<'de> DeserializeSeed<'de> for ValueElementSeed {
+    /// Returns the maximum filter limits.
     type Value = ValueWirePayloadV1;
 
     /// Decodes one membership payload after charging its collection position.
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that provides the encoded representation.
+    /// # Parameters
+    ///
+    /// * `deserializer` - Deserializer providing the filter representation.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

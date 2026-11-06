@@ -19,6 +19,10 @@ use super::strict_string_map::StrictStringMap;
 use crate::MetadataError;
 
 /// Deserializes a strict string map with caller-provided resource bounds.
+///
+/// # Type Parameters
+///
+/// * `V` - Type decoded for each map value.
 pub(crate) struct StrictStringMapSeed<'a, V> {
     /// Maximum number of entries accepted.
     max_entries: usize,
@@ -34,6 +38,11 @@ pub(crate) struct StrictStringMapSeed<'a, V> {
 
 impl<V> StrictStringMapSeed<'static, V> {
     /// Creates a bounded strict-map seed.
+    ///
+    /// # Parameters
+    ///
+    /// * `max_entries` - Maximum number of entries accepted.
+    /// * `max_key_bytes` - Maximum UTF-8 key length accepted.
     ///
     /// # Returns
     ///
@@ -52,6 +61,10 @@ impl<V> StrictStringMapSeed<'static, V> {
 
     /// Attaches a request-local slot retaining value-free domain failures.
     ///
+    /// # Parameters
+    ///
+    /// * `slot` - Shared slot for a structured wire-limit error.
+    ///
     /// # Returns
     ///
     /// The seed with the supplied error slot attached.
@@ -68,6 +81,7 @@ impl<'de, 'a, V> DeserializeSeed<'de> for StrictStringMapSeed<'a, V>
 where
     V: Deserialize<'de>,
 {
+    /// The decoded strict map with values of type `V`.
     type Value = StrictStringMap<V>;
 
     /// Deserializes a map while enforcing caller-provided bounds.
@@ -76,6 +90,14 @@ where
     ///
     /// Returns the deserializer error if a key or value cannot be decoded, a
     /// key is repeated, or either configured map limit is exceeded.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the map.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized map.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

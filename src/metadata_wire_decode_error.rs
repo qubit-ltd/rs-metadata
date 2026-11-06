@@ -45,7 +45,10 @@ pub enum MetadataWireDecodeError {
     },
     /// A metadata map or schema exceeded a domain limit without exposing
     /// values.
-    Domain(MetadataError),
+    Domain(
+        /// Structured metadata-domain failure.
+        MetadataError,
+    ),
     /// The envelope requests a wire version this decoder does not support.
     UnsupportedVersion {
         /// Version supported by this decoder.
@@ -54,7 +57,10 @@ pub enum MetadataWireDecodeError {
         actual: u8,
     },
     /// The JSON document exceeded one shared budget limit.
-    Budget(BudgetError<JsonResource, usize>),
+    Budget(
+        /// Shared JSON budget that was exceeded.
+        BudgetError<JsonResource, usize>,
+    ),
     /// A native JSON measurement could not be represented by the budget
     /// quantity.
     Quantity {
@@ -65,12 +71,21 @@ pub enum MetadataWireDecodeError {
         source: QuantityConversionError,
     },
     /// The JSON lexical preflight rejected the document with source details.
-    Syntax(JsonSyntaxError),
+    Syntax(
+        /// Lexical JSON syntax failure.
+        JsonSyntaxError,
+    ),
     /// The caller supplied metadata limits outside the protocol hard caps.
-    InvalidLimits(serde_json::Error),
+    InvalidLimits(
+        /// Validation error for the supplied metadata limits.
+        serde_json::Error,
+    ),
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
-    Filter(MetadataError),
+    Filter(
+        /// Structured filter-contract failure.
+        MetadataError,
+    ),
     /// A materialized metadata wire value could not be converted to a scalar
     /// metadata value.
     InvalidJson(
@@ -79,11 +94,22 @@ pub enum MetadataWireDecodeError {
     ),
     /// A shared decoding failure retaining its structured facts and
     /// diagnostic policy.
-    Decode(JsonDecodeError<JsonResource>),
+    Decode(
+        /// Shared JSON decoding failure.
+        JsonDecodeError<JsonResource>,
+    ),
 }
 
 impl fmt::Display for MetadataWireDecodeError {
     /// Formats a bounded JSON decoding failure.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the error message.
+    ///
+    /// # Returns
+    ///
+    /// A formatting result indicating whether the message was written.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Read { kind, .. } => {
@@ -127,6 +153,14 @@ impl Error for MetadataWireDecodeError {
 
 impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
     /// Converts a shared JSON decoding error into a metadata wire error.
+    ///
+    /// # Parameters
+    ///
+    /// * `error` - Shared JSON decoding failure to convert.
+    ///
+    /// # Returns
+    ///
+    /// The corresponding metadata wire decoding error.
     fn from(error: JsonDecodeError<JsonResource>) -> Self {
         match error.clone().into_source() {
             JsonDecodeErrorSource::Read { kind, source, .. } => Self::Read { kind, source },

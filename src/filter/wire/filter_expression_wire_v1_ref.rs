@@ -16,6 +16,10 @@ use crate::FilterExpression;
 use crate::FilterExpressionView;
 
 /// Borrowed V1 expression node used only for serialization.
+///
+/// # Type Parameters
+///
+/// * `'a` - Lifetime of the expression data borrowed by this node.
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub(crate) enum FilterExpressionWireV1Ref<'a> {
@@ -107,9 +111,14 @@ pub(crate) enum FilterExpressionWireV1Ref<'a> {
 }
 
 impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
+    /// Error returned when a condition value cannot be represented in V1.
     type Error = ValueWireEncodeError;
 
     /// Converts an expression into a borrowed V1 serialization node.
+    ///
+    /// # Parameters
+    ///
+    /// * `expression` - Expression whose values are borrowed for serialization.
     ///
     /// # Errors
     ///

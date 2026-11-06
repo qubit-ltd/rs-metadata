@@ -97,6 +97,10 @@ pub struct MetadataSchema {
 
 impl fmt::Debug for MetadataSchema {
     /// Writes the strict-policy diagnostic representation.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the redacted representation.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
         let text = output.text_or_marker("<redaction incomplete>");
@@ -106,6 +110,10 @@ impl fmt::Debug for MetadataSchema {
 
 impl Redact for MetadataSchema {
     /// Writes schema fields through one cumulative diagnostic budget.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Redaction writer receiving the schema representation.
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("MetadataSchema", |fields| {
             fields.nested("fields", &SchemaFields(&self.fields));
@@ -258,6 +266,14 @@ impl MetadataSchema {
     ///
     /// `Ok(())` after the buffered document is written successfully.
     ///
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer receiving the encoded JSON document.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination receiving the complete compact JSON document.
+    ///
     /// # Errors
     ///
     /// Returns [`crate::MetadataWireEncodeError`] when a schema field count or
@@ -296,6 +312,10 @@ impl MetadataSchema {
     ///
     /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
     /// budget, serialization fails, or `writer` rejects the output.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer receiving the encoded JSON document.
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
@@ -519,6 +539,14 @@ impl MetadataSchema {
 
 impl Serialize for MetadataSchema {
     /// Serializes this schema as its strict v1 envelope.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `S` - Serializer receiving the schema envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `serializer` - Destination serializer for the schema.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -536,6 +564,14 @@ impl Serialize for MetadataSchema {
 
 impl<'de> Deserialize<'de> for MetadataSchema {
     /// Deserializes only the strict v1 schema envelope.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the schema envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized schema.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

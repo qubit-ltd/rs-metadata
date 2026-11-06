@@ -14,6 +14,10 @@ use serde::Deserializer;
 use serde::de::DeserializeSeed;
 
 /// A string-keyed map that rejects duplicate keys while deserializing.
+///
+/// # Type Parameters
+///
+/// * `V` - Decoded value stored for each string key.
 pub(crate) struct StrictStringMap<V>(
     /// Entries decoded after duplicate-key validation.
     pub(crate) BTreeMap<String, V>,
@@ -38,6 +42,14 @@ where
     V: Deserialize<'de>,
 {
     /// Deserializes a map while rejecting a repeated key.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the map.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized map.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

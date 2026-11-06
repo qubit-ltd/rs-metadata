@@ -31,9 +31,14 @@ impl<'de, S> Visitor<'de> for MetadataWireV1Visitor<S>
 where
     S: DeserializeSeed<'de>,
 {
+    /// The decoded strict metadata envelope.
     type Value = MetadataWireV1<S::Value>;
 
     /// Describes the expected strict metadata envelope shape.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the expected shape.
     ///
     /// # Parameters
     ///

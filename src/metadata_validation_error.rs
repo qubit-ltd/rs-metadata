@@ -101,6 +101,10 @@ impl MetadataValidationError {
 
 impl fmt::Display for MetadataValidationError {
     /// Formats the validation summary and every collected issue.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the validation summary.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{} metadata validation issue(s)", self.issues.len())?;
         for (index, issue) in self.issues.iter().enumerate() {

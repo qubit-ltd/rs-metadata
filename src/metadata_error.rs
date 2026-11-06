@@ -167,6 +167,14 @@ impl MetadataError {
 
 impl fmt::Display for MetadataError {
     /// Formats this metadata operation error for display.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the error message.
+    ///
+    /// # Returns
+    ///
+    /// A formatting result indicating whether the message was written.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ValueAccess { key, source } => {

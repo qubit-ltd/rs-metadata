@@ -34,6 +34,7 @@ pub(in crate::filter::wire) struct ExpressionSequenceVisitor<'a> {
 }
 
 impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
+    /// Returns the maximum filter limits.
     type Value = Vec<FilterExpressionWireV1>;
 
     /// Describes a sequence of filter expression nodes.
@@ -63,6 +64,9 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
     ///
     /// Returns the deserializer error when a child cannot be decoded or its
     /// resource budget is exceeded.
+    /// # Type Parameters
+    ///
+    /// * `A` - Type used by this operation.
     fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,

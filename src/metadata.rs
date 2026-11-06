@@ -287,6 +287,10 @@ impl Metadata {
     /// preserve their [`MetadataError::WireLimitExceeded`] source in the
     /// `Domain` variant. The outer metadata wire contract is checked before
     /// value budgets.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer that receives the encoded document.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -321,6 +325,10 @@ impl Metadata {
     /// fails, or `writer` rejects the output. Wire-contract failures
     /// preserve their [`MetadataError::WireLimitExceeded`] source in the
     /// `Domain` variant.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer that receives the encoded document.
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
@@ -678,12 +686,34 @@ impl Metadata {
 
     /// Looks up storage, leaving unset and type classification to the value
     /// layer.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to look up.
+    ///
+    /// # Returns
+    ///
+    /// The stored value for the key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::MissingKey`] when the key is absent.
     fn entry(&self, key: &str) -> MetadataResult<&Value> {
         self.get_raw(key)
             .ok_or_else(|| MetadataError::MissingKey(key.to_owned()))
     }
 
-    /// Attaches a key without flattening or replacing the original value error.
+    /// Wraps a value access error with its metadata key while retaining the
+    /// original error as the source.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key associated with the access error.
+    /// * `source` - Original value access error.
+    ///
+    /// # Returns
+    ///
+    /// A metadata value access error containing `key` and `source`.
     fn map_access_error(key: &str, source: ValueError) -> MetadataError {
         MetadataError::ValueAccess {
             key: key.to_owned(),
@@ -691,7 +721,18 @@ impl Metadata {
         }
     }
 
-    /// Applies the value layer's strict or conversion fallback classification.
+    /// Determines whether a metadata error represents a defaultable missing
+    /// value under the selected read policy.
+    ///
+    /// # Parameters
+    ///
+    /// * `error` - Metadata error to classify.
+    /// * `conversion` - Whether conversion fallback rules apply.
+    ///
+    /// # Returns
+    ///
+    /// `true` when the error represents a missing value eligible for the
+    /// selected fallback; otherwise, `false`.
     fn is_defaultable(error: &MetadataError, conversion: bool) -> bool {
         match error {
             MetadataError::MissingKey(_) => true,
@@ -745,6 +786,10 @@ impl Metadata {
     /// # Returns
     ///
     /// The previous value when the key was already present, or `None`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Input type convertible into a stored [`Value`].
     #[inline]
     pub fn insert<T>(&mut self, key: &str, value: T) -> Option<Value>
     where
@@ -763,6 +808,10 @@ impl Metadata {
     /// # Returns
     ///
     /// A mutable reference to this metadata object.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Input type convertible into a stored [`Value`].
     #[inline]
     pub fn set<T>(&mut self, key: &str, value: T) -> &mut Self
     where
@@ -782,6 +831,10 @@ impl Metadata {
     /// # Returns
     ///
     /// This metadata object after inserting the value.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Input type convertible into a stored [`Value`].
     #[inline]
     #[must_use]
     pub fn with<T>(mut self, key: &str, value: T) -> Self
@@ -811,6 +864,10 @@ impl Metadata {
     /// schema, [`MetadataError::MissingRequiredField`] when a required field is
     /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
     /// constructed value's concrete type does not match the schema field type.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Input type convertible into a stored [`Value`].
     #[cfg(feature = "schema")]
     #[inline]
     pub fn insert_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Option<Value>>
@@ -841,6 +898,10 @@ impl Metadata {
     /// schema, [`MetadataError::MissingRequiredField`] when a required field is
     /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
     /// constructed value's concrete type does not match the schema field type.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Input type convertible into a stored [`Value`].
     #[cfg(feature = "schema")]
     #[inline]
     pub fn set_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<&mut Self>
@@ -869,6 +930,10 @@ impl Metadata {
     /// schema, [`MetadataError::MissingRequiredField`] when a required field is
     /// assigned [`Value::Unset`], or [`MetadataError::TypeMismatch`] when the
     /// constructed value's concrete type does not match the schema field type.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Input type convertible into a stored [`Value`].
     #[cfg(feature = "schema")]
     #[inline]
     pub fn with_checked<T>(mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Self>
@@ -967,6 +1032,10 @@ impl Metadata {
     ///
     /// * `predicate` - Callback invoked for each key and value; returning
     ///   `false` removes that entry.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback type used to decide which entries to retain.
     #[inline]
     pub fn retain<F>(&mut self, mut predicate: F)
     where
@@ -1048,6 +1117,10 @@ impl Redact for Metadata {
 
 impl fmt::Debug for Metadata {
     /// Writes the strict-policy redacted representation.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the redacted representation.
     #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
@@ -1063,6 +1136,10 @@ impl fmt::Display for Metadata {
     /// The strict policy redacts values according to the diagnostic policy, but
     /// this output is not a confidentiality boundary for arbitrary user-defined
     /// keys or error text.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the redacted representation.
     #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = Redactor::strict().redact_text(self);
@@ -1073,6 +1150,23 @@ impl fmt::Display for Metadata {
 
 impl Serialize for Metadata {
     /// Serializes metadata as the strict v1 envelope.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `S` - Serializer used to produce the wire envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `serializer` - Serializer receiving the metadata envelope.
+    ///
+    /// # Returns
+    ///
+    /// The serializer's result containing the encoded envelope.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error if wire validation or serialization
+    /// fails.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -1088,6 +1182,23 @@ impl Serialize for Metadata {
 
 impl<'de> Deserialize<'de> for Metadata {
     /// Deserializes only the strict v1 envelope.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the wire envelope.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized metadata envelope.
+    ///
+    /// # Returns
+    ///
+    /// The decoded metadata object.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error if the envelope is malformed,
+    /// unsupported, or contains invalid metadata values.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -1109,6 +1220,19 @@ impl<'de> Deserialize<'de> for Metadata {
 
 impl Metadata {
     /// Converts a decoded wire envelope into scalar metadata values.
+    ///
+    /// # Parameters
+    ///
+    /// * `wire` - Decoded metadata envelope containing scalar value payloads.
+    ///
+    /// # Returns
+    ///
+    /// The metadata values indexed by key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error message when an envelope value is not a scalar V1
+    /// payload.
     fn from_wire(
         wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>>,
     ) -> Result<BTreeMap<String, Value>, &'static str> {
@@ -1127,28 +1251,56 @@ impl Metadata {
 }
 
 impl From<BTreeMap<String, Value>> for Metadata {
-    #[inline]
     /// Takes ownership of a sorted map without validating schema or wire
     /// limits. Wire encoding can still reject keys or entry counts outside
     /// the V1 contract.
+    ///
+    /// # Parameters
+    ///
+    /// * `map` - Sorted metadata map to take ownership of.
+    ///
+    /// # Returns
+    ///
+    /// Metadata containing the supplied entries.
+    #[inline]
     fn from(map: BTreeMap<String, Value>) -> Self {
         Self(map)
     }
 }
 
 impl From<Metadata> for BTreeMap<String, Value> {
-    #[inline]
     /// Consumes metadata and returns its owned sorted map.
+    ///
+    /// # Parameters
+    ///
+    /// * `meta` - Metadata object to consume.
+    ///
+    /// # Returns
+    ///
+    /// The owned sorted map of metadata values.
+    #[inline]
     fn from(meta: Metadata) -> Self {
         meta.0
     }
 }
 
 impl FromIterator<(String, Value)> for Metadata {
-    #[inline]
     /// Collects entries into metadata using `BTreeMap` duplicate-key
     /// replacement. The resulting keys are sorted; collection does not
     /// validate schema or wire limits.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `I` - Iterator type yielding owned metadata key-value pairs.
+    ///
+    /// # Parameters
+    ///
+    /// * `iter` - Source of metadata key-value pairs.
+    ///
+    /// # Returns
+    ///
+    /// Metadata containing the collected entries.
+    #[inline]
     fn from_iter<I: IntoIterator<Item = (String, Value)>>(iter: I) -> Self {
         Self(iter.into_iter().collect())
     }
@@ -1160,8 +1312,16 @@ impl IntoIterator for Metadata {
     /// Owned key-value pair moved from the consumed metadata.
     type Item = (String, Value);
 
-    #[inline]
     /// Consumes metadata and moves its sorted entries without cloning.
+    ///
+    /// # Parameters
+    ///
+    /// * `self` - Metadata object whose entries are moved into the iterator.
+    ///
+    /// # Returns
+    ///
+    /// An owning iterator over sorted metadata entries.
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -1173,19 +1333,35 @@ impl<'a> IntoIterator for &'a Metadata {
     /// References to an entry's key and value; neither is cloned.
     type Item = (&'a String, &'a Value);
 
-    #[inline]
     /// Borrows sorted entries for the lifetime of the metadata borrow without
     /// cloning. This yields `(&String, &Value)`, unlike [`Metadata::iter`]
     /// which yields `(&str, &Value)`.
+    ///
+    /// # Parameters
+    ///
+    /// * `self` - Borrowed metadata whose entries are exposed by the iterator.
+    ///
+    /// # Returns
+    ///
+    /// A borrowed iterator over sorted metadata entries.
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
     }
 }
 
 impl Extend<(String, Value)> for Metadata {
-    #[inline]
     /// Adds entries, replacing duplicate keys according to `BTreeMap` behavior.
     /// The resulting keys remain sorted; no input iteration order is promised.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `I` - Iterator type yielding owned metadata key-value pairs.
+    ///
+    /// # Parameters
+    ///
+    /// * `iter` - Source of metadata key-value pairs to add.
+    #[inline]
     fn extend<I: IntoIterator<Item = (String, Value)>>(&mut self, iter: I) {
         self.0.extend(iter);
     }

@@ -31,6 +31,12 @@ pub(crate) struct MetadataFilterWireV1 {
 
 impl MetadataFilterWireV1 {
     /// Creates a decoded V1 envelope from strict visitor output.
+    ///
+    /// # Parameters
+    ///
+    /// * `version` - Serialized wire-format version.
+    /// * `expression` - Decoded root Boolean expression.
+    /// * `options` - Evaluation options for the filter.
     pub(crate) const fn new(version: u8, expression: FilterExpressionWireV1, options: FilterMatchOptions) -> Self {
         Self {
             version,
@@ -47,6 +53,10 @@ impl MetadataFilterWireV1 {
     }
 
     /// Converts this envelope while enforcing `receiver_limits`.
+    ///
+    /// # Parameters
+    ///
+    /// * `receiver_limits` - Resource bounds applied to the decoded expression.
     ///
     /// # Errors
     ///

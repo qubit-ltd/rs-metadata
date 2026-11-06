@@ -28,14 +28,24 @@ pub(in crate::filter::wire) struct ValueSequenceVisitor {
 }
 
 impl<'de> Visitor<'de> for ValueSequenceVisitor {
+    /// Returns the maximum filter limits.
     type Value = Vec<ValueWirePayloadV1>;
 
     /// Describes a sequence of scalar V1 payloads.
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter that receives the output.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a sequence of scalar V1 value payloads")
     }
 
     /// Decodes membership values one by one and bounds vector growth.
+    /// # Type Parameters
+    ///
+    /// * `A` - Type used by this operation.
+    /// # Parameters
+    ///
+    /// * `sequence` - Input sequence used by this operation.
     fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,

@@ -33,10 +33,17 @@ pub(in crate::filter::wire) struct ExpressionElementSeed<'a> {
 }
 
 impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
+    /// Returns the maximum filter limits.
     type Value = FilterExpressionWireV1;
 
     /// Charges one child item before delegating to the recursive expression
     /// seed.
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that provides the encoded representation.
+    /// # Parameters
+    ///
+    /// * `deserializer` - Deserializer providing the filter representation.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

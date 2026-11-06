@@ -40,14 +40,24 @@ pub(in crate::filter::wire) struct ExpressionVisitor<'a> {
 }
 
 impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
+    /// Returns the maximum filter limits.
     type Value = FilterExpressionWireV1;
 
     /// Describes one strict filter expression node.
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter that receives the output.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a strict metadata-filter expression object")
     }
 
     /// Decodes fields in any order while rejecting duplicates and unknowns.
+    /// # Type Parameters
+    ///
+    /// * `A` - Type used by this operation.
+    /// # Parameters
+    ///
+    /// * `map` - Input map used by this operation.
     fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,

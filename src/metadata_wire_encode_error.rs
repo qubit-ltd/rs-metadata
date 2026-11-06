@@ -35,7 +35,10 @@ use crate::MetadataError;
 #[must_use]
 pub enum MetadataWireEncodeError {
     /// The JSON document exceeded one configured resource budget.
-    Budget(BudgetError<JsonResource, usize>),
+    Budget(
+        /// Shared JSON resource budget that was exceeded.
+        BudgetError<JsonResource, usize>,
+    ),
     /// A native JSON measurement could not be represented by the budget
     /// quantity type.
     Quantity {
@@ -47,17 +50,37 @@ pub enum MetadataWireEncodeError {
     /// The metadata value exceeds the strict V1 metadata wire contract.
     ///
     /// The original domain error is preserved as the source.
-    Domain(MetadataError),
+    Domain(
+        /// Structured metadata-domain failure.
+        MetadataError,
+    ),
     /// The encoded value contains invalid JSON syntax.
-    Syntax(JsonSyntaxError),
+    Syntax(
+        /// Lexical JSON syntax failure.
+        JsonSyntaxError,
+    ),
     /// Strict JSON serialization rejected the value during bounded encoding.
-    Json(JsonSerializationError),
+    Json(
+        /// JSON serialization failure.
+        JsonSerializationError,
+    ),
     /// The destination writer rejected bounded JSON output.
-    Io(std::io::Error),
+    Io(
+        /// Destination writer error.
+        std::io::Error,
+    ),
 }
 
 impl fmt::Display for MetadataWireEncodeError {
     /// Formats the encoding failure with its underlying error context.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the error message.
+    ///
+    /// # Returns
+    ///
+    /// A formatting result indicating whether the message was written.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Budget(error) => {
@@ -100,6 +123,14 @@ impl std::error::Error for MetadataWireEncodeError {
 impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
     /// Converts a shared budget adapter error into the metadata encoding
     /// error.
+    ///
+    /// # Parameters
+    ///
+    /// * `error` - Shared JSON encoding failure to convert.
+    ///
+    /// # Returns
+    ///
+    /// The corresponding metadata wire encoding error.
     fn from(error: JsonEncodeError<JsonResource>) -> Self {
         match error.into_source() {
             JsonEncodeErrorSource::Budget(source) => match source {
@@ -114,6 +145,16 @@ impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
 }
 
 impl From<MeasuredBudgetError<JsonResource, usize>> for MetadataWireEncodeError {
+    /// Converts a measured JSON budget failure into the metadata encoding
+    /// error.
+    ///
+    /// # Parameters
+    ///
+    /// * `error` - Measured budget failure to convert.
+    ///
+    /// # Returns
+    ///
+    /// The corresponding metadata wire encoding error.
     fn from(error: MeasuredBudgetError<JsonResource, usize>) -> Self {
         match error {
             MeasuredBudgetError::Budget(error) => Self::Budget(error),

@@ -36,6 +36,14 @@ pub struct MetadataField {
 
 impl<'de> Deserialize<'de> for MetadataField {
     /// Deserializes a field definition from its strict object representation.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer providing the field object.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - Source of the serialized field definition.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
