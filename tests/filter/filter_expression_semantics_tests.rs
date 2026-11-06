@@ -5,7 +5,8 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Generated semantic checks against an independent three-valued expression model.
+//! Generated semantic checks against an independent three-valued expression
+//! model.
 
 use qubit_datatype::DataType;
 use qubit_datatype::NumericComparisonPolicy;
@@ -57,17 +58,13 @@ fn compile_raw(expr: &RawExpr, leaves: &[FilterExpression], context: &str) -> Fi
         RawExpr::Leaf(index) => leaves[*index].clone(),
         RawExpr::And(left, right) => compile_raw(left, leaves, context)
             .try_and(compile_raw(right, leaves, context))
-            .unwrap_or_else(|error| {
-                panic!("{context}: generated AND construction failed: {error}")
-            }),
+            .unwrap_or_else(|error| panic!("{context}: generated AND construction failed: {error}")),
         RawExpr::Or(left, right) => compile_raw(left, leaves, context)
             .try_or(compile_raw(right, leaves, context))
             .unwrap_or_else(|error| panic!("{context}: generated OR construction failed: {error}")),
         RawExpr::Not(inner) => compile_raw(inner, leaves, context)
             .try_not()
-            .unwrap_or_else(|error| {
-                panic!("{context}: generated NOT construction failed: {error}")
-            }),
+            .unwrap_or_else(|error| panic!("{context}: generated NOT construction failed: {error}")),
     }
 }
 
@@ -220,19 +217,13 @@ fn leaf_cases() -> (Metadata, Vec<LeafCase>) {
         ),
         make(
             "exists_concrete",
-            FilterExpression::builder()
-                .exists("int")
-                .build()
-                .expect("exists leaf"),
+            FilterExpression::builder().exists("int").build().expect("exists leaf"),
             Some(true),
         ),
         make(
             "in_match_prefers_match",
             FilterExpression::builder()
-                .in_set(
-                    "member_incomparable",
-                    [Value::from(18_i64), Value::from("rust")],
-                )
+                .in_set("member_incomparable", [Value::from(18_i64), Value::from("rust")])
                 .build()
                 .expect("membership leaf"),
             Some(true),
@@ -241,6 +232,14 @@ fn leaf_cases() -> (Metadata, Vec<LeafCase>) {
             "in_unknown_candidate",
             FilterExpression::builder()
                 .in_set("member_unknown", [18_i64])
+                .build()
+                .expect("membership leaf"),
+            None,
+        ),
+        make(
+            "not_in_unknown_candidate",
+            FilterExpression::builder()
+                .not_in_set("member_unknown", [18_i64])
                 .build()
                 .expect("membership leaf"),
             None,
@@ -269,14 +268,20 @@ fn leaf_cases() -> (Metadata, Vec<LeafCase>) {
                 .expect("empty membership leaf"),
             None,
         ),
+        make(
+            "empty_not_in_missing",
+            FilterExpression::builder()
+                .not_in_set::<_, Value>("missing", [])
+                .build()
+                .expect("empty membership leaf"),
+            None,
+        ),
     ];
     (metadata, cases)
 }
 
 fn policy_filter(expression: FilterExpression, policy: NumericComparisonPolicy) -> MetadataFilter {
-    let options = FilterMatchOptions::builder()
-        .numeric_comparison_policy(policy)
-        .build();
+    let options = FilterMatchOptions::builder().numeric_comparison_policy(policy).build();
     MetadataFilter::builder()
         .expression(expression)
         .options(options)
@@ -284,14 +289,7 @@ fn policy_filter(expression: FilterExpression, policy: NumericComparisonPolicy) 
         .expect("filter should build")
 }
 
-fn assert_semantics(
-    raw: &RawExpr,
-    metadata: &Metadata,
-    leaves: &[LeafCase],
-    seed: u64,
-    iteration: usize,
-    label: &str,
-) {
+fn assert_semantics(raw: &RawExpr, metadata: &Metadata, leaves: &[LeafCase], seed: u64, iteration: usize, label: &str) {
     let raw_values: Vec<_> = leaves
         .iter()
         .map(|leaf| match label {
@@ -299,15 +297,13 @@ fn assert_semantics(
             _ => leaf.approximate,
         })
         .collect();
+    let leaf_ids: Vec<_> = leaves.iter().map(|leaf| leaf.id).collect();
     let context = format!(
-        "seed={seed}, iteration={iteration}, tree={raw:?}, sample=all, policy={label}, case={label}"
+        "seed={seed}, iteration={iteration}, tree={raw:?}, sample=combined-metadata, leaf_ids={leaf_ids:?}, policy={label}"
     );
     let compiled = compile_raw(
         raw,
-        &leaves
-            .iter()
-            .map(|leaf| leaf.expression.clone())
-            .collect::<Vec<_>>(),
+        &leaves.iter().map(|leaf| leaf.expression.clone()).collect::<Vec<_>>(),
         &context,
     );
     let expected = eval_raw(raw, &raw_values) == Some(true);
@@ -329,10 +325,7 @@ fn assert_semantics(
     ] {
         let transformed = compile_raw(
             &expression,
-            &leaves
-                .iter()
-                .map(|leaf| leaf.expression.clone())
-                .collect::<Vec<_>>(),
+            &leaves.iter().map(|leaf| leaf.expression.clone()).collect::<Vec<_>>(),
             &format!("{context}, transform={name}"),
         );
         let transformed_expected = eval_raw(&expression, &raw_values) == Some(true);
@@ -393,10 +386,7 @@ fn generate(rng: &mut Lcg, depth: usize, leaf_count: usize) -> RawExpr {
 #[test]
 fn test_leaf_matrix_and_negation_match_hand_annotated_expectations() {
     let (metadata, leaves) = leaf_cases();
-    for policy in [
-        NumericComparisonPolicy::Exact,
-        NumericComparisonPolicy::Approximate,
-    ] {
+    for policy in [NumericComparisonPolicy::Exact, NumericComparisonPolicy::Approximate] {
         for leaf in &leaves {
             let expected = if policy == NumericComparisonPolicy::Exact {
                 leaf.exact
@@ -405,11 +395,7 @@ fn test_leaf_matrix_and_negation_match_hand_annotated_expectations() {
             };
             let filter = policy_filter(leaf.expression.clone(), policy);
             let context = format!("leaf={}, policy={policy:?}", leaf.id);
-            assert_eq!(
-                filter.matches(&metadata),
-                expected == Some(true),
-                "{context}"
-            );
+            assert_eq!(filter.matches(&metadata), expected == Some(true), "{context}");
             let negated = leaf
                 .expression
                 .clone()
@@ -458,9 +444,7 @@ fn test_fixed_shapes_cover_grouping_alternation_not_and_constants() {
             Box::new(a.clone()),
             Box::new(RawExpr::Or(Box::new(b.clone()), Box::new(c.clone()))),
         ),
-        RawExpr::Not(Box::new(RawExpr::Not(Box::new(RawExpr::Not(Box::new(
-            a.clone(),
-        )))))),
+        RawExpr::Not(Box::new(RawExpr::Not(Box::new(RawExpr::Not(Box::new(a.clone())))))),
         RawExpr::And(
             Box::new(RawExpr::Constant(false)),
             Box::new(RawExpr::Not(Box::new(b.clone()))),

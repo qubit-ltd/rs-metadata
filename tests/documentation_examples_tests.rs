@@ -34,10 +34,10 @@ mod support {
     #[cfg(feature = "filter")]
     pub mod user_guide_empty_sets;
     #[cfg(feature = "filter")]
-    pub mod user_guide_query_translation;
-    #[cfg(feature = "filter")]
     #[cfg(feature = "json")]
     pub mod user_guide_filter_bounded_encode;
+    #[cfg(feature = "filter")]
+    pub mod user_guide_query_translation;
 }
 
 #[cfg(feature = "filter")]
@@ -49,8 +49,7 @@ fn test_user_guide_empty_sets_example() {
 #[cfg(feature = "filter")]
 #[test]
 fn test_query_translation_example() {
-    support::user_guide_query_translation::main()
-        .expect("query translation guide example should run");
+    support::user_guide_query_translation::main().expect("query translation guide example should run");
 }
 
 #[cfg(feature = "filter")]
