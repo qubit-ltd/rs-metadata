@@ -591,14 +591,19 @@ schemas use positional field arrays, read them with the previous library
 version and re-serialize them as canonical objects before upgrading. The new
 decoder has no array fallback.
 
-`Metadata` and `MetadataSchema` are unbounded in memory. Their serializers
-reject maps larger than 4,096 entries or keys longer than 256 UTF-8 bytes only
-at the V1 wire boundary, returning `MetadataWireEncodeError::Domain` with the
-structured `MetadataError::WireLimitExceeded` details for metadata and schema encoding. Schema
-encoding checks these domain limits before JSON output budgets. These hard wire bounds are shared
-with the default strict decoders; keep them in producer-side
-validation when generating interchange data. Receiver-controlled JSON limits
-may be lowered for a particular boundary.
+`Metadata` and `MetadataSchema` are unbounded in memory. Their V1 wire
+contract limits maps to 4,096 entries and keys to 256 UTF-8 bytes. Generic
+Serde serialization returns the serializer's error type (`S::Error`), such as
+`serde_json::Error`; it converts domain failures through `custom`, so callers
+cannot directly match `MetadataWireEncodeError::Domain` on that result. The
+bounded `to_json_vec*` and `to_json_writer*` helpers instead return
+`MetadataWireEncodeError` and preserve wire-limit failures as
+`Domain(MetadataError::WireLimitExceeded { .. })`, checking domain limits
+before JSON output budgets. Call `validate_wire_contract()` before generic
+serialization when structured `MetadataError` details are needed. These hard
+wire bounds are shared with the default strict decoders; keep them in
+producer-side validation when generating interchange data. Receiver-controlled
+JSON limits may be lowered for a particular boundary.
 
 ## Errors and diagnostics
 

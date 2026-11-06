@@ -33,7 +33,7 @@ pub(in crate::filter::wire) struct ExpressionElementSeed<'a> {
 }
 
 impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
-    /// Returns the maximum filter limits.
+    /// The decoded filter expression node.
     type Value = FilterExpressionWireV1;
 
     /// Charges one child item before delegating to the recursive expression

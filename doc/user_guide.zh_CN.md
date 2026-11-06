@@ -533,9 +533,15 @@ schema 的 `fields` map 中每个值必须是仅含 `data_type` 和 `required` �
 拒绝。若已存 V1 schema 使用字段数组，升级前应使用旧版本读取，再以旧版本重编码为规范对象；
 新 decoder 不提供数组回退。
 
-`Metadata` 和 `MetadataSchema` 在内存模型中不限制条目数和 key 长度。序列化器只在 V1
-wire 边界拒绝超过 4,096 个条目的 map，或包含超过 256 个 UTF-8 字节 key 的 map；metadata 和 schema 编码通过 `MetadataWireEncodeError::Domain` 返回结构化的 `MetadataError::WireLimitExceeded`，且 schema 会先检查领域限制，再检查 JSON 输出预算。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端保持
-在限制以内。针对特定边界时，接收方控制的 JSON 限制可以进一步降低资源上限。
+`Metadata` 和 `MetadataSchema` 在内存模型中不限制条目数和 key 长度。其 V1 wire 契约将
+map 条目数限制为 4,096，key 长度限制为 256 个 UTF-8 字节。通用 Serde 序列化返回
+serializer 的错误类型（`S::Error`），例如 `serde_json::Error`；领域错误会通过 `custom`
+转换，因此调用方不能直接在该返回值上匹配 `MetadataWireEncodeError::Domain`。有界的
+`to_json_vec*` 和 `to_json_writer*` helper 则返回 `MetadataWireEncodeError`，并将 wire 限额错误
+保留为 `Domain(MetadataError::WireLimitExceeded { .. })`，且先检查领域限制，再检查 JSON
+输出预算。若需要结构化的 `MetadataError` 详情，可在通用序列化前调用
+`validate_wire_contract()`。这些硬性 wire 限制与默认严格解码器共享；生成交换数据时应在生产端
+保持在限制以内。针对特定边界时，接收方控制的 JSON 限制可以进一步降低资源上限。
 
 ## 错误与诊断
 

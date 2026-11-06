@@ -28,7 +28,7 @@ pub(in crate::filter::wire) struct ValueSequenceVisitor {
 }
 
 impl<'de> Visitor<'de> for ValueSequenceVisitor {
-    /// Returns the maximum filter limits.
+    /// The decoded sequence of V1 value wire payloads.
     type Value = Vec<ValueWirePayloadV1>;
 
     /// Describes a sequence of scalar V1 payloads.

@@ -33,7 +33,7 @@ pub(in crate::filter::wire) struct ExpressionSequenceSeed<'a> {
 }
 
 impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
-    /// Returns the maximum filter limits.
+    /// The decoded sequence of filter expression nodes.
     type Value = Vec<FilterExpressionWireV1>;
 
     /// Decodes child expressions with bounded growth.

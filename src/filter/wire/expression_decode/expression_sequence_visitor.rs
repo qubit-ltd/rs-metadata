@@ -34,7 +34,7 @@ pub(in crate::filter::wire) struct ExpressionSequenceVisitor<'a> {
 }
 
 impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
-    /// Returns the maximum filter limits.
+    /// The decoded sequence of filter expression nodes.
     type Value = Vec<FilterExpressionWireV1>;
 
     /// Describes a sequence of filter expression nodes.

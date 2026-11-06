@@ -40,7 +40,7 @@ pub(in crate::filter::wire) struct ExpressionVisitor<'a> {
 }
 
 impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
-    /// Returns the maximum filter limits.
+    /// The decoded filter expression node.
     type Value = FilterExpressionWireV1;
 
     /// Describes one strict filter expression node.
