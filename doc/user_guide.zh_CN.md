@@ -1,6 +1,6 @@
 # qubit-metadata 用户手册
 
-[English User Guide](user_guide.md) · [迁移到 0.6](migration_0.6.zh_CN.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
+[English User Guide](user_guide.md) · [从 0.6 升级到 0.7](migration_0.7.zh_CN.md) · [迁移到 0.6](migration_0.6.zh_CN.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
 本手册面向使用 `qubit-metadata` 0.7 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
 需要给记录、消息或文档分片附加可类型化、可查询 metadata，同时又不希望把 metadata

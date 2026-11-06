@@ -157,6 +157,10 @@ Metadata 和 schema 的有界 JSON 编码遇到 V1 wire 限额时，会返回
 
 ## 延伸阅读
 
+从 0.6 升级依赖到 0.7 时，请先看[从 0.6 升级到 0.7](doc/migration_0.7.zh_CN.md)，
+其中列出了已核实的依赖版本和 Cargo tree 排查方法。此前版本引入的 API 变更仍由
+[迁移到 0.6](doc/migration_0.6.zh_CN.md) 说明。
+
 0.6 删除 `try_get*`、`get_str` 和 `MetadataError::MissingValue`。原来需要转换的 `try_get`
 调用改为 `convert`；严格读取用 `get`，可选严格读取用 `get_optional`，借用文本用
 `get_ref::<str>`。`MetadataError::ValueAccess` 保留 `ValueError`，包括 `ValueMissing`
@@ -164,6 +168,8 @@ Metadata 和 schema 的有界 JSON 编码遇到 V1 wire 限额时，会返回
 保持不变。与 `Config::get` 不同，`Metadata::get` 现在要求精确的存储类型。
 
 - [中文用户手册](doc/user_guide.zh_CN.md)
+- [从 0.6 升级到 0.7](doc/migration_0.7.zh_CN.md)
+- [迁移到 0.6](doc/migration_0.6.zh_CN.md)
 - [English User Guide](doc/user_guide.md)
 - [Rust API 文档](https://docs.rs/qubit-metadata)
 - [English design](doc/design.md)

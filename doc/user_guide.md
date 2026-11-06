@@ -1,6 +1,6 @@
 # qubit-metadata User Guide
 
-[中文用户手册](user_guide.zh_CN.md) · [Migrating to 0.6](migration_0.6.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
+[中文用户手册](user_guide.zh_CN.md) · [Migrating from 0.6 to 0.7](migration_0.7.md) · [Migrating to 0.6](migration_0.6.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
 
 This guide targets `qubit-metadata` 0.7 and Rust 1.94 or later. It is for
 Rust developers who need to attach typed, queryable metadata to records,

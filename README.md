@@ -191,6 +191,12 @@ on the events supplied by their outer deserializer.
 
 ## Learn more
 
+When upgrading dependencies from 0.6 to 0.7, see
+[Migrating from 0.6 to 0.7](doc/migration_0.7.md) for the verified dependency
+version map and Cargo tree diagnostics. The earlier
+[0.6 API migration guide](doc/migration_0.6.md) remains available for changes
+introduced before 0.7.
+
 Version 0.6 removes `try_get*`, `get_str`, and `MetadataError::MissingValue`.
 Migrate converting `try_get` calls to `convert`, strict reads to `get`, optional
 strict reads to `get_optional`, and borrowed text to `get_ref::<str>`.
@@ -200,6 +206,8 @@ schema behavior, numeric comparison, and Wire V1 stay unchanged. Unlike
 `Config::get`, `Metadata::get` now requires the exact stored type.
 
 - [English user guide](doc/user_guide.md)
+- [Migrating from 0.6 to 0.7](doc/migration_0.7.md)
+- [Migrating to 0.6](doc/migration_0.6.md)
 - [中文用户手册](doc/user_guide.zh_CN.md)
 - [English design](doc/design.md)
 - [中文设计文档](doc/design.zh_CN.md)
