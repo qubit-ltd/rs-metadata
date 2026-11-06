@@ -13,6 +13,7 @@ use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonDecodeLimits;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
+use qubit_datatype::NumericComparisonPolicy;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::FilterLimits;
 use qubit_metadata::MetadataFilter;
@@ -41,6 +42,32 @@ fn test_metadata_filter_serde_round_trip() {
 }
 
 #[test]
+fn test_metadata_filter_options_object_round_trips_all_entry_points() {
+    for (policy_name, policy) in [
+        ("exact", NumericComparisonPolicy::Exact),
+        ("approximate", NumericComparisonPolicy::Approximate),
+    ] {
+        let input = format!(
+            r#"{{"version":1,"expression":{{"kind":"all"}},"options":{{"numeric_comparison_policy":"{policy_name}"}}}}"#,
+        );
+        let from_text: MetadataFilter = serde_json::from_str(&input).unwrap();
+        let from_value: MetadataFilter = serde_json::from_value(serde_json::from_str(&input).unwrap()).unwrap();
+        assert_eq!(from_text.options().numeric_comparison_policy(), policy);
+        assert_eq!(from_value, from_text);
+        assert_eq!(
+            serde_json::to_value(&from_text).unwrap()["options"]["numeric_comparison_policy"],
+            policy_name,
+        );
+
+        #[cfg(feature = "json")]
+        {
+            let bounded = MetadataFilter::decode_json_slice(input.as_bytes()).unwrap();
+            assert_eq!(bounded, from_text);
+        }
+    }
+}
+
+#[test]
 fn test_metadata_filter_rejects_unknown_fields_and_versions() {
     let mut unknown = serde_json::to_value(MetadataFilter::all()).unwrap();
     unknown["extra"] = serde_json::json!(true);
@@ -56,6 +83,24 @@ fn test_metadata_filter_rejects_unknown_fields_and_versions() {
     assert!(serde_json::from_value::<MetadataFilter>(unknown).is_err());
     assert!(serde_json::from_value::<MetadataFilter>(version).is_err());
     assert!(serde_json::from_value::<MetadataFilter>(legacy_limits).is_err());
+}
+
+#[test]
+fn test_metadata_filter_rejects_malformed_options() {
+    for options in [
+        r#"["exact"]"#,
+        "{}",
+        r#"{"extra":true,"numeric_comparison_policy":"exact"}"#,
+        r#"{"numeric_comparison_policy":"invalid"}"#,
+    ] {
+        let input = format!(r#"{{"version":1,"expression":{{"kind":"all"}},"options":{options}}}"#,);
+        let value: serde_json::Value = serde_json::from_str(&input).unwrap();
+
+        assert!(serde_json::from_str::<MetadataFilter>(&input).is_err(), "{input}");
+        assert!(serde_json::from_value::<MetadataFilter>(value).is_err(), "{input}");
+        #[cfg(feature = "json")]
+        assert!(MetadataFilter::decode_json_slice(input.as_bytes()).is_err(), "{input}");
+    }
 }
 
 #[test]

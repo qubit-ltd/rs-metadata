@@ -50,6 +50,10 @@ metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形
 `required` 的对象，拒绝位置式字段数组。若已存 V1 schema 使用字段数组，升级前须用旧版本读取，
 再由旧版本重编码为规范对象；新 decoder 不提供数组回退。泛型 Serde 解码仍使用普通
 deserializer 错误通道。
+filter 的 `options` 同样要求恰含 `numeric_comparison_policy` 的对象；V1 envelope decoder
+和直接的 `FilterMatchOptions` 反序列化都会拒绝位置数组。仓库内测试、文档及检索到的下游调用方
+均未依赖位置式 options。若调用方存储了这类数组，升级前须使用旧版本读取，再将其重编码为规范对象，
+例如 `{"numeric_comparison_policy":"exact"}`（或对应策略）。序列化后的 V1 输出和 wire 版本不变。
 
 ## 资源与信任边界
 

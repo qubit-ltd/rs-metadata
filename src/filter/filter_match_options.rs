@@ -9,9 +9,11 @@
 
 use qubit_datatype::NumericComparisonPolicy;
 use serde::Deserialize;
+use serde::Deserializer;
 use serde::Serialize;
 
 use super::FilterMatchOptionsBuilder;
+use super::internal::deserialize_filter_match_options;
 
 /// Match policies used when evaluating a [`crate::MetadataFilter`].
 ///
@@ -26,12 +28,37 @@ use super::FilterMatchOptionsBuilder;
 ///     .build();
 /// assert_eq!(options.numeric_comparison_policy(), NumericComparisonPolicy::Exact);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Default)]
 #[non_exhaustive]
 pub struct FilterMatchOptions {
     /// Policy for mixed numeric comparisons.
     numeric_comparison_policy: NumericComparisonPolicy,
+}
+
+impl<'de> Deserialize<'de> for FilterMatchOptions {
+    /// Decodes options from an object with one numeric comparison policy.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `D` - The deserializer supplying the options representation.
+    ///
+    /// # Parameters
+    ///
+    /// * `deserializer` - The source representation to decode.
+    ///
+    /// # Returns
+    ///
+    /// The decoded filter match options.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the representation is not a strict options object.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_filter_match_options(deserializer)
+    }
 }
 
 impl FilterMatchOptions {

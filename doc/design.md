@@ -69,6 +69,14 @@ exactly `data_type` and `required`; positional field arrays are rejected.
 Consumers with stored V1 schemas that use positional field arrays must read
 them with the previous library version and re-serialize them as canonical
 objects before upgrading. The new decoder does not provide an array fallback.
+Filter `options` likewise requires an object containing exactly
+`numeric_comparison_policy`; positional arrays are rejected by both the V1
+envelope decoder and direct `FilterMatchOptions` deserialization. No in-repo
+tests, documentation, or searched downstream callers rely on positional
+options. Callers storing such arrays must read them with the previous library
+version and re-serialize them as the canonical object
+`{"numeric_comparison_policy":"exact"}` (or the corresponding policy) before
+upgrading. Serialized V1 output and the wire version do not change.
 
 ## Resource and trust boundaries
 
