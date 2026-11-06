@@ -303,6 +303,19 @@ impl MetadataFilter {
     }
 
     /// Encodes this filter with the default JSON budget profile.
+    ///
+    /// Uses [`crate::default_json_encode_limits`]. Decode limits do not
+    /// affect output budgets. Successful filter construction does not
+    /// guarantee that the encoded document fits these JSON budgets.
+    ///
+    /// # Returns
+    ///
+    /// Compact JSON bytes representing this filter in the V1 wire format.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
+    /// JSON budget checks, or serialization fails.
     #[cfg(feature = "json")]
     pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
@@ -310,14 +323,22 @@ impl MetadataFilter {
 
     /// Encodes this filter with caller-provided JSON budgets.
     ///
+    /// The supplied limits apply to this encoding operation independently
+    /// of the AST limits enforced during filter construction. A successfully
+    /// constructed filter can still exceed these JSON budgets.
+    ///
     /// # Parameters
     ///
     /// * `limits` - Output and JSON-value budgets for this operation.
     ///
+    /// # Returns
+    ///
+    /// Compact JSON bytes representing this filter in the V1 wire format.
+    ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
-    /// budget or the filter cannot be represented by the V1 wire format.
+    /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
+    /// JSON budget checks, or serialization fails.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.preflight_wire_values(limits)?;
