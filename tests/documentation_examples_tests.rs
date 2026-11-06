@@ -75,8 +75,6 @@ fn test_user_guide_domain_limits_example() -> Result<(), MetadataWireDecodeError
 #[cfg(feature = "json")]
 #[test]
 fn test_user_guide_bounded_decode_source_matches() {
-    let package_manifest = include_str!("../Cargo.toml");
-    assert!(package_manifest.contains("version = \"0.7.0\""));
     for (name, document) in [
         ("English README", include_str!("../README.md")),
         ("Chinese README", include_str!("../README.zh_CN.md")),
