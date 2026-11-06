@@ -26,7 +26,7 @@ use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataWireDecodeError;
 use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::default_json_encode_limits;
-use support::bounded_encode::shared as bounded_encode;
+use support::bounded_encode;
 
 fn assert_bounded(
     canonical: &[u8],

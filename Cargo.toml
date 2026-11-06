@@ -20,7 +20,6 @@ include = [
     "/src/**",
     "/doc/**",
     "/tests/**",
-    "/fuzz/support/**",
     "/benches/**",
 ]
 
