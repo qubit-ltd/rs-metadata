@@ -374,7 +374,57 @@ keys.
 `FilterExpression::view()` exposes a read-only tree containing condition, AND,
 OR, NOT, true, and false nodes. A storage provider can walk this view and
 translate supported predicates into its native query language without relying
-on the private construction representation.
+on the private construction representation. The tree describes the expression;
+it does not by itself guarantee that a backend translation preserves its
+meaning. Numeric behavior is also part of the filter options, available through
+`filter.options().numeric_comparison_policy()`.
+
+Translation must preserve three-valued results through the complete NOT, AND,
+and OR expression, then match only a final `true`. In particular, do not turn
+an unknown comparison into false before applying NOT. See
+[Three-valued filter semantics](#three-valued-filter-semantics) for the matching rules.
+`exists` tests for a concrete value, not merely whether the map contains a key;
+an unset value is not present. Membership must preserve incomparable candidates,
+the rule that a definite membership match takes precedence, and empty-set
+behavior. Numeric comparisons must preserve the configured policy rather than
+assuming the backend's coercion rules.
+
+The example shows why translating `NOT (tenant = "acme")` as an ordinary
+inequality can incorrectly include a record with no tenant value. On the empty
+metadata below, the comparison under NOT does not match, while `not_exists`
+does. When a predicate cannot be translated with equivalent semantics, reject
+it or evaluate it locally only after obtaining the complete candidate set.
+Do not apply a lossy pushdown, pagination, limit, or aggregation before local
+filtering and then treat the result as equivalent. Apply sorting and pagination
+after semantic filtering as required by the application.
+
+<!-- query-translation-example:start -->
+```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+
+pub fn main() -> qubit_metadata::MetadataResult<()> {
+    let metadata = Metadata::new();
+    let comparison = MetadataFilter::builder()
+        .expression(FilterExpression::builder().eq("tenant", "acme").not().build()?)
+        .build()?;
+    let absent = MetadataFilter::builder()
+        .expression(FilterExpression::builder().not_exists("tenant").build()?)
+        .build()?;
+    assert!(!comparison.matches(&metadata));
+    assert!(absent.matches(&metadata));
+    Ok(())
+}
+```
+<!-- query-translation-example:end -->
 
 ### Bounded JSON decoding
 

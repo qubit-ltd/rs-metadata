@@ -34,6 +34,8 @@ mod support {
     #[cfg(feature = "filter")]
     pub mod user_guide_empty_sets;
     #[cfg(feature = "filter")]
+    pub mod user_guide_query_translation;
+    #[cfg(feature = "filter")]
     #[cfg(feature = "json")]
     pub mod user_guide_filter_bounded_encode;
 }
@@ -42,6 +44,29 @@ mod support {
 #[test]
 fn test_user_guide_empty_sets_example() {
     support::user_guide_empty_sets::main().expect("empty set guide example should run");
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_query_translation_example() {
+    support::user_guide_query_translation::main()
+        .expect("query translation guide example should run");
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_query_translation_source_matches() {
+    for (name, document) in [
+        ("English guide", include_str!("../doc/user_guide.md")),
+        ("Chinese guide", include_str!("../doc/user_guide.zh_CN.md")),
+    ] {
+        assert_documented_example(
+            name,
+            document,
+            "query-translation-example",
+            include_str!("support/user_guide_query_translation.rs"),
+        );
+    }
 }
 
 #[cfg(feature = "filter")]

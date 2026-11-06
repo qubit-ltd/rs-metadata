@@ -339,9 +339,49 @@ pub fn main() -> qubit_metadata::MetadataResult<()> {
 
 ### 检查或翻译 expression
 
-`MetadataFilter::expression()` 返回根 expression，`FilterExpression::view()` 暴露只读树，
-其中包括 condition、AND、OR、NOT、true 和 false 节点。存储 provider 可以遍历该 view，
-把支持的谓词翻译为自己的查询语言，而不依赖私有构造表示。
+`MetadataFilter::expression()` 返回根 expression，`FilterExpression::view()` 提供只读树，包含
+condition、AND、OR、NOT、true 和 false 节点。存储 provider 可以遍历该 view，将支持的谓词翻译为
+原生查询语言，而不依赖私有构造表示。表达式树只描述结构，本身不保证后端翻译保持语义；数值行为
+也属于 filter 选项，可通过 `filter.options().numeric_comparison_policy()` 获取。
+
+翻译必须让三值结果完整经过 NOT、AND、OR 运算，最后只匹配结果为 `true` 的记录。尤其不能在
+应用 NOT 前先把 unknown 比较转换为 false。匹配规则见
+[Filter 的三值逻辑](#filter-的三值逻辑)。`exists` 检查的是 concrete value，而不是 map 是否包含该 key；
+unset 值不算存在。membership 必须保留不可比较候选、确定匹配优先规则及空集合行为。数值比较也必须
+遵循已配置的策略，不能默认采用后端的强制转换规则。
+
+下面的示例说明，将 `NOT (tenant = "acme")` 翻译成普通不等比较，可能会错误地纳入缺少 tenant 值的
+记录。对于下面的空 metadata，NOT 包裹的比较不匹配，而 `not_exists` 匹配。如果某个谓词无法按等价
+语义翻译，应拒绝该谓词；或者仅在能够取得完整候选集后进行本地匹配。不能先执行会漏掉匹配项的下推、
+分页、limit 或聚合，再把本地过滤结果视为等价。应按应用需求在语义过滤完成后排序和分页。
+
+<!-- query-translation-example:start -->
+```rust
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+use qubit_metadata::FilterExpression;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataFilter;
+
+pub fn main() -> qubit_metadata::MetadataResult<()> {
+    let metadata = Metadata::new();
+    let comparison = MetadataFilter::builder()
+        .expression(FilterExpression::builder().eq("tenant", "acme").not().build()?)
+        .build()?;
+    let absent = MetadataFilter::builder()
+        .expression(FilterExpression::builder().not_exists("tenant").build()?)
+        .build()?;
+    assert!(!comparison.matches(&metadata));
+    assert!(absent.matches(&metadata));
+    Ok(())
+}
+```
+<!-- query-translation-example:end -->
 
 ### 有界 JSON 解码
 
