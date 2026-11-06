@@ -40,10 +40,6 @@ where
     ///
     /// * `formatter` - Formatter receiving the expected shape.
     ///
-    /// # Parameters
-    ///
-    /// * `formatter` — formatter receiving the human-readable description.
-    ///
     /// # Returns
     ///
     /// A formatting result indicating whether the description was written.
