@@ -9,6 +9,7 @@
 
 mod condition_tests;
 mod filter_expression_builder_tests;
+mod filter_expression_semantics_tests;
 mod filter_expression_tests;
 mod filter_expression_view_tests;
 mod filter_limit_kind_tests;
