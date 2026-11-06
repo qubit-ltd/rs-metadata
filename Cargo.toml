@@ -71,6 +71,10 @@ name = "metadata_benchmarks"
 harness = false
 required-features = ["filter"]
 
+[[example]]
+name = "filter_encode_allocations"
+required-features = ["json", "filter"]
+
 [profile.release]
 opt-level = 3
 lto = true

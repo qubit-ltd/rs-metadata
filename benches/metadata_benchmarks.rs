@@ -357,6 +357,98 @@ fn benchmark_filter_json_decode(criterion: &mut Criterion) {
 #[cfg(not(feature = "json"))]
 fn benchmark_filter_json_decode(_criterion: &mut Criterion) {}
 
+/// Measures ordinary and bounded JSON encoding of representative filters.
+#[cfg(all(feature = "json", feature = "filter"))]
+fn benchmark_filter_json_encode(criterion: &mut Criterion) {
+    let mut group = criterion.benchmark_group("metadata/filter_json_encode");
+    for (name, expression) in filter_encoding_samples() {
+        let filter = MetadataFilter::builder()
+            .expression(expression)
+            .build()
+            .expect("benchmark filter should build");
+        let ordinary = serde_json::to_vec(&filter).expect("benchmark filter should serialize");
+        let bounded = filter
+            .to_json_vec_with_limits(default_json_encode_limits())
+            .expect("benchmark filter should encode within default limits");
+        assert_eq!(ordinary, bounded, "benchmark encoding paths should agree");
+        let _output_bytes = ordinary.len();
+        group.bench_function(BenchmarkId::new("serde_json", &name), |bencher| {
+            bencher
+                .iter(|| black_box(serde_json::to_vec(black_box(&filter)).expect("benchmark filter should serialize")));
+        });
+        group.bench_function(BenchmarkId::new("bounded", &name), |bencher| {
+            bencher.iter(|| {
+                black_box(
+                    black_box(&filter)
+                        .to_json_vec_with_limits(default_json_encode_limits())
+                        .expect("benchmark filter should encode"),
+                )
+            });
+        });
+    }
+    group.finish();
+}
+
+#[cfg(not(all(feature = "json", feature = "filter")))]
+fn benchmark_filter_json_encode(_criterion: &mut Criterion) {}
+
+#[cfg(feature = "filter")]
+fn filter_encoding_samples() -> Vec<(String, FilterExpression)> {
+    let leaf = |index: usize| {
+        FilterExpression::builder()
+            .exists(&format!("field_{index}"))
+            .build()
+            .expect("benchmark leaf should build")
+    };
+    let flat = |count: usize, use_or: bool| {
+        let mut expressions = (0..count).map(leaf);
+        let first = expressions.next().expect("filter sample is nonempty");
+        expressions.fold(first, |left, right| {
+            if use_or {
+                left.try_or(right).expect("bounded benchmark OR should build")
+            } else {
+                left.try_and(right).expect("bounded benchmark AND should build")
+            }
+        })
+    };
+
+    let mut samples = Vec::new();
+    samples.push(("small_1".to_owned(), leaf(0)));
+    samples.push(("small_8".to_owned(), flat(8, false)));
+    // A flat group counts its operator node, so 255 leaves is the largest
+    // representable sample under the 256-node hard limit.
+    for count in [64, 255] {
+        samples.push((format!("flat_and_{count}"), flat(count, false)));
+        samples.push((format!("flat_or_{count}"), flat(count, true)));
+    }
+    for depth in [4, 16] {
+        let mut expression = leaf(depth);
+        for level in 0..depth {
+            expression = match level % 3 {
+                0 => expression.try_not().expect("bounded benchmark NOT should build"),
+                1 => expression
+                    .try_and(leaf(depth + level + 1))
+                    .expect("bounded benchmark nested AND should build"),
+                _ => expression
+                    .try_or(leaf(depth + level + 1))
+                    .expect("bounded benchmark nested OR should build"),
+            };
+        }
+        samples.push((format!("nested_{depth}"), expression));
+    }
+    // The public builder caps membership operands at 128 values.
+    for count in [8, 64, 128] {
+        samples.push((
+            format!("membership_{count}"),
+            FilterExpression::builder()
+                .in_set("member", 0_i64..count as i64)
+                .build()
+                .expect("bounded benchmark membership should build"),
+        ));
+    }
+    samples
+}
+
 /// Benchmarks bounded JSON decoding of a prepared metadata schema envelope.
 #[cfg(all(feature = "json", feature = "schema"))]
 fn benchmark_schema_json_decode(criterion: &mut Criterion) {
@@ -443,6 +535,7 @@ criterion_group!(
     benchmark_public_expression_composition,
     benchmark_filter_match,
     benchmark_filter_json_decode,
+    benchmark_filter_json_encode,
     benchmark_schema_json_decode,
 );
 criterion_main!(benches);
