@@ -437,6 +437,45 @@ Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
 `MetadataLimits::builder().build()?`，在配置阶段拒绝超过协议硬上限的领域限制，
 与 `FilterLimitsBuilder::build` 一致。
 
+### 定向 JSON 预算
+
+解码和编码预算相互独立。此例将输入上限设为 64 KiB、输出上限设为
+128 KiB。Metadata 领域限制描述 V1 metadata 契约；JSON 限制约束通用 JSON
+遍历和字节数。
+
+<!-- directional-json-limits-example:start -->
+```rust
+use qubit_budget::ResourceLimit;
+use qubit_budget::json::JsonResource;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
+use qubit_metadata::default_json_decode_limits;
+use qubit_metadata::default_json_encode_limits;
+
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let decode = default_json_decode_limits()
+        .into_builder()
+        .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
+        .build();
+    let encode = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+        .build();
+    let limits = MetadataLimits::builder()
+        .json_decode(decode)
+        .json_encode(encode)
+        .build()?;
+    assert_eq!(limits.json_decode().max_input_bytes(), Some(64 * 1024));
+    assert_eq!(limits.json_encode().max_output_bytes(), Some(128 * 1024));
+
+    let metadata = Metadata::new().with("tenant_id", "acme");
+    let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+    assert!(!bytes.is_empty());
+    Ok(())
+}
+```
+<!-- directional-json-limits-example:end -->
+
 ### 有界 JSON 编码
 
 文档分片准备写入存储或发送到后端时，应在应用自己的边界完成编码，再把生成的字节交给

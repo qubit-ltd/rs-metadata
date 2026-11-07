@@ -487,6 +487,46 @@ When limits come from an operator or configuration file, call
 `MetadataLimits::builder().build()?`. It rejects domain caps above the protocol
 hard limits during configuration, matching `FilterLimitsBuilder::build`.
 
+### Directional JSON budgets
+
+Decode and encode budgets are independent. This example admits up to 64 KiB
+of input while allowing up to 128 KiB of output. Metadata domain limits
+describe the V1 metadata contract; JSON limits bound generic JSON traversal
+and bytes.
+
+<!-- directional-json-limits-example:start -->
+```rust
+use qubit_budget::ResourceLimit;
+use qubit_budget::json::JsonResource;
+use qubit_metadata::Metadata;
+use qubit_metadata::MetadataLimits;
+use qubit_metadata::default_json_decode_limits;
+use qubit_metadata::default_json_encode_limits;
+
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let decode = default_json_decode_limits()
+        .into_builder()
+        .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
+        .build();
+    let encode = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
+        .build();
+    let limits = MetadataLimits::builder()
+        .json_decode(decode)
+        .json_encode(encode)
+        .build()?;
+    assert_eq!(limits.json_decode().max_input_bytes(), Some(64 * 1024));
+    assert_eq!(limits.json_encode().max_output_bytes(), Some(128 * 1024));
+
+    let metadata = Metadata::new().with("tenant_id", "acme");
+    let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
+    assert!(!bytes.is_empty());
+    Ok(())
+}
+```
+<!-- directional-json-limits-example:end -->
+
 ### Bounded JSON encoding
 
 For an application that stores or sends document chunks, encode each chunk at

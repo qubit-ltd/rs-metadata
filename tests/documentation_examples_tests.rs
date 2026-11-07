@@ -24,13 +24,15 @@ use qubit_metadata::default_json_encode_limits;
 
 mod support {
     #[cfg(feature = "json")]
-    pub mod readme_directional_limits;
+    pub mod readme_json_roundtrip;
     #[cfg(feature = "json")]
     pub mod user_guide_bounded_decode;
     #[cfg(feature = "json")]
     pub mod user_guide_bounded_encode;
     #[cfg(feature = "schema")]
     pub mod user_guide_chunk_workflow;
+    #[cfg(feature = "json")]
+    pub mod user_guide_directional_limits;
     #[cfg(feature = "filter")]
     pub mod user_guide_empty_sets;
     #[cfg(feature = "filter")]
@@ -86,8 +88,14 @@ fn test_user_guide_empty_sets_source_matches() {
 
 #[cfg(feature = "json")]
 #[test]
-fn test_readme_directional_limits_example() {
-    support::readme_directional_limits::main().expect("README example should run");
+fn test_readme_json_roundtrip_example() {
+    support::readme_json_roundtrip::main().expect("README JSON round-trip example should run");
+}
+
+#[cfg(feature = "json")]
+#[test]
+fn test_user_guide_directional_limits_example() {
+    support::user_guide_directional_limits::main().expect("directional budget guide example should run");
 }
 
 #[cfg(feature = "json")]
@@ -109,18 +117,22 @@ fn test_user_guide_bounded_decode_source_matches() {
             document.contains("qubit-metadata = { version = \"0.7\", features = [\"json\"] }"),
             "{name}: metadata json dependency"
         );
-        assert!(
-            document.contains("qubit-budget = { version = \"0.10\", features = [\"json\"] }"),
-            "{name}: budget json dependency"
-        );
         if name.contains("README") {
+            assert_readme_json_roundtrip(name, document);
+        } else {
+            assert!(
+                document.contains("qubit-budget = { version = \"0.10\", features = [\"json\"] }"),
+                "{name}: budget json dependency"
+            );
             assert_documented_example(
                 name,
                 document,
                 "directional-json-limits-example",
-                include_str!("support/readme_directional_limits.rs"),
+                marked_example(
+                    include_str!("support/user_guide_directional_limits.rs"),
+                    "user-guide-directional-limits-example",
+                ),
             );
-        } else {
             assert_documented_example(
                 name,
                 document,
@@ -166,6 +178,29 @@ fn test_user_guide_chunk_workflow_example() {
             include_str!("support/user_guide_chunk_workflow.rs"),
         );
     }
+}
+
+#[cfg(feature = "json")]
+fn assert_readme_json_roundtrip(name: &str, document: &str) {
+    let source = include_str!("support/readme_json_roundtrip.rs");
+    assert_documented_example(
+        name,
+        document,
+        "readme-json-roundtrip-example",
+        marked_example(source, "readme-json-roundtrip-example"),
+    );
+}
+
+#[cfg(feature = "json")]
+fn marked_example<'a>(source: &'a str, marker: &str) -> &'a str {
+    let start = format!("// {marker}:start");
+    let end = format!("// {marker}:end");
+    assert_eq!(source.matches(&start).count(), 1, "helper start marker for {marker}");
+    assert_eq!(source.matches(&end).count(), 1, "helper end marker for {marker}");
+    let a = source.find(&start).expect("helper start marker") + start.len();
+    let b = source.find(&end).expect("helper end marker");
+    assert!(a < b, "helper markers must be ordered for {marker}");
+    source[a..b].trim()
 }
 
 fn assert_documented_example(name: &str, document: &str, marker: &str, expected: &str) {

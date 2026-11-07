@@ -5,6 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+// user-guide-directional-limits-example:start
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
 use qubit_metadata::Metadata;
@@ -33,3 +34,4 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert!(!bytes.is_empty());
     Ok(())
 }
+// user-guide-directional-limits-example:end

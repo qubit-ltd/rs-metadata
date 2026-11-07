@@ -85,51 +85,27 @@ directional JSON limit profiles.
   callers that need to distinguish missing keys, unset values, type mismatches,
   invalid expressions, and input-limit failures.
 
-Decode and encode policies are deliberately directional. For example, a
-receiver can tighten input admission without accidentally changing its output
-allowance:
+Decode and encode policies are deliberately independent. The `json` feature
+enables JSON round trips; configure directional budgets in the
+[English user guide](doc/user_guide.md#directional-json-budgets).
 
-<!-- directional-json-limits-example:start -->
+<!-- readme-json-roundtrip-example:start -->
 ```rust
-// =============================================================================
-//    Copyright (c) 2025 - 2026 Haixing Hu.
-//
-//    SPDX-License-Identifier: Apache-2.0
-//
-//    Licensed under the Apache License, Version 2.0.
-// =============================================================================
-use qubit_budget::ResourceLimit;
-use qubit_budget::json::JsonResource;
 use qubit_metadata::Metadata;
-use qubit_metadata::MetadataLimits;
-use qubit_metadata::default_json_decode_limits;
-use qubit_metadata::default_json_encode_limits;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let decode = default_json_decode_limits()
-        .into_builder()
-        .input_bytes_limit(ResourceLimit::new(JsonResource::InputBytes, 64 * 1024))
-        .build();
-    let encode = default_json_encode_limits()
-        .into_builder()
-        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128 * 1024))
-        .build();
-    let limits = MetadataLimits::builder()
-        .json_decode(decode)
-        .json_encode(encode)
-        .build()?;
-    assert_eq!(limits.json_decode().max_input_bytes(), Some(64 * 1024));
-    assert_eq!(limits.json_encode().max_output_bytes(), Some(128 * 1024));
-
     let metadata = Metadata::new().with("tenant_id", "acme");
-    let bytes = metadata.to_json_vec_with_limits(limits.json_encode())?;
-    assert!(!bytes.is_empty());
+    let bytes = metadata.to_json_vec()?;
+    let decoded = Metadata::decode_json_slice(&bytes)?;
+    assert_eq!(decoded.get_ref::<str>("tenant_id")?, "acme");
     Ok(())
 }
 ```
-<!-- directional-json-limits-example:end -->
+<!-- readme-json-roundtrip-example:end -->
 
-This example needs `qubit-metadata = { version = "0.7", features = ["json"] }` and a direct `qubit-budget = { version = "0.10", features = ["json"] }` dependency. See the [English guide](doc/user_guide.md#bounded-json-encoding) for a complete round-trip and writer example.
+This example requires
+`qubit-metadata = { version = "0.7", features = ["json"] }`. See the guide
+for direct `qubit-budget` configuration.
 
 Metadata and schema bounded JSON encoding return
 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })` for V1

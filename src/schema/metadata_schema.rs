@@ -310,8 +310,10 @@ impl MetadataSchema {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
-    /// budget, serialization fails, or `writer` rejects the output.
+    /// Returns [`crate::MetadataWireEncodeError::Domain`] when the schema
+    /// exceeds a V1 wire limit. Wire-contract validation runs before JSON
+    /// output budgets. Budget or serialization failures occur before any
+    /// destination write; destination I/O errors may leave a written prefix.
     ///
     /// # Type Parameters
     ///

@@ -41,8 +41,10 @@ with tarfile.open(archives[0]) as archive:
     destination.mkdir()
     archive.extractall(destination, filter='data')
 (base / 'package-root').write_text(str(destination / root))
+(base / 'package-archive').write_text(str(archives[0]))
 PYCODE
 
 package_root=$(cat "$package_tmp/package-root")
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --no-default-features --features json --test metadata_fuzz_roundtrip_tests
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --all-features --all-targets
+"$project_root/.infra/check-package-with-latest-value-path.sh" "$(cat "$package_tmp/package-archive")"
