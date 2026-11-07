@@ -33,6 +33,8 @@
 //! - Enable `filter` for composable filter expressions and their public types
 //! - Enable `schema` (which includes `filter`) for field definitions and
 //!   validation APIs
+//! - Enable `json` for bounded JSON-slice decoding and buffered encoding; JSON
+//!   APIs for schemas and filters also require their respective features
 //! - Error type: [`MetadataError`] — structured failure reporting for reads,
 //!   conversions, validation, and wire boundaries
 //! - `schema` also provides aggregate validation errors
@@ -60,6 +62,37 @@
 //! does not match at the public API boundary. Existence predicates are an
 //! exception: `exists` and `not_exists` always return definite Booleans, and
 //! `exists(...).not()` is true when no concrete value is stored.
+//!
+//! ## Bounded JSON
+//!
+//! Enable the `json` feature to use the bounded JSON helpers. The default
+//! helpers use the crate's default decode or encode budget profile; use the
+//! corresponding `_with_limits` helper to configure a profile for that
+//! operation. Add `features = ["json"]` to the crate dependency. Decode and
+//! encode budgets are independent.
+//!
+//! ```rust
+//! # #[cfg(feature = "json")]
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use qubit_metadata::Metadata;
+//!
+//! let metadata = Metadata::new().with("tenant_id", "acme");
+//! let encoded = metadata.to_json_vec()?;
+//! let decoded = Metadata::decode_json_slice(&encoded)?;
+//! assert_eq!(decoded.get_ref::<str>("tenant_id")?, "acme");
+//! # Ok(())
+//! # }
+//! # #[cfg(not(feature = "json"))]
+//! # fn main() {}
+//! ```
+//!
+//! For complete untrusted JSON input, use the bounded slice decoder. Ordinary
+//! Serde paths still check the domain wire contract, but do not automatically
+//! provide the dedicated helper's complete-input byte admission and unified
+//! JSON traversal budget. See the [bounded JSON decoding guide](https://github.com/qubit-ltd/rs-metadata/blob/main/doc/user_guide.md#bounded-json-decoding)
+//! and [bounded JSON encoding guide](https://github.com/qubit-ltd/rs-metadata/blob/main/doc/user_guide.md#bounded-json-encoding)
+//! for configuration and writer behavior. Writer helpers buffer the complete
+//! document; a destination I/O error may leave a written prefix.
 //!
 //! ```rust
 //! # #[cfg(feature = "filter")]

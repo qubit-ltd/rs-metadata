@@ -69,7 +69,7 @@ qubit-datatype = "0.15"
 - `FilterExpression` 与 `MetadataFilter`：不可变布尔表达式，支持相等、范围、集合、存在性、
   分组、取反、匹配选项和接收端表达式资源限制。
 - metadata、schema、filter 的严格 V1 Serde 格式。启用 `json` 后，还可使用带资源限制的
-  JSON slice 解码。
+  JSON slice 解码和编码。
 - 结构化的 `MetadataError`、校验错误和 wire 解码错误，帮助调用方区分键缺失、unset 值、
   类型不匹配、非法表达式以及输入限制失败。
 
@@ -121,13 +121,9 @@ Metadata 和 schema 的有界 JSON 编码遇到 V1 wire 限额时，会返回
 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`。原先针对 schema 限额匹配
 `Json` 的调用方应改为匹配 `Domain` 并读取结构化字段；普通 Serde 序列化错误仍为 `Json`。
 
-`decode_json_slice_with_limits` 会根据 decode profile 创建一个 `JsonDecodeSession`，
-让它同时负责完整输入准入和整个 seed wire 遍历；encode profile 则单独交给有界序列化
-边界。被拒绝的 charge 不会生效；失败时已接受的输入字节计费保留，源值计费在 wire seed 反序列化成功后、后续领域转换前提交。
-专用 JSON helper 在 `serde_json/arbitrary_precision` feature 合并后仍提供原生数字事件，并先在
-配置的 JSON 深度及其他资源预算内构造无重复键的源树，再执行领域解码。
-当前 unique-key decoder 没有额外的固定 127 层容器上限；领域反序列化错误不保留原始源码坐标。
-通用 Serde seed 则继续依赖外层 deserializer 所提供的事件。
+完整的不可信 JSON 输入应使用有界 slice 解码。解码和编码 profile 相互独立，metadata
+领域限制不能替代共享 JSON 遍历预算。配置与调用见[有界 JSON 用户指南](doc/user_guide.zh_CN.md#有界-json-解码)，
+计费和物化细节见[资源与信任边界](doc/design.zh_CN.md#资源与信任边界)。
 
 ## 重要边界
 

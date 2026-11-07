@@ -62,6 +62,15 @@ filter 的 `options` 同样要求恰含 `numeric_comparison_policy` 的对象；
 默认 profile 包含 byte、depth、node、sequence/map、string/key/number/payload 以及领域限制。
 内存中的 metadata 本身不设这些 wire 上限；V1 wire map 会执行规范的条目数和 key 长度限制。
 
+### 专用 metadata JSON helper
+
+专用 metadata slice decoder 首先在共享 JSON 预算下物化无重复键的 JSON 源树，再应用 wire
+seed 并将值转换为 metadata 领域表示。启用 `serde_json/arbitrary_precision` 时，此路径仍保留
+原生数字事件。被拒绝的 charge 不应用；失败时已接受的输入字节计费保留，源值计费则在 wire
+seed 成功后、后续领域转换前提交。领域反序列化错误可能不再保留原始源码坐标。当前
+unique-key decoder 没有额外固定的 127 层容器上限，但仍受配置的通用 JSON 深度预算约束。
+这些属于实现细节，不是 API 或性能保证。通用 Serde seed 仍依赖外层 deserializer 提供的事件。
+
 专用 filter JSON decoder 首先在共享 JSON 解码预算下扫描并物化完整的唯一键 JSON 源树，然后
 由领域 seed 在构造 filter 时检查接收方 AST 和 membership 限制。收紧 `FilterLimits` 不会停止
 源树物化，因此应同时配置通用 JSON budget 和领域限制。该物化契约只适用于专用 JSON decoder，

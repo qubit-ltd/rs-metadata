@@ -88,6 +88,21 @@ depth, node, sequence/map, string/key/number/payload, and domain limits.
 In-memory metadata is not intrinsically bounded; V1 wire maps enforce their
 canonical entry and key limits.
 
+### Dedicated metadata JSON helpers
+
+The dedicated metadata slice decoder first materializes a unique-key JSON
+source tree under the shared JSON budgets, then applies the wire seed and
+converts values into the metadata domain representation. This path preserves
+native number events when `serde_json/arbitrary_precision` is enabled. Rejected
+charges are not applied; accepted input-byte charges remain on failure, while
+source-value charges commit after the wire seed succeeds and before later
+domain conversion. Domain deserialization errors may no longer retain original
+source coordinates. The current unique-key decoder has no additional fixed
+127-container limit; the configured generic JSON depth budget still applies.
+These are implementation details, not API or performance guarantees. Generic
+Serde seeds continue to depend on the events supplied by their outer
+deserializer.
+
 The dedicated filter JSON decoder first scans and materializes the complete
 unique-key JSON source tree under the shared JSON decode budgets. Its domain
 seed then checks receiver AST and membership limits while constructing the

@@ -80,7 +80,7 @@ directional JSON limit profiles.
   equality, range, membership, existence, grouping, negation, matching options,
   and receiver-side expression limits.
 - Strict V1 Serde formats for metadata, schemas, and filters. The `json`
-  feature also provides bounded JSON-slice decoding.
+  feature also provides bounded JSON-slice decoding and encoding.
 - Structured `MetadataError`, validation errors, and wire-decode errors for
   callers that need to distinguish missing keys, unset values, type mismatches,
   invalid expressions, and input-limit failures.
@@ -137,19 +137,11 @@ wire-limit failures. Callers that previously matched `Json` for schema limits
 should match `Domain` and inspect its structured fields; ordinary Serde
 serialization errors remain `Json`.
 
-`decode_json_slice_with_limits` creates one `JsonDecodeSession` from the decode
-profile and uses it for complete-input admission plus the entire seeded wire
-traversal. The encode profile is separately available to bounded serialization
-boundaries. Rejected charges are not applied. Accepted input bytes remain
-consumed on failure; source value charges commit after the wire seed
-deserializes successfully, before subsequent domain conversion.
-The dedicated JSON helpers preserve native numbers under
-`serde_json/arbitrary_precision` feature unification. They first materialize a
-unique-key source tree under the configured JSON depth and other resource
-budgets, then decode the domain representation. The current unique-key decoder
-has no additional fixed 127-container limit. Domain deserialization failures do
-not retain original source coordinates. Generic Serde seeds continue to depend
-on the events supplied by their outer deserializer.
+Use bounded slice decoding for complete untrusted JSON input. Decode and encode
+profiles are independent, and metadata domain limits do not replace the shared
+JSON traversal budget. See the [bounded JSON guide](doc/user_guide.md#bounded-json-decoding)
+for configuration and calls, and [Resource and trust boundaries](doc/design.md#resource-and-trust-boundaries)
+for implementation accounting and materialization details.
 
 ## Important boundaries
 
