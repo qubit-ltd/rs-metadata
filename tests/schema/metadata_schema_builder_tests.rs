@@ -27,9 +27,14 @@ fn test_schema_builder_default_builds_empty_schema() {
 
 #[test]
 fn test_schema_builder_rejects_duplicate_field_declarations() {
-    let error = MetadataSchemaBuilder::default()
+    let builder = MetadataSchemaBuilder::default()
         .required("id", DataType::String)
-        .optional("id", DataType::Int64)
+        .optional("id", DataType::Int64);
+    let debug = format!("{builder:?}");
+    assert!(debug.contains("MetadataSchemaBuilder"), "{debug}");
+    assert!(debug.contains("id"), "{debug}");
+    assert!(debug.contains("has_error: true"), "{debug}");
+    let error = builder
         .build()
         .expect_err("duplicate schema declarations must be rejected");
 
@@ -69,7 +74,10 @@ fn test_schema_builder_clone_debug_and_equality_are_stable() {
         .unknown_filter_field_policy(UnknownFilterFieldPolicy::AllowUnchecked);
     let clone = builder.clone();
     assert_eq!(builder, clone);
-    assert!(format!("{builder:?}").contains("id"));
+    let debug = format!("{builder:?}");
+    assert!(debug.contains("MetadataSchemaBuilder"), "{debug}");
+    assert!(debug.contains("id"), "{debug}");
+    assert!(debug.contains("has_error: false"), "{debug}");
 }
 
 #[test]

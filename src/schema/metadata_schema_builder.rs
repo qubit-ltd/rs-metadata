@@ -8,8 +8,12 @@
 //! [`MetadataSchemaBuilder`] — fluent schema construction API.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 use qubit_datatype::DataType;
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
 
 use crate::MetadataError;
 use crate::MetadataResult;
@@ -17,8 +21,16 @@ use crate::schema::MetadataField;
 use crate::schema::MetadataSchema;
 use crate::schema::UnknownFilterFieldPolicy;
 use crate::schema::UnknownMetadataFieldPolicy;
+use crate::schema::internal::SchemaFields;
 
 /// Builder for [`MetadataSchema`].
+///
+/// Its [`fmt::Debug`] output uses strict redaction with one cumulative
+/// diagnostic budget for the field map and builder state. If that budget is
+/// exceeded, Debug displays `<redaction incomplete>`. A stored build error is
+/// represented only by whether an error exists; [`Self::build`] returns its
+/// original details. Debug output is bounded, but field names are not treated
+/// as a confidentiality boundary.
 ///
 /// # Examples
 ///
@@ -34,7 +46,7 @@ use crate::schema::UnknownMetadataFieldPolicy;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct MetadataSchemaBuilder {
     /// Field definitions being built.
     fields: BTreeMap<String, MetadataField>,
@@ -44,6 +56,35 @@ pub struct MetadataSchemaBuilder {
     unknown_filter_field_policy: UnknownFilterFieldPolicy,
     /// First duplicate declaration detected while building the schema.
     error: Option<MetadataError>,
+}
+
+impl Redact for MetadataSchemaBuilder {
+    /// Writes builder fields through one cumulative diagnostic budget.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Redaction writer receiving the builder representation.
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.record("MetadataSchemaBuilder", |fields| {
+            fields.nested("fields", &SchemaFields(&self.fields));
+            fields.unmarked("unknown_metadata_field_policy", || self.unknown_metadata_field_policy);
+            fields.unmarked("unknown_filter_field_policy", || self.unknown_filter_field_policy);
+            fields.unmarked("has_error", || self.error.is_some());
+        });
+    }
+}
+
+impl fmt::Debug for MetadataSchemaBuilder {
+    /// Writes the strict-policy diagnostic representation.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Formatter receiving the redacted representation.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let output = Redactor::strict().redact_text(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        formatter.write_str(text.as_ref())
+    }
 }
 
 impl MetadataSchemaBuilder {

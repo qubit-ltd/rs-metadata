@@ -434,6 +434,36 @@ fn test_metadata_schema_uses_strict_shared_diagnostic_budget() {
     assert!(!limited.text().as_str().contains("z_blocked"));
 }
 
+#[cfg(feature = "schema")]
+#[test]
+fn test_schema_builder_uses_strict_shared_diagnostic_budget() {
+    let builder = MetadataSchema::builder()
+        .optional("account", DataType::String)
+        .required("id", DataType::String);
+    assert_exact_diagnostic_budget_boundaries(&builder);
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn test_schema_builder_debug_is_bounded() {
+    let many = (0..256).fold(MetadataSchema::builder(), |builder, index| {
+        builder.optional(&format!("field-{index}"), DataType::String)
+    });
+    assert_eq!(format!("{many:?}"), "<redaction incomplete>");
+    let key = "k".repeat(100_000);
+    let invalid = MetadataSchema::builder()
+        .required(&key, DataType::String)
+        .optional(&key, DataType::String);
+    assert_eq!(format!("{invalid:?}"), "<redaction incomplete>");
+    assert!(matches!(
+        invalid.build(),
+        Err(qubit_metadata::MetadataError::DuplicateSchemaField { key: actual })
+            if actual == key
+    ));
+    let long = MetadataSchema::builder().optional(&key, DataType::String);
+    assert_eq!(format!("{long:?}"), "<redaction incomplete>");
+}
+
 #[test]
 fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
     let metadata = Metadata::new().with("secret_number", 12345_i32);
