@@ -49,11 +49,17 @@ qubit-metadata = "0.7"
 
 Enable optional layers explicitly when they are used:
 
+<!-- installation-dependencies:start -->
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.7", features = ["schema", "json"] }
 qubit-datatype = "0.15"
+qubit-value = "0.13"
 ```
+<!-- installation-dependencies:end -->
+
+The examples that construct `Value::Unset` import `qubit_value::Value` directly,
+so they also require the `qubit-value` dependency shown above.
 
 The `schema` feature includes `filter`; use `features = ["filter"]` when
 schema validation is not needed. There are no default features, so a

@@ -45,11 +45,17 @@ qubit-metadata = "0.7"
 
 使用可选能力时请显式启用对应 feature：
 
+<!-- installation-dependencies:start -->
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.7", features = ["schema", "json"] }
 qubit-datatype = "0.15"
+qubit-value = "0.13"
 ```
+<!-- installation-dependencies:end -->
+
+后文构造 `Value::Unset` 的示例直接导入 `qubit_value::Value`，因此也需要
+上面列出的 `qubit-value` 依赖。
 
 `schema` 会包含 `filter`；不需要 schema 校验时可使用
 `features = ["filter"]`。crate 没有默认 feature，因此只依赖 metadata 容器时
