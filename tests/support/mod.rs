@@ -16,3 +16,7 @@ pub mod test_support;
 #[cfg(feature = "json")]
 #[allow(dead_code)]
 pub mod bounded_encode;
+
+#[cfg(feature = "json")]
+#[allow(dead_code)]
+pub mod decode_profiles;
