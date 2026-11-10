@@ -35,6 +35,9 @@ with tarfile.open(archives[0]) as archive:
     root = roots.pop()
     names = {member.name for member in members}
     assert f'{root}/tests/support/bounded_encode.rs' in names, 'package missing the shared bounded-encoding oracle'
+    assert not any(name.endswith('.tar.gz') for name in names), 'package includes raw benchmark archives'
+    assert f'{root}/doc/design.md' in names
+    assert f'{root}/doc/design.zh_CN.md' in names
     assert f'{root}/fuzz/Cargo.toml' not in names
     assert not any(name.startswith(f'{root}/fuzz/fuzz_targets/') for name in names)
     destination = base / 'unpacked'
