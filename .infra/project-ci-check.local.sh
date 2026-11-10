@@ -45,6 +45,7 @@ with tarfile.open(archives[0]) as archive:
 PYCODE
 
 package_root=$(cat "$package_tmp/package-root")
+python3 "$project_root/.infra/tests/check-user-guide-consumers.py" "$package_root" "${local_dependency_patches[@]}"
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --no-default-features --features json --test metadata_fuzz_roundtrip_tests
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --all-features --all-targets
 "$project_root/.infra/check-package-with-latest-value-path.sh" "$(cat "$package_tmp/package-archive")"
