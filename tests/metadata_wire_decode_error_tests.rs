@@ -36,6 +36,7 @@ use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
 use serde_json::Value;
 use serde_json::from_str;
+#[cfg(feature = "schema")]
 use serde_json::to_value;
 use serde_json::to_vec;
 
