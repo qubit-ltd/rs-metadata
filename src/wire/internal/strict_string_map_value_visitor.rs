@@ -22,6 +22,7 @@ use serde::de::Visitor;
 use super::super::strict_string_map::StrictStringMap;
 use crate::MetadataError;
 use crate::MetadataWireLimitKind;
+use crate::internal::BoundedStringSeed;
 
 /// Builds a strict map while enforcing key, count, and value decoding limits.
 ///
@@ -114,7 +115,7 @@ where
         A: MapAccess<'de>,
     {
         let mut values = BTreeMap::new();
-        while let Some(key) = map.next_key::<String>()? {
+        while let Some(key) = map.next_key_seed(BoundedStringSeed::<_, String>::new(|key: &str| {
             if key.len() > self.max_key_bytes {
                 if let Some(slot) = &self.error_slot {
                     *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
@@ -123,12 +124,14 @@ where
                         maximum: self.max_key_bytes,
                     });
                 }
-                return Err(de::Error::custom(format!(
+                return Err(format!(
                     "map key has {} bytes, exceeding the limit of {} bytes",
                     key.len(),
                     self.max_key_bytes,
-                )));
+                ));
             }
+            Ok(())
+        }))? {
             if values.len() >= self.max_entries {
                 if let Some(slot) = &self.error_slot {
                     *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {

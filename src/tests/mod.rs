@@ -9,3 +9,6 @@
 
 #[cfg(feature = "json")]
 mod metadata_limits_tests;
+
+#[cfg(test)]
+mod bounded_string_seed_tests;

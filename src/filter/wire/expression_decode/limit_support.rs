@@ -11,7 +11,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use qubit_budget::InsufficientBudgetError;
-use serde::de;
 
 use crate::FilterLimitKind;
 use crate::FilterLimits;
@@ -64,9 +63,6 @@ pub(in crate::filter::wire) fn capture_filter_error(
 
 /// Checks one decoded key against receiver filter limits.
 ///
-/// # Type Parameters
-///
-/// * `E` - Deserializer error type used to report an oversized key.
 /// # Parameters
 ///
 /// * `key` - Decoded metadata key whose UTF-8 byte length is checked.
@@ -75,20 +71,17 @@ pub(in crate::filter::wire) fn capture_filter_error(
 ///
 /// # Errors
 ///
-/// Returns `E::custom` with a filter-limit error when the key exceeds the
+/// Returns the structured filter-limit error when the key exceeds the
 /// receiver's maximum key length.
 ///
 /// # Returns
 ///
 /// Returns `Ok(())` when the key fits the receiver limit.
-pub(in crate::filter::wire) fn check_key<E>(
+pub(in crate::filter::wire) fn check_key(
     key: &str,
     receiver_limits: FilterLimits,
     error_slot: &Rc<RefCell<Option<MetadataError>>>,
-) -> Result<(), E>
-where
-    E: de::Error,
-{
+) -> Result<(), MetadataError> {
     if key.len() > receiver_limits.max_key_bytes() {
         let error = MetadataError::FilterLimitExceeded {
             kind: FilterLimitKind::KeyBytes,
@@ -96,7 +89,7 @@ where
             maximum: receiver_limits.max_key_bytes(),
         };
         capture_filter_error(error_slot, error.clone());
-        return Err(E::custom(error));
+        return Err(error);
     }
     Ok(())
 }

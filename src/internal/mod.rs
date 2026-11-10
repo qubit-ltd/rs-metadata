@@ -7,6 +7,9 @@
 // =============================================================================
 //! Internal implementation helpers.
 
+mod bounded_string_seed;
+mod bounded_string_visitor;
 mod metadata_values;
 
+pub(crate) use bounded_string_seed::BoundedStringSeed;
 pub(crate) use metadata_values::MetadataValues;

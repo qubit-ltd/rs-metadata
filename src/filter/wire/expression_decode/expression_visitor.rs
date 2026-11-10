@@ -26,6 +26,7 @@ use super::value_sequence_seed::ValueSequenceSeed;
 use crate::FilterLimitKind;
 use crate::FilterLimits;
 use crate::MetadataError;
+use crate::internal::BoundedStringSeed;
 
 /// Visitor for one expression map.
 pub(in crate::filter::wire) struct ExpressionVisitor<'a> {
@@ -101,8 +102,9 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     if fields.key.is_some() {
                         return Err(de::Error::duplicate_field("key"));
                     }
-                    let key = map.next_value::<String>()?;
-                    check_key::<A::Error>(&key, self.receiver_limits, &self.error_slot)?;
+                    let key = map.next_value_seed(BoundedStringSeed::new(|key: &str| {
+                        check_key(key, self.receiver_limits, &self.error_slot).map_err(|error| error.to_string())
+                    }))?;
                     fields.key = Some(key);
                 }
                 "value" => {
