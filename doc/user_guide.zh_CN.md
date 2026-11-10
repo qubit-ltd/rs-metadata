@@ -38,12 +38,26 @@ Metadata -> MetadataSchema -> 已存值校验
 
 使用核心 metadata API（crate 默认只启用核心功能）：
 
+<!-- core-dependencies:start -->
 ```toml
 [dependencies]
 qubit-metadata = "0.7"
 ```
+<!-- core-dependencies:end -->
 
 使用可选能力时请显式启用对应 feature：
+
+<!-- core-read-example:start -->
+```rust
+use qubit_metadata::Metadata;
+
+pub fn main() -> qubit_metadata::MetadataResult<()> {
+    let metadata = Metadata::new().with("tenant", "acme");
+    assert_eq!(metadata.get_ref::<str>("tenant")?, "acme");
+    Ok(())
+}
+```
+<!-- core-read-example:end -->
 
 <!-- installation-dependencies:start -->
 ```toml
@@ -361,6 +375,13 @@ unset 值不算存在。membership 必须保留不可比较候选、确定匹配
 语义翻译，应拒绝该谓词；或者仅在能够取得完整候选集后进行本地匹配。不能先执行会漏掉匹配项的下推、
 分页、limit 或聚合，再把本地过滤结果视为等价。应按应用需求在语义过滤完成后排序和分页。
 
+<!-- filter-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["filter"] }
+```
+<!-- filter-dependencies:end -->
+
 <!-- query-translation-example:start -->
 ```rust
 // =============================================================================
@@ -392,6 +413,13 @@ pub fn main() -> qubit_metadata::MetadataResult<()> {
 ### 有界 JSON 解码
 
 启用 `json` 后，对于完整的不可信 JSON 输入使用 slice 解码方法：
+
+<!-- bounded-json-decode-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+```
+<!-- bounded-json-decode-dependencies:end -->
 
 <!-- bounded-json-decoding-example:start -->
 ```rust
@@ -448,6 +476,14 @@ Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
 解码和编码预算相互独立。此例将输入上限设为 64 KiB、输出上限设为
 128 KiB。Metadata 领域限制描述 V1 metadata 契约；JSON 限制约束通用 JSON
 遍历和字节数。
+
+<!-- budget-json-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+qubit-budget = { version = "0.10", features = ["json"] }
+```
+<!-- budget-json-dependencies:end -->
 
 <!-- directional-json-limits-example:start -->
 ```rust
@@ -570,10 +606,12 @@ wire 契约错误使用 `Domain(MetadataError::WireLimitExceeded { kind, value, 
 接收端的 `FilterLimits` 是瞬态策略，不会序列化。编码器会在 writer 写入首字节前完成文档
 编码和预算检查，因此预算失败不会写入目标；目标 I/O 失败仍可能留下部分前缀。
 
+<!-- filter-json-dependencies:start -->
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.7", features = ["json", "filter"] }
 ```
+<!-- filter-json-dependencies:end -->
 
 下面的示例构造 tenant filter，编码并解码后检查匹配结果，同时验证 writer 和 Vec API
 生成相同的字节：

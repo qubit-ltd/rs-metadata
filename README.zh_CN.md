@@ -60,6 +60,7 @@ qubit-datatype = "0.15"
 `all`。声明 schema 字段类型时直接依赖 `qubit-datatype`；直接构造 `Value` 操作数时依赖
 `qubit-value`；定制定向 JSON limits 时直接依赖 `qubit-budget`。
 
+
 ## 提供的能力
 
 - `Metadata`：有序的 `String -> Value` 存储，支持严格 `get`、借用 `get_ref`、可选/默认值读取、显式 `convert`、`set`、
@@ -76,6 +77,15 @@ qubit-datatype = "0.15"
 解码和编码策略相互独立。启用 `json` feature 后可进行 JSON 往返；
 定向预算配置见[中文用户手册](doc/user_guide.zh_CN.md#定向-json-预算)。
 
+JSON 往返示例需要此依赖：
+
+<!-- readme-json-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+```
+<!-- readme-json-dependencies:end -->
+
 <!-- readme-json-roundtrip-example:start -->
 ```rust
 use qubit_metadata::Metadata;
@@ -90,9 +100,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 <!-- readme-json-roundtrip-example:end -->
 
-此示例需要
-`qubit-metadata = { version = "0.7", features = ["json"] }`。直接配置
-`qubit-budget` 的方法见用户手册。
+直接配置 `qubit-budget` 的方法见用户手册。
 
 Metadata 和 schema 的有界 JSON 编码遇到 V1 wire 限额时，会返回
 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`。原先针对 schema 限额匹配

@@ -42,12 +42,26 @@ The following sections implement this path incrementally.
 
 For the core metadata API (the crate's default feature set is core-only):
 
+<!-- core-dependencies:start -->
 ```toml
 [dependencies]
 qubit-metadata = "0.7"
 ```
+<!-- core-dependencies:end -->
 
 Enable optional layers explicitly when they are used:
+
+<!-- core-read-example:start -->
+```rust
+use qubit_metadata::Metadata;
+
+pub fn main() -> qubit_metadata::MetadataResult<()> {
+    let metadata = Metadata::new().with("tenant", "acme");
+    assert_eq!(metadata.get_ref::<str>("tenant")?, "acme");
+    Ok(())
+}
+```
+<!-- core-read-example:end -->
 
 <!-- installation-dependencies:start -->
 ```toml
@@ -404,6 +418,13 @@ Do not apply a lossy pushdown, pagination, limit, or aggregation before local
 filtering and then treat the result as equivalent. Apply sorting and pagination
 after semantic filtering as required by the application.
 
+<!-- filter-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["filter"] }
+```
+<!-- filter-dependencies:end -->
+
 <!-- query-translation-example:start -->
 ```rust
 // =============================================================================
@@ -436,6 +457,13 @@ pub fn main() -> qubit_metadata::MetadataResult<()> {
 
 When `json` is enabled, use the slice decoding methods for complete untrusted
 JSON input:
+
+<!-- bounded-json-decode-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+```
+<!-- bounded-json-decode-dependencies:end -->
 
 <!-- bounded-json-decoding-example:start -->
 ```rust
@@ -499,6 +527,14 @@ Decode and encode budgets are independent. This example admits up to 64 KiB
 of input while allowing up to 128 KiB of output. Metadata domain limits
 describe the V1 metadata contract; JSON limits bound generic JSON traversal
 and bytes.
+
+<!-- budget-json-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+qubit-budget = { version = "0.10", features = ["json"] }
+```
+<!-- budget-json-dependencies:end -->
 
 <!-- directional-json-limits-example:start -->
 ```rust
@@ -635,10 +671,12 @@ encoding. `to_json_vec` and `to_json_writer` use the default JSON output budget;
 the complete document and its budget before writing to a writer, so a budget
 failure writes no bytes; a destination I/O failure can still leave a prefix.
 
+<!-- filter-json-dependencies:start -->
 ```toml
 [dependencies]
 qubit-metadata = { version = "0.7", features = ["json", "filter"] }
 ```
+<!-- filter-json-dependencies:end -->
 
 This example builds a tenant filter, encodes and decodes it, checks the match,
 and verifies that the writer and Vec APIs produce identical bytes:

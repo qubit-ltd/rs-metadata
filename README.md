@@ -68,6 +68,7 @@ declaring schema field types, and `qubit-value` when constructing `Value`
 operands directly. Depend on `qubit-budget` directly when customizing the
 directional JSON limit profiles.
 
+
 ## What it provides
 
 - `Metadata`: ordered `String -> Value` storage with strict `get`, borrowed
@@ -89,6 +90,15 @@ Decode and encode policies are deliberately independent. The `json` feature
 enables JSON round trips; configure directional budgets in the
 [English user guide](doc/user_guide.md#directional-json-budgets).
 
+The JSON round-trip example needs this dependency:
+
+<!-- readme-json-dependencies:start -->
+```toml
+[dependencies]
+qubit-metadata = { version = "0.7", features = ["json"] }
+```
+<!-- readme-json-dependencies:end -->
+
 <!-- readme-json-roundtrip-example:start -->
 ```rust
 use qubit_metadata::Metadata;
@@ -103,9 +113,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 <!-- readme-json-roundtrip-example:end -->
 
-This example requires
-`qubit-metadata = { version = "0.7", features = ["json"] }`. See the guide
-for direct `qubit-budget` configuration.
+For direct `qubit-budget` configuration, see the guide.
 
 Metadata and schema bounded JSON encoding return
 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })` for V1
