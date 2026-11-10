@@ -703,6 +703,15 @@ JSON limits may be lowered for a particular boundary.
 
 ## Errors and diagnostics
 
+Aggregate schema validation retains every issue in `MetadataValidationError::issues()`.
+Its `Debug` and `Display` views use one cumulative diagnostic budget; exhaustion
+produces an explicit `<redaction incomplete>` marker rather than formatting the
+entire collection. The summary still reports the total issue count. Diagnostic
+text is not a stable serialization format or a confidentiality boundary for
+arbitrary keys and application-supplied messages. Collection itself remains
+complete and is not capped by the formatting budget.
+
+
 Use the error type that matches the boundary being validated:
 
 | Boundary | API | Typical information |

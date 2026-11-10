@@ -88,6 +88,13 @@ unique-key decoder 没有额外固定的 127 层容器上限，但仍受配置�
 
 ## 错误分类与脱敏
 
+Schema 聚合校验仍通过 `MetadataValidationError::issues()` 保留全部问题。
+其 `Debug` 与 `Display` 使用一个累计诊断预算；预算耗尽时输出明确的
+`<redaction incomplete>` 标记，不再格式化整个集合。摘要仍报告问题总数。
+诊断文本不是稳定的序列化格式，也不是任意 key 或应用自定义消息的保密边界。
+格式化预算不限制问题收集，结构化问题集合仍保持完整。
+
+
 `MetadataError` 覆盖 metadata 读取和 schema 校验，校验结果可以暴露多个相互独立的问题。Filter
 builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语法/envelope 失败和不支持版本。有界 metadata 与 schema 编码通过 `MetadataWireEncodeError::Domain` 保留 `MetadataError::WireLimitExceeded`；schema wire preflight 优先于 JSON 输出预算。原先针对 schema wire 限额匹配 `Json` 的调用方应改为匹配 `Domain` 并读取 `kind`、`value` 和 `maximum`；普通 Serde 序列化错误仍使用 `Json`。诊断
 保留有用的类型、数量和版本号，但不嵌入被拒绝的 metadata 值；这属于诊断脱敏，不承诺隐藏任意

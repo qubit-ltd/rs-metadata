@@ -9,6 +9,10 @@
 
 use std::fmt;
 
+use qubit_redact::Redact;
+use qubit_redact::RedactionWriter;
+use qubit_redact::Redactor;
+
 use crate::metadata_error::MetadataError;
 
 /// Aggregate error returned by schema-level validation APIs.
@@ -16,6 +20,9 @@ use crate::metadata_error::MetadataError;
 /// Unlike single-entry metadata accessors, schema validation can discover
 /// multiple independent issues in one pass. This type preserves all collected
 /// [`MetadataError`] values so callers can report or fix them together.
+/// `Debug` and `Display` share a bounded diagnostic traversal; use
+/// [`Self::issues`] to inspect the complete collection independently of
+/// formatting limits.
 ///
 /// # Examples
 ///
@@ -25,7 +32,7 @@ use crate::metadata_error::MetadataError;
 /// let error = MetadataValidationError::from_issue(MetadataError::MissingKey("tenant".into()));
 /// assert_eq!(error.len(), 1);
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[must_use]
 pub struct MetadataValidationError {
     /// Collected validation issues.
@@ -99,18 +106,53 @@ impl MetadataValidationError {
     }
 }
 
+impl Redact for MetadataValidationError {
+    /// Writes admitted issues under one cumulative diagnostic budget.
+    ///
+    /// Issue text is diagnostic data, not a confidentiality boundary for
+    /// arbitrary keys or application-supplied error messages.
+    ///
+    /// # Parameters
+    ///
+    /// * `writer` - Destination sharing output, node, and collection budgets.
+    fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
+        writer.sequence(|items| {
+            items.for_each(&self.issues, |items, issue| {
+                items.unredacted_item(|| issue);
+            });
+        });
+    }
+}
+
+impl fmt::Debug for MetadataValidationError {
+    /// Formats a bounded diagnostic summary using the strict policy.
+    ///
+    /// # Parameters
+    ///
+    /// * `formatter` - Destination receiving the diagnostic summary.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, formatter)
+    }
+}
+
 impl fmt::Display for MetadataValidationError {
-    /// Formats the validation summary and every collected issue.
+    /// Formats the issue count and a bounded diagnostic view of the issues.
+    ///
+    /// The complete issue collection remains available through `issues()`.
+    /// Exhausted diagnostic budgets produce an explicit incomplete marker.
     ///
     /// # Parameters
     ///
     /// * `formatter` - Formatter receiving the validation summary.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{} metadata validation issue(s)", self.issues.len())?;
-        for (index, issue) in self.issues.iter().enumerate() {
-            write!(formatter, "; {}: {issue}", index + 1)?;
-        }
-        Ok(())
+        let output = Redactor::strict().redact_text(self);
+        let text = output.text_or_marker("<redaction incomplete>");
+        write!(
+            formatter,
+            "{} metadata validation issue(s): {}",
+            self.issues.len(),
+            text
+        )
     }
 }
 

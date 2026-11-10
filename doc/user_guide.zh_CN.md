@@ -630,6 +630,13 @@ serializer 的错误类型（`S::Error`），例如 `serde_json::Error`；领域
 
 ## 错误与诊断
 
+Schema 聚合校验仍通过 `MetadataValidationError::issues()` 保留全部问题。
+其 `Debug` 与 `Display` 使用一个累计诊断预算；预算耗尽时输出明确的
+`<redaction incomplete>` 标记，不再格式化整个集合。摘要仍报告问题总数。
+诊断文本不是稳定的序列化格式，也不是任意 key 或应用自定义消息的保密边界。
+格式化预算不限制问题收集，结构化问题集合仍保持完整。
+
+
 根据校验边界选择错误类型：
 
 | 边界 | API | 典型信息 |

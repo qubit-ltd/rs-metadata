@@ -130,6 +130,15 @@ appropriate for ordering or grouping.
 
 ## Error taxonomy and redaction
 
+Aggregate schema validation retains every issue in `MetadataValidationError::issues()`.
+Its `Debug` and `Display` views use one cumulative diagnostic budget; exhaustion
+produces an explicit `<redaction incomplete>` marker rather than formatting the
+entire collection. The summary still reports the total issue count. Diagnostic
+text is not a stable serialization format or a confidentiality boundary for
+arbitrary keys and application-supplied messages. Collection itself remains
+complete and is not capped by the formatting budget.
+
+
 `MetadataError` covers metadata access and schema validation; validation results
 can expose multiple independent issues. Filter builders report malformed or
 incompatible expressions. Wire errors distinguish domain-limit failures,
