@@ -47,12 +47,12 @@ metadata、schema 和 filter 使用严格的 V1 envelope。未知字段、畸形
 被拒绝。Filter limits 是接收端的瞬态策略，不会序列化。有界 decoder 将不支持版本报告为
 `UnsupportedVersion`；schema envelope 的泛型 Serde 解码拒绝位置式序列，要求规范四字段对象；
 现有对象输出和 V1 版本保持不变。schema `fields` map 的每个值也必须是仅含 `data_type` 和
-`required` 的对象，拒绝位置式字段数组。若已存 V1 schema 使用字段数组，升级前须用旧版本读取，
-再由旧版本重编码为规范对象；新 decoder 不提供数组回退。泛型 Serde 解码仍使用普通
+`required` 的对象，拒绝位置式字段数组。若已存 V1 schema 使用字段数组，升级前须用经核实确实接受
+该表示的旧版本读取，再由该版本重编码为规范对象；新 decoder 不提供数组回退。泛型 Serde 解码仍使用普通
 deserializer 错误通道。
 filter 的 `options` 同样要求恰含 `numeric_comparison_policy` 的对象；V1 envelope decoder
 和直接的 `FilterMatchOptions` 反序列化都会拒绝位置数组。仓库内测试、文档及检索到的下游调用方
-均未依赖位置式 options。若调用方存储了这类数组，升级前须使用旧版本读取，再将其重编码为规范对象，
+均未依赖位置式 options。若调用方存储了这类数组，升级前须使用经核实确实接受该表示的旧版本读取，再将其重编码为规范对象，
 例如 `{"numeric_comparison_policy":"exact"}`（或对应策略）。序列化后的 V1 输出和 wire 版本不变。
 
 ## 资源与信任边界
@@ -123,7 +123,4 @@ slice 解码入口也会在 wire 物化后的 payload 无法转换为 scalar met
 
 ## 兼容策略
 
-0.6 曾按上述规则修改读取签名和缺失错误处理，不保留兼容别名。V1 wire 表示、filter 语义和
-schema 校验行为保持不变。已存值的 schema 校验仍与兼容数值的 filter 检查分离。
-集成方应使用 builder 和公开 Serde API，让 wire 数据保持在规范限制内，并把未来 wire 版本变化
-作为明确的兼容事件处理。
+已发布的 0.6.2 API 已具有上文所述的读取签名和缺失错误处理，相关已移除 API 不提供兼容别名。兼容性应分为三个维度：V1 wire 版本与规范对象输出、decoder 接受的输入表示范围，以及对调用方公开的错误/API 契约。wire 版本和规范输出稳定，不代表输入接受范围不变。特别是当前 decoder 会拒绝位置式 schema envelope/字段序列以及位置式 filter `options` 数组；迁移方式见[0.7 兼容性核查清单](migration_0.7.zh_CN.md#升级前的兼容性核查)。这些输入限制首次出现在哪个版本尚未确认。错误分类和 Rust API 变化也应作为独立契约核对，不能从 wire 版本推断。

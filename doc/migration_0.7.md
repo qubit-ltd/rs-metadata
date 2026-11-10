@@ -2,10 +2,31 @@
 
 [中文迁移说明](migration_0.7.zh_CN.md) · [User guide](user_guide.md) · [README](../README.md) · [Design](design.md) · [API documentation](https://docs.rs/qubit-metadata)
 
-This guide covers dependency coordination when moving to `qubit-metadata`
-0.7. The comparison below uses the published `qubit-metadata` 0.6.2 manifest
-from the local Cargo registry and this repository's 0.7.0 manifest. It does not
-claim that every 0.6.x release has the same dependency set.
+This guide covers dependency coordination and checks against the current target
+contracts when moving to `qubit-metadata` 0.7. The comparison below uses the
+published `qubit-metadata` 0.6.2 manifest from the local Cargo registry and this
+repository's 0.7.0 manifest. It does not claim that every 0.6.x release has the
+same dependency set.
+
+## Compatibility checks before upgrading
+
+Use this checklist when your application stores, sends, or classifies metadata
+wire data. These are the current target-version contracts; the first release
+that introduced each input or error-contract change has not been confirmed.
+The stable design document describes the [V1 wire contract](design.md#v1-wire-contract-and-versioning)
+and [error taxonomy](design.md#error-taxonomy-and-redaction).
+
+| Check | Applies when | Current contract and action |
+| --- | --- | --- |
+| Schema envelope and field objects | You persist or produce schema JSON, especially if it may contain positional sequences | The envelope must be the canonical four-field object, and every `fields` value must be an object containing exactly `data_type` and `required`. Both positional envelope sequences and positional field arrays are rejected. If stored data uses either form, back it up, read it with an older library version verified to accept that representation, encode it as canonical objects, validate it with the target version, then switch consumers. Keep the backup until the target-version validation succeeds. See the [schema wire contract](design.md#v1-wire-contract-and-versioning). |
+| Filter `options` | You persist/send filter JSON or deserialize `FilterMatchOptions` directly, and options may be a positional array | `options` must be an object containing exactly `numeric_comparison_policy`; positional arrays are rejected by the envelope decoder and direct options deserialization. Preserve the stored policy when encoding the canonical object; do not replace every policy with `exact`. For legacy arrays, use the same backup → verified old-version read → canonical object encoding → target-version validation → consumer switch sequence. See the [filter options contract](design.md#v1-wire-contract-and-versioning). |
+| Decode error classification | Callers treat `InvalidJson` as the complete set of JSON decoding failures | `Decode` carries shared decoder failures such as empty input, invalid UTF-8, unexpected top-level types, and deserialization failures, with structured accessors. Add handling for `Decode` while retaining the dedicated `Read`, `Budget`, `Quantity`, and `Syntax` cases and the existing `InvalidJson` case. See the [decode error contract](design.md#error-taxonomy-and-redaction). |
+| Bounded encode wire limits | Callers handle metadata/schema wire-limit failures only through the `Json` encode-error branch | Bounded metadata and schema encoders report wire-limit failures as `Domain(MetadataError::WireLimitExceeded { .. })`; handle that variant and its `kind`, `value`, and `maximum`. Ordinary Serde serialization failures remain in `Json`. See the [bounded encode error contract](design.md#error-taxonomy-and-redaction). |
+
+The positional-array changes are input-acceptance changes; they do not change
+canonical V1 output or the wire version. Do not infer that an older release
+accepts a stored representation: verify it against the exact library version
+and data shape before using it for migration.
 
 ## Dependency versions
 

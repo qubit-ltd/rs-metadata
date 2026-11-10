@@ -67,14 +67,15 @@ generic Serde decoding retains its ordinary deserializer error channel.
 Each value in the schema `fields` map must itself be an object containing
 exactly `data_type` and `required`; positional field arrays are rejected.
 Consumers with stored V1 schemas that use positional field arrays must read
-them with the previous library version and re-serialize them as canonical
-objects before upgrading. The new decoder does not provide an array fallback.
+them with an older library version verified to accept that representation and
+re-serialize them as canonical objects before upgrading. The new decoder does
+not provide an array fallback.
 Filter `options` likewise requires an object containing exactly
 `numeric_comparison_policy`; positional arrays are rejected by both the V1
 envelope decoder and direct `FilterMatchOptions` deserialization. No in-repo
 tests, documentation, or searched downstream callers rely on positional
-options. Callers storing such arrays must read them with the previous library
-version and re-serialize them as the canonical object
+options. Callers storing such arrays must read them with an older library
+version verified to accept that representation and re-serialize them as the canonical object
 `{"numeric_comparison_policy":"exact"}` (or the corresponding policy) before
 upgrading. Serialized V1 output and the wire version do not change.
 
@@ -183,10 +184,14 @@ Applications should enable only the layers used at each boundary.
 
 ## Compatibility policy
 
-Version 0.6 changed read signatures and missing error handling as described
-above; no compatibility aliases are retained. The V1 wire representation,
-filter semantics, and schema validation behavior remain unchanged.
-The crate keeps strict stored-value schema validation distinct from compatible
-numeric filter checks. Integrations should use builders and public Serde APIs,
-keep wire data within canonical limits, and treat a future wire-version change
-as an explicit compatibility event.
+The published 0.6.2 API has the read signatures and missing-error handling
+described above; those removed APIs have no compatibility aliases. Compatibility
+has three separate dimensions: the V1 wire version and canonical
+object output, the set of input representations accepted by decoders, and the
+error/API contracts exposed to callers. Stable wire version and canonical output do not guarantee an unchanged
+input-acceptance range. In particular, schema envelope/field positional
+sequences and positional filter `options` arrays are rejected by the current
+decoder; see the [0.7 migration checklist](migration_0.7.md#compatibility-checks-before-upgrading).
+The release that first introduced these input restrictions has not been
+confirmed. Error classification and Rust API changes must likewise be checked
+as their own contracts, not inferred from the wire version.

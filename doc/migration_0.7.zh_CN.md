@@ -2,9 +2,22 @@
 
 [English migration guide](migration_0.7.md) · [用户手册](user_guide.zh_CN.md) · [README](../README.zh_CN.md) · [设计文档](design.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
-本文说明升级到 `qubit-metadata` 0.7 时如何协调依赖。下表以 Cargo
+本文说明升级到 `qubit-metadata` 0.7 时如何协调依赖并核查当前目标版本的兼容契约。下表以 Cargo
 registry 中已发布的 `qubit-metadata 0.6.2` 清单和本仓库 `0.7.0` 清单为对照，
 不能据此推断所有 0.6.x 版本都使用相同依赖。
+
+## 升级前的兼容性核查
+
+当应用保存、发送或分类 metadata wire 数据时，请按此清单核查。这里描述的是当前目标版本契约；各项输入或错误契约变化首次出现在哪个版本尚未确认。稳定设计文档说明了 [V1 wire 契约](design.zh_CN.md#v1-线协议与版本策略)和[错误分类](design.zh_CN.md#错误分类与脱敏)。
+
+| 核查项 | 适用条件 | 当前契约与行动 |
+| --- | --- | --- |
+| Schema envelope 与字段对象 | 应用持久化或生成 schema JSON，尤其是数据可能含位置序列时 | envelope 必须是规范四字段对象，且 `fields` 中每个值必须是仅含 `data_type` 和 `required` 的对象。位置式 envelope 序列和位置式字段数组都会被拒绝。若已存数据使用其中任一形式，先备份，再用已验证确实接受该表示的旧版读取，编码为规范对象，由目标版本验证，最后切换消费者。目标版验证成功前保留备份。见 [schema wire 契约](design.zh_CN.md#v1-线协议与版本策略)。 |
+| Filter `options` | 应用持久化/发送 filter JSON 或直接反序列化 `FilterMatchOptions`，且 options 可能是位置数组时 | `options` 必须是仅含 `numeric_comparison_policy` 的对象；envelope decoder 和直接 options 反序列化都会拒绝位置数组。编码为规范对象时保留原有策略，不能一律替换成 `exact`。旧数组按“备份→经验证的旧版读取→规范对象编码→目标版验证→切换消费者”处理。见 [filter options 契约](design.zh_CN.md#v1-线协议与版本策略)。 |
+| Decode 错误分类 | 调用方把 `InvalidJson` 当作全部 JSON 解码失败时 | `Decode` 承载共享 decoder 失败，如空输入、非法 UTF-8、顶层类型不符和反序列化失败，并提供结构化 accessor。应增加 `Decode` 处理，同时保留独立的 `Read`、`Budget`、`Quantity`、`Syntax` 分支及现有 `InvalidJson` 分支。见 [解码错误契约](design.zh_CN.md#错误分类与脱敏)。 |
+| 有界编码的 wire 限额 | 调用方只通过编码错误的 `Json` 分支处理 metadata/schema wire 限额时 | 有界 metadata 和 schema encoder 将 wire 限额报告为 `Domain(MetadataError::WireLimitExceeded { .. })`；应处理此变体及其 `kind`、`value`、`maximum`。普通 Serde 序列化失败仍属于 `Json`。见[有界编码错误契约](design.zh_CN.md#错误分类与脱敏)。 |
+
+位置数组相关变化收紧了输入接受范围，不改变规范 V1 输出或 wire 版本。不要推定旧版本一定接受某种存储表示；迁移前应使用准确的库版本和数据形态进行核实。
 
 ## 依赖版本对照
 
