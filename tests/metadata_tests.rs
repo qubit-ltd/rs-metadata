@@ -68,8 +68,6 @@ fn test_optional_and_default_reads_do_not_hide_type_errors() {
 
 #[test]
 fn test_conversion_optional_uses_policy_and_defaults_are_lazy() {
-    use std::cell::Cell;
-
     use qubit_datatype::BlankStringPolicy;
     use qubit_datatype::StringConversionPolicy;
     struct CountedDefault<'a>(&'a Cell<usize>);
@@ -807,10 +805,6 @@ fn test_strict_read_preserves_type_and_borrows_string() {
 
 #[test]
 fn test_explicit_conversion_preserves_source_and_policy() {
-    use std::error::Error;
-
-    use qubit_datatype::ConversionLimits;
-    use qubit_datatype::ConversionPolicy;
     use qubit_datatype::NumericConversionPolicy;
     let metadata = Metadata::new().with("score", 1.5_f64);
     let error = metadata.convert::<i32>("score").expect_err("exact conversion");
@@ -852,9 +846,6 @@ fn test_explicit_reads_distinguish_absent_and_unset() {
 
 #[test]
 fn test_explicit_conversion_retains_budget_failure() {
-    use qubit_datatype::ConversionLimits;
-    use qubit_datatype::ConversionPolicy;
-    use qubit_datatype::NumericConversionLimits;
     let limits = ConversionLimits::builder()
         .numeric_limits(NumericConversionLimits::builder().max_text_bytes(2).build())
         .build();

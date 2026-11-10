@@ -14,7 +14,15 @@
 /// ```
 /// use qubit_metadata::FilterLimitKind;
 ///
-/// assert_eq!(FilterLimitKind::Depth, FilterLimitKind::Depth);
+/// let kind = FilterLimitKind::Depth;
+/// let description = match kind {
+///     FilterLimitKind::Depth => "expression depth",
+///     FilterLimitKind::Nodes => "expression node count",
+///     FilterLimitKind::SetValues => "set-membership values",
+///     FilterLimitKind::KeyBytes => "metadata key bytes",
+///     _ => "other filter resource",
+/// };
+/// assert_eq!(description, "expression depth");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]

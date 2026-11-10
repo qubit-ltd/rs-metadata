@@ -79,9 +79,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key == value` with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -103,9 +105,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key != value` with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -127,9 +131,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key < value` with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -151,9 +157,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key <= value` with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -175,9 +183,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key > value` with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -199,9 +209,11 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends `key >= value` with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -223,10 +235,12 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a membership predicate with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `I` - Iterator that supplies candidate values.
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -267,10 +281,12 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-membership predicate with logical AND.
+    ///
     /// # Type Parameters
     ///
     /// * `I` - Iterator that supplies candidate values.
     /// * `T` - Value type converted into the stored representation.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -311,6 +327,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends an existence predicate with logical AND.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -325,6 +342,7 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a non-existence predicate with logical AND.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
@@ -340,6 +358,14 @@ impl FilterExpressionBuilder {
 
     /// Appends a grouped expression with logical AND.
     ///
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
+    ///
+    /// # Parameters
+    ///
+    /// * `build` - Callback that constructs the nested group.
+    ///
     /// # Examples
     ///
     /// ```
@@ -351,12 +377,6 @@ impl FilterExpressionBuilder {
     ///     .build()?;
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
-    /// # Type Parameters
-    ///
-    /// * `F` - Callback that visits operands or constructs a nested group.
-    /// # Parameters
-    ///
-    /// * `build` - Callback that constructs the nested group.
     #[inline]
     #[must_use]
     pub fn and_group<F>(self, build: F) -> Self
@@ -370,6 +390,14 @@ impl FilterExpressionBuilder {
     }
 
     /// Appends a grouped expression with logical OR.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
+    ///
+    /// # Parameters
+    ///
+    /// * `build` - Callback that constructs the nested group.
     ///
     /// # Examples
     ///
@@ -398,12 +426,6 @@ impl FilterExpressionBuilder {
     /// assert!(filter.matches(&metadata));
     /// # Ok::<(), qubit_metadata::MetadataError>(())
     /// ```
-    /// # Type Parameters
-    ///
-    /// * `F` - Callback that visits operands or constructs a nested group.
-    /// # Parameters
-    ///
-    /// * `build` - Callback that constructs the nested group.
     #[inline]
     #[must_use]
     pub fn or_group<F>(self, build: F) -> Self
@@ -451,10 +473,12 @@ impl FilterExpressionBuilder {
 
     /// Adds a lazily constructed condition and enforces hard limits
     /// immediately.
+    ///
     /// # Parameters
     ///
     /// * `key` - Metadata key used by the condition.
-    /// * `condition` - Input condition used by this operation.
+    /// * `condition` - Deferred constructor for the next condition, evaluated
+    ///   only while the builder is still valid.
     /// * `combine` - Function that combines the existing expression with the
     ///   new condition.
     fn append(
@@ -503,11 +527,13 @@ impl FilterExpressionBuilder {
     }
 
     /// Combines a non-empty nested group and immediately enforces hard limits.
+    ///
     /// # Parameters
     ///
-    /// * `operator` - Filter operator used for validation.
-    /// * `group` - Input group used by this operation.
-    /// * `combine` - Input combine used by this operation.
+    /// * `operator` - Logical operator included in an empty-group error.
+    /// * `group` - Nested builder whose first error or completed expression is
+    ///   incorporated into this builder.
+    /// * `combine` - Function that joins the existing expression and group.
     fn combine_group(
         mut self,
         operator: &'static str,
@@ -544,11 +570,11 @@ impl FilterExpressionBuilder {
     }
 }
 
-/// Creates the validation error for an empty logical group.
+/// Creates the invalid-expression error for a group with no conditions.
 ///
 /// # Parameters
 ///
-/// * `operator` - Logical operator naming the empty group.
+/// * `operator` - Logical operator named in the error message.
 ///
 /// # Returns
 ///
@@ -559,10 +585,12 @@ fn empty_group_error(operator: &'static str) -> MetadataError {
     }
 }
 
-/// Converts a typed value into its stored representation.
+/// Converts an input value into the representation stored in a condition.
+///
 /// # Type Parameters
 ///
-/// * `T` - Type used by this operation.
+/// * `T` - Input type convertible to the stored [`Value`] representation.
+///
 /// # Parameters
 ///
 /// * `value` - Value supplied for the condition.
@@ -576,9 +604,14 @@ where
 
 /// Converts and validates membership operands in iterator order.
 ///
+/// # Type Parameters
+///
+/// * `I` - Iterator source consumed in input order.
+/// * `T` - Input type converted to [`Value`] before validation.
+///
 /// # Parameters
 ///
-/// * `operator` - Membership operator used in any operand error.
+/// * `operator` - Membership operator named in any operand error.
 /// * `values` - Candidate operands, consumed lazily until the first error.
 ///
 /// # Returns
@@ -591,10 +624,6 @@ where
 /// If all preceding operands are valid, returns
 /// [`MetadataError::FilterLimitExceeded`] when a 129th item is requested; that
 /// item is consumed from the iterator but not converted.
-/// # Type Parameters
-///
-/// * `I` - Type used by this operation.
-/// * `T` - Type used by this operation.
 fn collect_values<I, T>(operator: &'static str, values: I) -> MetadataResult<Vec<Value>>
 where
     I: IntoIterator<Item = T>,

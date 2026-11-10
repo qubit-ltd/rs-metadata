@@ -78,6 +78,7 @@ use crate::metadata_limits::MetadataLimits;
 /// # }
 /// ```
 #[derive(Clone, PartialEq)]
+#[must_use]
 pub struct MetadataFilter {
     /// Root Boolean expression.
     expression: FilterExpression,
@@ -89,6 +90,7 @@ pub struct MetadataFilter {
 
 impl fmt::Debug for MetadataFilter {
     /// Writes the strict-policy diagnostic representation.
+    ///
     /// # Parameters
     ///
     /// * `formatter` - Formatter that receives the output.
@@ -101,6 +103,7 @@ impl fmt::Debug for MetadataFilter {
 
 impl Redact for MetadataFilter {
     /// Writes the filter through one cumulative diagnostic budget.
+    ///
     /// # Parameters
     ///
     /// * `writer` - Destination that receives the encoded or redacted output.
@@ -121,7 +124,6 @@ impl MetadataFilter {
     /// A constant-true filter using default match options and library hard
     /// limits.
     #[inline]
-    #[must_use = "the constructed all-matching filter should be used"]
     pub fn all() -> Self {
         Self::new(
             FilterExpression::match_all(),
@@ -137,7 +139,6 @@ impl MetadataFilter {
     /// A constant-false filter using default match options and library hard
     /// limits.
     #[inline]
-    #[must_use = "the constructed no-match filter should be used"]
     pub fn none() -> Self {
         Self::new(
             FilterExpression::match_none(),
@@ -154,11 +155,16 @@ impl MetadataFilter {
     }
 
     /// Creates a filter from already validated parts.
+    ///
     /// # Parameters
     ///
     /// * `expression` - Filter expression stored by the filter.
     /// * `options` - Options used when matching.
     /// * `limits` - Resource limits applied by this operation.
+    ///
+    /// # Returns
+    ///
+    /// A filter containing the supplied validated parts.
     #[inline]
     pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
         Self {
@@ -174,21 +180,25 @@ impl MetadataFilter {
     /// must separately bound raw input bytes and any deserializer-specific
     /// resources before accepting untrusted data.
     ///
+    /// # Type Parameters
+    ///
+    /// * `D` - Deserializer that provides the encoded representation.
+    ///
     /// # Parameters
     ///
     /// * `deserializer` - Source of the versioned filter representation.
     /// * `receiver_limits` - Local upper bounds applied to the decoded AST.
+    ///
+    /// # Returns
+    ///
+    /// The decoded filter using the supplied receiver limits.
     ///
     /// # Errors
     ///
     /// Returns a deserialization error for malformed V1 data or an unsupported
     /// version. The underlying deserializer's error type receives the
     /// structured filter-limit or policy failure through `D::Error::custom`;
-    /// this generic API cannot return `MetadataWireDecodeError`
-    /// directly.
-    /// # Type Parameters
-    ///
-    /// * `D` - Deserializer that provides the encoded representation.
+    /// this generic API cannot return `MetadataWireDecodeError` directly.
     pub fn deserialize_with_filter_limits<'de, D>(
         deserializer: D,
         receiver_limits: FilterLimits,
@@ -358,6 +368,10 @@ impl MetadataFilter {
     /// [`crate::default_json_encode_limits`]; decode limits do not affect
     /// the output budget.
     ///
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer that receives the encoded representation.
+    ///
     /// # Parameters
     ///
     /// * `writer` - Destination receiving the compact JSON document.
@@ -371,9 +385,6 @@ impl MetadataFilter {
     /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
     /// budget checks, serialization, or destination I/O fails. Only destination
     /// I/O errors can occur after writing has started.
-    /// # Type Parameters
-    ///
-    /// * `W` - Writer that receives the encoded representation.
     #[cfg(feature = "json")]
     pub fn to_json_writer<W>(&self, writer: W) -> Result<(), crate::MetadataWireEncodeError>
     where
@@ -393,6 +404,10 @@ impl MetadataFilter {
     /// supplied [`JsonEncodeLimits`] controls encoding; decode limits do not
     /// affect the output budget.
     ///
+    /// # Type Parameters
+    ///
+    /// * `W` - Writer that receives the encoded representation.
+    ///
     /// # Parameters
     ///
     /// * `writer` - Destination receiving the compact JSON document.
@@ -407,9 +422,6 @@ impl MetadataFilter {
     /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
     /// budget checks, serialization, or destination I/O fails. Only destination
     /// I/O errors can occur after writing has started.
-    /// # Type Parameters
-    ///
-    /// * `W` - Writer that receives the encoded representation.
     #[cfg(feature = "json")]
     pub fn to_json_writer_with_limits<W>(
         &self,
@@ -427,6 +439,10 @@ impl MetadataFilter {
     }
 
     /// Returns the root expression.
+    ///
+    /// # Returns
+    ///
+    /// The expression evaluated by this filter.
     #[inline]
     #[must_use = "the filter expression should be inspected"]
     pub const fn expression(&self) -> &FilterExpression {
@@ -434,6 +450,10 @@ impl MetadataFilter {
     }
 
     /// Returns the evaluation options.
+    ///
+    /// # Returns
+    ///
+    /// The policy used when evaluating conditions.
     #[inline]
     #[must_use]
     pub const fn options(&self) -> FilterMatchOptions {
@@ -441,23 +461,78 @@ impl MetadataFilter {
     }
 
     /// Returns the resource limits.
+    ///
+    /// # Returns
+    ///
+    /// The limits validated when this filter was constructed.
     #[inline]
     #[must_use = "the filter limits should be inspected"]
     pub const fn limits(&self) -> FilterLimits {
         *self.limits.get()
     }
 
+    /// Returns whether `metadata` satisfies this filter.
+    ///
+    /// # Parameters
+    ///
+    /// * `metadata` - Metadata inspected by the filter.
+    ///
+    /// # Returns
+    ///
+    /// `true` when the metadata satisfies the expression and match options.
+    #[inline]
+    #[must_use]
+    pub fn matches(&self, metadata: &Metadata) -> bool {
+        self.expression.evaluate(metadata, self.options).is_match()
+    }
+
+    /// Visits every leaf condition in the expression.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback invoked for each visited condition.
+    ///
+    /// # Parameters
+    ///
+    /// * `visitor` - Callback applied to each leaf condition.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first error produced by `visitor`.
+    #[cfg(feature = "schema")]
+    #[inline]
+    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
+    where
+        F: FnMut(&Condition) -> MetadataResult<()>,
+    {
+        self.expression.visit_conditions(&mut visitor)
+    }
+
     /// Preflights every operand against the shared JSON encoding budget.
+    ///
     /// # Parameters
     ///
     /// * `limits` - Resource limits applied by this operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an encoding error if any operand exceeds the budget.
     #[cfg(feature = "json")]
     fn preflight_wire_values(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
         /// Checks every value operand in one expression subtree.
+        ///
         /// # Parameters
         ///
         /// * `expression` - Filter expression stored by the filter.
         /// * `checker` - Shared preflight checker for encoded values.
+        ///
+        /// # Returns
+        ///
+        /// `Ok(())` after every operand in the subtree passes preflight.
+        ///
+        /// # Errors
+        ///
+        /// Returns an encoding error when an operand exceeds the shared budget.
         fn visit(
             expression: &FilterExpression,
             checker: &mut ValueWireEncodePreflight,
@@ -479,46 +554,27 @@ impl MetadataFilter {
         let mut checker = ValueWireEncodePreflight::new(limits);
         visit(&self.expression, &mut checker)
     }
-
-    /// Returns whether `metadata` satisfies this filter.
-    /// # Parameters
-    ///
-    /// * `metadata` - Metadata inspected by the filter.
-    #[inline]
-    #[must_use]
-    pub fn matches(&self, metadata: &Metadata) -> bool {
-        self.expression.evaluate(metadata, self.options).is_match()
-    }
-
-    /// Visits every leaf condition in the expression.
-    ///
-    /// # Errors
-    ///
-    /// Returns the first error produced by `visitor`.
-    /// # Type Parameters
-    ///
-    /// * `F` - Callback that visits operands or constructs a nested group.
-    /// # Parameters
-    ///
-    /// * `visitor` - Callback invoked for each visited item.
-    #[cfg(feature = "schema")]
-    #[inline]
-    pub(crate) fn visit_conditions<F>(&self, mut visitor: F) -> MetadataResult<()>
-    where
-        F: FnMut(&Condition) -> MetadataResult<()>,
-    {
-        self.expression.visit_conditions(&mut visitor)
-    }
 }
 
 impl Serialize for MetadataFilter {
     /// Serializes this filter through its versioned wire representation.
+    ///
     /// # Type Parameters
     ///
     /// * `S` - Serializer that receives the encoded representation.
+    ///
     /// # Parameters
     ///
     /// * `serializer` - Serializer receiving the filter representation.
+    ///
+    /// # Returns
+    ///
+    /// The serializer's representation of this filter.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error if conversion to the wire form or
+    /// serialization fails.
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -532,12 +588,23 @@ impl Serialize for MetadataFilter {
 
 impl<'de> Deserialize<'de> for MetadataFilter {
     /// Deserializes a filter using library hard limits as receiver limits.
+    ///
     /// # Type Parameters
     ///
     /// * `D` - Deserializer that provides the encoded representation.
+    ///
     /// # Parameters
     ///
     /// * `deserializer` - Deserializer providing the filter representation.
+    ///
+    /// # Returns
+    ///
+    /// The reconstructed filter.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error if the versioned representation is
+    /// malformed or violates the filter limits.
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

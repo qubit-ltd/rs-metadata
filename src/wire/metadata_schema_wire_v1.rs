@@ -53,10 +53,15 @@ where
     ///
     /// * `deserializer` - Source of the serialized schema envelope.
     ///
+    /// # Returns
+    ///
+    /// The decoded envelope, with fields deserialized as `F`.
+    ///
     /// # Errors
     ///
     /// Returns the deserializer error for positional input, duplicate,
     /// missing, or unknown fields, or a rejected field value.
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

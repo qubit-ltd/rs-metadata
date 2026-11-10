@@ -18,6 +18,8 @@ use qubit_metadata::MetadataField;
 #[cfg(feature = "json")]
 use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataSchema;
+use serde_json::Map;
+use serde_json::Value;
 use serde_json::from_str;
 use serde_json::from_value;
 use serde_json::json;
@@ -243,7 +245,7 @@ fn test_metadata_schema_accepts_reordered_field_object() {
     let input = format!(
         r#"{{"version":1,"fields":{{"tenant":{{"required":true,"data_type":{data_type}}}}},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}}"#
     );
-    let value = serde_json::from_str(&input).expect("reordered schema should parse as a value");
+    let value = from_str(&input).expect("reordered schema should parse as a value");
 
     assert_eq!(
         from_value::<MetadataSchema>(value).expect("schema object order should be flexible"),
@@ -298,11 +300,11 @@ fn test_metadata_schema_deserialization_enforces_hard_entry_boundary() {
     let envelope = to_value(&template_schema).expect("template should serialize");
     let field = envelope["fields"]["sample"].clone();
     for count in [4_096, 4_097] {
-        let fields: serde_json::Map<String, serde_json::Value> = (0..count)
+        let fields: Map<String, Value> = (0..count)
             .map(|index| (format!("key-{index:04}"), field.clone()))
             .collect();
         let mut raw = envelope.clone();
-        raw["fields"] = serde_json::Value::Object(fields);
+        raw["fields"] = Value::Object(fields);
         let input = to_string(&raw).expect("raw JSON should serialize beyond model limits");
         let decoded = from_str::<MetadataSchema>(&input);
         if count == 4_096 {

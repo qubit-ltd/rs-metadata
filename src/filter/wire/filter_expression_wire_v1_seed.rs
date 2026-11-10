@@ -48,6 +48,12 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
     /// * `node_budget` - Remaining budget charged for each decoded node.
     /// * `depth` - Depth assigned to the expression being decoded.
     /// * `error_slot` - Slot for retaining the first structured limit error.
+    ///
+    /// # Returns
+    ///
+    /// A seed that charges the supplied node budget while decoding.
+    #[must_use]
+    #[inline]
     pub(crate) const fn new(
         receiver_limits: FilterLimits,
         node_budget: &'a mut ResourceBudget<FilterLimitKind, usize>,
@@ -67,6 +73,11 @@ impl<'a> FilterExpressionWireV1Seed<'a> {
     /// # Type Parameters
     ///
     /// * `E` - Deserializer error type used to report limit failures.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the expression depth or remaining node budget
+    /// exceeds the configured limit.
     fn enter_node<E>(&mut self) -> Result<(), E>
     where
         E: de::Error,
@@ -104,6 +115,11 @@ impl<'de, 'a> DeserializeSeed<'de> for FilterExpressionWireV1Seed<'a> {
     /// # Parameters
     ///
     /// * `deserializer` - Source of the encoded expression map.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer error for malformed input or a receiver-side
+    /// depth or node-budget limit violation.
     fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

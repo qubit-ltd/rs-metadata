@@ -37,6 +37,12 @@ impl<'de> DeserializeSeed<'de> for ValueSequenceSeed {
     /// # Parameters
     ///
     /// * `deserializer` - Deserializer providing the filter representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error if the sequence cannot be decoded or
+    /// a value exceeds the receiver-side limits.
+    #[inline]
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

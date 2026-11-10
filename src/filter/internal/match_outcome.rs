@@ -56,17 +56,19 @@ impl MatchOutcome {
 
     /// Combines outcomes with three-valued logical AND.
     ///
+    /// # Type Parameters
+    ///
+    /// * `I` - Iterator that supplies candidate outcomes.
+    ///
     /// # Parameters
     ///
-    /// * `outcomes` - Outcomes to combine.
+    /// * `outcomes` - Outcomes to combine, consumed until the result is
+    ///   determined or the iterator is exhausted.
     ///
     /// # Returns
     ///
     /// False when any child is false, unknown when no child is false and at
     /// least one is unknown, or true otherwise.
-    /// # Type Parameters
-    ///
-    /// * `I` - Iterator that supplies candidate values.
     pub(crate) fn and<I>(outcomes: I) -> Self
     where
         I: IntoIterator<Item = Self>,
@@ -84,17 +86,19 @@ impl MatchOutcome {
 
     /// Combines outcomes with three-valued logical OR.
     ///
+    /// # Type Parameters
+    ///
+    /// * `I` - Iterator that supplies candidate outcomes.
+    ///
     /// # Parameters
     ///
-    /// * `outcomes` - Outcomes to combine.
+    /// * `outcomes` - Outcomes to combine, consumed until the result is
+    ///   determined or the iterator is exhausted.
     ///
     /// # Returns
     ///
     /// True when any child is true, unknown when no child is true and at
     /// least one is unknown, or false otherwise.
-    /// # Type Parameters
-    ///
-    /// * `I` - Iterator that supplies candidate values.
     pub(crate) fn or<I>(outcomes: I) -> Self
     where
         I: IntoIterator<Item = Self>,

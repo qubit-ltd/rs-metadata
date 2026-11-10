@@ -80,7 +80,6 @@ impl MetadataLimits {
     ///
     /// A builder initialized with the protocol defaults.
     #[inline(always)]
-    #[must_use = "the builder must be configured or used to build metadata limits"]
     pub fn builder() -> MetadataLimitsBuilder {
         MetadataLimitsBuilder::default()
     }

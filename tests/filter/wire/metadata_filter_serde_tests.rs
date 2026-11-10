@@ -48,7 +48,7 @@ fn test_metadata_filter_options_object_round_trips_all_entry_points() {
         ("approximate", NumericComparisonPolicy::Approximate),
     ] {
         let input = format!(
-            r#"{{"version":1,"expression":{{"kind":"all"}},"options":{{"numeric_comparison_policy":"{policy_name}"}}}}"#,
+            r#"{{"version":1,"expression":{{"kind":"all"}},"options":{{"numeric_comparison_policy":"{policy_name}"}}}}"#
         );
         let from_text: MetadataFilter = serde_json::from_str(&input).unwrap();
         let from_value: MetadataFilter = serde_json::from_value(serde_json::from_str(&input).unwrap()).unwrap();

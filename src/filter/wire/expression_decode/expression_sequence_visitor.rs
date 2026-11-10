@@ -50,7 +50,13 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
         formatter.write_str("a sequence of filter expressions")
     }
 
-    /// Decodes children one by one and charges each collection item first.
+    /// Decodes child expressions in input order, charging each node before its
+    /// body is read and limiting initial allocation to the receiver's node
+    /// limit. An empty input sequence produces an empty vector.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `A` - Sequence access that deserializes each child expression.
     ///
     /// # Parameters
     ///
@@ -62,11 +68,9 @@ impl<'de, 'a> Visitor<'de> for ExpressionSequenceVisitor<'a> {
     ///
     /// # Errors
     ///
-    /// Returns the deserializer error when a child cannot be decoded or its
-    /// resource budget is exceeded.
-    /// # Type Parameters
-    ///
-    /// * `A` - Type used by this operation.
+    /// Returns the deserializer error when a child cannot be decoded or the
+    /// depth or node budget is exceeded. A structured limit error is also
+    /// retained in the shared error slot for the enclosing decode operation.
     fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,

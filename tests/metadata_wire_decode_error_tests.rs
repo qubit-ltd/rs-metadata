@@ -18,18 +18,28 @@ use qubit_budget::QuantityConversionError;
 use qubit_budget::QuantityMeasurement;
 use qubit_budget::json::JsonResource;
 use qubit_json::decode::DiagnosticPolicy;
+use qubit_json::decode::JsonDecodeError;
 use qubit_json::decode::JsonDecodeErrorKind;
 use qubit_json::decode::JsonDecoder;
 use qubit_json::decode::JsonRootKind;
 use qubit_json::decode::NormalizingJsonDecodePolicy;
 use qubit_json::decode::NormalizingJsonDecoder;
+#[cfg(feature = "filter")]
+use qubit_metadata::FilterLimits;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataError;
+#[cfg(feature = "filter")]
+use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataLimits;
 #[cfg(feature = "schema")]
 use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireDecodeError;
+use serde_json::Value;
+use serde_json::from_str;
+use serde_json::to_value;
+use serde_json::to_vec;
 
+/// Produces a read failure with a sentinel message for redaction assertions.
 struct FailedRead;
 
 impl io::Read for FailedRead {
@@ -44,7 +54,7 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
         let mut decoder =
             JsonDecoder::with_limits(MetadataLimits::default().json_decode()).with_diagnostic_policy(policy);
         let json_error = decoder
-            .decode_input::<serde_json::Value, _>(&mut FailedRead)
+            .decode_input::<Value, _>(&mut FailedRead)
             .expect_err("input read should fail");
         let error = MetadataWireDecodeError::from(json_error);
 
@@ -74,9 +84,6 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
 #[cfg(feature = "filter")]
 #[test]
 fn test_filter_unsupported_version_retains_version_number() {
-    use qubit_metadata::FilterLimits;
-    use qubit_metadata::MetadataFilter;
-
     let input = br#"{"version":7,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"}}"#;
     let error = MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), FilterLimits::MAX)
         .expect_err("filter version");
@@ -99,9 +106,7 @@ fn test_budget_error_preserves_source_chain() {
 
 #[test]
 fn test_invalid_json_preserves_source_chain() {
-    let error = MetadataWireDecodeError::InvalidJson(
-        serde_json::from_str::<serde_json::Value>("{").expect_err("input should be malformed"),
-    );
+    let error = MetadataWireDecodeError::InvalidJson(from_str::<Value>("{").expect_err("input should be malformed"));
     assert!(error.source().is_some());
 }
 
@@ -119,7 +124,7 @@ fn test_quantity_error_preserves_source_chain() {
 #[test]
 fn test_domain_error_exposes_structured_source_without_values() {
     let metadata = Metadata::new().with("private-key", "private-value");
-    let input = serde_json::to_vec(&metadata).expect("wire");
+    let input = to_vec(&metadata).expect("wire");
     let limits = MetadataLimits::builder()
         .max_key_bytes(2)
         .build()
@@ -143,10 +148,9 @@ fn test_unsupported_version_has_safe_diagnostic_and_no_synthetic_source() {
 #[test]
 fn test_schema_unsupported_version_retains_version_number() {
     let schema = MetadataSchema::default();
-    let mut wire = serde_json::to_value(schema).expect("schema");
+    let mut wire = to_value(schema).expect("schema");
     wire["version"] = 7.into();
-    let error =
-        MetadataSchema::decode_json_slice(&serde_json::to_vec(&wire).expect("wire")).expect_err("schema version");
+    let error = MetadataSchema::decode_json_slice(&to_vec(&wire).expect("wire")).expect_err("schema version");
     assert!(matches!(
         error,
         MetadataWireDecodeError::UnsupportedVersion { expected: 1, actual: 7 }
@@ -169,12 +173,7 @@ fn test_shared_deserialize_error_preserves_diagnostic_policy() {
         assert_eq!(shared.diagnostic_policy(), policy);
         assert_eq!(shared.kind(), JsonDecodeErrorKind::Deserialize);
         assert_eq!(shared.source().is_some(), policy == DiagnosticPolicy::Detailed);
-        assert!(
-            error
-                .source()
-                .expect("shared error wrapper")
-                .is::<qubit_json::decode::JsonDecodeError>()
-        );
+        assert!(error.source().expect("shared error wrapper").is::<JsonDecodeError>());
         if policy == DiagnosticPolicy::Redacted {
             assert!(!format!("{error:?}").contains("missing field"));
         } else {
@@ -192,9 +191,7 @@ fn test_shared_deserialize_error_preserves_diagnostic_policy() {
 #[test]
 fn test_shared_invalid_utf8_retains_offset() {
     let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode());
-    let shared = decoder
-        .decode_utf8::<serde_json::Value>(&[b' ', 0xff])
-        .expect_err("invalid UTF-8");
+    let shared = decoder.decode_utf8::<Value>(&[b' ', 0xff]).expect_err("invalid UTF-8");
     let MetadataWireDecodeError::Decode(shared) = MetadataWireDecodeError::from(shared) else {
         panic!("UTF-8 facts must be preserved");
     };
@@ -208,7 +205,7 @@ fn test_shared_invalid_utf8_retains_offset() {
 fn test_shared_unexpected_top_level_retains_kinds() {
     let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode());
     let shared = decoder
-        .decode_object_str::<serde_json::Value>("[]")
+        .decode_object_str::<Value>("[]")
         .expect_err("an object is required");
     let MetadataWireDecodeError::Decode(shared) = MetadataWireDecodeError::from(shared) else {
         panic!("top-level kinds must be preserved");
@@ -225,7 +222,7 @@ fn test_shared_normalized_empty_input_retains_category() {
         MetadataLimits::default().json_decode(),
     );
     let shared = decoder
-        .decode_str::<serde_json::Value>("")
+        .decode_str::<Value>("")
         .expect_err("normalization leaves no document");
     assert_eq!(shared.kind(), JsonDecodeErrorKind::EmptyInput);
     let stage = shared.stage();

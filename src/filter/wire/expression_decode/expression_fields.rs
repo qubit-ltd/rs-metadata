@@ -14,24 +14,33 @@ use super::expression_kind::ExpressionKind;
 use super::limit_support::ensure_absent;
 use super::limit_support::required;
 
-/// Temporarily owned fields collected from one expression map.
+/// Holds fields collected while deserializing one expression map.
+///
+/// The decoder keeps optional fields until it knows the expression kind, then
+/// validates which fields that kind accepts before constructing the wire
+/// expression.
 pub(super) struct ExpressionFields {
-    /// Parsed expression kind tag.
+    /// Expression variant tag parsed from the map.
     pub(super) kind: Option<ExpressionKind>,
-    /// Optional condition key.
+    /// Condition key used by comparison, membership, or existence variants.
     pub(super) key: Option<String>,
-    /// Optional single condition operand.
+    /// Single operand used by comparison variants.
     pub(super) value: Option<ValueWirePayloadV1>,
-    /// Optional membership operands.
+    /// Operand list used by membership variants.
     pub(super) values: Option<Vec<ValueWirePayloadV1>>,
-    /// Optional Boolean children.
+    /// Child expressions used by conjunction and disjunction variants.
     pub(super) children: Option<Vec<FilterExpressionWireV1>>,
-    /// Optional negated child expression.
+    /// Child expression used by the negation variant.
     pub(super) expression: Option<Box<FilterExpressionWireV1>>,
 }
 
 impl ExpressionFields {
-    /// Converts validated fields into the corresponding V1 wire variant.
+    /// Validates the collected fields and builds the corresponding V1 variant.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message when the expression kind is missing, a required field
+    /// is absent, or a field is not supported by the selected kind.
     pub(super) fn into_wire(self) -> Result<FilterExpressionWireV1, String> {
         let Self {
             kind,

@@ -12,6 +12,7 @@ use serde::Serialize;
 
 use super::FilterExpressionWireV1Ref;
 use super::metadata_filter_wire_v1::METADATA_FILTER_WIRE_VERSION_V1;
+use crate::FilterMatchOptions;
 use crate::MetadataFilter;
 
 /// Borrowed V1 metadata-filter envelope used only for serialization.
@@ -27,7 +28,7 @@ pub(crate) struct MetadataFilterWireV1Ref<'a> {
     /// Root Boolean expression.
     expression: FilterExpressionWireV1Ref<'a>,
     /// Evaluation options.
-    options: crate::FilterMatchOptions,
+    options: FilterMatchOptions,
 }
 
 impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
@@ -39,6 +40,11 @@ impl<'a> TryFrom<&'a MetadataFilter> for MetadataFilterWireV1Ref<'a> {
     /// # Parameters
     ///
     /// * `filter` - Filter whose expression and options are serialized.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ValueWireEncodeError`] if the filter expression contains a
+    /// value that cannot be represented by the V1 wire format.
     fn try_from(filter: &'a MetadataFilter) -> Result<Self, Self::Error> {
         Ok(Self {
             version: METADATA_FILTER_WIRE_VERSION_V1,

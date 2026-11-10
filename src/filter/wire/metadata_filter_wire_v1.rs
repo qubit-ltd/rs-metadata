@@ -10,6 +10,7 @@
 use serde::Serialize;
 
 use super::FilterExpressionWireV1;
+use crate::FilterLimits;
 use crate::FilterMatchOptions;
 use crate::MetadataError;
 use crate::MetadataFilter;
@@ -37,6 +38,7 @@ impl MetadataFilterWireV1 {
     /// * `version` - Serialized wire-format version.
     /// * `expression` - Decoded root Boolean expression.
     /// * `options` - Evaluation options for the filter.
+    #[inline]
     pub(crate) const fn new(version: u8, expression: FilterExpressionWireV1, options: FilterMatchOptions) -> Self {
         Self {
             version,
@@ -62,7 +64,7 @@ impl MetadataFilterWireV1 {
     ///
     /// Returns an invalid-expression error for unsupported versions or an
     /// expression-limit error when the expression exceeds receiver limits.
-    pub(crate) fn into_filter(self, receiver_limits: crate::FilterLimits) -> MetadataResult<MetadataFilter> {
+    pub(crate) fn into_filter(self, receiver_limits: FilterLimits) -> MetadataResult<MetadataFilter> {
         if self.version != METADATA_FILTER_WIRE_VERSION_V1 {
             return Err(MetadataError::InvalidFilterExpression {
                 message: format!(

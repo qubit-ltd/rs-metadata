@@ -28,7 +28,7 @@ mod support {
     #[cfg(feature = "json")]
     pub mod user_guide_bounded_decode;
     #[cfg(feature = "json")]
-    pub mod user_guide_bounded_encode;
+    pub mod user_guide_bounded_encode_tests;
     #[cfg(feature = "schema")]
     pub mod user_guide_chunk_workflow;
     #[cfg(feature = "json")]
@@ -143,7 +143,7 @@ fn test_user_guide_bounded_decode_source_matches() {
                 name,
                 document,
                 "bounded-json-encoding-example",
-                include_str!("support/user_guide_bounded_encode.rs"),
+                include_str!("support/user_guide_bounded_encode_tests.rs"),
             );
             #[cfg(feature = "filter")]
             assert_documented_example(
@@ -234,7 +234,7 @@ fn assert_documented_example(name: &str, document: &str, marker: &str, expected:
 #[cfg(feature = "json")]
 #[test]
 fn test_user_guide_bounded_json_encoding_example() {
-    support::user_guide_bounded_encode::main().expect("encoding guide example should run");
+    support::user_guide_bounded_encode_tests::main().expect("encoding guide example should run");
 }
 
 #[cfg(feature = "json")]

@@ -61,6 +61,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the required root expression.
+    ///
     /// # Parameters
     ///
     /// * `expression` - Filter expression stored by the filter.
@@ -72,6 +73,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the match options.
+    ///
     /// # Parameters
     ///
     /// * `options` - Options used when matching.
@@ -83,6 +85,7 @@ impl MetadataFilterBuilder {
     }
 
     /// Sets the resource limits.
+    ///
     /// # Parameters
     ///
     /// * `limits` - Resource limits applied by this operation.
@@ -100,6 +103,10 @@ impl MetadataFilterBuilder {
     /// Returns [`MetadataError::MissingFilterExpression`] if no expression was
     /// supplied, or [`MetadataError::FilterLimitExceeded`] if it exceeds the
     /// configured limits.
+    ///
+    /// # Returns
+    ///
+    /// A filter containing the validated expression, match options, and limits.
     #[inline]
     pub fn build(self) -> MetadataResult<MetadataFilter> {
         let expression = self.expression.ok_or(MetadataError::MissingFilterExpression)?;
@@ -109,12 +116,17 @@ impl MetadataFilterBuilder {
 
     /// Builds and validates a filter against `schema`.
     ///
+    /// # Parameters
+    ///
+    /// * `schema` - Schema against which the filter expression is validated.
+    ///
     /// # Errors
     ///
     /// Returns construction errors or aggregate schema-validation errors.
-    /// # Parameters
     ///
-    /// * `schema` - Input schema used by this operation.
+    /// # Returns
+    ///
+    /// The filter after successful expression and schema validation.
     #[cfg(feature = "schema")]
     #[inline]
     pub fn build_checked(self, schema: &MetadataSchema) -> MetadataValidationResult<MetadataFilter> {

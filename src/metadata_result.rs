@@ -15,4 +15,13 @@ use crate::metadata_error::MetadataError;
 /// # Type Parameters
 ///
 /// * `T` - Success value returned by the metadata operation.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_metadata::MetadataResult;
+///
+/// let result: MetadataResult<&str> = Ok("ready");
+/// assert_eq!(result, Ok("ready"));
+/// ```
 pub type MetadataResult<T> = Result<T, MetadataError>;

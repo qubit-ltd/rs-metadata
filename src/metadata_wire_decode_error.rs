@@ -133,7 +133,15 @@ impl fmt::Display for MetadataWireDecodeError {
 }
 
 impl Error for MetadataWireDecodeError {
-    /// Returns the budget, filter, or Serde source associated with the error.
+    /// Returns the retained source error associated with this failure.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some` for failures that retain an underlying source, including
+    /// detailed read failures, domain, budget, quantity, syntax, Serde, and
+    /// optional filter failures. Returns `None` for unsupported wire versions
+    /// and read failures whose diagnostic policy did not retain the original
+    /// I/O error.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Read { source, .. } => source.as_deref().map(|error| error as &(dyn Error + 'static)),

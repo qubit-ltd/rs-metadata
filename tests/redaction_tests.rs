@@ -25,6 +25,8 @@ use qubit_redact::RedactionTextOutput;
 use qubit_redact::RedactionWriter;
 use qubit_redact::Redactor;
 use qubit_redact::Sensitivity;
+#[cfg(feature = "json")]
+use serde_json::json;
 
 fn redacted_output<T: Redact>(value: &T, policy: &RedactionPolicy) -> RedactionTextOutput {
     Redactor::new(policy.clone()).redact_text(value)
@@ -488,10 +490,7 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
 #[test]
 fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
     let metadata = Metadata::new()
-        .with(
-            "profile",
-            serde_json::json!({"api_key": "nested-secret", "label": "Ada"}),
-        )
+        .with("profile", json!({"api_key": "nested-secret", "label": "Ada"}))
         .with("token", "outer-secret");
     let policy = RedactionPolicy::default()
         .to_builder()

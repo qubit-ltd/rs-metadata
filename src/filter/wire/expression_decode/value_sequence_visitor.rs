@@ -5,7 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
-//! Visitor for a bounded membership-value sequence.
+//! Visitor that decodes membership payloads under the receiver's value limit.
 
 use std::cell::RefCell;
 use std::fmt;
@@ -19,11 +19,13 @@ use super::value_element_seed::ValueElementSeed;
 use crate::FilterLimits;
 use crate::MetadataError;
 
-/// Visitor for a bounded membership-value sequence.
+/// Decodes each membership payload while carrying receiver-side resource
+/// policy.
 pub(in crate::filter::wire) struct ValueSequenceVisitor {
-    /// Receiver-side membership limit.
+    /// Limits used to reject an element before decoding it when the sequence is
+    /// full.
     pub(in crate::filter::wire) receiver_limits: FilterLimits,
-    /// First structured limit error.
+    /// Shared slot preserving the first structured limit error for the caller.
     pub(in crate::filter::wire) error_slot: Rc<RefCell<Option<MetadataError>>>,
 }
 
@@ -31,21 +33,35 @@ impl<'de> Visitor<'de> for ValueSequenceVisitor {
     /// The decoded sequence of V1 value wire payloads.
     type Value = Vec<ValueWirePayloadV1>;
 
-    /// Describes a sequence of scalar V1 payloads.
+    /// Describes the sequence shape expected by this filter decoder.
+    ///
     /// # Parameters
     ///
-    /// * `formatter` - Formatter that receives the output.
+    /// * `formatter` - Destination for the human-readable expected shape.
+    ///
+    /// # Returns
+    ///
+    /// The formatter's result after writing the expected sequence description.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a sequence of scalar V1 value payloads")
     }
 
-    /// Decodes membership values one by one and bounds vector growth.
+    /// Decodes membership payloads one by one, checking each position before
+    /// its payload is read and avoiding capacity allocation beyond the limit.
+    ///
     /// # Type Parameters
     ///
-    /// * `A` - Type used by this operation.
+    /// * `A` - Serde access object that supplies the sequence elements.
+    ///
     /// # Parameters
     ///
-    /// * `sequence` - Input sequence used by this operation.
+    /// * `sequence` - Serde access object for the encoded membership sequence.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error if an element is malformed or exceeds
+    /// the configured membership limit. The first structured limit error is
+    /// retained in `error_slot` for the enclosing decoder.
     fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,

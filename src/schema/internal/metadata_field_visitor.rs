@@ -27,6 +27,10 @@ const FIELD_NAMES: &[&str] = &["data_type", "required"];
 ///
 /// * `deserializer` - Source of the serialized field definition.
 ///
+/// # Returns
+///
+/// The decoded data type and required flag, in that order.
+///
 /// # Errors
 ///
 /// Returns the deserializer error when the input is not an object, a required
@@ -53,7 +57,12 @@ impl<'de> Visitor<'de> for MetadataFieldVisitor {
     ///
     /// # Returns
     ///
-    /// A formatting result indicating whether the description was written.
+    /// `Ok(())` after writing the expected object description, or a formatting
+    /// error if writing fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns the formatter's error if it cannot write the description.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a metadata field object")
     }
@@ -67,6 +76,15 @@ impl<'de> Visitor<'de> for MetadataFieldVisitor {
     /// # Parameters
     ///
     /// * `map` - Access to the serialized field members.
+    ///
+    /// # Returns
+    ///
+    /// The decoded data type and required flag, in that order.
+    ///
+    /// # Errors
+    ///
+    /// Returns the map access error for invalid values, duplicate or unknown
+    /// fields, or missing required fields.
     fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,

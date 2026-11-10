@@ -25,6 +25,7 @@ pub struct ProbeWriter {
 }
 
 impl ProbeWriter {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             bytes: PREFIX.to_vec(),
@@ -160,6 +161,7 @@ fn check_one(
     }
 }
 
+#[must_use]
 pub fn caps(canonical_len: usize, first_input_byte: u8) -> [usize; 5] {
     let below = canonical_len.saturating_sub(1).max(1);
     let random = usize::from(first_input_byte) % canonical_len.saturating_add(1).max(1) + 1;

@@ -20,5 +20,8 @@ fn test_match_outcome_unknown_remains_non_matching_after_negation() {
         .unwrap();
     let filter = MetadataFilter::builder().expression(expression).build().unwrap();
 
-    assert!(!filter.matches(&Metadata::new()));
+    assert!(
+        !filter.matches(&Metadata::new()),
+        "unknown outcomes must remain non-matching after negation"
+    );
 }

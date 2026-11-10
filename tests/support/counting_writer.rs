@@ -28,6 +28,7 @@ impl CountingWriter {
     /// # Returns
     ///
     /// A new counting writer.
+    #[must_use]
     #[inline]
     pub(crate) const fn new(fail_on_write: Option<usize>) -> Self {
         Self {
@@ -41,6 +42,7 @@ impl CountingWriter {
     /// # Returns
     ///
     /// The observed write count.
+    #[must_use]
     #[inline(always)]
     pub(crate) const fn write_count(&self) -> usize {
         self.write_count

@@ -33,7 +33,8 @@ fn test_filter_match_options_serde_accepts_only_strict_objects() {
     for policy in ["exact", "approximate"] {
         let json = format!(r#"{{"numeric_comparison_policy":"{policy}"}}"#);
         let options: FilterMatchOptions = serde_json::from_str(&json).unwrap();
-        let from_value = serde_json::from_value::<FilterMatchOptions>(serde_json::from_str(&json).unwrap()).unwrap();
+        let value = serde_json::from_str(&json).unwrap();
+        let from_value = serde_json::from_value::<FilterMatchOptions>(value).unwrap();
         assert_eq!(from_value, options);
         let encoded = serde_json::to_value(options).unwrap();
         assert_eq!(encoded, serde_json::from_str::<serde_json::Value>(&json).unwrap());

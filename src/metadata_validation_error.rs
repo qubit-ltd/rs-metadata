@@ -66,6 +66,7 @@ impl MetadataValidationError {
     /// # Returns
     ///
     /// `Some` aggregate error for a non-empty list; otherwise, `None`.
+    #[must_use]
     #[inline]
     pub fn from_issues(issues: Vec<MetadataError>) -> Option<Self> {
         (!issues.is_empty()).then_some(Self { issues })

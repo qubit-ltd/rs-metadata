@@ -42,6 +42,11 @@ impl<'de> DeserializeSeed<'de> for ValueElementSeed {
     /// # Parameters
     ///
     /// * `deserializer` - Deserializer providing the filter representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error if the next membership position
+    /// exceeds the receiver limit or if the payload cannot be decoded.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

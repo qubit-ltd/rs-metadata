@@ -18,6 +18,7 @@ use criterion::criterion_main;
 use qubit_budget::ResourceLimit;
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
+use qubit_datatype::DataType;
 use qubit_metadata::FilterExpression;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
@@ -29,6 +30,7 @@ use qubit_metadata::MetadataSchema;
 use qubit_metadata::MetadataWireEncodeError;
 #[cfg(feature = "json")]
 use qubit_metadata::default_json_encode_limits;
+use serde_json::to_vec;
 
 /// Benchmarks constructing a small metadata object through the fluent API.
 fn benchmark_metadata_construction(criterion: &mut Criterion) {
@@ -75,7 +77,7 @@ fn benchmark_metadata_json_decode(criterion: &mut Criterion) {
         .with("tenant", "acme")
         .with("score", 42_i64)
         .with("active", true);
-    let encoded = serde_json::to_vec(&metadata).expect("benchmark metadata should serialize");
+    let encoded = to_vec(&metadata).expect("benchmark metadata should serialize");
 
     criterion.bench_function("metadata/json_decode", |bencher| {
         bencher.iter(|| {
@@ -183,7 +185,7 @@ fn benchmark_request_encode_investigation(criterion: &mut Criterion) {
             bencher.iter_batched(
                 || metadata.clone(),
                 |metadata| {
-                    let encoded = serde_json::to_vec(&metadata).expect("benchmark metadata should serialize");
+                    let encoded = to_vec(&metadata).expect("benchmark metadata should serialize");
                     black_box(encoded.len());
                     drop(encoded);
                 },
@@ -200,8 +202,7 @@ fn benchmark_request_encode_investigation(criterion: &mut Criterion) {
                     black_box(validated.len());
                     drop(validated);
                     let metadata_for_storage = metadata.clone();
-                    let persisted =
-                        serde_json::to_vec(&metadata_for_storage).expect("benchmark metadata should serialize");
+                    let persisted = to_vec(&metadata_for_storage).expect("benchmark metadata should serialize");
                     black_box(persisted.len());
                     drop(persisted);
                 },
@@ -343,7 +344,7 @@ fn benchmark_filter_json_decode(criterion: &mut Criterion) {
         .expression(expression)
         .build()
         .expect("benchmark filter should build");
-    let encoded = serde_json::to_vec(&filter).expect("benchmark filter should serialize");
+    let encoded = to_vec(&filter).expect("benchmark filter should serialize");
 
     criterion.bench_function("metadata/filter_json_decode", |bencher| {
         bencher.iter(|| {
@@ -366,15 +367,14 @@ fn benchmark_filter_json_encode(criterion: &mut Criterion) {
             .expression(expression)
             .build()
             .expect("benchmark filter should build");
-        let ordinary = serde_json::to_vec(&filter).expect("benchmark filter should serialize");
+        let ordinary = to_vec(&filter).expect("benchmark filter should serialize");
         let bounded = filter
             .to_json_vec_with_limits(default_json_encode_limits())
             .expect("benchmark filter should encode within default limits");
         assert_eq!(ordinary, bounded, "benchmark encoding paths should agree");
         let _output_bytes = ordinary.len();
         group.bench_function(BenchmarkId::new("serde_json", &name), |bencher| {
-            bencher
-                .iter(|| black_box(serde_json::to_vec(black_box(&filter)).expect("benchmark filter should serialize")));
+            bencher.iter(|| black_box(to_vec(black_box(&filter)).expect("benchmark filter should serialize")));
         });
         group.bench_function(BenchmarkId::new("bounded", &name), |bencher| {
             bencher.iter(|| {
@@ -392,6 +392,7 @@ fn benchmark_filter_json_encode(criterion: &mut Criterion) {
 #[cfg(not(all(feature = "json", feature = "filter")))]
 fn benchmark_filter_json_encode(_criterion: &mut Criterion) {}
 
+/// Builds representative expression shapes used by JSON encoding benchmarks.
 #[cfg(feature = "filter")]
 fn filter_encoding_samples() -> Vec<(String, FilterExpression)> {
     let leaf = |index: usize| {
@@ -453,11 +454,11 @@ fn filter_encoding_samples() -> Vec<(String, FilterExpression)> {
 #[cfg(all(feature = "json", feature = "schema"))]
 fn benchmark_schema_json_decode(criterion: &mut Criterion) {
     let schema = MetadataSchema::builder()
-        .required("tenant", qubit_datatype::DataType::String)
-        .optional("score", qubit_datatype::DataType::Int64)
+        .required("tenant", DataType::String)
+        .optional("score", DataType::Int64)
         .build()
         .expect("benchmark schema should build");
-    let encoded = serde_json::to_vec(&schema).expect("benchmark schema should serialize");
+    let encoded = to_vec(&schema).expect("benchmark schema should serialize");
 
     criterion.bench_function("metadata/schema_json_decode", |bencher| {
         bencher.iter(|| {

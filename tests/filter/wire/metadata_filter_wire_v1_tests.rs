@@ -60,14 +60,14 @@ fn deserialize_with_filter_limits(encoded: &str, limits: FilterLimits) -> Result
 
 #[test]
 fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
-    let encoded = to_string(&filter_for_existing_key("status")).unwrap();
+    let encoded = to_string(&filter_for_existing_key("status")).expect("filter should serialize");
     let receiver = FilterLimits::builder()
         .max_depth(1)
         .max_nodes(1)
         .max_set_values(1)
         .max_key_bytes(6)
         .build()
-        .unwrap();
+        .expect("receiver limits should be valid");
 
     let decoded =
         deserialize_with_filter_limits(&encoded, receiver).expect("actual expression should fit receiver limits");
@@ -76,10 +76,14 @@ fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
 
 #[test]
 fn test_receiver_rejects_expression_exceeding_its_key_limit() {
-    let encoded = to_string(&filter_for_existing_key("status")).unwrap();
-    let receiver = FilterLimits::builder().max_key_bytes(5).build().unwrap();
+    let encoded = to_string(&filter_for_existing_key("status")).expect("filter should serialize");
+    let receiver = FilterLimits::builder()
+        .max_key_bytes(5)
+        .build()
+        .expect("receiver limits should be valid");
 
-    let error = deserialize_with_filter_limits(&encoded, receiver).unwrap_err();
+    let error = deserialize_with_filter_limits(&encoded, receiver)
+        .expect_err("receiver should reject a key exceeding its limit");
     assert!(error.to_string().contains("KeyBytes value 6 exceeds the maximum of 5"));
 }
 
@@ -100,8 +104,11 @@ fn test_filter_wire_rejects_sender_limits_field() {
 
 #[test]
 fn test_receiver_accepts_expression_at_exact_boundary() {
-    let encoded = to_string(&filter_for_existing_key("status")).unwrap();
-    let receiver = FilterLimits::builder().max_key_bytes(6).build().unwrap();
+    let encoded = to_string(&filter_for_existing_key("status")).expect("filter should serialize");
+    let receiver = FilterLimits::builder()
+        .max_key_bytes(6)
+        .build()
+        .expect("receiver limits should be valid");
 
     assert!(
         deserialize_with_filter_limits(&encoded, receiver).is_ok(),
@@ -124,17 +131,27 @@ fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
             "options": { "numeric_comparison_policy": "exact" }
         }
     "#;
-    let receiver = FilterLimits::builder().max_nodes(1).build().unwrap();
+    let receiver = FilterLimits::builder()
+        .max_nodes(1)
+        .build()
+        .expect("receiver limits should be valid");
 
-    let error = deserialize_with_filter_limits(encoded, receiver).unwrap_err();
+    let error = deserialize_with_filter_limits(encoded, receiver)
+        .expect_err("receiver should reject raw nodes before normalization");
     assert!(error.to_string().contains("Nodes value 2 exceeds the maximum of 1"));
 }
 
 #[test]
 fn test_metadata_filter_wire_contains_expression() {
-    let expression = FilterExpression::builder().exists("status").build().unwrap();
-    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
-    let encoded = to_value(filter).unwrap();
+    let expression = FilterExpression::builder()
+        .exists("status")
+        .build()
+        .expect("existence expression should build");
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .expect("metadata filter should build");
+    let encoded = to_value(filter).expect("metadata filter should serialize");
 
     assert_eq!(encoded["version"], json!(1));
     assert_eq!(encoded["expression"]["kind"], json!("exists"));

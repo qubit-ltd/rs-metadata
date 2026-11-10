@@ -51,6 +51,7 @@ use crate::MetadataResult;
 /// assert!(matches!(condition, Condition::Equal { .. }));
 /// ```
 #[derive(Clone, PartialEq)]
+#[must_use = "the constructed filter condition should be used"]
 #[non_exhaustive]
 pub enum Condition {
     /// Key equals value.
@@ -130,6 +131,10 @@ pub enum Condition {
 impl Condition {
     /// Visits each value operand in wire order without allocating.
     ///
+    /// # Type Parameters
+    ///
+    /// * `E` - Error type returned by the visitor callback.
+    ///
     /// # Parameters
     ///
     /// * `visitor` - Callback invoked for each operand in wire order.
@@ -137,9 +142,6 @@ impl Condition {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor` and stops visiting.
-    /// # Type Parameters
-    ///
-    /// * `E` - Error type returned by the visitor callback.
     #[cfg(feature = "json")]
     pub(crate) fn visit_operands<E>(&self, visitor: &mut impl FnMut(&Value) -> Result<(), E>) -> Result<(), E> {
         match self {
@@ -384,6 +386,10 @@ impl fmt::Debug for Condition {
 
 /// Evaluates a predicate that requires a concrete stored value.
 ///
+/// # Type Parameters
+///
+/// * `F` - Type used by this operation.
+///
 /// # Parameters
 ///
 /// * `meta` - Metadata object being matched.
@@ -394,9 +400,6 @@ impl fmt::Debug for Condition {
 ///
 /// The predicate result, or [`MatchOutcome::Unknown`] when the key is absent
 /// or stores [`Value::Unset`].
-/// # Type Parameters
-///
-/// * `F` - Type used by this operation.
 #[inline]
 fn evaluate_concrete<F>(meta: &Metadata, key: &str, predicate: F) -> MatchOutcome
 where

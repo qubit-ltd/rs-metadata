@@ -14,7 +14,7 @@
 /// ```
 /// use qubit_metadata::MetadataWireLimitKind;
 ///
-/// assert_eq!(MetadataWireLimitKind::Entries, MetadataWireLimitKind::Entries);
+/// assert_ne!(MetadataWireLimitKind::Entries, MetadataWireLimitKind::KeyBytes);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]

@@ -19,6 +19,7 @@ mod bounded_encode;
 use libfuzzer_sys::fuzz_target;
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonResource;
+use qubit_metadata::DEFAULT_MAX_JSON_BYTES;
 use qubit_metadata::FilterLimits;
 use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataLimits;
@@ -33,7 +34,7 @@ fuzz_target!(|data: &[u8]| {
         .expect("fixed fuzz limits should be valid");
     if let Ok(value) = MetadataFilter::decode_json_slice_with_limits(data, MetadataLimits::default(), receiver_limits) {
         let encoded = serde_json::to_vec(&value).expect("filter should serialize");
-        let input_limit = encoded.len().max(qubit_metadata::DEFAULT_MAX_JSON_BYTES);
+        let input_limit = encoded.len().max(DEFAULT_MAX_JSON_BYTES);
         let decode_limits = MetadataLimits::builder()
             .json_decode(
                 MetadataLimits::default()

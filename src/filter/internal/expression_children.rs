@@ -12,15 +12,20 @@ use qubit_redact::RedactionWriter;
 
 use crate::FilterExpression;
 
-/// A borrowed set of expression children written under one redaction session.
-/// Borrows the expression children written in one redaction session.
+/// Adapts expression children to the structured redaction writer.
+///
+/// The adapter keeps the children borrowed and writes each child as a nested
+/// item, so one enclosing redaction session retains ownership of its budget.
 pub(crate) struct ExpressionChildren<'a>(
     /// Expression children written in one redaction session.
     pub(crate) &'a [FilterExpression],
 );
 
 impl Redact for ExpressionChildren<'_> {
-    /// Writes admitted children without cloning them or resetting the budget.
+    /// Writes each child as a nested item in the enclosing redaction session.
+    ///
+    /// Borrowing avoids cloning the expressions, and using the supplied writer
+    /// preserves the session's shared budget.
     /// # Parameters
     ///
     /// * `writer` - Destination that receives the encoded or redacted output.

@@ -135,6 +135,31 @@ impl MetadataSchema {
         MetadataSchemaBuilder::default()
     }
 
+    /// Creates a schema from field definitions and unknown-field policies.
+    ///
+    /// # Parameters
+    ///
+    /// * `fields` - Field definitions keyed by metadata key.
+    /// * `unknown_metadata_field_policy` - Policy for undeclared metadata keys.
+    /// * `unknown_filter_field_policy` - Policy for undeclared filter keys.
+    ///
+    /// # Returns
+    ///
+    /// A new immutable schema.
+    #[must_use]
+    #[inline]
+    pub(crate) fn new(
+        fields: BTreeMap<String, MetadataField>,
+        unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
+        unknown_filter_field_policy: UnknownFilterFieldPolicy,
+    ) -> Self {
+        Self {
+            fields,
+            unknown_metadata_field_policy,
+            unknown_filter_field_policy,
+        }
+    }
+
     /// Decodes a strict metadata-schema JSON envelope using the metadata
     /// profile.
     ///
@@ -226,6 +251,10 @@ impl MetadataSchema {
     /// exceeds a V1 wire limit, before checking JSON output budgets.
     /// Returns [`crate::MetadataWireEncodeError`] when encoding exceeds a
     /// default JSON budget or serialization fails.
+    ///
+    /// # Returns
+    ///
+    /// The compact JSON bytes representing this schema.
     #[cfg(feature = "json")]
     pub fn to_json_vec(&self) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.to_json_vec_with_limits(crate::metadata_limits::default_json_encode_limits())
@@ -243,6 +272,10 @@ impl MetadataSchema {
     /// key exceeds the V1 wire limit, encoding exceeds a JSON budget, or
     /// serialization fails. Schema wire-limit errors are reported as
     /// `Domain(MetadataError::WireLimitExceeded { .. })` before JSON budgets.
+    ///
+    /// # Returns
+    ///
+    /// The compact JSON bytes representing this schema.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.validate_wire_contract()
@@ -335,31 +368,6 @@ impl MetadataSchema {
             .map_err(Into::into)
     }
 
-    /// Creates a schema from field definitions and unknown-field policies.
-    ///
-    /// # Parameters
-    ///
-    /// * `fields` - Field definitions keyed by metadata key.
-    /// * `unknown_metadata_field_policy` - Policy for undeclared metadata keys.
-    /// * `unknown_filter_field_policy` - Policy for undeclared filter keys.
-    ///
-    /// # Returns
-    ///
-    /// A new immutable schema.
-    #[must_use]
-    #[inline]
-    pub(crate) fn new(
-        fields: BTreeMap<String, MetadataField>,
-        unknown_metadata_field_policy: UnknownMetadataFieldPolicy,
-        unknown_filter_field_policy: UnknownFilterFieldPolicy,
-    ) -> Self {
-        Self {
-            fields,
-            unknown_metadata_field_policy,
-            unknown_filter_field_policy,
-        }
-    }
-
     /// Returns the field definition for `key`.
     ///
     /// # Parameters
@@ -396,7 +404,6 @@ impl MetadataSchema {
     ///
     /// The policy applied to undeclared metadata keys.
     #[inline]
-    #[must_use]
     pub fn unknown_metadata_field_policy(&self) -> UnknownMetadataFieldPolicy {
         self.unknown_metadata_field_policy
     }
@@ -549,6 +556,15 @@ impl Serialize for MetadataSchema {
     /// # Parameters
     ///
     /// * `serializer` - Destination serializer for the schema.
+    ///
+    /// # Returns
+    ///
+    /// The serializer's success value after encoding the strict v1 envelope.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error when the schema exceeds wire limits or
+    /// serialization fails.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -574,6 +590,15 @@ impl<'de> Deserialize<'de> for MetadataSchema {
     /// # Parameters
     ///
     /// * `deserializer` - Source of the serialized schema.
+    ///
+    /// # Returns
+    ///
+    /// The schema decoded from the strict v1 envelope.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error when the envelope is malformed or its
+    /// version is unsupported.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

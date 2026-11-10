@@ -13,7 +13,8 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::de::DeserializeSeed;
 
-/// A string-keyed map that rejects duplicate keys while deserializing.
+/// A string-keyed map that rejects duplicate keys and enforces wire-format
+/// entry-count and key-length limits while deserializing.
 ///
 /// # Type Parameters
 ///
@@ -41,7 +42,7 @@ impl<'de, V> Deserialize<'de> for StrictStringMap<V>
 where
     V: Deserialize<'de>,
 {
-    /// Deserializes a map while rejecting a repeated key.
+    /// Deserializes a strict string-keyed map using the configured wire limits.
     ///
     /// # Type Parameters
     ///
@@ -50,6 +51,16 @@ where
     /// # Parameters
     ///
     /// * `deserializer` - Source of the serialized map.
+    ///
+    /// # Returns
+    ///
+    /// The decoded map after duplicate-key and resource-limit validation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer error if an entry cannot be decoded, a key is
+    /// repeated, or the map exceeds the configured entry-count or key-length
+    /// limit.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

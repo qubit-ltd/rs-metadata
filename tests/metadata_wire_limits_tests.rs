@@ -118,7 +118,10 @@ fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
 #[test]
 fn test_filter_domain_limits_remain_separate_from_json_budget() {
     let input = filter_input(r#"{"kind":"not","expression":{"kind":"all"}}"#);
-    let limits = FilterLimits::builder().max_depth(1).build().unwrap();
+    let limits = FilterLimits::builder()
+        .max_depth(1)
+        .build()
+        .expect("filter depth limit should build");
     let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
         .expect_err("nested expression should exceed receiver depth");
     assert!(matches!(
@@ -135,7 +138,10 @@ fn test_filter_domain_limits_remain_separate_from_json_budget() {
 #[test]
 fn test_filter_key_limit_preserves_structured_error() {
     let input = filter_input(r#"{"kind":"exists","key":"status"}"#);
-    let limits = FilterLimits::builder().max_key_bytes(5).build().unwrap();
+    let limits = FilterLimits::builder()
+        .max_key_bytes(5)
+        .build()
+        .expect("filter key limit should build");
     let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
         .expect_err("the filter key should exceed the receiver limit");
     assert!(matches!(
@@ -152,7 +158,10 @@ fn test_filter_key_limit_preserves_structured_error() {
 #[test]
 fn test_filter_node_limit_preserves_structured_error() {
     let input = filter_input(r#"{"kind":"or","children":[{"kind":"all"},{"kind":"all"}]}"#);
-    let limits = FilterLimits::builder().max_nodes(1).build().unwrap();
+    let limits = FilterLimits::builder()
+        .max_nodes(1)
+        .build()
+        .expect("filter node limit should build");
     let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
         .expect_err("the second node should exceed the receiver limit");
     assert!(matches!(
@@ -170,7 +179,10 @@ fn test_filter_node_limit_preserves_structured_error() {
 fn test_filter_set_values_limit_preserves_structured_error() {
     let input =
         filter_input(r#"{"kind":"in","key":"status","values":[{"scalar":{"string":"a"}},{"scalar":{"string":"b"}}]}"#);
-    let limits = FilterLimits::builder().max_set_values(1).build().unwrap();
+    let limits = FilterLimits::builder()
+        .max_set_values(1)
+        .build()
+        .expect("filter set-value limit should build");
     let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
         .expect_err("the second set value should exceed the receiver limit");
     assert!(matches!(
@@ -287,7 +299,10 @@ fn test_strict_envelopes_reject_duplicates_and_unknown_fields() {
         br#"{"version":1,"values":{},"extra":true}"#.as_slice(),
         br#"{"version":1,"version":1,"values":{}}"#.as_slice(),
     ] {
-        assert!(Metadata::decode_json_slice(input).is_err());
+        assert!(
+            Metadata::decode_json_slice(input).is_err(),
+            "strict envelope should reject {input:?}"
+        );
     }
 }
 

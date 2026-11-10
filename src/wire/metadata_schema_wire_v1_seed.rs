@@ -33,6 +33,7 @@ impl<S> MetadataSchemaWireV1Seed<S> {
     /// # Returns
     ///
     /// A seed configured with the supplied fields decoder.
+    #[must_use]
     #[inline]
     pub(crate) const fn new(fields: S) -> Self {
         Self { fields }
@@ -56,6 +57,15 @@ where
     /// # Parameters
     ///
     /// * `deserializer` - Source of the serialized schema envelope.
+    ///
+    /// # Returns
+    ///
+    /// The decoded schema envelope, with the fields value produced by `S`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer error when the input is not a valid strict
+    /// schema envelope or when decoding its fields fails.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

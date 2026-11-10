@@ -44,6 +44,14 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
     /// # Parameters
     ///
     /// * `deserializer` - Deserializer providing the filter representation.
+    ///
+    /// # Returns
+    ///
+    /// The decoded child expression.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer error when decoding the child expression fails.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

@@ -8,8 +8,10 @@
 //! Expression wire tests through a root filter.
 
 use qubit_metadata::FilterExpression;
+use qubit_metadata::FilterLimits;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
+use serde_json::Deserializer;
 use serde_json::from_str;
 use serde_json::from_value;
 use serde_json::json;
@@ -180,4 +182,109 @@ fn test_filter_wire_rejects_invalid_operand_shapes_and_group_members() {
             "invalid expression must be rejected"
         );
     }
+}
+
+#[test]
+fn test_validate_limits_rejects_depth_nodes_key_and_membership() {
+    let cases = [
+        (
+            json!({
+                "kind": "not",
+                "expression": {"kind": "not", "expression": {"kind": "all"}}
+            }),
+            FilterLimits::builder()
+                .max_depth(2)
+                .build()
+                .expect("depth limits should build"),
+            "Depth value 3 exceeds the maximum of 2",
+        ),
+        (
+            json!({
+                "kind": "and",
+                "children": [{"kind": "all"}, {"kind": "none"}, {"kind": "all"}]
+            }),
+            FilterLimits::builder()
+                .max_nodes(2)
+                .build()
+                .expect("node limits should build"),
+            "Nodes value 3 exceeds the maximum of 2",
+        ),
+        (
+            json!({"kind": "exists", "key": "status"}),
+            FilterLimits::builder()
+                .max_key_bytes(4)
+                .build()
+                .expect("key limits should build"),
+            "KeyBytes value 6 exceeds the maximum of 4",
+        ),
+        (
+            json!({
+                "kind": "in",
+                "key": "k",
+                "values": [
+                    {"scalar": {"int32": 1}},
+                    {"scalar": {"int32": 2}}
+                ]
+            }),
+            FilterLimits::builder()
+                .max_set_values(1)
+                .build()
+                .expect("membership limits should build"),
+            "SetValues value 2 exceeds the maximum of 1",
+        ),
+    ];
+
+    for (expression, limits, expected_error) in cases {
+        let envelope = json!({
+            "version": 1,
+            "expression": expression,
+            "options": {"numeric_comparison_policy": "exact"}
+        });
+        let encoded = to_string(&envelope).expect("wire envelope should encode");
+        let mut deserializer = Deserializer::from_str(&encoded);
+        let error = MetadataFilter::deserialize_with_filter_limits(&mut deserializer, limits)
+            .expect_err("expression should exceed receiver limits");
+
+        assert!(
+            error.to_string().contains(expected_error),
+            "unexpected limit error: {error}"
+        );
+    }
+}
+
+#[test]
+fn test_into_expression_rejects_non_scalar_operands_and_short_groups() {
+    let invalid_expressions = [
+        json!({
+            "kind": "eq",
+            "key": "k",
+            "value": {"collection": {"int32": [1, 2]}}
+        }),
+        json!({"kind": "and", "children": [{"kind": "all"}]}),
+    ];
+
+    for expression in invalid_expressions {
+        let envelope = json!({
+            "version": 1,
+            "expression": expression,
+            "options": {"numeric_comparison_policy": "exact"}
+        });
+        assert!(
+            from_value::<MetadataFilter>(envelope).is_err(),
+            "invalid expression should be rejected"
+        );
+    }
+
+    let three_children = json!({
+        "version": 1,
+        "expression": {
+            "kind": "or",
+            "children": [{"kind": "all"}, {"kind": "none"}, {"kind": "all"}]
+        },
+        "options": {"numeric_comparison_policy": "exact"}
+    });
+    assert!(
+        from_value::<MetadataFilter>(three_children).is_ok(),
+        "three-child groups should fold into an expression"
+    );
 }

@@ -19,6 +19,7 @@ use serde::Serialize;
 ///
 /// assert_eq!(UnknownMetadataFieldPolicy::default(), UnknownMetadataFieldPolicy::Reject);
 /// ```
+#[must_use = "the policy must be configured on a metadata schema"]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum UnknownMetadataFieldPolicy {

@@ -684,69 +684,6 @@ impl Metadata {
             .map(|value| value.unwrap_or_else(|| default.into_value_default()))
     }
 
-    /// Looks up storage, leaving unset and type classification to the value
-    /// layer.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key to look up.
-    ///
-    /// # Returns
-    ///
-    /// The stored value for the key.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`MetadataError::MissingKey`] when the key is absent.
-    fn entry(&self, key: &str) -> MetadataResult<&Value> {
-        self.get_raw(key)
-            .ok_or_else(|| MetadataError::MissingKey(key.to_owned()))
-    }
-
-    /// Wraps a value access error with its metadata key while retaining the
-    /// original error as the source.
-    ///
-    /// # Parameters
-    ///
-    /// * `key` - Metadata key associated with the access error.
-    /// * `source` - Original value access error.
-    ///
-    /// # Returns
-    ///
-    /// A metadata value access error containing `key` and `source`.
-    fn map_access_error(key: &str, source: ValueError) -> MetadataError {
-        MetadataError::ValueAccess {
-            key: key.to_owned(),
-            source: Box::new(source),
-        }
-    }
-
-    /// Determines whether a metadata error represents a defaultable missing
-    /// value under the selected read policy.
-    ///
-    /// # Parameters
-    ///
-    /// * `error` - Metadata error to classify.
-    /// * `conversion` - Whether conversion fallback rules apply.
-    ///
-    /// # Returns
-    ///
-    /// `true` when the error represents a missing value eligible for the
-    /// selected fallback; otherwise, `false`.
-    fn is_defaultable(error: &MetadataError, conversion: bool) -> bool {
-        match error {
-            MetadataError::MissingKey(_) => true,
-            MetadataError::ValueAccess { source, .. } => source.missing().is_some_and(|missing| {
-                if conversion {
-                    missing.is_defaultable_for_conversion()
-                } else {
-                    missing.is_defaultable_for_strict_read()
-                }
-            }),
-            _ => false,
-        }
-    }
-
     /// Returns a reference to the stored [`Value`] for `key`, or `None` if
     /// absent.
     ///
@@ -1087,6 +1024,99 @@ impl Metadata {
         }
         Ok(())
     }
+
+    /// Looks up storage, leaving unset and type classification to the value
+    /// layer.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key to look up.
+    ///
+    /// # Returns
+    ///
+    /// The stored value for the key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::MissingKey`] when the key is absent.
+    fn entry(&self, key: &str) -> MetadataResult<&Value> {
+        self.get_raw(key)
+            .ok_or_else(|| MetadataError::MissingKey(key.to_owned()))
+    }
+
+    /// Wraps a value access error with its metadata key while retaining the
+    /// original error as the source.
+    ///
+    /// # Parameters
+    ///
+    /// * `key` - Metadata key associated with the access error.
+    /// * `source` - Original value access error.
+    ///
+    /// # Returns
+    ///
+    /// A metadata value access error containing `key` and `source`.
+    fn map_access_error(key: &str, source: ValueError) -> MetadataError {
+        MetadataError::ValueAccess {
+            key: key.to_owned(),
+            source: Box::new(source),
+        }
+    }
+
+    /// Determines whether a metadata error represents a defaultable missing
+    /// value under the selected read policy.
+    ///
+    /// # Parameters
+    ///
+    /// * `error` - Metadata error to classify.
+    /// * `conversion` - Whether conversion fallback rules apply.
+    ///
+    /// # Returns
+    ///
+    /// `true` when the error represents a missing value eligible for the
+    /// selected fallback; otherwise, `false`.
+    fn is_defaultable(error: &MetadataError, conversion: bool) -> bool {
+        match error {
+            MetadataError::MissingKey(_) => true,
+            MetadataError::ValueAccess { source, .. } => source.missing().is_some_and(|missing| {
+                if conversion {
+                    missing.is_defaultable_for_conversion()
+                } else {
+                    missing.is_defaultable_for_strict_read()
+                }
+            }),
+            _ => false,
+        }
+    }
+
+    /// Converts a decoded wire envelope into scalar metadata values.
+    ///
+    /// # Parameters
+    ///
+    /// * `wire` - Decoded metadata envelope containing scalar value payloads.
+    ///
+    /// # Returns
+    ///
+    /// The metadata values indexed by key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error message when an envelope value is not a scalar V1
+    /// payload.
+    fn from_wire(
+        wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>>,
+    ) -> Result<BTreeMap<String, Value>, &'static str> {
+        wire.values
+            .into_inner()
+            .into_iter()
+            .map(|(key, value)| {
+                value
+                    .into_container()
+                    .into_scalar()
+                    .map(|value| (key, value))
+                    .map_err(|_| "metadata values must use scalar V1 payloads")
+            })
+            .collect()
+    }
 }
 
 impl Redact for Metadata {
@@ -1215,38 +1245,6 @@ impl<'de> Deserialize<'de> for Metadata {
         }
         let values = Self::from_wire(wire).map_err(de::Error::custom)?;
         Ok(Self(values))
-    }
-}
-
-impl Metadata {
-    /// Converts a decoded wire envelope into scalar metadata values.
-    ///
-    /// # Parameters
-    ///
-    /// * `wire` - Decoded metadata envelope containing scalar value payloads.
-    ///
-    /// # Returns
-    ///
-    /// The metadata values indexed by key.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error message when an envelope value is not a scalar V1
-    /// payload.
-    fn from_wire(
-        wire: MetadataWireV1<StrictStringMap<ValueWirePayloadV1>>,
-    ) -> Result<BTreeMap<String, Value>, &'static str> {
-        wire.values
-            .into_inner()
-            .into_iter()
-            .map(|(key, value)| {
-                value
-                    .into_container()
-                    .into_scalar()
-                    .map(|value| (key, value))
-                    .map_err(|_| "metadata values must use scalar V1 payloads")
-            })
-            .collect()
     }
 }
 

@@ -20,7 +20,7 @@ use serde::de::Visitor;
 use super::super::filter_expression_wire_v1::FilterExpressionWireV1;
 use super::super::filter_expression_wire_v1_seed::FilterExpressionWireV1Seed;
 use super::expression_fields::ExpressionFields;
-use super::expression_sequence_seed::ExpressionSequenceSeed;
+use super::internal::expression_sequence_seed::ExpressionSequenceSeed;
 use super::limit_support::check_key;
 use super::value_sequence_seed::ValueSequenceSeed;
 use crate::FilterLimitKind;
@@ -47,6 +47,15 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
     /// # Parameters
     ///
     /// * `formatter` - Formatter that receives the output.
+    ///
+    /// # Returns
+    ///
+    /// Writes the expected representation to `formatter` and returns its
+    /// formatting result.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to `formatter` fails.
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a strict metadata-filter expression object")
     }
@@ -58,6 +67,16 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
     /// # Parameters
     ///
     /// * `map` - Input map used by this operation.
+    ///
+    /// # Returns
+    ///
+    /// Returns the decoded expression node when all fields satisfy the wire
+    /// format and the receiver-side limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserializer error for duplicate or unknown fields, invalid
+    /// field values, missing required fields, or exceeded receiver-side limits.
     fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
     where
         A: MapAccess<'de>,

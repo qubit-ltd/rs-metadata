@@ -14,8 +14,8 @@ use qubit_budget::ResourceBudget;
 use serde::de::DeserializeSeed;
 use serde::de::Deserializer;
 
-use super::super::filter_expression_wire_v1::FilterExpressionWireV1;
-use super::expression_sequence_visitor::ExpressionSequenceVisitor;
+use super::super::super::filter_expression_wire_v1::FilterExpressionWireV1;
+use super::super::expression_sequence_visitor::ExpressionSequenceVisitor;
 use crate::FilterLimitKind;
 use crate::FilterLimits;
 use crate::MetadataError;
@@ -43,6 +43,11 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionSequenceSeed<'a> {
     /// # Parameters
     ///
     /// * `deserializer` - Deserializer providing the filter representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the deserializer's error if the sequence or any child expression
+    /// cannot be decoded.
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,

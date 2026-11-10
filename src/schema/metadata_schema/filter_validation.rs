@@ -61,15 +61,21 @@ impl MetadataSchema {
     /// * `issues` - Destination for discovered issues.
     fn collect_condition_issues(&self, condition: &Condition, issues: &mut Vec<MetadataError>) {
         match condition {
-            Condition::Equal { key, value } => collect_issue(issues, self.validate_value_condition(key, "eq", value)),
+            Condition::Equal { key, value } => {
+                collect_issue(issues, self.validate_value_condition(key, "eq", value));
+            }
             Condition::NotEqual { key, value } => {
                 collect_issue(issues, self.validate_value_condition(key, "ne", value))
             }
-            Condition::Less { key, value } => collect_issue(issues, self.validate_range_condition(key, "lt", value)),
+            Condition::Less { key, value } => {
+                collect_issue(issues, self.validate_range_condition(key, "lt", value));
+            }
             Condition::LessEqual { key, value } => {
                 collect_issue(issues, self.validate_range_condition(key, "le", value))
             }
-            Condition::Greater { key, value } => collect_issue(issues, self.validate_range_condition(key, "gt", value)),
+            Condition::Greater { key, value } => {
+                collect_issue(issues, self.validate_range_condition(key, "gt", value));
+            }
             Condition::GreaterEqual { key, value } => {
                 collect_issue(issues, self.validate_range_condition(key, "ge", value))
             }

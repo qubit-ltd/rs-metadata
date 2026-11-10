@@ -17,8 +17,10 @@ use super::FilterMatchOptions;
 ///
 /// ```
 /// use qubit_metadata::FilterMatchOptions;
+/// use qubit_metadata::FilterMatchOptionsBuilder;
 ///
-/// let options = FilterMatchOptions::builder().build();
+/// let builder: FilterMatchOptionsBuilder = FilterMatchOptions::builder();
+/// let options = builder.build();
 /// assert_eq!(options, FilterMatchOptions::default());
 /// ```
 #[must_use]

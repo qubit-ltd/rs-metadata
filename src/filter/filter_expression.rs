@@ -118,19 +118,93 @@ impl FilterExpression {
 
     /// Creates an expression that matches every metadata object.
     #[inline(always)]
-    #[must_use = "the constructed all-matching expression should be used"]
     pub const fn match_all() -> Self {
         Self::true_expression()
     }
 
     /// Creates an expression that matches no metadata object.
     #[inline(always)]
-    #[must_use = "the constructed no-match expression should be used"]
     pub const fn match_none() -> Self {
         Self::false_expression()
     }
 
+    /// Creates a condition expression.
+    ///
+    /// # Parameters
+    ///
+    /// * `condition` - Leaf condition to store.
+    ///
+    /// # Returns
+    ///
+    /// A new condition expression.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterOperand`] when a comparison
+    /// operand is unset or cannot be represented by the V1 wire format.
+    #[inline]
+    pub(crate) fn condition(condition: Condition) -> MetadataResult<Self> {
+        condition.validate_operands()?;
+        Ok(Self {
+            node: FilterExpressionNode::Condition(condition),
+            node_count: 1,
+            max_depth: 1,
+        })
+    }
+
+    /// Creates a constant true expression.
+    ///
+    /// # Returns
+    ///
+    /// A new constant true expression.
+    #[inline]
+    pub(crate) const fn true_expression() -> Self {
+        Self {
+            node: FilterExpressionNode::True,
+            node_count: 1,
+            max_depth: 1,
+        }
+    }
+
+    /// Creates a constant false expression.
+    ///
+    /// # Returns
+    ///
+    /// A new constant false expression.
+    #[inline]
+    pub(crate) const fn false_expression() -> Self {
+        Self {
+            node: FilterExpressionNode::False,
+            node_count: 1,
+            max_depth: 1,
+        }
+    }
+
+    /// Creates a NOT expression without simplifying its child.
+    ///
+    /// # Parameters
+    ///
+    /// * `expression` - Child expression to negate.
+    ///
+    /// # Returns
+    ///
+    /// A NOT expression containing the supplied child.
+    #[inline]
+    pub(crate) fn not_expression(expression: Self) -> Self {
+        let node_count = expression.node_count + 1;
+        let max_depth = expression.max_depth + 1;
+        Self {
+            node: FilterExpressionNode::Not(Box::new(expression)),
+            node_count,
+            max_depth,
+        }
+    }
+
     /// Combines this expression with `other` using logical AND.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback that visits operands or constructs a nested group.
     ///
     /// # Parameters
     ///
@@ -201,58 +275,6 @@ impl FilterExpression {
         }
     }
 
-    /// Creates a condition expression.
-    ///
-    /// # Parameters
-    ///
-    /// * `condition` - Leaf condition to store.
-    ///
-    /// # Returns
-    ///
-    /// A new condition expression.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`MetadataError::InvalidFilterOperand`] when a comparison
-    /// operand is unset or cannot be represented by the V1 wire format.
-    #[inline]
-    pub(crate) fn condition(condition: Condition) -> MetadataResult<Self> {
-        condition.validate_operands()?;
-        Ok(Self {
-            node: FilterExpressionNode::Condition(condition),
-            node_count: 1,
-            max_depth: 1,
-        })
-    }
-
-    /// Creates a constant true expression.
-    ///
-    /// # Returns
-    ///
-    /// A new constant true expression.
-    #[inline]
-    pub(crate) const fn true_expression() -> Self {
-        Self {
-            node: FilterExpressionNode::True,
-            node_count: 1,
-            max_depth: 1,
-        }
-    }
-
-    /// Creates a constant false expression.
-    ///
-    /// # Returns
-    ///
-    /// A new constant false expression.
-    #[inline]
-    pub(crate) const fn false_expression() -> Self {
-        Self {
-            node: FilterExpressionNode::False,
-            node_count: 1,
-            max_depth: 1,
-        }
-    }
-
     /// Combines two expressions with logical AND.
     ///
     /// # Parameters
@@ -297,26 +319,6 @@ impl FilterExpression {
             return left;
         }
         Self::combine_or(left, right)
-    }
-
-    /// Creates a NOT expression without simplifying its child.
-    ///
-    /// # Parameters
-    ///
-    /// * `expression` - Child expression to negate.
-    ///
-    /// # Returns
-    ///
-    /// A NOT expression containing the supplied child.
-    #[inline]
-    pub(crate) fn not_expression(expression: Self) -> Self {
-        let node_count = expression.node_count + 1;
-        let max_depth = expression.max_depth + 1;
-        Self {
-            node: FilterExpressionNode::Not(Box::new(expression)),
-            node_count,
-            max_depth,
-        }
     }
 
     /// Returns the three-valued logical negation of this expression.
@@ -391,6 +393,10 @@ impl FilterExpression {
 
     /// Visits every leaf condition in this expression.
     ///
+    /// # Type Parameters
+    ///
+    /// * `F` - Callback type used to observe each leaf condition.
+    ///
     /// # Parameters
     ///
     /// * `visitor` - Callback invoked for each condition.
@@ -402,9 +408,6 @@ impl FilterExpression {
     /// # Errors
     ///
     /// Returns the first error produced by `visitor`.
-    /// # Type Parameters
-    ///
-    /// * `F` - Callback that visits operands or constructs a nested group.
     #[cfg(feature = "schema")]
     pub(crate) fn visit_conditions<F>(&self, visitor: &mut F) -> MetadataResult<()>
     where

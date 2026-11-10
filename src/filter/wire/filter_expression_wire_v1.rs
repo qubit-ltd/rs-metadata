@@ -18,7 +18,8 @@ use crate::FilterLimits;
 use crate::MetadataError;
 use crate::MetadataResult;
 
-/// One V1 expression node.
+/// One decoded V1 expression node, preserving the wire shape until validation
+/// has enforced limits on the complete input tree.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum FilterExpressionWireV1 {
@@ -110,6 +111,25 @@ pub(crate) enum FilterExpressionWireV1 {
 }
 
 impl FilterExpressionWireV1 {
+    /// Converts a V1 node into an expression.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterExpression`] for collection-shaped
+    /// operands or an AND/OR group with fewer than two children,
+    /// [`MetadataError::InvalidFilterOperand`] for an unset or unsupported
+    /// comparison operand, and [`MetadataError::FilterLimitExceeded`] for an
+    /// oversized tree.
+    ///
+    /// # Returns
+    ///
+    /// The normalized filter expression represented by this wire node.
+    pub(crate) fn into_expression(self) -> MetadataResult<FilterExpression> {
+        let expression = self.into_expression_unchecked()?;
+        expression.validate_limits(FilterLimits::MAX)?;
+        Ok(expression)
+    }
+
     /// Validates the unnormalized wire tree against resource limits.
     ///
     /// This check precedes conversion because Boolean normalization can remove
@@ -118,6 +138,10 @@ impl FilterExpressionWireV1 {
     /// # Parameters
     ///
     /// * `limits` - Bounds to enforce on the raw wire tree.
+    ///
+    /// # Returns
+    ///
+    /// `()` when the raw tree satisfies every configured bound.
     ///
     /// # Errors
     ///
@@ -128,20 +152,19 @@ impl FilterExpressionWireV1 {
         self.validate_limits_at(limits, 1, &mut node_count)
     }
 
-    /// Converts a V1 node into an expression.
+    /// Converts a node recursively without repeatedly traversing the partial
+    /// expression tree for hard-limit validation.
     ///
     /// # Errors
     ///
-    /// Returns an invalid-expression error for AND/OR groups with fewer than
-    /// two children, or a hard-limit error for oversized trees.
-    pub(crate) fn into_expression(self) -> MetadataResult<FilterExpression> {
-        let expression = self.into_expression_unchecked()?;
-        expression.validate_limits(FilterLimits::MAX)?;
-        Ok(expression)
-    }
-
-    /// Converts a node recursively without repeatedly traversing the partial
-    /// expression tree for hard-limit validation.
+    /// Returns [`MetadataError::InvalidFilterExpression`] for collection-shaped
+    /// operands or a Boolean group with fewer than two children, or
+    /// [`MetadataError::InvalidFilterOperand`] for an unset or unsupported
+    /// comparison operand.
+    ///
+    /// # Returns
+    ///
+    /// The expression represented by this node before hard-limit validation.
     fn into_expression_unchecked(self) -> MetadataResult<FilterExpression> {
         match self {
             Self::All => Ok(FilterExpression::match_all()),
@@ -194,6 +217,15 @@ impl FilterExpressionWireV1 {
     /// * `depth` - Current one-based depth of this node in the wire tree.
     /// * `node_count` - Running count of visited nodes, updated during
     ///   traversal.
+    ///
+    /// # Returns
+    ///
+    /// `()` when this node and its descendants satisfy `limits`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when any visited node,
+    /// key, or membership list exceeds its configured bound.
     fn validate_limits_at(&self, limits: FilterLimits, depth: usize, node_count: &mut usize) -> MetadataResult<()> {
         if depth > limits.max_depth() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -247,6 +279,16 @@ impl FilterExpressionWireV1 {
     ///
     /// * `key` - Metadata key whose encoded byte length is checked.
     /// * `limits` - Resource bounds applied to the key.
+    ///
+    /// # Returns
+    ///
+    /// `()` when the key fits within the configured byte limit.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::FilterLimitExceeded`] when the UTF-8 byte
+    /// length of `key` exceeds the configured maximum.
+    #[inline]
     fn validate_key(key: &str, limits: FilterLimits) -> MetadataResult<()> {
         if key.len() > limits.max_key_bytes() {
             return Err(MetadataError::FilterLimitExceeded {
@@ -263,6 +305,15 @@ impl FilterExpressionWireV1 {
     /// # Parameters
     ///
     /// * `value` - Encoded value that must contain a scalar.
+    ///
+    /// # Returns
+    ///
+    /// The scalar value encoded by `value`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterExpression`] when `value` encodes
+    /// a collection instead of a scalar.
     fn into_scalar_value(value: ValueWirePayloadV1) -> MetadataResult<Value> {
         value
             .into_container()
@@ -277,6 +328,15 @@ impl FilterExpressionWireV1 {
     /// # Parameters
     ///
     /// * `values` - Encoded condition values, each of which must be scalar.
+    ///
+    /// # Returns
+    ///
+    /// The scalar values in their original order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterExpression`] if any element
+    /// encodes a collection instead of a scalar.
     fn into_scalar_values(values: Vec<ValueWirePayloadV1>) -> MetadataResult<Vec<Value>> {
         values.into_iter().map(Self::into_scalar_value).collect()
     }
@@ -288,6 +348,16 @@ impl FilterExpressionWireV1 {
     /// * `children` - Wire nodes to fold; at least two are required.
     /// * `combine` - Operation that combines two converted expressions.
     /// * `operator` - Operator name used in invalid-group errors.
+    ///
+    /// # Returns
+    ///
+    /// The expression formed by folding the converted children from left to
+    /// right.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetadataError::InvalidFilterExpression`] when fewer than two
+    /// children are provided or a child cannot be converted.
     fn combine(
         children: Vec<Self>,
         combine: fn(FilterExpression, FilterExpression) -> FilterExpression,
@@ -309,125 +379,5 @@ impl FilterExpressionWireV1 {
             expression = combine(expression, child.into_expression_unchecked()?);
         }
         Ok(expression)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use qubit_value::MultiValues;
-    use qubit_value::ValueWirePayloadV1;
-
-    use super::FilterExpressionWireV1;
-    use crate::FilterLimitKind;
-    use crate::FilterLimits;
-    use crate::MetadataError;
-
-    fn non_scalar_payload() -> ValueWirePayloadV1 {
-        ValueWirePayloadV1::try_from(MultiValues::Int32(vec![1, 2])).expect("collection payload should convert")
-    }
-
-    #[test]
-    fn test_validate_limits_rejects_depth_nodes_key_and_membership() {
-        let depth_limits = FilterLimits::builder()
-            .max_depth(2)
-            .build()
-            .expect("limits should build");
-        let too_deep = FilterExpressionWireV1::Not {
-            expression: Box::new(FilterExpressionWireV1::Not {
-                expression: Box::new(FilterExpressionWireV1::All),
-            }),
-        };
-        assert!(matches!(
-            too_deep.validate_limits(depth_limits),
-            Err(MetadataError::FilterLimitExceeded {
-                kind: FilterLimitKind::Depth,
-                value: 3,
-                maximum: 2,
-            })
-        ));
-
-        let node_limits = FilterLimits::builder()
-            .max_nodes(2)
-            .build()
-            .expect("limits should build");
-        let too_many_nodes = FilterExpressionWireV1::And {
-            children: vec![
-                FilterExpressionWireV1::All,
-                FilterExpressionWireV1::None,
-                FilterExpressionWireV1::All,
-            ],
-        };
-        assert!(matches!(
-            too_many_nodes.validate_limits(node_limits),
-            Err(MetadataError::FilterLimitExceeded {
-                kind: FilterLimitKind::Nodes,
-                value: 3,
-                maximum: 2,
-            })
-        ));
-
-        let key_limits = FilterLimits::builder()
-            .max_key_bytes(4)
-            .build()
-            .expect("limits should build");
-        let long_key = FilterExpressionWireV1::Exists {
-            key: "status".to_owned(),
-        };
-        assert!(matches!(
-            long_key.validate_limits(key_limits),
-            Err(MetadataError::FilterLimitExceeded {
-                kind: FilterLimitKind::KeyBytes,
-                value: 6,
-                maximum: 4,
-            })
-        ));
-
-        let set_limits = FilterLimits::builder()
-            .max_set_values(1)
-            .build()
-            .expect("limits should build");
-        let too_many_values = FilterExpressionWireV1::In {
-            key: "k".to_owned(),
-            values: vec![non_scalar_payload(), non_scalar_payload()],
-        };
-        assert!(matches!(
-            too_many_values.validate_limits(set_limits),
-            Err(MetadataError::FilterLimitExceeded {
-                kind: FilterLimitKind::SetValues,
-                value: 2,
-                maximum: 1,
-            })
-        ));
-    }
-
-    #[test]
-    fn test_into_expression_rejects_non_scalar_operands_and_short_groups() {
-        let non_scalar = FilterExpressionWireV1::Eq {
-            key: "k".to_owned(),
-            value: non_scalar_payload(),
-        };
-        assert!(matches!(
-            non_scalar.into_expression(),
-            Err(MetadataError::InvalidFilterExpression { .. })
-        ));
-
-        let single_child = FilterExpressionWireV1::And {
-            children: vec![FilterExpressionWireV1::All],
-        };
-        assert!(matches!(
-            single_child.into_expression(),
-            Err(MetadataError::InvalidFilterExpression { .. })
-        ));
-
-        let three_children = FilterExpressionWireV1::Or {
-            children: vec![
-                FilterExpressionWireV1::All,
-                FilterExpressionWireV1::None,
-                FilterExpressionWireV1::All,
-            ],
-        };
-        let _ = three_children
-            .into_expression()
-            .expect("three-child groups should fold into an expression");
     }
 }

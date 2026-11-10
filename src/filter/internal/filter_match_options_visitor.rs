@@ -17,35 +17,10 @@ use serde::de::Visitor;
 use crate::FilterMatchOptions;
 
 /// Field names accepted by the filter match options object visitor.
-const FIELD_NAMES: &[&str] = &["numeric_comparison_policy"];
-
-/// Deserializes the strict object representation of filter match options.
-///
-/// # Type Parameters
-///
-/// * `D` - The deserializer supplying the options representation.
-///
-/// # Parameters
-///
-/// * `deserializer` - The source representation to decode.
-///
-/// # Returns
-///
-/// The decoded filter match options.
-///
-/// # Errors
-///
-/// Returns an error if the representation is not an object with exactly one
-/// valid numeric comparison policy.
-pub(crate) fn deserialize_filter_match_options<'de, D>(deserializer: D) -> Result<FilterMatchOptions, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserializer.deserialize_struct("FilterMatchOptions", FIELD_NAMES, FilterMatchOptionsVisitor)
-}
+pub(super) const FIELD_NAMES: &[&str] = &["numeric_comparison_policy"];
 
 /// Visits the object representation of filter match options.
-struct FilterMatchOptionsVisitor;
+pub(super) struct FilterMatchOptionsVisitor;
 
 impl<'de> Visitor<'de> for FilterMatchOptionsVisitor {
     /// The options value produced by this visitor.
@@ -103,4 +78,29 @@ impl<'de> Visitor<'de> for FilterMatchOptionsVisitor {
             numeric_comparison_policy.ok_or_else(|| serde::de::Error::missing_field("numeric_comparison_policy"))?;
         Ok(FilterMatchOptions::from_numeric_comparison_policy(policy))
     }
+}
+
+/// Deserializes the strict object representation of filter match options.
+///
+/// # Type Parameters
+///
+/// * `D` - The deserializer supplying the options representation.
+///
+/// # Parameters
+///
+/// * `deserializer` - The source representation to decode.
+///
+/// # Returns
+///
+/// The decoded filter match options.
+///
+/// # Errors
+///
+/// Returns an error if the representation is not an object with exactly one
+/// valid numeric comparison policy.
+pub(crate) fn deserialize_filter_match_options<'de, D>(deserializer: D) -> Result<FilterMatchOptions, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_struct("FilterMatchOptions", FIELD_NAMES, FilterMatchOptionsVisitor)
 }
