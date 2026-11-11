@@ -56,7 +56,7 @@ qubit-budget = { version = "^0.10", optional = true }
 qubit-datatype = { version = "^0.15", default-features = false, features = ["converter"] }
 qubit-json = { version = "^0.12", optional = true }
 qubit-redact = { version = "^0.10", default-features = false }
-qubit-value = { version = "^0.13", default-features = false, features = ["converter", "redact"] }
+qubit-value = { version = "^0.13", default-features = false, features = ["converter", "redact"] , path = "../rs-value" }
 
 [dev-dependencies]
 criterion = { version = "^0.8", default-features = false }
