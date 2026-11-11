@@ -19,6 +19,7 @@ python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))' || {
     exit 2
 }
 
+bash "$project_root/.infra/tests/check-package-with-registry-deps-tests.sh"
 cargo "${local_dependency_patches[@]}" package --manifest-path "$project_root/Cargo.toml" --allow-dirty --no-verify
 python3 - "$package_tmp" <<'PYCODE'
 import pathlib
@@ -52,4 +53,7 @@ python3 "$project_root/.infra/tests/check-user-guide-consumers-tests.py"
 python3 "$project_root/.infra/tests/check-user-guide-consumers.py" "$package_root" "${local_dependency_patches[@]}"
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --no-default-features --features json --test metadata_fuzz_roundtrip_tests
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --all-features --all-targets
+echo "Checking archive with latest candidate dependencies"
 "$project_root/.infra/check-package-with-latest-value-path.sh" "$(cat "$package_tmp/package-archive")"
+echo "Checking the same archive with published registry dependencies"
+"$project_root/.infra/check-package-with-registry-deps.sh" "$(cat "$package_tmp/package-archive")"
