@@ -23,15 +23,11 @@ use qubit_metadata::MetadataFilter;
 use qubit_metadata::MetadataLimits;
 
 fuzz_target!(|data: &[u8]| {
-    let default_filter = FilterLimits::builder()
-        .max_depth(4)
-        .max_nodes(16)
-        .max_set_values(8)
-        .max_key_bytes(32)
-        .build()
-        .expect("fixed fuzz limits valid");
-    if let Ok(value) = MetadataFilter::decode_json_slice_with_limits(data, MetadataLimits::default(), default_filter) {
-        check(value, data, MetadataLimits::default(), default_filter);
+    let production_filter_limits = FilterLimits::MAX;
+    if let Ok(value) =
+        MetadataFilter::decode_json_slice_with_limits(data, MetadataLimits::default(), production_filter_limits)
+    {
+        check(value, data, MetadataLimits::default(), production_filter_limits);
     }
     if let Ok(value) = MetadataFilter::decode_json_slice_with_limits(
         data,

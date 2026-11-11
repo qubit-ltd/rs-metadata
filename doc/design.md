@@ -184,14 +184,17 @@ Applications should enable only the layers used at each boundary.
 
 ## Compatibility policy
 
-The published 0.6.2 API has the read signatures and missing-error handling
-described above; those removed APIs have no compatibility aliases. Compatibility
-has three separate dimensions: the V1 wire version and canonical
+Compatibility has three separate dimensions: the V1 wire version and canonical
 object output, the set of input representations accepted by decoders, and the
-error/API contracts exposed to callers. Stable wire version and canonical output do not guarantee an unchanged
-input-acceptance range. In particular, schema envelope/field positional
-sequences and positional filter `options` arrays are rejected by the current
-decoder; see the [0.7 migration checklist](migration_0.7.md#compatibility-checks-before-upgrading).
-The release that first introduced these input restrictions has not been
-confirmed. Error classification and Rust API changes must likewise be checked
-as their own contracts, not inferred from the wire version.
+error/API contracts exposed to callers. Stable wire version and canonical
+output do not guarantee an unchanged input-acceptance range. A registry-backed
+consumer using `qubit-metadata 0.6.2` and this 0.7.0 checkout read the same
+fixtures in `tests/fixtures/compatibility/`: 0.6.2 accepts positional schema
+field arrays and positional filter `options`, but rejects positional schema
+envelopes; current decoders reject all three positional forms. The same run
+observed error-class changes for invalid UTF-8 and wrong top-level input, and
+for bounded entry/key encode limits. Details and migration steps are in the
+[0.7 migration checklist](migration_0.7.md#compatibility-checks-before-upgrading).
+This verifies only 0.6.2 → this 0.7.0 checkout. It does not determine behavior
+for every 0.6.x release or which release first changed acceptance or error
+classification. Rust API changes remain a separate compatibility dimension.

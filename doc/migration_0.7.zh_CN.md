@@ -2,22 +2,55 @@
 
 [English migration guide](migration_0.7.md) · [用户手册](user_guide.zh_CN.md) · [README](../README.zh_CN.md) · [设计文档](design.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
-本文说明升级到 `qubit-metadata` 0.7 时如何协调依赖并核查当前目标版本的兼容契约。下表以 Cargo
-registry 中已发布的 `qubit-metadata 0.6.2` 清单和本仓库 `0.7.0` 清单为对照，
-不能据此推断所有 0.6.x 版本都使用相同依赖。
+本文说明升级到 `qubit-metadata` 0.7 时如何协调依赖并核查当前目标版本的兼容契约。运行时
+对照使用 registry 中的 `qubit-metadata 0.6.2` 与本仓库 `0.7.0` checkout；不能据此推断
+所有 0.6.x 版本的行为，也不能确定某项契约首次变化的版本。
 
 ## 升级前的兼容性核查
 
-当应用保存、发送或分类 metadata wire 数据时，请按此清单核查。这里描述的是当前目标版本契约；各项输入或错误契约变化首次出现在哪个版本尚未确认。稳定设计文档说明了 [V1 wire 契约](design.zh_CN.md#v1-线协议与版本策略)和[错误分类](design.zh_CN.md#错误分类与脱敏)。
+当应用保存、发送或分类 metadata wire 数据时，请核对下表。表中记录的是精确
+0.6.2 到 0.7.0 的实测结果，不用于推断各差异首次出现的版本。稳定设计文档说明了
+[V1 wire 契约](design.zh_CN.md#v1-线协议与版本策略)和[错误分类](design.zh_CN.md#错误分类与脱敏)。
 
-| 核查项 | 适用条件 | 当前契约与行动 |
-| --- | --- | --- |
-| Schema envelope 与字段对象 | 应用持久化或生成 schema JSON，尤其是数据可能含位置序列时 | envelope 必须是规范四字段对象，且 `fields` 中每个值必须是仅含 `data_type` 和 `required` 的对象。位置式 envelope 序列和位置式字段数组都会被拒绝。若已存数据使用其中任一形式，先备份，再用已验证确实接受该表示的旧版读取，编码为规范对象，由目标版本验证，最后切换消费者。目标版验证成功前保留备份。见 [schema wire 契约](design.zh_CN.md#v1-线协议与版本策略)。 |
-| Filter `options` | 应用持久化/发送 filter JSON 或直接反序列化 `FilterMatchOptions`，且 options 可能是位置数组时 | `options` 必须是仅含 `numeric_comparison_policy` 的对象；envelope decoder 和直接 options 反序列化都会拒绝位置数组。编码为规范对象时保留原有策略，不能一律替换成 `exact`。旧数组按“备份→经验证的旧版读取→规范对象编码→目标版验证→切换消费者”处理。见 [filter options 契约](design.zh_CN.md#v1-线协议与版本策略)。 |
-| Decode 错误分类 | 调用方把 `InvalidJson` 当作全部 JSON 解码失败时 | `Decode` 承载共享 decoder 失败，如空输入、非法 UTF-8、顶层类型不符和反序列化失败，并提供结构化 accessor。应增加 `Decode` 处理，同时保留独立的 `Read`、`Budget`、`Quantity`、`Syntax` 分支及现有 `InvalidJson` 分支。见 [解码错误契约](design.zh_CN.md#错误分类与脱敏)。 |
-| 有界编码的 wire 限额 | 调用方只通过编码错误的 `Json` 分支处理 metadata/schema wire 限额时 | 有界 metadata 和 schema encoder 将 wire 限额报告为 `Domain(MetadataError::WireLimitExceeded { .. })`；应处理此变体及其 `kind`、`value`、`maximum`。普通 Serde 序列化失败仍属于 `Json`。见[有界编码错误契约](design.zh_CN.md#错误分类与脱敏)。 |
+| 用例 / API | registry 0.6.2 实测 | 当前 0.7.0 实测 | 升级影响与迁移方式 |
+| --- | --- | --- | --- |
+| schema_object / MetadataSchema::decode_json_slice | 接受；输出规范对象 | 接受；输出规范对象 | 未观察到输入形态变化。 |
+| schema_envelope_sequence / schema decoder | 拒绝，分类为 InvalidJson | 拒绝，结构化分类为 Decode | 接受范围未变化；调用方需考虑错误分类变化。 |
+| schema_field_sequence / schema decoder | 接受；规范化为对象字段 | 拒绝，结构化分类为 Decode | 先备份，再由精确版本 0.6.2 的消费者读取，将 schema 序列化为规范对象（实测输出保留 name 字段、string 类型、required: true 和两个 reject 策略）；由 0.7 校验后再切换消费者。 |
+| options_object / 直接 FilterMatchOptions | 接受 approximate | 接受 approximate | 未观察到输入形态变化。 |
+| options_exact_object / 直接 FilterMatchOptions | 接受 exact | 接受 exact | 未观察到输入形态变化；探针同时覆盖 exact 和 approximate 策略。 |
+| options_sequence / 直接 FilterMatchOptions | 接受；规范化为保留 approximate 的对象 | 直接 Serde 反序列化拒绝 | 由 0.6.2 读取并序列化成 options 对象，保留其策略，再由 0.7 校验。不要把所有策略改成 exact。 |
+| filter_options_sequence / filter decoder | 接受；规范化后的 filter 保留 approximate | 拒绝，结构化分类为 Decode | 备份后由 0.6.2 读取，将 filter 序列化为 options 对象，由 0.7 校验，再切换消费者。 |
+| empty / 有界 metadata、schema、filter decoder | 拒绝，分类为 Syntax | 拒绝，分类为 Syntax | 未观察到分类变化。 |
+| invalid_utf8 / 有界 metadata、schema、filter decoder | 拒绝，分类为 InvalidJson（共享 decoder 将其归为非法 UTF-8） | 拒绝，结构化分类为 Decode | 增加 Decode 分支，使用结构化 kind，不匹配显示文本。 |
+| wrong_top_level / 有界 metadata、schema、filter decoder | 拒绝，分类为 InvalidJson | 拒绝，结构化分类为 Decode | 输入仍被拒绝；调用方需考虑增加 Decode 分支。 |
+| invalid_syntax / 有界 metadata、schema、filter decoder | 拒绝，分类为 Syntax | 拒绝，分类为 Syntax | 未观察到分类变化。 |
+| 4,097 个 metadata 条目或 schema 字段 / 有界编码 | 拒绝，分类为 Json(CustomSerialization) | 拒绝，分类为 Domain(MetadataError::WireLimitExceeded { kind: Entries, value: 4097, maximum: 4096 }) | 处理 Domain 并读取结构化限额事实；0.6.2 的公开编码错误不提供这些事实。 |
+| 257 字节 metadata 或 schema key / 有界编码 | 拒绝，分类为 Json(CustomSerialization) | 拒绝，分类为 Domain(MetadataError::WireLimitExceeded { kind: KeyBytes, value: 257, maximum: 256 }) | 处理 Domain 并读取结构化限额事实；0.6.2 的公开编码错误不提供这些事实。 |
 
-位置数组相关变化收紧了输入接受范围，不改变规范 V1 输出或 wire 版本。不要推定旧版本一定接受某种存储表示；迁移前应使用准确的库版本和数据形态进行核实。
+旧消费者会把实际接受并序列化的输出写入
+`tests/fixtures/compatibility/normalized/`；当前测试再读取这些相同字节，解码并比较 schema
+字段、required 标记、unknown-field 策略和 numeric 策略。对照使用独立消费者
+[tests/fixtures/compatibility-0.6.2/](../tests/fixtures/compatibility-0.6.2/)
+和两边按字节共享的输入
+[tests/fixtures/compatibility/](../tests/fixtures/compatibility/)。当前版断言位于
+[compatibility_contract_tests.rs](../tests/compatibility_contract_tests.rs)。生成旧消费者锁文件后，
+以下命令均以退出码 0 完成：
+
+```sh
+cargo run --locked --manifest-path tests/fixtures/compatibility-0.6.2/Cargo.toml
+cargo tree --manifest-path tests/fixtures/compatibility-0.6.2/Cargo.toml -i qubit-metadata@0.6.2
+cargo test --all-features --test compatibility_contract_tests -- --nocapture
+```
+
+旧消费者启用 schema,json；锁文件解析到 registry qubit-metadata 0.6.2、
+qubit-datatype 0.14.0、qubit-value 0.12.2 和 0.6 系列 JSON crate。当前测试针对
+仓库 checkout 的 0.7.0，并启用全部 feature。锁文件与源码是可复现的版本和依赖证据；
+已验证边界仅为 0.6.2 → 本次 0.7.0 checkout。
+
+已实测的位置数组输入变化不影响规范 V1 输出或 wire 版本。证据确认 0.6.2 接受位置式
+schema 字段值和位置式 filter options，但拒绝位置式 schema envelope。不能据此推断其他
+0.6.x 版本行为，也未确定首次改变接受范围的版本。
 
 ## 依赖版本对照
 

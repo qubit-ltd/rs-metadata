@@ -3,30 +3,65 @@
 [中文迁移说明](migration_0.7.zh_CN.md) · [User guide](user_guide.md) · [README](../README.md) · [Design](design.md) · [API documentation](https://docs.rs/qubit-metadata)
 
 This guide covers dependency coordination and checks against the current target
-contracts when moving to `qubit-metadata` 0.7. The comparison below uses the
-published `qubit-metadata` 0.6.2 manifest from the local Cargo registry and this
-repository's 0.7.0 manifest. It does not claim that every 0.6.x release has the
-same dependency set.
+contracts when moving to `qubit-metadata` 0.7. The runtime comparison below was
+run between registry `qubit-metadata` 0.6.2 and this repository's 0.7.0
+checkout. It does not establish behavior for every 0.6.x release or identify
+the first release that changed a contract.
 
 ## Compatibility checks before upgrading
 
 Use this checklist when your application stores, sends, or classifies metadata
-wire data. These are the current target-version contracts; the first release
-that introduced each input or error-contract change has not been confirmed.
-The stable design document describes the [V1 wire contract](design.md#v1-wire-contract-and-versioning)
+wire data. The matrix records observed results for the exact 0.6.2-to-0.7.0
+comparison; it does not establish when each difference first appeared. The
+stable design document describes the [V1 wire contract](design.md#v1-wire-contract-and-versioning)
 and [error taxonomy](design.md#error-taxonomy-and-redaction).
 
-| Check | Applies when | Current contract and action |
-| --- | --- | --- |
-| Schema envelope and field objects | You persist or produce schema JSON, especially if it may contain positional sequences | The envelope must be the canonical four-field object, and every `fields` value must be an object containing exactly `data_type` and `required`. Both positional envelope sequences and positional field arrays are rejected. If stored data uses either form, back it up, read it with an older library version verified to accept that representation, encode it as canonical objects, validate it with the target version, then switch consumers. Keep the backup until the target-version validation succeeds. See the [schema wire contract](design.md#v1-wire-contract-and-versioning). |
-| Filter `options` | You persist/send filter JSON or deserialize `FilterMatchOptions` directly, and options may be a positional array | `options` must be an object containing exactly `numeric_comparison_policy`; positional arrays are rejected by the envelope decoder and direct options deserialization. Preserve the stored policy when encoding the canonical object; do not replace every policy with `exact`. For legacy arrays, use the same backup → verified old-version read → canonical object encoding → target-version validation → consumer switch sequence. See the [filter options contract](design.md#v1-wire-contract-and-versioning). |
-| Decode error classification | Callers treat `InvalidJson` as the complete set of JSON decoding failures | `Decode` carries shared decoder failures such as empty input, invalid UTF-8, unexpected top-level types, and deserialization failures, with structured accessors. Add handling for `Decode` while retaining the dedicated `Read`, `Budget`, `Quantity`, and `Syntax` cases and the existing `InvalidJson` case. See the [decode error contract](design.md#error-taxonomy-and-redaction). |
-| Bounded encode wire limits | Callers handle metadata/schema wire-limit failures only through the `Json` encode-error branch | Bounded metadata and schema encoders report wire-limit failures as `Domain(MetadataError::WireLimitExceeded { .. })`; handle that variant and its `kind`, `value`, and `maximum`. Ordinary Serde serialization failures remain in `Json`. See the [bounded encode error contract](design.md#error-taxonomy-and-redaction). |
+| Case / API | Registry 0.6.2 observation | Current 0.7.0 observation | Upgrade impact and migration |
+| --- | --- | --- | --- |
+| schema_object / MetadataSchema::decode_json_slice | Accepted; canonical object output | Accepted; canonical object output | No input-shape change observed. |
+| schema_envelope_sequence / schema decoder | Rejected as InvalidJson | Rejected as structured Decode | No acceptance change; callers may need to account for the error-class change. |
+| schema_field_sequence / schema decoder | Accepted; normalized to object fields | Rejected as structured Decode | Back up, read with the exact 0.6.2 consumer, serialize the schema to canonical objects (the observed output preserves the `name` field, `string` type, `required: true`, and both `reject` policies), validate with 0.7, then switch consumers. |
+| options_object / direct FilterMatchOptions | Accepted with approximate | Accepted with approximate | No input-shape change observed. |
+| options_exact_object / direct FilterMatchOptions | Accepted with exact | Accepted with exact | No input-shape change observed; the probe covers exact and approximate policies. |
+| options_sequence / direct FilterMatchOptions | Accepted; normalized to object retaining approximate | Rejected by direct Serde deserialization | Read with 0.6.2, serialize the options object, preserve its policy, and validate in 0.7. Do not rewrite all policies to exact. |
+| filter_options_sequence / filter decoder | Accepted; normalized filter retains approximate | Rejected as structured Decode | Back up, read with 0.6.2, serialize the filter with object options, validate in 0.7, then switch consumers. |
+| empty / bounded metadata, schema, and filter decoders | Rejected as Syntax | Rejected as Syntax | No classification change observed. |
+| invalid_utf8 / bounded metadata, schema, and filter decoders | Rejected as InvalidJson (shared decoder classified invalid UTF-8) | Rejected as structured Decode | Add Decode handling and use its structured kind rather than display text. |
+| wrong_top_level / bounded metadata, schema, and filter decoders | Rejected as InvalidJson | Rejected as structured Decode | Same input remains rejected; callers may need to add Decode handling. |
+| invalid_syntax / bounded metadata, schema, and filter decoders | Rejected as Syntax | Rejected as Syntax | No classification change observed. |
+| 4,097 metadata entries or schema fields / bounded encode | Rejected as Json(CustomSerialization) | Rejected as Domain(MetadataError::WireLimitExceeded { kind: Entries, value: 4097, maximum: 4096 }) | Handle Domain and inspect the structured limit facts; 0.6.2's public encode error did not expose these facts. |
+| 257-byte metadata or schema key / bounded encode | Rejected as Json(CustomSerialization) | Rejected as Domain(MetadataError::WireLimitExceeded { kind: KeyBytes, value: 257, maximum: 256 }) | Handle Domain and inspect the structured limit facts; 0.6.2's public encode error did not expose these facts. |
 
-The positional-array changes are input-acceptance changes; they do not change
-canonical V1 output or the wire version. Do not infer that an older release
-accepts a stored representation: verify it against the exact library version
-and data shape before using it for migration.
+The old consumer writes accepted cases' actual serialized output to
+`tests/fixtures/compatibility/normalized/`; current tests decode those same
+bytes and compare schema fields, required flags, unknown-field policies, and
+numeric policies. The comparison uses the independent consumer in
+[tests/fixtures/compatibility-0.6.2/](../tests/fixtures/compatibility-0.6.2/)
+and byte-identical shared cases in
+[tests/fixtures/compatibility/](../tests/fixtures/compatibility/). Current
+assertions are in [compatibility_contract_tests.rs](../tests/compatibility_contract_tests.rs).
+The commands below completed with exit code 0 after generating the consumer
+lockfile:
+
+```sh
+cargo run --locked --manifest-path tests/fixtures/compatibility-0.6.2/Cargo.toml
+cargo tree --manifest-path tests/fixtures/compatibility-0.6.2/Cargo.toml -i qubit-metadata@0.6.2
+cargo test --all-features --test compatibility_contract_tests -- --nocapture
+```
+
+The isolated
+consumer enables schema,json; its lockfile resolves registry
+qubit-metadata 0.6.2, qubit-datatype 0.14.0, qubit-value 0.12.2, and the 0.6-era
+JSON crates. The current test ran against checkout package version 0.7.0 with
+all features. The lockfile and source tree are reproducible version and
+dependency evidence; the observed release boundary is 0.6.2 to this 0.7.0
+checkout.
+
+The verified positional-array input changes do not alter canonical V1 output
+or the wire version. The evidence confirms 0.6.2 accepts positional schema
+field values and positional filter options, but rejects positional schema
+envelopes. It does not establish behavior for other 0.6.x releases or identify
+the first release that changed acceptance.
 
 ## Dependency versions
 

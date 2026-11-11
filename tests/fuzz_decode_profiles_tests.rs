@@ -11,9 +11,17 @@
 
 mod support;
 
+#[cfg(feature = "filter")]
+use qubit_metadata::FilterLimitKind;
+#[cfg(feature = "filter")]
+use qubit_metadata::FilterLimits;
 use qubit_metadata::Metadata;
 #[cfg(feature = "filter")]
+use qubit_metadata::MetadataError;
+#[cfg(feature = "filter")]
 use qubit_metadata::MetadataLimits;
+#[cfg(feature = "filter")]
+use qubit_metadata::MetadataWireDecodeError;
 
 #[test]
 fn test_small_metadata_profile_rejects_domain_key_and_entry_boundaries() {
@@ -142,6 +150,137 @@ fn test_small_filter_profile_rejects_node_depth_and_set_boundaries() {
         )
         .is_err()
     );
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_production_filter_profile_accepts_named_boundary_fixtures_and_corpus() {
+    use qubit_metadata::MetadataFilter;
+
+    let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("fuzz/fuzz_targets/decode_metadata_filter.rs");
+    if target.exists() {
+        let target = std::fs::read_to_string(target).expect("fuzz target should read");
+        let compact: String = target.chars().filter(|character| !character.is_whitespace()).collect();
+        assert!(compact.contains("letproduction_filter_limits=FilterLimits::MAX;"));
+        assert!(compact.contains(
+            "MetadataFilter::decode_json_slice_with_limits(data,MetadataLimits::default(),production_filter_limits)"
+        ));
+        assert!(compact.contains("check(value,data,MetadataLimits::default(),production_filter_limits)"));
+    }
+
+    let fixtures = [
+        (
+            "depth",
+            include_bytes!("fixtures/filter-production-depth.json").as_slice(),
+        ),
+        (
+            "nodes",
+            include_bytes!("fixtures/filter-production-nodes.json").as_slice(),
+        ),
+        ("set", include_bytes!("fixtures/filter-production-set.json").as_slice()),
+        ("key", include_bytes!("fixtures/filter-production-key.json").as_slice()),
+    ];
+    for (name, fixture) in fixtures {
+        let decoded =
+            MetadataFilter::decode_json_slice_with_limits(fixture, MetadataLimits::default(), FilterLimits::MAX)
+                .unwrap_or_else(|error| panic!("production {name} fixture must be accepted: {error:?}"));
+        let encoded = serde_json::to_vec(&decoded).expect("fixture should serialize");
+        let round_tripped =
+            MetadataFilter::decode_json_slice_with_limits(&encoded, MetadataLimits::default(), FilterLimits::MAX)
+                .expect("accepted fixture should round trip under production filter limits");
+        assert_eq!(round_tripped, decoded);
+        let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("fuzz/corpus/decode_metadata_filter")
+            .join(format!("production-{name}.json"));
+        if corpus.exists() {
+            assert_eq!(std::fs::read(corpus).expect("corpus should read"), fixture);
+        }
+    }
+}
+
+#[cfg(feature = "filter")]
+#[test]
+fn test_filter_hard_boundaries_report_structured_limit_errors() {
+    use qubit_metadata::MetadataFilter;
+
+    fn envelope(expression: serde_json::Value) -> Vec<u8> {
+        serde_json::to_vec(&serde_json::json!({
+            "version": 1,
+            "expression": expression,
+            "options": {"numeric_comparison_policy": "exact"}
+        }))
+        .expect("envelope should serialize")
+    }
+    fn assert_limit(input: &[u8], limits: FilterLimits, kind: FilterLimitKind, value: usize, maximum: usize) {
+        let result = MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), limits);
+        assert!(
+            matches!(
+                result,
+                Err(MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
+                    kind: actual,
+                    value: actual_value,
+                    maximum: actual_maximum,
+                }))
+                    if actual == kind && actual_value == value && actual_maximum == maximum
+            ),
+            "expected {kind:?}={value} max {maximum}, got {result:?}"
+        );
+    }
+
+    let max = FilterLimits::MAX;
+    let nodes = |count: usize| {
+        envelope(serde_json::json!({
+            "kind": "and",
+            "children": (0..count).map(|_| serde_json::json!({"kind":"exists", "key":"x"})).collect::<Vec<_>>()
+        }))
+    };
+    assert!(MetadataFilter::decode_json_slice_with_limits(&nodes(255), MetadataLimits::default(), max).is_ok());
+    assert_limit(&nodes(256), max, FilterLimitKind::Nodes, 257, 256);
+
+    let set = |count: usize| {
+        envelope(serde_json::json!({
+            "kind": "in", "key": "x",
+            "values": (0..count).map(|_| serde_json::json!({"scalar":{"int64":1}})).collect::<Vec<_>>()
+        }))
+    };
+    assert!(MetadataFilter::decode_json_slice_with_limits(&set(128), MetadataLimits::default(), max).is_ok());
+    assert_limit(&set(129), max, FilterLimitKind::SetValues, 129, 128);
+
+    let key = |size: usize| envelope(serde_json::json!({"kind":"exists", "key":"x".repeat(size)}));
+    assert!(MetadataFilter::decode_json_slice_with_limits(&key(256), MetadataLimits::default(), max).is_ok());
+    assert_limit(&key(257), max, FilterLimitKind::KeyBytes, 257, 256);
+
+    let not_chain = |count: usize| {
+        let expression = (0..count).fold(
+            serde_json::json!({"kind":"exists", "key":"x"}),
+            |child, _| serde_json::json!({"kind":"not", "expression":child}),
+        );
+        envelope(expression)
+    };
+    let json_decode = MetadataLimits::default()
+        .json_decode()
+        .into_builder()
+        .max_depth(256)
+        .build();
+    let metadata = MetadataLimits::builder()
+        .json_decode(json_decode)
+        .build()
+        .expect("finite JSON profile should build");
+    let finite = FilterLimits::builder()
+        .max_depth(64)
+        .build()
+        .expect("finite filter profile should build");
+    assert!(MetadataFilter::decode_json_slice_with_limits(&not_chain(63), metadata, finite).is_ok());
+    let too_deep = MetadataFilter::decode_json_slice_with_limits(&not_chain(64), metadata, finite)
+        .expect_err("65 AST levels should exceed the filter depth profile");
+    assert!(matches!(
+        too_deep,
+        MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
+            kind: FilterLimitKind::Depth,
+            value: 65,
+            maximum: 64,
+        })
+    ));
 }
 
 #[test]
