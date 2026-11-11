@@ -115,6 +115,34 @@ impl Metadata {
         Self(BTreeMap::new())
     }
 
+    /// Checks the metadata wire contract and all values against JSON limits.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the wire contract and every value pass preflight.
+    ///
+    /// # Errors
+    ///
+    /// Returns the wire-contract error before checking JSON value budgets.
+    /// Values are checked in key order with one shared preflight, so value
+    /// budgets accumulate across all metadata values.
+    #[cfg(feature = "json")]
+    fn preflight_json_encoding(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
+        self.validate_wire_contract()
+            .map_err(crate::MetadataWireEncodeError::Domain)?;
+        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
+        for value in self.0.values() {
+            preflight
+                .check_value(value)
+                .map_err(crate::MetadataWireEncodeError::from)?;
+        }
+        Ok(())
+    }
+
     /// Decodes a strict metadata JSON envelope using the metadata profile.
     ///
     /// # Parameters
@@ -247,14 +275,7 @@ impl Metadata {
     /// value budgets.
     #[cfg(feature = "json")]
     pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
-        self.validate_wire_contract()
-            .map_err(crate::MetadataWireEncodeError::Domain)?;
-        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
-        for value in self.0.values() {
-            preflight
-                .check_value(value)
-                .map_err(crate::MetadataWireEncodeError::from)?;
-        }
+        self.preflight_json_encoding(limits)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
@@ -285,14 +306,7 @@ impl Metadata {
     #[cfg(feature = "json")]
     #[inline]
     pub fn validate_json_with_limits(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
-        self.validate_wire_contract()
-            .map_err(crate::MetadataWireEncodeError::Domain)?;
-        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
-        for value in self.0.values() {
-            preflight
-                .check_value(value)
-                .map_err(crate::MetadataWireEncodeError::from)?;
-        }
+        self.preflight_json_encoding(limits)?;
         JsonEncoder::new(JsonEncodeSession::from_limits(limits))
             .write_incremental(&mut std::io::sink(), self)
             .map_err(Into::into)
@@ -378,14 +392,7 @@ impl Metadata {
     where
         W: Write,
     {
-        self.validate_wire_contract()
-            .map_err(crate::MetadataWireEncodeError::Domain)?;
-        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
-        for value in self.0.values() {
-            preflight
-                .check_value(value)
-                .map_err(crate::MetadataWireEncodeError::from)?;
-        }
+        self.preflight_json_encoding(limits)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session)
             .write_buffered(&mut writer, self)

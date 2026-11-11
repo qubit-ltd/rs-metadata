@@ -48,10 +48,19 @@ fn signature(result: Result<(), MetadataWireEncodeError>) -> Signature {
 }
 
 fn assert_equivalent(metadata: &Metadata, limits: JsonEncodeLimits) -> Signature {
-    let expected = signature(metadata.to_json_vec_with_limits(limits).map(drop));
-    let actual = signature(metadata.validate_json_with_limits(limits));
-    assert_eq!(actual, expected);
-    actual
+    let encoded = metadata.to_json_vec_with_limits(limits);
+    let mut written = Vec::new();
+    let writer_result = metadata.to_json_writer_with_limits(&mut written, limits);
+    if let Ok(bytes) = &encoded {
+        assert!(writer_result.is_ok());
+        assert_eq!(&written, bytes);
+    } else {
+        assert!(written.is_empty());
+    }
+    let expected = signature(encoded.map(drop));
+    assert_eq!(signature(writer_result), expected);
+    assert_eq!(signature(metadata.validate_json_with_limits(limits)), expected);
+    expected
 }
 
 #[test]
