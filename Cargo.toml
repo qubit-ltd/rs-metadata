@@ -75,6 +75,10 @@ required-features = ["filter"]
 name = "filter_encode_allocations"
 required-features = ["json", "filter"]
 
+[[example]]
+name = "metadata_validation_allocations"
+required-features = ["json"]
+
 [profile.release]
 opt-level = 3
 lto = true

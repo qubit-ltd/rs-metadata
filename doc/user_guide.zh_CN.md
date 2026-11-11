@@ -21,7 +21,7 @@ Metadata -> MetadataSchema -> 已存值校验
 ```
 
 `schema` 会启用 schema 校验并包含 `filter`。如果不需要 schema 校验，可以单独启用
-`filter`。`json` feature 提供带资源限制的 JSON slice 解码。
+`filter`。`json` feature 提供带资源限制的 JSON slice 解码和 JSON 编码校验。
 
 ## 场景：索引文档分片
 
@@ -575,9 +575,13 @@ I/O 失败后的补偿。`to_json_vec` 和 `to_json_writer` 使用默认输出�
 修改 `json_decode` 不会改变输出 profile。启用 `schema` feature 后，`MetadataSchema`
 也提供同一组 `to_json_vec*` 和 `to_json_writer*` 方法。 Metadata 和 schema 的有界编码遇到 V1 wire 限额时都会返回 `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })`，并优先于 JSON 输出预算检查。原先针对 schema 限额匹配 `Json` 的调用方应改为匹配 `Domain` 并读取这些字段；普通 Serde 序列化错误仍为 `Json`。
 
-编码器会先检查值是否可表示以及预算是否足够，再生成完整的紧凑 JSON 缓冲区；writer API
-随后写出缓冲结果。若目标 writer 写入失败，目标端仍可能已经收到部分字节，因此不能据此
-认为文件或网络写入具有事务原子性。将输出预算设为 1 字节可以稳定观察拒绝结果：
+编码器会先检查值是否可表示以及预算是否足够，再生成完整的紧凑 JSON 缓冲区。若调用方只需
+校验 metadata，后续不会使用编码字节，可调用 `Metadata::validate_json_with_limits`；它执行相同的
+wire、值、序列化和输出预算检查，但不保留该缓冲区。此 API 需要启用 `json` feature，并显式传入
+相同的 `JsonEncodeLimits`；输出限制按紧凑编码后的字节数计算。writer API 仍会先缓冲完整输出，
+目标写入失败时仍可能留下部分字节。
+
+将输出预算设为 1 字节可以稳定观察拒绝结果：
 
 ```rust
 use qubit_budget::json::JsonResource;

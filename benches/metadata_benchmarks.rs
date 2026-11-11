@@ -17,8 +17,10 @@ use criterion::criterion_main;
 #[cfg(feature = "json")]
 use qubit_budget::ResourceLimit;
 #[cfg(feature = "json")]
+#[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
 use qubit_datatype::DataType;
+#[cfg(feature = "json")]
 use qubit_metadata::FilterExpression;
 use qubit_metadata::Metadata;
 use qubit_metadata::MetadataFilter;
@@ -29,7 +31,9 @@ use qubit_metadata::MetadataSchema;
 #[cfg(feature = "json")]
 use qubit_metadata::MetadataWireEncodeError;
 #[cfg(feature = "json")]
+#[cfg(feature = "json")]
 use qubit_metadata::default_json_encode_limits;
+#[cfg(feature = "json")]
 use serde_json::to_vec;
 
 /// Benchmarks constructing a small metadata object through the fluent API.
@@ -212,6 +216,73 @@ fn benchmark_request_encode_investigation(criterion: &mut Criterion) {
     }
     group.finish();
 }
+
+/// Compares the current allocate-and-discard validation path with an
+/// incremental encoder directed to a sink, using prepared request-sized data.
+#[cfg(feature = "json")]
+fn benchmark_metadata_validation_only(criterion: &mut Criterion) {
+    let limits = default_json_encode_limits()
+        .into_builder()
+        .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 16 * 1024))
+        .build();
+    let mut samples = Vec::new();
+    samples.push(("empty_0_entries".to_owned(), Metadata::new()));
+
+    for count in [1, 8, 32] {
+        let mut scalar = Metadata::new();
+        let mut text = Metadata::new();
+        for index in 0..count {
+            scalar.set(&format!("k{index:02}"), index as i64);
+            text.set(&format!("k{index:02}"), "representative metadata text");
+        }
+        samples.push((format!("scalar_{count}_entries"), scalar));
+        samples.push((format!("text_{count}_entries"), text));
+    }
+
+    let mut special = Metadata::new();
+    special.set("escaped", "quote=\" slash=\\ newline=\n tab=\t");
+    special.set("unicode", "café 東京 🛰");
+    special.set("nested", serde_json::json!({"outer": [1, {"inner": true}]}));
+    samples.push(("escaped_unicode_nested".to_owned(), special));
+
+    // 32 short keys plus 32 values yield encoded JSON close to the 16 KiB
+    // request cap; the successful size is computed with the real encoder.
+    let mut near_limit = Metadata::new();
+    for index in 0..32 {
+        near_limit.set(&format!("f{index:02}"), "x".repeat(480));
+    }
+    let near_bytes = near_limit
+        .to_json_vec_with_limits(limits)
+        .expect("near-limit sample should fit")
+        .len();
+    samples.push((format!("near_16k_{near_bytes}_bytes"), near_limit));
+
+    let mut over_limit = Metadata::new();
+    for index in 0..32 {
+        over_limit.set(&format!("f{index:02}"), "x".repeat(510));
+    }
+    let over_bytes = serde_json::to_vec(&over_limit)
+        .expect("oversize sample should serialize")
+        .len();
+    samples.push((format!("over_16k_{over_bytes}_bytes"), over_limit));
+
+    let mut group = criterion.benchmark_group("metadata/validation_only");
+    for (name, metadata) in samples {
+        let observed = serde_json::to_vec(&metadata).expect("sample output length").len();
+        let expected_success = observed <= 16 * 1024;
+        assert_eq!(metadata.to_json_vec_with_limits(limits).is_ok(), expected_success);
+        group.bench_function(BenchmarkId::new("to_vec", &name), |bencher| {
+            bencher.iter(|| black_box(black_box(&metadata).to_json_vec_with_limits(limits)))
+        });
+        group.bench_function(BenchmarkId::new("validate_api", &name), |bencher| {
+            bencher.iter(|| black_box(black_box(&metadata).validate_json_with_limits(limits)))
+        });
+    }
+    group.finish();
+}
+
+#[cfg(not(feature = "json"))]
+fn benchmark_metadata_validation_only(_criterion: &mut Criterion) {}
 
 #[cfg(not(feature = "json"))]
 fn benchmark_request_encode_investigation(_criterion: &mut Criterion) {}
@@ -532,6 +603,7 @@ criterion_group!(
     benchmark_metadata_json_decode,
     benchmark_metadata_json_encode,
     benchmark_request_encode_investigation,
+    benchmark_metadata_validation_only,
     benchmark_filter_expression_construction,
     benchmark_public_expression_composition,
     benchmark_filter_match,

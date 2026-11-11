@@ -258,6 +258,45 @@ impl Metadata {
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
     }
 
+    /// Validates that this metadata object can be encoded within
+    /// caller-provided JSON budgets.
+    ///
+    /// This performs the same wire-contract, value-preflight, serialization,
+    /// and output-budget checks as [`Self::to_json_vec_with_limits`]
+    /// without retaining the encoded JSON bytes. Use it when validating
+    /// metadata before another operation encodes it.
+    ///
+    /// # Parameters
+    ///
+    /// * `limits` - Output and JSON-value budgets for this operation.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the metadata can be encoded within the supplied budgets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MetadataWireEncodeError`] with the same structured
+    /// error categories and validation ordering as
+    /// [`Self::to_json_vec_with_limits`]. The metadata V1 wire contract
+    /// is checked before JSON value budgets; output byte limits apply to
+    /// compact encoded JSON.
+    #[cfg(feature = "json")]
+    #[inline]
+    pub fn validate_json_with_limits(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
+        self.validate_wire_contract()
+            .map_err(crate::MetadataWireEncodeError::Domain)?;
+        let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
+        for value in self.0.values() {
+            preflight
+                .check_value(value)
+                .map_err(crate::MetadataWireEncodeError::from)?;
+        }
+        JsonEncoder::new(JsonEncodeSession::from_limits(limits))
+            .write_incremental(&mut std::io::sink(), self)
+            .map_err(Into::into)
+    }
+
     /// Encodes this metadata object to a writer with the default JSON budget
     /// profile ([`crate::default_json_encode_limits`]).
     ///

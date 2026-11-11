@@ -24,7 +24,7 @@ Metadata -> MetadataSchema -> validation of stored values
 
 `schema` enables schema validation and includes `filter`. The `filter` feature
 can be enabled independently when schema validation is not needed. The `json`
-feature enables bounded JSON-slice decoding.
+feature enables bounded JSON-slice decoding and JSON encoding validation.
 
 ## Scenario: indexing document chunks
 
@@ -631,10 +631,15 @@ output profile. `MetadataSchema` has the same `to_json_vec*` and
 `to_json_writer*` family when the `schema` feature is enabled. Both metadata and schema bounded encoders return `Domain(MetadataError::WireLimitExceeded { kind, value, maximum })` for V1 wire-limit violations, before checking JSON output budgets. Callers that previously matched `Json` for schema limits should match `Domain` and inspect those fields; ordinary Serde serialization failures remain `Json`.
 
 The encoder checks value representability and budgets before producing the
-compact JSON buffer. The writer API then writes that buffered output; a writer
-failure can still leave some bytes at the destination. This does not make file
-or network writes transactional. A one-byte budget gives a predictable
-rejection:
+compact JSON buffer. When a caller only needs to validate metadata and will not
+use the encoded bytes, `Metadata::validate_json_with_limits` performs the same
+wire, value, serialization, and output-budget checks without retaining that
+buffer. This API is available with the `json` feature and requires the same
+explicit `JsonEncodeLimits`; output limits count compact encoded bytes. The
+writer API still buffers the complete output before writing, and a writer
+failure can leave a prefix at the destination.
+
+A one-byte budget gives a predictable rejection:
 
 ```rust
 use qubit_budget::json::JsonResource;
