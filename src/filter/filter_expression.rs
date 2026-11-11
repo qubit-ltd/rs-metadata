@@ -202,10 +202,6 @@ impl FilterExpression {
 
     /// Combines this expression with `other` using logical AND.
     ///
-    /// # Type Parameters
-    ///
-    /// * `F` - Callback that visits operands or constructs a nested group.
-    ///
     /// # Parameters
     ///
     /// * `other` - Expression whose conditions must also match.
