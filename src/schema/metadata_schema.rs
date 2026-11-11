@@ -176,8 +176,8 @@ impl MetadataSchema {
     /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
     /// configured limit, `Domain` for schema field/key limits,
     /// `UnsupportedVersion` for a version mismatch, and `InvalidLimits` for
-    /// invalid metadata limits. Lexical JSON errors return `Syntax`; shared
-    /// decoder failures such as empty input, invalid UTF-8, unexpected
+    /// invalid metadata limits. Empty input and lexical JSON errors return
+    /// `Syntax`; shared decoder failures such as invalid UTF-8, unexpected
     /// top-level types, or deserialization failures return `Decode`.
     #[cfg(feature = "json")]
     #[inline]
@@ -202,8 +202,8 @@ impl MetadataSchema {
     /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
     /// configured limit, `Domain` for schema field/key limits,
     /// `UnsupportedVersion` for a version mismatch, and `InvalidLimits` for
-    /// invalid metadata limits. Lexical JSON errors return `Syntax`; shared
-    /// decoder failures such as empty input, invalid UTF-8, unexpected
+    /// invalid metadata limits. Empty input and lexical JSON errors return
+    /// `Syntax`; shared decoder failures such as invalid UTF-8, unexpected
     /// top-level types, or deserialization failures return `Decode`.
     #[cfg(feature = "json")]
     pub fn decode_json_slice_with_limits(

@@ -130,10 +130,11 @@ impl Metadata {
     /// Returns [`crate::MetadataWireDecodeError::Budget`] or
     /// [`crate::MetadataWireDecodeError::Quantity`] when shared JSON traversal
     /// exceeds a configured limit, [`crate::MetadataWireDecodeError::Syntax`]
-    /// for lexical JSON errors, and [`crate::MetadataWireDecodeError::Decode`]
-    /// for shared decoder failures such as empty input, invalid UTF-8,
-    /// unexpected top-level types, or deserialization failures. Domain limits
-    /// return [`crate::MetadataWireDecodeError::Domain`]; invalid metadata
+    /// for empty input or lexical JSON errors, and
+    /// [`crate::MetadataWireDecodeError::Decode`] for shared decoder failures
+    /// such as invalid UTF-8, unexpected top-level types, or deserialization
+    /// failures. Domain limits return
+    /// [`crate::MetadataWireDecodeError::Domain`]; invalid metadata
     /// limit configuration returns
     /// [`crate::MetadataWireDecodeError::InvalidLimits`]; unsupported
     /// versions return
@@ -163,8 +164,8 @@ impl Metadata {
     /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
     /// configured limit, `Domain` for entry/key limits, `UnsupportedVersion`
     /// for a version mismatch, and `InvalidLimits` for invalid metadata limits.
-    /// Lexical JSON errors return `Syntax`; shared decoder failures such as
-    /// empty input, invalid UTF-8, unexpected top-level types, or
+    /// Empty input and lexical JSON errors return `Syntax`; shared decoder
+    /// failures such as invalid UTF-8, unexpected top-level types, or
     /// deserialization failures return `Decode`. A metadata value conversion
     /// failure after wire materialization returns `InvalidJson` and may no
     /// longer have source coordinates.

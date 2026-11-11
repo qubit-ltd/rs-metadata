@@ -769,7 +769,8 @@ embedding the rejected source value. This makes errors suitable for logs while
 avoiding accidental disclosure of metadata contents.
 
 For bounded JSON decoding, `Read`, `Budget`, `Quantity`, and `Syntax` remain
-separate error categories. Shared decoder failures for empty input, invalid UTF-8,
+separate error categories. Empty input is reported as
+`MetadataWireDecodeError::Syntax`. Shared decoder failures for invalid UTF-8,
 an unexpected top-level type, or deserialization are reported as
 `MetadataWireDecodeError::Decode`; inspect its `kind()` and other accessors for
 structured details instead of parsing display text. The standard metadata

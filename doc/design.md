@@ -154,8 +154,9 @@ diagnostic redaction, not a promise to hide arbitrary user keys or error text.
 Composite expression, filter, and schema diagnostics share one cumulative
 resource budget; output that exceeds it uses an incomplete marker.
 
-`MetadataWireDecodeError::Decode` preserves shared decoder failures for empty input,
-invalid UTF-8, unexpected top-level types, and deserialization, including their
+Empty input is reported as `MetadataWireDecodeError::Syntax`.
+`MetadataWireDecodeError::Decode` preserves shared decoder failures for invalid
+UTF-8, unexpected top-level types, and deserialization, including their
 `kind()` and structured accessors. `Read`, `Budget`, `Quantity`, and `Syntax` keep
 their existing dedicated mappings. Standard metadata entry points use `Redacted`
 diagnostics; a `Detailed` source is retained only when the caller selected that

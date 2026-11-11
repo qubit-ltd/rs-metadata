@@ -234,9 +234,10 @@ impl MetadataFilter {
     /// Returns `Budget` or `Quantity` when shared JSON traversal exceeds a
     /// configured budget, `Filter` when the receiver AST or filter contract
     /// exceeds its limit, `UnsupportedVersion` for a version mismatch,
-    /// `InvalidLimits` for invalid metadata limits, and `Syntax` for lexical
-    /// JSON errors. Shared decoder failures such as empty input, invalid UTF-8,
-    /// unexpected top-level types, or deserialization failures return `Decode`.
+    /// `InvalidLimits` for invalid metadata limits, and `Syntax` for empty
+    /// input or lexical JSON errors. Shared decoder failures such as invalid
+    /// UTF-8, unexpected top-level types, or deserialization failures return
+    /// `Decode`.
     /// The complete unique-key JSON source tree is first materialized under
     /// the shared JSON decode budgets. The domain seed then checks receiver AST
     /// and membership limits while constructing the filter. Receiver AST or
@@ -274,8 +275,8 @@ impl MetadataFilter {
     /// configured budget, `Filter` when domain traversal detects an AST limit
     /// or the decoded filter violates its contract, `UnsupportedVersion` for a
     /// version mismatch, and `InvalidLimits` for invalid metadata limits.
-    /// Lexical JSON errors return `Syntax`; shared decoder failures such as
-    /// empty input, invalid UTF-8, unexpected top-level types, or other
+    /// Empty input and lexical JSON errors return `Syntax`; shared decoder
+    /// failures such as invalid UTF-8, unexpected top-level types, or other
     /// deserialization failures return `Decode`. Receiver AST or filter
     /// contract failures return `Filter` and do not retain source coordinates.
     /// Individual JSON strings and embedded value payloads remain bounded by

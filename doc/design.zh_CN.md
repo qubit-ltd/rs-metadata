@@ -101,8 +101,9 @@ builder 报告畸形或不兼容表达式。Wire 错误区分领域限制、语�
 用户 key 或错误文本。复合表达式、filter 和 schema 诊断共用一个累计资源预算；超出预算时使用
 不完整 marker。
 
-`MetadataWireDecodeError::Decode` 保留共享 decoder 对空输入、非法 UTF-8、顶层类型不符和
-反序列化失败的分类，包括 `kind()` 与结构化 accessor。`Read`、`Budget`、`Quantity` 和
+空输入归为 `MetadataWireDecodeError::Syntax`。`MetadataWireDecodeError::Decode` 保留共享
+decoder 对非法 UTF-8、顶层类型不符和反序列化失败的分类，包括 `kind()` 与结构化
+accessor。`Read`、`Budget`、`Quantity` 和
 `Syntax` 继续使用原有的独立映射。标准 metadata 入口采用 `Redacted` 诊断；只有调用方在
 转换前选择了 `Detailed`，才会保留详细来源。`InvalidJson` 变体仍可手工构造；标准 metadata
 slice 解码入口也会在 wire 物化后的 payload 无法转换为 scalar metadata 值时返回该变体，例如
