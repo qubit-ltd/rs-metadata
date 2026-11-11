@@ -7,7 +7,7 @@ publish = false
 [workspace]
 
 [dependencies]
-qubit-metadata = { version = "=0.6.2", features = ["schema", "json"] }
+qubit-metadata = { version = "^0.7", features = ["schema", "json"] , path = "../../../" }
 serde_json = "1"
 serde = "1"
-qubit-datatype = "0.14"
+qubit-datatype = "^0.15"
