@@ -29,7 +29,10 @@ mod chrono_values {
         assert_eq!(metadata.get::<NaiveTime>("time").unwrap(), time);
         assert_eq!(metadata.get::<NaiveDateTime>("datetime").unwrap(), datetime);
         assert!(metadata.get::<String>("date").is_err());
-        assert_eq!(metadata.get_raw("date").unwrap().data_type(), DataType::Date);
+        assert_eq!(
+            metadata.get_raw("date").unwrap().data_type(),
+            DataType::Date
+        );
 
         #[cfg(feature = "json")]
         {
@@ -45,7 +48,10 @@ mod chrono_values {
             assert_eq!(decoded, metadata);
             assert_eq!(decoded.get_raw("date").unwrap().data_type(), DataType::Date);
             assert_eq!(decoded.get_raw("time").unwrap().data_type(), DataType::Time);
-            assert_eq!(decoded.get_raw("datetime").unwrap().data_type(), DataType::DateTime);
+            assert_eq!(
+                decoded.get_raw("datetime").unwrap().data_type(),
+                DataType::DateTime
+            );
             let limits = JsonEncodeLimits::builder()
                 .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
                 .build();
@@ -64,12 +70,20 @@ mod chrono_values {
                 .required("date", DataType::Date)
                 .build()
                 .unwrap();
-            assert!(date_schema.validate(&Metadata::new().with("date", date)).is_ok());
+            assert!(
+                date_schema
+                    .validate(&Metadata::new().with("date", date))
+                    .is_ok()
+            );
             let wrong_schema = qubit_metadata::MetadataSchema::builder()
                 .required("date", DataType::String)
                 .build()
                 .unwrap();
-            assert!(wrong_schema.validate(&Metadata::new().with("date", date)).is_err());
+            assert!(
+                wrong_schema
+                    .validate(&Metadata::new().with("date", date))
+                    .is_err()
+            );
         }
     }
 }
@@ -93,7 +107,10 @@ mod big_integer_values {
         assert_eq!(metadata.get::<BigInt>("positive").unwrap(), positive);
         assert_eq!(metadata.get::<BigInt>("negative").unwrap(), negative);
         assert!(metadata.get::<i128>("positive").is_err());
-        assert_eq!(metadata.get_raw("positive").unwrap().data_type(), DataType::BigInteger);
+        assert_eq!(
+            metadata.get_raw("positive").unwrap().data_type(),
+            DataType::BigInteger
+        );
 
         #[cfg(feature = "json")]
         {
@@ -107,7 +124,10 @@ mod big_integer_values {
             assert_eq!(serde_json::to_vec(&metadata).unwrap(), bytes);
             let decoded = Metadata::decode_json_slice(&bytes).unwrap();
             assert_eq!(decoded, metadata);
-            assert_eq!(decoded.get_raw("positive").unwrap().data_type(), DataType::BigInteger);
+            assert_eq!(
+                decoded.get_raw("positive").unwrap().data_type(),
+                DataType::BigInteger
+            );
             assert_eq!(decoded.get::<BigInt>("negative").unwrap(), negative);
             let limits = JsonEncodeLimits::builder()
                 .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
@@ -173,7 +193,10 @@ mod big_decimal_values {
 
         assert_eq!(metadata.get::<BigDecimal>("decimal").unwrap(), decimal);
         assert!(metadata.get::<f64>("decimal").is_err());
-        assert_eq!(metadata.get_raw("decimal").unwrap().data_type(), DataType::BigDecimal);
+        assert_eq!(
+            metadata.get_raw("decimal").unwrap().data_type(),
+            DataType::BigDecimal
+        );
 
         #[cfg(feature = "json")]
         {
@@ -187,7 +210,10 @@ mod big_decimal_values {
             let decoded = Metadata::decode_json_slice(&bytes).unwrap();
             assert_eq!(decoded, metadata);
             assert_eq!(decoded.get::<BigDecimal>("decimal").unwrap(), decimal);
-            assert_eq!(decoded.get_raw("decimal").unwrap().data_type(), DataType::BigDecimal);
+            assert_eq!(
+                decoded.get_raw("decimal").unwrap().data_type(),
+                DataType::BigDecimal
+            );
             let limits = JsonEncodeLimits::builder()
                 .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
                 .build();
@@ -283,12 +309,20 @@ mod url_values {
                 .required("url", DataType::Url)
                 .build()
                 .unwrap();
-            assert!(schema.validate(&Metadata::new().with("url", url.clone())).is_ok());
+            assert!(
+                schema
+                    .validate(&Metadata::new().with("url", url.clone()))
+                    .is_ok()
+            );
             let wrong_schema = qubit_metadata::MetadataSchema::builder()
                 .required("url", DataType::String)
                 .build()
                 .unwrap();
-            assert!(wrong_schema.validate(&Metadata::new().with("url", url)).is_err());
+            assert!(
+                wrong_schema
+                    .validate(&Metadata::new().with("url", url))
+                    .is_err()
+            );
         }
     }
 }

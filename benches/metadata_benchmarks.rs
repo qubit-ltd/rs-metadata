@@ -81,7 +81,8 @@ fn benchmark_metadata_json_decode(criterion: &mut Criterion) {
 
     criterion.bench_function("metadata/json_decode", |bencher| {
         bencher.iter(|| {
-            let decoded = Metadata::decode_json_slice(black_box(&encoded)).expect("benchmark metadata should decode");
+            let decoded = Metadata::decode_json_slice(black_box(&encoded))
+                .expect("benchmark metadata should decode");
             black_box(decoded)
         });
     });
@@ -97,7 +98,10 @@ fn benchmark_metadata_json_encode(criterion: &mut Criterion) {
     for count in [8, 64, 256] {
         let mut metadata = Metadata::new();
         for index in 0..count {
-            metadata.set(&format!("field_{index:03}"), "representative request metadata value");
+            metadata.set(
+                &format!("field_{index:03}"),
+                "representative request metadata value",
+            );
         }
         let success_limits = default_json_encode_limits();
         let rejection_limits = success_limits
@@ -121,9 +125,14 @@ fn benchmark_metadata_json_encode(criterion: &mut Criterion) {
                 )
             });
         });
-        group.bench_function(BenchmarkId::new("output_limit_rejection", count), |bencher| {
-            bencher.iter(|| black_box(black_box(&metadata).to_json_vec_with_limits(rejection_limits)));
-        });
+        group.bench_function(
+            BenchmarkId::new("output_limit_rejection", count),
+            |bencher| {
+                bencher.iter(|| {
+                    black_box(black_box(&metadata).to_json_vec_with_limits(rejection_limits))
+                });
+            },
+        );
     }
     group.finish();
 }
@@ -158,22 +167,28 @@ fn benchmark_request_encode_investigation(criterion: &mut Criterion) {
             .to_json_vec_with_limits(limits)
             .expect("benchmark metadata sample should encode within the request limit");
         let encoded_len = encoded.len();
-        assert!(encoded_len <= 16 * 1024, "sample exceeds the request byte limit");
+        assert!(
+            encoded_len <= 16 * 1024,
+            "sample exceeds the request byte limit"
+        );
         drop(encoded);
 
-        group.bench_function(BenchmarkId::new("encode_and_drop", &sample_name), |bencher| {
-            bencher.iter_batched(
-                || metadata.clone(),
-                |metadata| {
-                    let encoded = metadata
-                        .to_json_vec_with_limits(limits)
-                        .expect("benchmark metadata should encode");
-                    black_box(encoded.len());
-                    drop(encoded);
-                },
-                BatchSize::SmallInput,
-            );
-        });
+        group.bench_function(
+            BenchmarkId::new("encode_and_drop", &sample_name),
+            |bencher| {
+                bencher.iter_batched(
+                    || metadata.clone(),
+                    |metadata| {
+                        let encoded = metadata
+                            .to_json_vec_with_limits(limits)
+                            .expect("benchmark metadata should encode");
+                        black_box(encoded.len());
+                        drop(encoded);
+                    },
+                    BatchSize::SmallInput,
+                );
+            },
+        );
         group.bench_function(BenchmarkId::new("clone", &sample_name), |bencher| {
             bencher.iter_batched(
                 || metadata.clone(),
@@ -181,34 +196,42 @@ fn benchmark_request_encode_investigation(criterion: &mut Criterion) {
                 BatchSize::SmallInput,
             );
         });
-        group.bench_function(BenchmarkId::new("serde_reencode", &sample_name), |bencher| {
-            bencher.iter_batched(
-                || metadata.clone(),
-                |metadata| {
-                    let encoded = to_vec(&metadata).expect("benchmark metadata should serialize");
-                    black_box(encoded.len());
-                    drop(encoded);
-                },
-                BatchSize::SmallInput,
-            );
-        });
-        group.bench_function(BenchmarkId::new("validation_clone_reencode", &sample_name), |bencher| {
-            bencher.iter_batched(
-                || metadata.clone(),
-                |metadata| {
-                    let validated = metadata
-                        .to_json_vec_with_limits(limits)
-                        .expect("benchmark metadata should pass the request limit");
-                    black_box(validated.len());
-                    drop(validated);
-                    let metadata_for_storage = metadata.clone();
-                    let persisted = to_vec(&metadata_for_storage).expect("benchmark metadata should serialize");
-                    black_box(persisted.len());
-                    drop(persisted);
-                },
-                BatchSize::SmallInput,
-            );
-        });
+        group.bench_function(
+            BenchmarkId::new("serde_reencode", &sample_name),
+            |bencher| {
+                bencher.iter_batched(
+                    || metadata.clone(),
+                    |metadata| {
+                        let encoded =
+                            to_vec(&metadata).expect("benchmark metadata should serialize");
+                        black_box(encoded.len());
+                        drop(encoded);
+                    },
+                    BatchSize::SmallInput,
+                );
+            },
+        );
+        group.bench_function(
+            BenchmarkId::new("validation_clone_reencode", &sample_name),
+            |bencher| {
+                bencher.iter_batched(
+                    || metadata.clone(),
+                    |metadata| {
+                        let validated = metadata
+                            .to_json_vec_with_limits(limits)
+                            .expect("benchmark metadata should pass the request limit");
+                        black_box(validated.len());
+                        drop(validated);
+                        let metadata_for_storage = metadata.clone();
+                        let persisted = to_vec(&metadata_for_storage)
+                            .expect("benchmark metadata should serialize");
+                        black_box(persisted.len());
+                        drop(persisted);
+                    },
+                    BatchSize::SmallInput,
+                );
+            },
+        );
     }
     group.finish();
 }
@@ -246,7 +269,9 @@ fn benchmark_filter_match(criterion: &mut Criterion) {
 fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
     let mut group = criterion.benchmark_group("metadata/filter_expression_construction");
     for condition_count in [16, 64, 128, 255] {
-        let keys: Vec<_> = (0..condition_count).map(|index| format!("key_{index}")).collect();
+        let keys: Vec<_> = (0..condition_count)
+            .map(|index| format!("key_{index}"))
+            .collect();
         group.bench_with_input(
             BenchmarkId::from_parameter(condition_count),
             keys.as_slice(),
@@ -254,7 +279,9 @@ fn benchmark_filter_expression_construction(criterion: &mut Criterion) {
                 bencher.iter(|| {
                     let result = keys
                         .iter()
-                        .fold(FilterExpression::builder(), |builder, key| builder.exists(key))
+                        .fold(FilterExpression::builder(), |builder, key| {
+                            builder.exists(key)
+                        })
                         .build();
                     black_box(result.expect("benchmark filter should build"))
                 });
@@ -308,7 +335,13 @@ fn benchmark_public_expression_composition(criterion: &mut Criterion) {
         group.bench_function(BenchmarkId::new("not", not_count), |bencher| {
             bencher.iter_batched(
                 || not_input.clone(),
-                |expression| black_box(expression.try_not().expect("bounded public NOT composition")),
+                |expression| {
+                    black_box(
+                        expression
+                            .try_not()
+                            .expect("bounded public NOT composition"),
+                    )
+                },
                 BatchSize::SmallInput,
             );
         });
@@ -348,8 +381,8 @@ fn benchmark_filter_json_decode(criterion: &mut Criterion) {
 
     criterion.bench_function("metadata/filter_json_decode", |bencher| {
         bencher.iter(|| {
-            let decoded =
-                MetadataFilter::decode_json_slice(black_box(&encoded)).expect("benchmark filter should decode");
+            let decoded = MetadataFilter::decode_json_slice(black_box(&encoded))
+                .expect("benchmark filter should decode");
             black_box(decoded)
         });
     });
@@ -374,7 +407,9 @@ fn benchmark_filter_json_encode(criterion: &mut Criterion) {
         assert_eq!(ordinary, bounded, "benchmark encoding paths should agree");
         let _output_bytes = ordinary.len();
         group.bench_function(BenchmarkId::new("serde_json", &name), |bencher| {
-            bencher.iter(|| black_box(to_vec(black_box(&filter)).expect("benchmark filter should serialize")));
+            bencher.iter(|| {
+                black_box(to_vec(black_box(&filter)).expect("benchmark filter should serialize"))
+            });
         });
         group.bench_function(BenchmarkId::new("bounded", &name), |bencher| {
             bencher.iter(|| {
@@ -406,9 +441,11 @@ fn filter_encoding_samples() -> Vec<(String, FilterExpression)> {
         let first = expressions.next().expect("filter sample is nonempty");
         expressions.fold(first, |left, right| {
             if use_or {
-                left.try_or(right).expect("bounded benchmark OR should build")
+                left.try_or(right)
+                    .expect("bounded benchmark OR should build")
             } else {
-                left.try_and(right).expect("bounded benchmark AND should build")
+                left.try_and(right)
+                    .expect("bounded benchmark AND should build")
             }
         })
     };
@@ -426,7 +463,9 @@ fn filter_encoding_samples() -> Vec<(String, FilterExpression)> {
         let mut expression = leaf(depth);
         for level in 0..depth {
             expression = match level % 3 {
-                0 => expression.try_not().expect("bounded benchmark NOT should build"),
+                0 => expression
+                    .try_not()
+                    .expect("bounded benchmark NOT should build"),
                 1 => expression
                     .try_and(leaf(depth + level + 1))
                     .expect("bounded benchmark nested AND should build"),
@@ -462,8 +501,11 @@ fn benchmark_schema_json_decode(criterion: &mut Criterion) {
 
     criterion.bench_function("metadata/schema_json_decode", |bencher| {
         bencher.iter(|| {
-            let decoded = MetadataSchema::decode_json_slice_with_limits(black_box(&encoded), MetadataLimits::default())
-                .expect("benchmark schema should decode");
+            let decoded = MetadataSchema::decode_json_slice_with_limits(
+                black_box(&encoded),
+                MetadataLimits::default(),
+            )
+            .expect("benchmark schema should decode");
             black_box(decoded)
         });
     });
@@ -477,7 +519,10 @@ fn benchmark_downstream_metadata_paths(criterion: &mut Criterion) {
     for count in [8, 64, 256] {
         let mut metadata = Metadata::new();
         for index in 0..count {
-            metadata.set(&format!("field_{index:03}"), "representative request metadata value");
+            metadata.set(
+                &format!("field_{index:03}"),
+                "representative request metadata value",
+            );
         }
         criterion.bench_function(&format!("metadata/clone_{count}_fields"), |bencher| {
             bencher.iter(|| black_box(black_box(&metadata).clone()));

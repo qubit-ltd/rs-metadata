@@ -115,23 +115,25 @@ where
         A: MapAccess<'de>,
     {
         let mut values = BTreeMap::new();
-        while let Some(key) = map.next_key_seed(BoundedStringSeed::<_, String>::new(|key: &str| {
-            if key.len() > self.max_key_bytes {
-                if let Some(slot) = &self.error_slot {
-                    *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
-                        kind: MetadataWireLimitKind::KeyBytes,
-                        value: key.len(),
-                        maximum: self.max_key_bytes,
-                    });
+        while let Some(key) =
+            map.next_key_seed(BoundedStringSeed::<_, String>::new(|key: &str| {
+                if key.len() > self.max_key_bytes {
+                    if let Some(slot) = &self.error_slot {
+                        *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
+                            kind: MetadataWireLimitKind::KeyBytes,
+                            value: key.len(),
+                            maximum: self.max_key_bytes,
+                        });
+                    }
+                    return Err(format!(
+                        "map key has {} bytes, exceeding the limit of {} bytes",
+                        key.len(),
+                        self.max_key_bytes,
+                    ));
                 }
-                return Err(format!(
-                    "map key has {} bytes, exceeding the limit of {} bytes",
-                    key.len(),
-                    self.max_key_bytes,
-                ));
-            }
-            Ok(())
-        }))? {
+                Ok(())
+            }))?
+        {
             if values.len() >= self.max_entries {
                 if let Some(slot) = &self.error_slot {
                     *slot.borrow_mut() = Some(MetadataError::WireLimitExceeded {
@@ -147,7 +149,10 @@ where
             }
             match values.entry(key) {
                 Entry::Occupied(entry) => {
-                    return Err(de::Error::custom(format!("duplicate map key '{}'", entry.key())));
+                    return Err(de::Error::custom(format!(
+                        "duplicate map key '{}'",
+                        entry.key()
+                    )));
                 }
                 Entry::Vacant(entry) => {
                     entry.insert(map.next_value_seed(self.value_seed.clone())?);

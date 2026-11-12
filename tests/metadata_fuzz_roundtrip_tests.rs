@@ -31,12 +31,20 @@ use support::bounded_encode;
 fn assert_bounded(
     canonical: &[u8],
     encode_vec: impl Fn(JsonEncodeLimits) -> Result<Vec<u8>, MetadataWireEncodeError>,
-    encode_writer: impl FnMut(&mut bounded_encode::ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+    encode_writer: impl FnMut(
+        &mut bounded_encode::ProbeWriter,
+        JsonEncodeLimits,
+    ) -> Result<(), MetadataWireEncodeError>,
 ) {
     let length = canonical.len();
     bounded_encode::check(
         canonical,
-        [1, length.saturating_sub(1).max(1), length, length.saturating_add(1)],
+        [
+            1,
+            length.saturating_sub(1).max(1),
+            length,
+            length.saturating_add(1),
+        ],
         encode_vec,
         encode_writer,
     );
@@ -52,7 +60,9 @@ fn test_bounded_metadata_encode_oracle_covers_output_and_value_budgets() {
         |writer, limits| empty.to_json_writer_with_limits(writer, limits),
     );
 
-    let metadata = Metadata::new().with("tenant", "acme \"北\"").with("empty", "");
+    let metadata = Metadata::new()
+        .with("tenant", "acme \"北\"")
+        .with("empty", "");
     let canonical = serde_json::to_vec(&metadata).unwrap();
     assert_bounded(
         &canonical,
@@ -72,8 +82,14 @@ fn test_bounded_metadata_encode_oracle_covers_output_and_value_budgets() {
     );
 
     for limits in [
-        default_json_encode_limits().into_builder().max_depth(1).build(),
-        default_json_encode_limits().into_builder().max_string_bytes(1).build(),
+        default_json_encode_limits()
+            .into_builder()
+            .max_depth(1)
+            .build(),
+        default_json_encode_limits()
+            .into_builder()
+            .max_string_bytes(1)
+            .build(),
     ] {
         let error = metadata
             .to_json_vec_with_limits(limits)
@@ -114,7 +130,10 @@ fn test_bounded_filter_encode_oracle() {
         .eq("enabled", true)
         .build()
         .unwrap();
-    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .unwrap();
     let canonical = serde_json::to_vec(&filter).unwrap();
     assert_bounded(
         &canonical,
@@ -138,8 +157,8 @@ fn test_metadata_roundtrip_oracle_allows_number_normalization_growth() {
     }
     input.push_str("}}");
 
-    let metadata =
-        Metadata::decode_json_slice(input.as_bytes()).expect("default decoder should accept the boundary input");
+    let metadata = Metadata::decode_json_slice(input.as_bytes())
+        .expect("default decoder should accept the boundary input");
     let encoded = serde_json::to_vec(&metadata).expect("metadata should serialize");
     assert_eq!(input.len(), 1_040_408);
     assert_eq!(encoded.len(), 1_048_600);
@@ -148,7 +167,10 @@ fn test_metadata_roundtrip_oracle_allows_number_normalization_growth() {
     let error = Metadata::decode_json_slice(&encoded)
         .expect_err("the default complete-input limit should reject normalized output");
     assert!(matches!(error, MetadataWireDecodeError::Budget(_)));
-    assert!(error.to_string().contains("InputBytes"), "unexpected error: {error}");
+    assert!(
+        error.to_string().contains("InputBytes"),
+        "unexpected error: {error}"
+    );
 
     let json_decode = MetadataLimits::default()
         .json_decode()
@@ -201,13 +223,21 @@ fn test_filter_roundtrip_oracle_allows_number_normalization_growth() {
     assert_eq!(input.len(), DEFAULT_MAX_JSON_BYTES - 1);
     assert_eq!(canonical.len(), DEFAULT_MAX_JSON_BYTES + 1);
 
-    let decoded = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), receiver_limits)
-        .expect("candidate input should pass the original fuzz limits");
+    let decoded = MetadataFilter::decode_json_slice_with_limits(
+        &input,
+        MetadataLimits::default(),
+        receiver_limits,
+    )
+    .expect("candidate input should pass the original fuzz limits");
     let encoded = serde_json::to_vec(&decoded).expect("filter should serialize");
     assert_eq!(encoded, canonical);
 
-    let error = MetadataFilter::decode_json_slice_with_limits(&encoded, MetadataLimits::default(), receiver_limits)
-        .expect_err("the default complete-input limit should reject normalized output");
+    let error = MetadataFilter::decode_json_slice_with_limits(
+        &encoded,
+        MetadataLimits::default(),
+        receiver_limits,
+    )
+    .expect_err("the default complete-input limit should reject normalized output");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Budget(qubit_budget::BudgetError::Insufficient {

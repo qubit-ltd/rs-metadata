@@ -67,8 +67,12 @@ impl Redact for MetadataSchemaBuilder {
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("MetadataSchemaBuilder", |fields| {
             fields.nested("fields", &SchemaFields(&self.fields));
-            fields.unmarked("unknown_metadata_field_policy", || self.unknown_metadata_field_policy);
-            fields.unmarked("unknown_filter_field_policy", || self.unknown_filter_field_policy);
+            fields.unmarked("unknown_metadata_field_policy", || {
+                self.unknown_metadata_field_policy
+            });
+            fields.unmarked("unknown_filter_field_policy", || {
+                self.unknown_filter_field_policy
+            });
             fields.unmarked("has_error", || self.error.is_some());
         });
     }
@@ -205,7 +209,9 @@ impl MetadataSchemaBuilder {
     fn declare_field(mut self, key: &str, field: MetadataField) -> Self {
         if self.fields.contains_key(key) {
             if self.error.is_none() {
-                self.error = Some(MetadataError::DuplicateSchemaField { key: key.to_string() });
+                self.error = Some(MetadataError::DuplicateSchemaField {
+                    key: key.to_string(),
+                });
             }
             return self;
         }

@@ -22,7 +22,8 @@ use qubit_metadata::MetadataWireLimitKind;
 use serde_json::Value;
 
 fn fixture(case: &str) -> Vec<u8> {
-    std::fs::read(format!("tests/fixtures/compatibility/{case}.json")).expect("compatibility fixture exists")
+    std::fs::read(format!("tests/fixtures/compatibility/{case}.json"))
+        .expect("compatibility fixture exists")
 }
 
 fn normalized(case: &str) -> Vec<u8> {
@@ -39,7 +40,8 @@ fn canonical(value: impl serde::Serialize) -> Vec<u8> {
 #[test]
 fn test_rejects_positional_schema_forms_that_0_6_2_accepted() {
     let object = fixture("schema_object");
-    let current = MetadataSchema::decode_json_slice(&object).expect("both releases accept schema objects");
+    let current =
+        MetadataSchema::decode_json_slice(&object).expect("both releases accept schema objects");
     assert_eq!(
         serde_json::from_slice::<Value>(&canonical(current)).unwrap(),
         serde_json::from_slice::<Value>(&object).unwrap()
@@ -51,8 +53,8 @@ fn test_rejects_positional_schema_forms_that_0_6_2_accepted() {
         Err(MetadataWireDecodeError::Decode(_))
     ));
     let old_normalized = normalized("schema_field_sequence");
-    let migrated =
-        MetadataSchema::decode_json_slice(&old_normalized).expect("0.6.2-normalized schema reads in current version");
+    let migrated = MetadataSchema::decode_json_slice(&old_normalized)
+        .expect("0.6.2-normalized schema reads in current version");
     let fields: Vec<_> = migrated.fields().collect();
     assert_eq!(fields.len(), 1);
     let (name, field) = fields[0];
@@ -73,7 +75,8 @@ fn test_rejects_positional_schema_forms_that_0_6_2_accepted() {
 #[test]
 fn test_preserves_numeric_policies_and_rejects_positional_options() {
     let object = fixture("options_object");
-    let options: FilterMatchOptions = serde_json::from_slice(&object).expect("options object is accepted");
+    let options: FilterMatchOptions =
+        serde_json::from_slice(&object).expect("options object is accepted");
     assert_eq!(
         options.numeric_comparison_policy(),
         qubit_datatype::NumericComparisonPolicy::Approximate
@@ -102,15 +105,15 @@ fn test_preserves_numeric_policies_and_rejects_positional_options() {
     // The 0.6.2 normalized form retained `approximate`; current callers must
     // preserve that policy while converting it to the canonical object form.
     let normalized_options_bytes = normalized("options_sequence");
-    let normalized_options: FilterMatchOptions =
-        serde_json::from_slice(&normalized_options_bytes).expect("normalized old options read in current version");
+    let normalized_options: FilterMatchOptions = serde_json::from_slice(&normalized_options_bytes)
+        .expect("normalized old options read in current version");
     assert_eq!(
         normalized_options.numeric_comparison_policy(),
         qubit_datatype::NumericComparisonPolicy::Approximate
     );
     let normalized_filter = normalized("filter_options_sequence");
-    let current_filter =
-        MetadataFilter::decode_json_slice(&normalized_filter).expect("normalized old filter reads in current version");
+    let current_filter = MetadataFilter::decode_json_slice(&normalized_filter)
+        .expect("normalized old filter reads in current version");
     assert_eq!(
         serde_json::from_slice::<Value>(&canonical(current_filter)).unwrap(),
         serde_json::from_slice::<Value>(&normalized_filter).unwrap()
@@ -129,13 +132,20 @@ fn test_classifies_shared_malformed_inputs() {
         let metadata = Metadata::decode_json_slice(&bytes).unwrap_err();
         let schema = MetadataSchema::decode_json_slice(&bytes).unwrap_err();
         let filter = MetadataFilter::decode_json_slice(&bytes).unwrap_err();
-        for (api, error) in [("metadata", metadata), ("schema", schema), ("filter", filter)] {
+        for (api, error) in [
+            ("metadata", metadata),
+            ("schema", schema),
+            ("filter", filter),
+        ] {
             let matches = match expected {
                 "syntax" => matches!(&error, MetadataWireDecodeError::Syntax(_)),
                 "decode" => matches!(&error, MetadataWireDecodeError::Decode(_)),
                 _ => false,
             };
-            assert!(matches, "{case} should classify as {expected} for {api}: {error:?}");
+            assert!(
+                matches,
+                "{case} should classify as {expected} for {api}: {error:?}"
+            );
         }
     }
 }
@@ -149,36 +159,45 @@ fn test_reports_structured_bounded_encode_limits() {
     }
     assert!(matches!(
         metadata.to_json_vec(),
-        Err(MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
-            kind: MetadataWireLimitKind::Entries,
-            value: 4097,
-            maximum: 4096
-        }))
+        Err(MetadataWireEncodeError::Domain(
+            MetadataError::WireLimitExceeded {
+                kind: MetadataWireLimitKind::Entries,
+                value: 4097,
+                maximum: 4096
+            }
+        ))
     ));
 
     let long_key = "k".repeat(257);
     let metadata = Metadata::new().with(&long_key, "value");
     assert!(matches!(
         metadata.to_json_vec(),
-        Err(MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
-            kind: MetadataWireLimitKind::KeyBytes,
-            value: 257,
-            maximum: 256
-        }))
+        Err(MetadataWireEncodeError::Domain(
+            MetadataError::WireLimitExceeded {
+                kind: MetadataWireLimitKind::KeyBytes,
+                value: 257,
+                maximum: 256
+            }
+        ))
     ));
 
     let mut builder = MetadataSchema::builder();
     for index in 0..4097 {
-        builder = builder.replace_field(&format!("key-{index}"), MetadataField::new(DataType::String, false));
+        builder = builder.replace_field(
+            &format!("key-{index}"),
+            MetadataField::new(DataType::String, false),
+        );
     }
     let schema = builder.build().unwrap();
     assert!(matches!(
         schema.to_json_vec(),
-        Err(MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
-            kind: MetadataWireLimitKind::Entries,
-            value: 4097,
-            maximum: 4096
-        }))
+        Err(MetadataWireEncodeError::Domain(
+            MetadataError::WireLimitExceeded {
+                kind: MetadataWireLimitKind::Entries,
+                value: 4097,
+                maximum: 4096
+            }
+        ))
     ));
 
     let long_schema = MetadataSchema::builder()
@@ -187,10 +206,12 @@ fn test_reports_structured_bounded_encode_limits() {
         .unwrap();
     assert!(matches!(
         long_schema.to_json_vec(),
-        Err(MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
-            kind: MetadataWireLimitKind::KeyBytes,
-            value: 257,
-            maximum: 256
-        }))
+        Err(MetadataWireEncodeError::Domain(
+            MetadataError::WireLimitExceeded {
+                kind: MetadataWireLimitKind::KeyBytes,
+                value: 257,
+                maximum: 256
+            }
+        ))
     ));
 }

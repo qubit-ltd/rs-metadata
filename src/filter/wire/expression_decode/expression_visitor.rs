@@ -103,7 +103,8 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                         return Err(de::Error::duplicate_field("key"));
                     }
                     let key = map.next_value_seed(BoundedStringSeed::new(|key: &str| {
-                        check_key(key, self.receiver_limits, &self.error_slot).map_err(|error| error.to_string())
+                        check_key(key, self.receiver_limits, &self.error_slot)
+                            .map_err(|error| error.to_string())
                     }))?;
                     fields.key = Some(key);
                 }
@@ -138,12 +139,14 @@ impl<'de, 'a> Visitor<'de> for ExpressionVisitor<'a> {
                     if fields.expression.is_some() {
                         return Err(de::Error::duplicate_field("expression"));
                     }
-                    fields.expression = Some(Box::new(map.next_value_seed(FilterExpressionWireV1Seed::new(
-                        self.receiver_limits,
-                        &mut *self.node_budget,
-                        self.depth.saturating_add(1),
-                        Rc::clone(&self.error_slot),
-                    ))?));
+                    fields.expression = Some(Box::new(map.next_value_seed(
+                        FilterExpressionWireV1Seed::new(
+                            self.receiver_limits,
+                            &mut *self.node_budget,
+                            self.depth.saturating_add(1),
+                            Rc::clone(&self.error_slot),
+                        ),
+                    )?));
                 }
                 _ => {
                     return Err(de::Error::unknown_field(

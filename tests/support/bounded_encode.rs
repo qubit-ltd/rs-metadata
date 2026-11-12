@@ -78,14 +78,23 @@ pub fn check(
     canonical: &[u8],
     caps: impl IntoIterator<Item = usize>,
     vec_encode: impl Fn(JsonEncodeLimits) -> Result<Vec<u8>, MetadataWireEncodeError>,
-    mut writer_encode: impl FnMut(&mut ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+    mut writer_encode: impl FnMut(
+        &mut ProbeWriter,
+        JsonEncodeLimits,
+    ) -> Result<(), MetadataWireEncodeError>,
 ) {
     for cap in caps {
         let limits = default_json_encode_limits()
             .into_builder()
             .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, cap))
             .build();
-        check_one(canonical, Some(cap), limits, &vec_encode, &mut writer_encode);
+        check_one(
+            canonical,
+            Some(cap),
+            limits,
+            &vec_encode,
+            &mut writer_encode,
+        );
     }
     if canonical.len() > 1 {
         let below = canonical.len() - 1;
@@ -100,7 +109,8 @@ pub fn check(
         }) if limit == below && requested == canonical.len())
         );
         let mut writer = ProbeWriter::new();
-        let writer_error = writer_encode(&mut writer, limits).expect_err("writer must reject canonical bytes at L-1");
+        let writer_error = writer_encode(&mut writer, limits)
+            .expect_err("writer must reject canonical bytes at L-1");
         assert!(
             matches!(writer_error, MetadataWireEncodeError::Budget(qubit_budget::BudgetError::Insufficient {
             resource: JsonResource::OutputBytes, limit, requested, ..
@@ -111,9 +121,15 @@ pub fn check(
 
         let limits = default_json_encode_limits()
             .into_builder()
-            .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, canonical.len()))
+            .output_bytes_limit(ResourceLimit::new(
+                JsonResource::OutputBytes,
+                canonical.len(),
+            ))
             .build();
-        assert_eq!(vec_encode(limits).expect("L output cap must succeed"), canonical);
+        assert_eq!(
+            vec_encode(limits).expect("L output cap must succeed"),
+            canonical
+        );
         let mut writer = ProbeWriter::new();
         writer_encode(&mut writer, limits).expect("writer must succeed at L output cap");
         let mut expected = PREFIX.to_vec();
@@ -124,8 +140,14 @@ pub fn check(
     // preserving all other defaults. Either outcome is acceptable for an
     // arbitrary fuzz value as long as both encoding paths agree.
     for limits in [
-        default_json_encode_limits().into_builder().max_nodes(1).build(),
-        default_json_encode_limits().into_builder().max_string_bytes(1).build(),
+        default_json_encode_limits()
+            .into_builder()
+            .max_nodes(1)
+            .build(),
+        default_json_encode_limits()
+            .into_builder()
+            .max_string_bytes(1)
+            .build(),
     ] {
         check_one(canonical, None, limits, &vec_encode, &mut writer_encode);
     }
@@ -136,7 +158,10 @@ fn check_one(
     output_cap: Option<usize>,
     limits: JsonEncodeLimits,
     vec_encode: &impl Fn(JsonEncodeLimits) -> Result<Vec<u8>, MetadataWireEncodeError>,
-    writer_encode: &mut impl FnMut(&mut ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+    writer_encode: &mut impl FnMut(
+        &mut ProbeWriter,
+        JsonEncodeLimits,
+    ) -> Result<(), MetadataWireEncodeError>,
 ) {
     let vector = vec_encode(limits);
     let mut writer = ProbeWriter::new();
@@ -165,5 +190,11 @@ fn check_one(
 pub fn caps(canonical_len: usize, first_input_byte: u8) -> [usize; 5] {
     let below = canonical_len.saturating_sub(1).max(1);
     let random = usize::from(first_input_byte) % canonical_len.saturating_add(1).max(1) + 1;
-    [1, below, canonical_len, canonical_len.saturating_add(1), random]
+    [
+        1,
+        below,
+        canonical_len,
+        canonical_len.saturating_add(1),
+        random,
+    ]
 }

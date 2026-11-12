@@ -53,7 +53,9 @@ fn test_v1_fixed_comparison_and_membership_contracts() {
             [false, true, true, false],
         ),
         (
-            FilterExpression::builder().not_in_set("k", [2_i64, 3]).build(),
+            FilterExpression::builder()
+                .not_in_set("k", [2_i64, 3])
+                .build(),
             json!({"kind":"not_in","key":"k","values":[
                 {"scalar":{"int64":2}}, {"scalar":{"int64":3}}]}),
             [true, true, false, false],
@@ -71,7 +73,8 @@ fn test_v1_fixed_comparison_and_membership_contracts() {
             "options": {"numeric_comparison_policy": "exact"}
         });
         assert_eq!(to_value(&filter).expect("filter should encode"), expected);
-        let decoded: MetadataFilter = from_value(expected.clone()).expect("fixed V1 sample should decode");
+        let decoded: MetadataFilter =
+            from_value(expected.clone()).expect("fixed V1 sample should decode");
         assert_eq!(decoded, filter);
         for (value, outcome) in (0_i64..4).zip(outcomes) {
             assert_eq!(decoded.matches(&Metadata::new().with("k", value)), outcome);
@@ -130,7 +133,9 @@ fn test_filter_wire_round_trips_every_condition_and_boolean_operator() {
         FilterExpression::builder().gt("k", 1_i64).build(),
         FilterExpression::builder().ge("k", 1_i64).build(),
         FilterExpression::builder().in_set("k", [1_i64, 2]).build(),
-        FilterExpression::builder().not_in_set("k", [1_i64, 2]).build(),
+        FilterExpression::builder()
+            .not_in_set("k", [1_i64, 2])
+            .build(),
         FilterExpression::builder().exists("k").build(),
         FilterExpression::builder().not_exists("k").build(),
         FilterExpression::builder()

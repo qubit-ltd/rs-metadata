@@ -203,7 +203,9 @@ impl Metadata {
             });
         }
         let metadata = Self(Self::from_wire(wire).map_err(|error| {
-            crate::MetadataWireDecodeError::InvalidJson(<serde_json::Error as DeError>::custom(error))
+            crate::MetadataWireDecodeError::InvalidJson(<serde_json::Error as DeError>::custom(
+                error,
+            ))
         })?);
         Ok(metadata)
     }
@@ -245,7 +247,10 @@ impl Metadata {
     /// `Domain` variant. The outer metadata wire contract is checked before
     /// value budgets.
     #[cfg(feature = "json")]
-    pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+    pub fn to_json_vec_with_limits(
+        &self,
+        limits: JsonEncodeLimits,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.validate_wire_contract()
             .map_err(crate::MetadataWireEncodeError::Domain)?;
         let mut preflight = ValueWireEncodePreflight::new_value_limits(*limits.value_limits());
@@ -296,7 +301,10 @@ impl Metadata {
     where
         W: Write,
     {
-        self.to_json_writer_with_limits(writer, crate::metadata_limits::default_json_encode_limits())
+        self.to_json_writer_with_limits(
+            writer,
+            crate::metadata_limits::default_json_encode_limits(),
+        )
     }
 
     /// Encodes this metadata object to a writer with caller-provided budgets.
@@ -541,7 +549,11 @@ impl Metadata {
     /// assert_eq!(metadata.get_or::<i64>("absent", 7_i64).unwrap(), 7);
     /// assert!(metadata.get_or::<i64>("text", 7_i64).is_err());
     /// ```
-    pub fn get_or<T: StrictValueRead>(&self, key: &str, default: impl IntoValueDefault<T>) -> MetadataResult<T> {
+    pub fn get_or<T: StrictValueRead>(
+        &self,
+        key: &str,
+        default: impl IntoValueDefault<T>,
+    ) -> MetadataResult<T> {
         self.get_optional(key)
             .map(|value| value.unwrap_or_else(|| default.into_value_default()))
     }
@@ -568,7 +580,11 @@ impl Metadata {
     /// the underlying missing, invalid, unsupported, precision-loss, or
     /// resource-limit error and its source chain.
     pub fn convert<T: DataConversionTarget>(&self, key: &str) -> MetadataResult<T> {
-        self.convert_with(key, ConversionPolicy::default_ref(), ConversionLimits::default_ref())
+        self.convert_with(
+            key,
+            ConversionPolicy::default_ref(),
+            ConversionLimits::default_ref(),
+        )
     }
 
     /// Converts the stored value under `key` to `T` with an explicit
@@ -807,7 +823,12 @@ impl Metadata {
     /// * `T` - Input type convertible into a stored [`Value`].
     #[cfg(feature = "schema")]
     #[inline]
-    pub fn insert_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Option<Value>>
+    pub fn insert_checked<T>(
+        &mut self,
+        schema: &MetadataSchema,
+        key: &str,
+        value: T,
+    ) -> MetadataResult<Option<Value>>
     where
         T: Into<Value>,
     {
@@ -841,7 +862,12 @@ impl Metadata {
     /// * `T` - Input type convertible into a stored [`Value`].
     #[cfg(feature = "schema")]
     #[inline]
-    pub fn set_checked<T>(&mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<&mut Self>
+    pub fn set_checked<T>(
+        &mut self,
+        schema: &MetadataSchema,
+        key: &str,
+        value: T,
+    ) -> MetadataResult<&mut Self>
     where
         T: Into<Value>,
     {
@@ -873,7 +899,12 @@ impl Metadata {
     /// * `T` - Input type convertible into a stored [`Value`].
     #[cfg(feature = "schema")]
     #[inline]
-    pub fn with_checked<T>(mut self, schema: &MetadataSchema, key: &str, value: T) -> MetadataResult<Self>
+    pub fn with_checked<T>(
+        mut self,
+        schema: &MetadataSchema,
+        key: &str,
+        value: T,
+    ) -> MetadataResult<Self>
     where
         T: Into<Value>,
     {
@@ -1015,7 +1046,11 @@ impl Metadata {
                 maximum: STRICT_STRING_MAP_MAX_ENTRIES,
             });
         }
-        if let Some(key) = self.0.keys().find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES) {
+        if let Some(key) = self
+            .0
+            .keys()
+            .find(|key| key.len() > STRICT_STRING_MAP_MAX_KEY_BYTES)
+        {
             return Err(MetadataError::WireLimitExceeded {
                 kind: crate::MetadataWireLimitKind::KeyBytes,
                 value: key.len(),
@@ -1201,7 +1236,8 @@ impl Serialize for Metadata {
     where
         S: Serializer,
     {
-        self.validate_wire_contract().map_err(<S::Error as SerError>::custom)?;
+        self.validate_wire_contract()
+            .map_err(<S::Error as SerError>::custom)?;
         MetadataWireV1 {
             version: METADATA_WIRE_VERSION_V1,
             values: MetadataWireValuesRef(&self.0),
@@ -1241,7 +1277,9 @@ impl<'de> Deserialize<'de> for Metadata {
             ))
             .deserialize(deserializer)?;
         if wire.version != METADATA_WIRE_VERSION_V1 {
-            return Err(de::Error::custom("unsupported Metadata wire format version"));
+            return Err(de::Error::custom(
+                "unsupported Metadata wire format version",
+            ));
         }
         let values = Self::from_wire(wire).map_err(de::Error::custom)?;
         Ok(Self(values))

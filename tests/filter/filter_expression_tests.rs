@@ -84,7 +84,10 @@ fn test_public_composition_preserves_wide_groups_constants_and_double_not() {
 
     let leaf = leaves[0].clone();
     assert_eq!(
-        leaf.clone().try_not().expect("first NOT should fit").try_not(),
+        leaf.clone()
+            .try_not()
+            .expect("first NOT should fit")
+            .try_not(),
         Ok(leaf),
     );
 }
@@ -203,7 +206,9 @@ fn test_and_or_follow_three_valued_logic_for_missing_and_unset_values() {
                 (
                     "AND",
                     expected_and,
-                    left.clone().try_and(right.clone()).expect("AND should build"),
+                    left.clone()
+                        .try_and(right.clone())
+                        .expect("AND should build"),
                 ),
                 (
                     "OR",
@@ -288,7 +293,10 @@ fn test_full_validation_reports_earlier_key_error_before_later_node_error() {
         .build()
         .expect("custom limits should build");
 
-    let result = MetadataFilter::builder().expression(expression).limits(limits).build();
+    let result = MetadataFilter::builder()
+        .expression(expression)
+        .limits(limits)
+        .build();
 
     assert_eq!(
         result,
@@ -320,7 +328,10 @@ fn test_full_validation_reports_earlier_key_error_before_later_depth_error() {
         .build()
         .expect("custom limits should build");
 
-    let result = MetadataFilter::builder().expression(expression).limits(limits).build();
+    let result = MetadataFilter::builder()
+        .expression(expression)
+        .limits(limits)
+        .build();
 
     assert_eq!(
         result,

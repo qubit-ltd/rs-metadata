@@ -51,7 +51,8 @@ fn test_user_guide_empty_sets_example() {
 #[cfg(feature = "filter")]
 #[test]
 fn test_query_translation_example() {
-    support::user_guide_query_translation::main().expect("query translation guide example should run");
+    support::user_guide_query_translation::main()
+        .expect("query translation guide example should run");
 }
 
 #[cfg(feature = "filter")]
@@ -95,7 +96,8 @@ fn test_readme_json_roundtrip_example() {
 #[cfg(feature = "json")]
 #[test]
 fn test_user_guide_directional_limits_example() {
-    support::user_guide_directional_limits::main().expect("directional budget guide example should run");
+    support::user_guide_directional_limits::main()
+        .expect("directional budget guide example should run");
 }
 
 #[cfg(feature = "json")]
@@ -160,7 +162,8 @@ fn test_user_guide_bounded_decode_source_matches() {
 #[cfg(feature = "json")]
 #[test]
 fn test_user_guide_filter_bounded_json_encoding_example() {
-    support::user_guide_filter_bounded_encode::main().expect("filter encoding guide example should run");
+    support::user_guide_filter_bounded_encode::main()
+        .expect("filter encoding guide example should run");
 }
 
 #[cfg(feature = "schema")]
@@ -195,8 +198,16 @@ fn assert_readme_json_roundtrip(name: &str, document: &str) {
 fn marked_example<'a>(source: &'a str, marker: &str) -> &'a str {
     let start = format!("// {marker}:start");
     let end = format!("// {marker}:end");
-    assert_eq!(source.matches(&start).count(), 1, "helper start marker for {marker}");
-    assert_eq!(source.matches(&end).count(), 1, "helper end marker for {marker}");
+    assert_eq!(
+        source.matches(&start).count(),
+        1,
+        "helper start marker for {marker}"
+    );
+    assert_eq!(
+        source.matches(&end).count(),
+        1,
+        "helper end marker for {marker}"
+    );
     let a = source.find(&start).expect("helper start marker") + start.len();
     let b = source.find(&end).expect("helper end marker");
     assert!(a < b, "helper markers must be ordered for {marker}");
@@ -206,11 +217,22 @@ fn marked_example<'a>(source: &'a str, marker: &str) -> &'a str {
 fn assert_documented_example(name: &str, document: &str, marker: &str, expected: &str) {
     let start = format!("<!-- {marker}:start -->");
     let end = format!("<!-- {marker}:end -->");
-    assert_eq!(document.matches(&start).count(), 1, "{name}: start marker for {marker}");
-    assert_eq!(document.matches(&end).count(), 1, "{name}: end marker for {marker}");
+    assert_eq!(
+        document.matches(&start).count(),
+        1,
+        "{name}: start marker for {marker}"
+    );
+    assert_eq!(
+        document.matches(&end).count(),
+        1,
+        "{name}: end marker for {marker}"
+    );
     let start_index = document.find(&start).expect("start marker");
     let end_index = document.find(&end).expect("end marker");
-    assert!(start_index < end_index, "{name}: markers out of order for {marker}");
+    assert!(
+        start_index < end_index,
+        "{name}: markers out of order for {marker}"
+    );
     let block = &document[start_index + start.len()..end_index];
     assert_eq!(
         block.matches("```rust").count(),
@@ -228,7 +250,11 @@ fn assert_documented_example(name: &str, document: &str, marker: &str, expected:
         .and_then(|value| value.strip_suffix("```"))
         .expect("one fenced Rust block")
         .trim();
-    assert_eq!(code, expected.trim(), "{name}: {marker} must match compiled example");
+    assert_eq!(
+        code,
+        expected.trim(),
+        "{name}: {marker} must match compiled example"
+    );
 }
 
 #[cfg(feature = "json")]

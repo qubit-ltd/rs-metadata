@@ -166,7 +166,11 @@ impl MetadataFilter {
     ///
     /// A filter containing the supplied validated parts.
     #[inline]
-    pub(crate) const fn new(expression: FilterExpression, options: FilterMatchOptions, limits: FilterLimits) -> Self {
+    pub(crate) const fn new(
+        expression: FilterExpression,
+        options: FilterMatchOptions,
+        limits: FilterLimits,
+    ) -> Self {
         Self {
             expression,
             options,
@@ -350,7 +354,10 @@ impl MetadataFilter {
     /// Returns [`crate::MetadataWireEncodeError`] when operand preflight,
     /// JSON budget checks, or serialization fails.
     #[cfg(feature = "json")]
-    pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+    pub fn to_json_vec_with_limits(
+        &self,
+        limits: JsonEncodeLimits,
+    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.preflight_wire_values(limits)?;
         let session = JsonEncodeSession::from_limits(limits);
         JsonEncoder::new(session).to_vec(self).map_err(Into::into)
@@ -390,7 +397,10 @@ impl MetadataFilter {
     where
         W: Write,
     {
-        self.to_json_writer_with_limits(writer, crate::metadata_limits::default_json_encode_limits())
+        self.to_json_writer_with_limits(
+            writer,
+            crate::metadata_limits::default_json_encode_limits(),
+        )
     }
 
     /// Encodes this filter to a writer with caller-provided JSON budgets.
@@ -518,7 +528,10 @@ impl MetadataFilter {
     ///
     /// Returns an encoding error if any operand exceeds the budget.
     #[cfg(feature = "json")]
-    fn preflight_wire_values(&self, limits: JsonEncodeLimits) -> Result<(), crate::MetadataWireEncodeError> {
+    fn preflight_wire_values(
+        &self,
+        limits: JsonEncodeLimits,
+    ) -> Result<(), crate::MetadataWireEncodeError> {
         /// Checks every value operand in one expression subtree.
         ///
         /// # Parameters
@@ -538,9 +551,13 @@ impl MetadataFilter {
             checker: &mut ValueWireEncodePreflight,
         ) -> Result<(), crate::MetadataWireEncodeError> {
             match expression.view() {
-                FilterExpressionView::Condition(condition) => condition.visit_operands(&mut |value| {
-                    checker.check_value(value).map_err(crate::MetadataWireEncodeError::from)
-                }),
+                FilterExpressionView::Condition(condition) => {
+                    condition.visit_operands(&mut |value| {
+                        checker
+                            .check_value(value)
+                            .map_err(crate::MetadataWireEncodeError::from)
+                    })
+                }
                 FilterExpressionView::And(children) | FilterExpressionView::Or(children) => {
                     for child in children {
                         visit(child, checker)?;

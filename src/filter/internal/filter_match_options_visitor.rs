@@ -66,7 +66,9 @@ impl<'de> Visitor<'de> for FilterMatchOptionsVisitor {
             match key.as_str() {
                 "numeric_comparison_policy" => {
                     if numeric_comparison_policy.is_some() {
-                        return Err(serde::de::Error::duplicate_field("numeric_comparison_policy"));
+                        return Err(serde::de::Error::duplicate_field(
+                            "numeric_comparison_policy",
+                        ));
                     }
                     numeric_comparison_policy = Some(map.next_value::<NumericComparisonPolicy>()?);
                 }
@@ -74,8 +76,8 @@ impl<'de> Visitor<'de> for FilterMatchOptionsVisitor {
             }
         }
 
-        let policy =
-            numeric_comparison_policy.ok_or_else(|| serde::de::Error::missing_field("numeric_comparison_policy"))?;
+        let policy = numeric_comparison_policy
+            .ok_or_else(|| serde::de::Error::missing_field("numeric_comparison_policy"))?;
         Ok(FilterMatchOptions::from_numeric_comparison_policy(policy))
     }
 }
@@ -98,7 +100,9 @@ impl<'de> Visitor<'de> for FilterMatchOptionsVisitor {
 ///
 /// Returns an error if the representation is not an object with exactly one
 /// valid numeric comparison policy.
-pub(crate) fn deserialize_filter_match_options<'de, D>(deserializer: D) -> Result<FilterMatchOptions, D::Error>
+pub(crate) fn deserialize_filter_match_options<'de, D>(
+    deserializer: D,
+) -> Result<FilterMatchOptions, D::Error>
 where
     D: Deserializer<'de>,
 {
