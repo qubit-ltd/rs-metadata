@@ -42,18 +42,12 @@ struct CountedOperand {
 impl From<CountedOperand> for Value {
     fn from(operand: CountedOperand) -> Self {
         operand.conversions.set(operand.conversions.get() + 1);
-        operand
-            .value
-            .expect("rejected operands must not be converted")
+        operand.value.expect("rejected operands must not be converted")
     }
 }
 
 /// Builds an expression with `depth` alternating AND/OR levels.
-fn build_alternating_group(
-    builder: FilterExpressionBuilder,
-    depth: usize,
-    use_or: bool,
-) -> FilterExpressionBuilder {
+fn build_alternating_group(builder: FilterExpressionBuilder, depth: usize, use_or: bool) -> FilterExpressionBuilder {
     let builder = builder.exists("nested");
     if depth == 1 {
         return builder;
@@ -98,27 +92,14 @@ fn test_builder_rejects_unset_and_non_finite_filter_operands() {
             message: "filter operands must be concrete values".to_owned(),
         })
     );
-    assert!(
-        FilterExpression::builder()
-            .eq("score", f64::NAN)
-            .build()
-            .is_err()
-    );
-    assert!(
-        FilterExpression::builder()
-            .eq("score", f64::INFINITY)
-            .build()
-            .is_err()
-    );
+    assert!(FilterExpression::builder().eq("score", f64::NAN).build().is_err());
+    assert!(FilterExpression::builder().eq("score", f64::INFINITY).build().is_err());
 }
 
 #[test]
 fn test_builder_rejects_oversized_keys_and_membership_sets() {
     let long_key = "k".repeat(FilterLimits::MAX.max_key_bytes() + 1);
-    let error = FilterExpression::builder()
-        .exists(&long_key)
-        .build()
-        .unwrap_err();
+    let error = FilterExpression::builder().exists(&long_key).build().unwrap_err();
     assert!(matches!(
         error,
         MetadataError::FilterLimitExceeded {
@@ -201,12 +182,7 @@ fn test_oversized_keys_skip_scalar_operand_conversion() {
 fn test_key_preflight_preserves_boundaries_and_first_error() {
     let maximum = FilterLimits::MAX.max_key_bytes();
     let exact = "k".repeat(maximum);
-    assert!(
-        FilterExpression::builder()
-            .eq(&exact, 1_i64)
-            .build()
-            .is_ok()
-    );
+    assert!(FilterExpression::builder().eq(&exact, 1_i64).build().is_ok());
     assert!(FilterExpression::builder().exists(&exact).build().is_ok());
     let key = "é".repeat(maximum / 2 + 1);
     for builder in [
@@ -271,10 +247,7 @@ fn test_builder_creates_nested_boolean_expression() {
         .expect("filter should build");
 
     assert!(filter.matches(&sample()));
-    assert!(matches!(
-        filter.expression().view(),
-        FilterExpressionView::Or(_)
-    ));
+    assert!(matches!(filter.expression().view(), FilterExpressionView::Or(_)));
 }
 
 #[test]
@@ -292,9 +265,7 @@ fn test_or_group_matches_either_explicit_branch_within_group() {
         .expression(expression)
         .build()
         .expect("filter should build");
-    let metadata = Metadata::new()
-        .with("tenant", "other")
-        .with("priority", 2_i64);
+    let metadata = Metadata::new().with("tenant", "other").with("priority", 2_i64);
 
     assert!(filter.matches(&metadata));
 }
@@ -353,9 +324,7 @@ fn test_not_propagates_node_limit_error() {
 #[test]
 fn test_and_group_preserves_nested_error() {
     assert_eq!(
-        FilterExpression::builder()
-            .and_group(|group| group.not())
-            .build(),
+        FilterExpression::builder().and_group(|group| group.not()).build(),
         Err(MetadataError::InvalidFilterExpression {
             message: "cannot negate an empty filter expression".to_owned(),
         })
@@ -407,11 +376,7 @@ fn test_membership_stops_iteration_at_first_invalid_operand() {
         let calls = Cell::new(0);
         let values = from_fn(|| {
             calls.set(calls.get() + 1);
-            assert_eq!(
-                calls.get(),
-                1,
-                "must not request an item after invalid operand"
-            );
+            assert_eq!(calls.get(), 1, "must not request an item after invalid operand");
             Some(Value::Unset(DataType::String))
         });
         let builder = FilterExpression::builder();
@@ -482,9 +447,7 @@ fn test_membership_non_finite_operand_stops_conversion() {
     });
 
     assert_eq!(
-        FilterExpression::builder()
-            .not_in_set("key", values)
-            .build(),
+        FilterExpression::builder().not_in_set("key", values).build(),
         Err(MetadataError::InvalidFilterOperand {
             operator: "not_in_set",
             data_type: DataType::Float64,
@@ -505,10 +468,7 @@ fn test_failed_builder_does_not_consume_membership_or_run_groups() {
         .and_group(|_| panic!("failed builder must skip group callback"))
         .build();
     assert_eq!(consumed.get(), 0);
-    assert!(matches!(
-        result,
-        Err(MetadataError::InvalidFilterExpression { .. })
-    ));
+    assert!(matches!(result, Err(MetadataError::InvalidFilterExpression { .. })));
 }
 
 #[test]

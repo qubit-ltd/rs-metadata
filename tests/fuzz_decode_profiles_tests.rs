@@ -29,19 +29,12 @@ fn test_small_metadata_profile_rejects_domain_key_and_entry_boundaries() {
     let invalid_key = br#"{"version":1,"values":{"12345678901234567":{"scalar":{"string":"ok"}}}}"#;
     assert!(Metadata::decode_json_slice(valid_key).is_ok());
     assert!(
-        Metadata::decode_json_slice_with_limits(
-            valid_key,
-            support::decode_profiles::small_metadata_limits()
-        )
-        .is_ok()
+        Metadata::decode_json_slice_with_limits(valid_key, support::decode_profiles::small_metadata_limits()).is_ok()
     );
     assert!(Metadata::decode_json_slice(invalid_key).is_ok());
     assert!(
-        Metadata::decode_json_slice_with_limits(
-            invalid_key,
-            support::decode_profiles::small_metadata_limits()
-        )
-        .is_err()
+        Metadata::decode_json_slice_with_limits(invalid_key, support::decode_profiles::small_metadata_limits())
+            .is_err()
     );
 
     let mut entries = String::from(r#"{"version":1,"values":{"#);
@@ -54,11 +47,8 @@ fn test_small_metadata_profile_rejects_domain_key_and_entry_boundaries() {
     entries.push_str("}}");
     assert!(Metadata::decode_json_slice(entries.as_bytes()).is_ok());
     assert!(
-        Metadata::decode_json_slice_with_limits(
-            entries.as_bytes(),
-            support::decode_profiles::small_metadata_limits()
-        )
-        .is_err()
+        Metadata::decode_json_slice_with_limits(entries.as_bytes(), support::decode_profiles::small_metadata_limits())
+            .is_err()
     );
 }
 
@@ -70,32 +60,22 @@ fn test_small_schema_profile_rejects_domain_field_count_and_key_boundaries() {
     let key_bad = br#"{"version":1,"fields":{"12345678901234567":{"data_type":"string","required":false}},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#;
     assert!(MetadataSchema::decode_json_slice(key_ok).is_ok());
     assert!(
-        MetadataSchema::decode_json_slice_with_limits(
-            key_ok,
-            support::decode_profiles::small_metadata_limits()
-        )
-        .is_ok()
+        MetadataSchema::decode_json_slice_with_limits(key_ok, support::decode_profiles::small_metadata_limits())
+            .is_ok()
     );
     assert!(MetadataSchema::decode_json_slice(key_bad).is_ok());
     assert!(
-        MetadataSchema::decode_json_slice_with_limits(
-            key_bad,
-            support::decode_profiles::small_metadata_limits()
-        )
-        .is_err()
+        MetadataSchema::decode_json_slice_with_limits(key_bad, support::decode_profiles::small_metadata_limits())
+            .is_err()
     );
     let mut fields = String::from(r#"{"version":1,"fields":{"#);
     for index in 0..5 {
         if index != 0 {
             fields.push(',');
         }
-        fields.push_str(&format!(
-            r#""f{index}":{{"data_type":"string","required":false}}"#
-        ));
+        fields.push_str(&format!(r#""f{index}":{{"data_type":"string","required":false}}"#));
     }
-    fields.push_str(
-        r#"},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#,
-    );
+    fields.push_str(r#"},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}"#);
     assert!(MetadataSchema::decode_json_slice(fields.as_bytes()).is_ok());
     assert!(
         MetadataSchema::decode_json_slice_with_limits(
@@ -115,13 +95,8 @@ fn test_small_filter_profile_rejects_node_depth_and_set_boundaries() {
     let small_filter = support::decode_profiles::small_filter_limits();
     let valid = br#"{"version":1,"expression":{"kind":"in","key":"region","values":[{"scalar":{"string":"a"}},{"scalar":{"string":"b"}},{"scalar":{"string":"c"}},{"scalar":{"string":"d"}}]},"options":{"numeric_comparison_policy":"exact"}}"#;
     let oversized_set = br#"{"version":1,"expression":{"kind":"in","key":"region","values":[{"scalar":{"string":"a"}},{"scalar":{"string":"b"}},{"scalar":{"string":"c"}},{"scalar":{"string":"d"}},{"scalar":{"string":"e"}}]},"options":{"numeric_comparison_policy":"exact"}}"#;
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(valid, metadata_limits, small_filter).is_ok()
-    );
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(oversized_set, metadata_limits, small_filter)
-            .is_err()
-    );
+    assert!(MetadataFilter::decode_json_slice_with_limits(valid, metadata_limits, small_filter).is_ok());
+    assert!(MetadataFilter::decode_json_slice_with_limits(oversized_set, metadata_limits, small_filter).is_err());
     assert!(
         MetadataFilter::decode_json_slice_with_limits(
             oversized_set,
@@ -131,10 +106,7 @@ fn test_small_filter_profile_rejects_node_depth_and_set_boundaries() {
         .is_err()
     );
     let nested = br#"{"version":1,"expression":{"kind":"not","expression":{"kind":"not","expression":{"kind":"not","expression":{"kind":"not","expression":{"kind":"exists","key":"x"}}}}},"options":{"numeric_comparison_policy":"exact"}}"#;
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(nested, small_metadata, small_filter)
-            .is_err()
-    );
+    assert!(MetadataFilter::decode_json_slice_with_limits(nested, small_metadata, small_filter).is_err());
     let key_ok = br#"{"version":1,"expression":{"kind":"exists","key":"1234567890123456"},"options":{"numeric_comparison_policy":"exact"}}"#;
     let key_bad = br#"{"version":1,"expression":{"kind":"exists","key":"12345678901234567"},"options":{"numeric_comparison_policy":"exact"}}"#;
     assert!(
@@ -185,22 +157,15 @@ fn test_small_filter_profile_rejects_node_depth_and_set_boundaries() {
 fn test_production_filter_profile_accepts_named_boundary_fixtures_and_corpus() {
     use qubit_metadata::MetadataFilter;
 
-    let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("fuzz/fuzz_targets/decode_metadata_filter.rs");
+    let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("fuzz/fuzz_targets/decode_metadata_filter.rs");
     if target.exists() {
         let target = std::fs::read_to_string(target).expect("fuzz target should read");
-        let compact: String = target
-            .chars()
-            .filter(|character| !character.is_whitespace())
-            .collect();
+        let compact: String = target.chars().filter(|character| !character.is_whitespace()).collect();
         assert!(compact.contains("letproduction_filter_limits=FilterLimits::MAX;"));
         assert!(compact.contains(
             "MetadataFilter::decode_json_slice_with_limits(data,MetadataLimits::default(),production_filter_limits)"
         ));
-        assert!(
-            compact
-                .contains("check(value,data,MetadataLimits::default(),production_filter_limits)")
-        );
+        assert!(compact.contains("check(value,data,MetadataLimits::default(),production_filter_limits)"));
     }
 
     let fixtures = [
@@ -212,29 +177,17 @@ fn test_production_filter_profile_accepts_named_boundary_fixtures_and_corpus() {
             "nodes",
             include_bytes!("fixtures/filter-production-nodes.json").as_slice(),
         ),
-        (
-            "set",
-            include_bytes!("fixtures/filter-production-set.json").as_slice(),
-        ),
-        (
-            "key",
-            include_bytes!("fixtures/filter-production-key.json").as_slice(),
-        ),
+        ("set", include_bytes!("fixtures/filter-production-set.json").as_slice()),
+        ("key", include_bytes!("fixtures/filter-production-key.json").as_slice()),
     ];
     for (name, fixture) in fixtures {
-        let decoded = MetadataFilter::decode_json_slice_with_limits(
-            fixture,
-            MetadataLimits::default(),
-            FilterLimits::MAX,
-        )
-        .unwrap_or_else(|error| panic!("production {name} fixture must be accepted: {error:?}"));
+        let decoded =
+            MetadataFilter::decode_json_slice_with_limits(fixture, MetadataLimits::default(), FilterLimits::MAX)
+                .unwrap_or_else(|error| panic!("production {name} fixture must be accepted: {error:?}"));
         let encoded = serde_json::to_vec(&decoded).expect("fixture should serialize");
-        let round_tripped = MetadataFilter::decode_json_slice_with_limits(
-            &encoded,
-            MetadataLimits::default(),
-            FilterLimits::MAX,
-        )
-        .expect("accepted fixture should round trip under production filter limits");
+        let round_tripped =
+            MetadataFilter::decode_json_slice_with_limits(&encoded, MetadataLimits::default(), FilterLimits::MAX)
+                .expect("accepted fixture should round trip under production filter limits");
         assert_eq!(round_tripped, decoded);
         let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("fuzz/corpus/decode_metadata_filter")
@@ -258,15 +211,8 @@ fn test_filter_hard_boundaries_report_structured_limit_errors() {
         }))
         .expect("envelope should serialize")
     }
-    fn assert_limit(
-        input: &[u8],
-        limits: FilterLimits,
-        kind: FilterLimitKind,
-        value: usize,
-        maximum: usize,
-    ) {
-        let result =
-            MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), limits);
+    fn assert_limit(input: &[u8], limits: FilterLimits, kind: FilterLimitKind, value: usize, maximum: usize) {
+        let result = MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), limits);
         assert!(
             matches!(
                 result,
@@ -288,10 +234,7 @@ fn test_filter_hard_boundaries_report_structured_limit_errors() {
             "children": (0..count).map(|_| serde_json::json!({"kind":"exists", "key":"x"})).collect::<Vec<_>>()
         }))
     };
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(&nodes(255), MetadataLimits::default(), max)
-            .is_ok()
-    );
+    assert!(MetadataFilter::decode_json_slice_with_limits(&nodes(255), MetadataLimits::default(), max).is_ok());
     assert_limit(&nodes(256), max, FilterLimitKind::Nodes, 257, 256);
 
     let set = |count: usize| {
@@ -300,17 +243,11 @@ fn test_filter_hard_boundaries_report_structured_limit_errors() {
             "values": (0..count).map(|_| serde_json::json!({"scalar":{"int64":1}})).collect::<Vec<_>>()
         }))
     };
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(&set(128), MetadataLimits::default(), max)
-            .is_ok()
-    );
+    assert!(MetadataFilter::decode_json_slice_with_limits(&set(128), MetadataLimits::default(), max).is_ok());
     assert_limit(&set(129), max, FilterLimitKind::SetValues, 129, 128);
 
     let key = |size: usize| envelope(serde_json::json!({"kind":"exists", "key":"x".repeat(size)}));
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(&key(256), MetadataLimits::default(), max)
-            .is_ok()
-    );
+    assert!(MetadataFilter::decode_json_slice_with_limits(&key(256), MetadataLimits::default(), max).is_ok());
     assert_limit(&key(257), max, FilterLimitKind::KeyBytes, 257, 256);
 
     let not_chain = |count: usize| {
@@ -333,9 +270,7 @@ fn test_filter_hard_boundaries_report_structured_limit_errors() {
         .max_depth(64)
         .build()
         .expect("finite filter profile should build");
-    assert!(
-        MetadataFilter::decode_json_slice_with_limits(&not_chain(63), metadata, finite).is_ok()
-    );
+    assert!(MetadataFilter::decode_json_slice_with_limits(&not_chain(63), metadata, finite).is_ok());
     let too_deep = MetadataFilter::decode_json_slice_with_limits(&not_chain(64), metadata, finite)
         .expect_err("65 AST levels should exceed the filter depth profile");
     assert!(matches!(
@@ -388,17 +323,11 @@ fn test_small_generic_json_profile_covers_each_resource_boundary() {
     let maps = one_limit(|b| b.max_map_entries(8).build());
     let map8 = format!(
         "{{{}}}",
-        (0..8)
-            .map(|i| format!("\"k{i}\":0"))
-            .collect::<Vec<_>>()
-            .join(",")
+        (0..8).map(|i| format!("\"k{i}\":0")).collect::<Vec<_>>().join(",")
     );
     let map9 = format!(
         "{{{}}}",
-        (0..9)
-            .map(|i| format!("\"k{i}\":0"))
-            .collect::<Vec<_>>()
-            .join(",")
+        (0..9).map(|i| format!("\"k{i}\":0")).collect::<Vec<_>>().join(",")
     );
     assert!(accepts(&map8, maps));
     assert!(!accepts(&map9, maps));

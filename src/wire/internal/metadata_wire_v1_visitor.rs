@@ -89,10 +89,7 @@ where
                     if values.is_some() {
                         return Err(DeError::duplicate_field("values"));
                     }
-                    let seed = self
-                        .values
-                        .take()
-                        .expect("metadata values seed is consumed once");
+                    let seed = self.values.take().expect("metadata values seed is consumed once");
                     values = Some(map.next_value_seed(seed)?);
                 }
                 _ => {

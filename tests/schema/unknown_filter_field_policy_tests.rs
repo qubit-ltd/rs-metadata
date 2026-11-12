@@ -11,10 +11,7 @@ use qubit_metadata::UnknownFilterFieldPolicy;
 
 #[test]
 fn test_unknown_filter_field_policy_default_is_reject() {
-    assert_eq!(
-        UnknownFilterFieldPolicy::default(),
-        UnknownFilterFieldPolicy::Reject
-    );
+    assert_eq!(UnknownFilterFieldPolicy::default(), UnknownFilterFieldPolicy::Reject);
 }
 
 #[test]
@@ -24,8 +21,7 @@ fn test_unknown_filter_field_policy_serde_uses_snake_case() {
         serde_json::json!("allow_unchecked")
     );
     assert!(
-        serde_json::from_value::<UnknownFilterFieldPolicy>(serde_json::json!("AllowUnchecked"))
-            .is_err(),
+        serde_json::from_value::<UnknownFilterFieldPolicy>(serde_json::json!("AllowUnchecked")).is_err(),
         "Serde must reject variant names that are not snake_case"
     );
 }

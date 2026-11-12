@@ -148,12 +148,7 @@ impl MetadataSchema {
     /// # Errors
     ///
     /// Returns an unknown-field or incompatible-value error.
-    fn validate_value_condition(
-        &self,
-        key: &str,
-        operator: &'static str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    fn validate_value_condition(&self, key: &str, operator: &'static str, value: &Value) -> MetadataResult<()> {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
         };
@@ -188,12 +183,7 @@ impl MetadataSchema {
     ///
     /// Returns an unknown-field, invalid-operator, or incompatible-value
     /// error.
-    fn validate_range_condition(
-        &self,
-        key: &str,
-        operator: &'static str,
-        value: &Value,
-    ) -> MetadataResult<()> {
+    fn validate_range_condition(&self, key: &str, operator: &'static str, value: &Value) -> MetadataResult<()> {
         let Some(field) = self.filter_field(key)? else {
             return Ok(());
         };
@@ -246,9 +236,7 @@ impl MetadataSchema {
             {
                 Ok(None)
             }
-            None => Err(MetadataError::UnknownFilterField {
-                key: key.to_string(),
-            }),
+            None => Err(MetadataError::UnknownFilterField { key: key.to_string() }),
         }
     }
 }

@@ -86,9 +86,7 @@ fn test_filter_json_encode_and_decode_surface() {
         .expect("filter should encode with limits");
 
     let mut buffer = Vec::new();
-    filter
-        .to_json_writer(&mut buffer)
-        .expect("filter should write");
+    filter.to_json_writer(&mut buffer).expect("filter should write");
     filter
         .to_json_writer_with_limits(&mut buffer, default_json_encode_limits())
         .expect("filter should write with limits");

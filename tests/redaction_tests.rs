@@ -134,8 +134,7 @@ fn test_metadata_debug_and_redacted_output_hide_sensitive_string_values() {
 
 #[test]
 fn test_metadata_uses_structured_writer_signature() {
-    let _: for<'session> fn(&Metadata, &'session mut RedactionWriter<'session>) =
-        <Metadata as Redact>::write_redacted;
+    let _: for<'session> fn(&Metadata, &'session mut RedactionWriter<'session>) = <Metadata as Redact>::write_redacted;
 }
 
 #[test]
@@ -255,9 +254,7 @@ fn test_all_condition_variants_have_redacted_diagnostics() {
         FilterExpression::builder().gt("k", 1_i64).build(),
         FilterExpression::builder().ge("k", 1_i64).build(),
         FilterExpression::builder().in_set("k", [1_i64, 2]).build(),
-        FilterExpression::builder()
-            .not_in_set("k", [1_i64, 2])
-            .build(),
+        FilterExpression::builder().not_in_set("k", [1_i64, 2]).build(),
         FilterExpression::builder().exists("k").build(),
         FilterExpression::builder().not_exists("k").build(),
     ];
@@ -288,10 +285,7 @@ fn test_composite_filter_types_implement_redact_and_share_budgets() {
     let adequate = policy_with_domain_limits(64, 64);
     let expression_text = complete_redacted_text(&expression, &adequate);
     assert!(expression_text.contains("And"), "{expression_text}");
-    assert!(
-        !expression_text.contains("operand-secret"),
-        "{expression_text}"
-    );
+    assert!(!expression_text.contains("operand-secret"), "{expression_text}");
 
     let restrictive = policy_with_domain_limits(2, 64);
     let output = redacted_output(&expression, &restrictive);
@@ -354,10 +348,7 @@ fn test_filter_expression_diagnostics_cover_every_operator_branch() {
         .map(|expression| complete_redacted_text(expression, &policy_with_domain_limits(128, 128)))
         .collect::<Vec<_>>();
 
-    for (output, expected) in outputs
-        .iter()
-        .zip(["True", "False", "And", "Or", "Not", "Condition"])
-    {
+    for (output, expected) in outputs.iter().zip(["True", "False", "And", "Or", "Not", "Condition"]) {
         assert!(output.contains(expected), "expected {expected} in {output}");
     }
 }
@@ -483,10 +474,7 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
             fields
                 .disable_floor()
                 .raise("secret_number", Sensitivity::Low)
-                .mask(
-                    Sensitivity::Low,
-                    MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0),
-                );
+                .mask(Sensitivity::Low, MaskPolicy::preserve_edges(1, 1, "OPAQUE", 0));
         })
         .expect("the test policy should be valid")
         .build()
@@ -502,10 +490,7 @@ fn test_metadata_redaction_masks_sensitive_non_strings_as_opaque_values() {
 #[test]
 fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
     let metadata = Metadata::new()
-        .with(
-            "profile",
-            json!({"api_key": "nested-secret", "label": "Ada"}),
-        )
+        .with("profile", json!({"api_key": "nested-secret", "label": "Ada"}))
         .with("token", "outer-secret");
     let policy = RedactionPolicy::default()
         .to_builder()
@@ -528,14 +513,8 @@ fn test_metadata_redaction_recursively_hides_nested_value_secrets() {
         ("Display", display.as_str()),
     ] {
         for secret in ["nested-secret", "outer-secret", "Ada"] {
-            assert!(
-                !output.contains(secret),
-                "{label} exposed {secret}: {output}"
-            );
+            assert!(!output.contains(secret), "{label} exposed {secret}: {output}");
         }
     }
-    assert!(
-        !display.contains('\n'),
-        "Display must be single-line: {display}"
-    );
+    assert!(!display.contains('\n'), "Display must be single-line: {display}");
 }

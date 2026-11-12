@@ -45,18 +45,15 @@ struct FailedRead;
 
 impl io::Read for FailedRead {
     fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
-        Err(io::Error::new(
-            io::ErrorKind::PermissionDenied,
-            "private-read-detail",
-        ))
+        Err(io::Error::new(io::ErrorKind::PermissionDenied, "private-read-detail"))
     }
 }
 
 #[test]
 fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
     for policy in [DiagnosticPolicy::Redacted, DiagnosticPolicy::Detailed] {
-        let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode())
-            .with_diagnostic_policy(policy);
+        let mut decoder =
+            JsonDecoder::with_limits(MetadataLimits::default().json_decode()).with_diagnostic_policy(policy);
         let json_error = decoder
             .decode_input::<Value, _>(&mut FailedRead)
             .expect_err("input read should fail");
@@ -66,10 +63,7 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
             panic!("read failures must retain their structured metadata variant");
         };
         assert_eq!(*kind, io::ErrorKind::PermissionDenied);
-        assert_eq!(
-            error.source().is_some(),
-            policy == DiagnosticPolicy::Detailed
-        );
+        assert_eq!(error.source().is_some(), policy == DiagnosticPolicy::Detailed);
 
         let display = error.to_string();
         let debug = format!("{error:?}");
@@ -79,9 +73,7 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
             assert!(!display.contains("private-read-detail"));
             assert!(!debug.contains("private-read-detail"));
         } else {
-            let source = source
-                .as_ref()
-                .expect("detailed diagnostics retain read source");
+            let source = source.as_ref().expect("detailed diagnostics retain read source");
             assert!(source.to_string().contains("private-read-detail"));
             let chain_source = error.source().expect("detailed source chain");
             assert!(chain_source.to_string().contains("private-read-detail"));
@@ -94,18 +86,11 @@ fn test_read_error_obeys_diagnostic_policy_and_preserves_source_chain() {
 #[test]
 fn test_filter_unsupported_version_retains_version_number() {
     let input = br#"{"version":7,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"}}"#;
-    let error = MetadataFilter::decode_json_slice_with_limits(
-        input,
-        MetadataLimits::default(),
-        FilterLimits::MAX,
-    )
-    .expect_err("filter version");
+    let error = MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), FilterLimits::MAX)
+        .expect_err("filter version");
     assert!(matches!(
         error,
-        MetadataWireDecodeError::UnsupportedVersion {
-            expected: 1,
-            actual: 7
-        }
+        MetadataWireDecodeError::UnsupportedVersion { expected: 1, actual: 7 }
     ));
 }
 
@@ -122,9 +107,7 @@ fn test_budget_error_preserves_source_chain() {
 
 #[test]
 fn test_invalid_json_preserves_source_chain() {
-    let error = MetadataWireDecodeError::InvalidJson(
-        from_str::<Value>("{").expect_err("input should be malformed"),
-    );
+    let error = MetadataWireDecodeError::InvalidJson(from_str::<Value>("{").expect_err("input should be malformed"));
     assert!(error.source().is_some());
 }
 
@@ -158,10 +141,7 @@ fn test_domain_error_exposes_structured_source_without_values() {
 #[test]
 fn test_unsupported_version_has_safe_diagnostic_and_no_synthetic_source() {
     let error = Metadata::decode_json_slice(br#"{"version":7,"values":{}}"#).expect_err("version");
-    assert_eq!(
-        error.to_string(),
-        "Unsupported metadata wire version 7; expected 1"
-    );
+    assert_eq!(error.to_string(), "Unsupported metadata wire version 7; expected 1");
     assert!(error.source().is_none());
 }
 
@@ -171,22 +151,18 @@ fn test_schema_unsupported_version_retains_version_number() {
     let schema = MetadataSchema::default();
     let mut wire = to_value(schema).expect("schema");
     wire["version"] = 7.into();
-    let error = MetadataSchema::decode_json_slice(&to_vec(&wire).expect("wire"))
-        .expect_err("schema version");
+    let error = MetadataSchema::decode_json_slice(&to_vec(&wire).expect("wire")).expect_err("schema version");
     assert!(matches!(
         error,
-        MetadataWireDecodeError::UnsupportedVersion {
-            expected: 1,
-            actual: 7
-        }
+        MetadataWireDecodeError::UnsupportedVersion { expected: 1, actual: 7 }
     ));
 }
 
 #[test]
 fn test_shared_deserialize_error_preserves_diagnostic_policy() {
     for policy in [DiagnosticPolicy::Redacted, DiagnosticPolicy::Detailed] {
-        let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode())
-            .with_diagnostic_policy(policy);
+        let mut decoder =
+            JsonDecoder::with_limits(MetadataLimits::default().json_decode()).with_diagnostic_policy(policy);
         let shared = decoder
             .decode_str::<Metadata>(r#"{"values":{}}"#)
             .expect_err("version is required");
@@ -197,16 +173,8 @@ fn test_shared_deserialize_error_preserves_diagnostic_policy() {
         };
         assert_eq!(shared.diagnostic_policy(), policy);
         assert_eq!(shared.kind(), JsonDecodeErrorKind::Deserialize);
-        assert_eq!(
-            shared.source().is_some(),
-            policy == DiagnosticPolicy::Detailed
-        );
-        assert!(
-            error
-                .source()
-                .expect("shared error wrapper")
-                .is::<JsonDecodeError>()
-        );
+        assert_eq!(shared.source().is_some(), policy == DiagnosticPolicy::Detailed);
+        assert!(error.source().expect("shared error wrapper").is::<JsonDecodeError>());
         if policy == DiagnosticPolicy::Redacted {
             assert!(!format!("{error:?}").contains("missing field"));
         } else {
@@ -224,9 +192,7 @@ fn test_shared_deserialize_error_preserves_diagnostic_policy() {
 #[test]
 fn test_shared_invalid_utf8_retains_offset() {
     let mut decoder = JsonDecoder::with_limits(MetadataLimits::default().json_decode());
-    let shared = decoder
-        .decode_utf8::<Value>(&[b' ', 0xff])
-        .expect_err("invalid UTF-8");
+    let shared = decoder.decode_utf8::<Value>(&[b' ', 0xff]).expect_err("invalid UTF-8");
     let MetadataWireDecodeError::Decode(shared) = MetadataWireDecodeError::from(shared) else {
         panic!("UTF-8 facts must be preserved");
     };

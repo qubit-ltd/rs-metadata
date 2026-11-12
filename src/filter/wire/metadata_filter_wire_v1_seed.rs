@@ -41,10 +41,7 @@ impl MetadataFilterWireV1Seed {
     /// * `error_slot` - Slot for retaining the first structured limit error.
     #[must_use]
     #[inline]
-    pub(crate) fn new(
-        receiver_limits: FilterLimits,
-        error_slot: Rc<RefCell<Option<crate::MetadataError>>>,
-    ) -> Self {
+    pub(crate) fn new(receiver_limits: FilterLimits, error_slot: Rc<RefCell<Option<crate::MetadataError>>>) -> Self {
         Self {
             receiver_limits,
             error_slot,
@@ -113,8 +110,7 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
         let mut version = None;
         let mut expression = None;
         let mut options = None;
-        let mut node_budget =
-            ResourceBudget::new(FilterLimitKind::Nodes, self.receiver_limits.max_nodes());
+        let mut node_budget = ResourceBudget::new(FilterLimitKind::Nodes, self.receiver_limits.max_nodes());
         while let Some(field) = map.next_key::<String>()? {
             match field.as_str() {
                 "version" => {
@@ -141,10 +137,7 @@ impl<'de> Visitor<'de> for MetadataFilterWireVisitor {
                     options = Some(map.next_value::<FilterMatchOptions>()?);
                 }
                 _ => {
-                    return Err(de::Error::unknown_field(
-                        &field,
-                        &["version", "expression", "options"],
-                    ));
+                    return Err(de::Error::unknown_field(&field, &["version", "expression", "options"]));
                 }
             }
         }

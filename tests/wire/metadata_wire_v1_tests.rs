@@ -46,11 +46,7 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
     let metadata = Metadata::new().with("port", 8080_i32);
     let encoded = to_value(metadata).expect("metadata should serialize");
 
-    assert_eq!(
-        encoded["version"],
-        json!(1),
-        "the envelope should own version 1"
-    );
+    assert_eq!(encoded["version"], json!(1), "the envelope should own version 1");
     assert_eq!(
         encoded["values"]["port"],
         json!({"scalar": {"int32": 8080}}),
@@ -63,8 +59,7 @@ fn test_metadata_v1_embeds_unversioned_value_payloads() {
 fn test_metadata_v1_user_guide_example_decodes() {
     const INPUT: &[u8] = br#"{"version":1,"values":{"tenant_id":{"scalar":{"string":"acme"}}}}"#;
 
-    let metadata =
-        Metadata::decode_json_slice(INPUT).expect("the user-guide V1 example should decode");
+    let metadata = Metadata::decode_json_slice(INPUT).expect("the user-guide V1 example should decode");
 
     assert_eq!(
         metadata.get_ref::<str>("tenant_id"),
@@ -92,8 +87,7 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
         "serialization should reject keys longer than 256 bytes"
     );
 
-    let malformed_after_limit =
-        format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
+    let malformed_after_limit = format!(r#"{{"version":1,"values":{{"{long_key}":{{"invalid":}}}}}}"#);
     let error = from_slice::<Metadata>(malformed_after_limit.as_bytes())
         .expect_err("the hard entry limit should reject before the value");
     assert!(
@@ -104,15 +98,14 @@ fn test_metadata_deserialization_enforces_hard_map_limits() {
 
 #[test]
 fn test_metadata_deserialization_enforces_hard_entry_boundary() {
-    let template = to_value(Metadata::new().with("sample", 1_i64))
-        .expect("template should serialize")["values"]["sample"]
-        .clone();
+    let template =
+        to_value(Metadata::new().with("sample", 1_i64)).expect("template should serialize")["values"]["sample"].clone();
     for count in [4_096, 4_097] {
         let values: serde_json::Map<String, serde_json::Value> = (0..count)
             .map(|index| (format!("key-{index:04}"), template.clone()))
             .collect();
-        let input = to_string(&json!({"version": 1, "values": values}))
-            .expect("raw JSON should serialize beyond model limits");
+        let input =
+            to_string(&json!({"version": 1, "values": values})).expect("raw JSON should serialize beyond model limits");
         let decoded = from_str::<Metadata>(&input);
         if count == 4_096 {
             let metadata = decoded.expect("4096 entries should decode");
@@ -120,10 +113,7 @@ fn test_metadata_deserialization_enforces_hard_entry_boundary() {
             assert_eq!(metadata.get::<i64>("key-4095"), Ok(1));
         } else {
             let error = decoded.expect_err("4097 entries should exceed the hard limit");
-            assert!(
-                error.to_string().contains("4096 entries"),
-                "wrong limit error: {error}"
-            );
+            assert!(error.to_string().contains("4096 entries"), "wrong limit error: {error}");
         }
     }
 }

@@ -168,10 +168,7 @@ fn test_metadata_wire_encode_error_conversion_covers_shared_encoder_errors() {
 
     assert!(matches!(errors[0], MetadataWireEncodeError::Json(_)));
     assert!(matches!(errors[1], MetadataWireEncodeError::Budget(_)));
-    assert!(matches!(
-        errors[2],
-        MetadataWireEncodeError::Quantity { .. }
-    ));
+    assert!(matches!(errors[2], MetadataWireEncodeError::Quantity { .. }));
     assert!(matches!(errors[3], MetadataWireEncodeError::Syntax(_)));
     assert!(matches!(errors[4], MetadataWireEncodeError::Io(_)));
 }

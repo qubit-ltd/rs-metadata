@@ -47,14 +47,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut store = RecordingStore::default();
     ingest(&mut store, &schema, record.clone())?;
     assert_eq!(store.0.len(), 1);
-    assert!(
-        ingest(
-            &mut store,
-            &schema,
-            Metadata::new().with("tenant_id", "acme")
-        )
-        .is_err()
-    );
+    assert!(ingest(&mut store, &schema, Metadata::new().with("tenant_id", "acme")).is_err());
     assert_eq!(store.0.len(), 1);
 
     let filter = MetadataFilter::builder()
@@ -66,17 +59,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .build_checked(&schema)?;
     assert!(filter.matches(&record));
-    assert!(
-        !filter.matches(
-            &Metadata::new()
-                .with("tenant_id", "other")
-                .with("chunk_index", 3_i64)
-        )
-    );
+    assert!(!filter.matches(&Metadata::new().with("tenant_id", "other").with("chunk_index", 3_i64)));
 
-    let invalid_query = FilterExpression::builder()
-        .ge("chunk_index", "two")
-        .build()?;
+    let invalid_query = FilterExpression::builder().ge("chunk_index", "two").build()?;
     assert!(
         MetadataFilter::builder()
             .expression(invalid_query)

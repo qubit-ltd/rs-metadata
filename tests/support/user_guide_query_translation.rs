@@ -12,12 +12,7 @@ use qubit_metadata::MetadataFilter;
 pub fn main() -> qubit_metadata::MetadataResult<()> {
     let metadata = Metadata::new();
     let comparison = MetadataFilter::builder()
-        .expression(
-            FilterExpression::builder()
-                .eq("tenant", "acme")
-                .not()
-                .build()?,
-        )
+        .expression(FilterExpression::builder().eq("tenant", "acme").not().build()?)
         .build()?;
     let absent = MetadataFilter::builder()
         .expression(FilterExpression::builder().not_exists("tenant").build()?)

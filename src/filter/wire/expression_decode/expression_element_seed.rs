@@ -56,12 +56,7 @@ impl<'de, 'a> DeserializeSeed<'de> for ExpressionElementSeed<'a> {
     where
         D: Deserializer<'de>,
     {
-        FilterExpressionWireV1Seed::new(
-            self.receiver_limits,
-            self.node_budget,
-            self.depth,
-            self.error_slot,
-        )
-        .deserialize(deserializer)
+        FilterExpressionWireV1Seed::new(self.receiver_limits, self.node_budget, self.depth, self.error_slot)
+            .deserialize(deserializer)
     }
 }

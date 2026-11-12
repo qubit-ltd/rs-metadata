@@ -91,15 +91,13 @@ where
                     if unknown_metadata_field_policy.is_some() {
                         return Err(DeError::duplicate_field("unknown_metadata_field_policy"));
                     }
-                    unknown_metadata_field_policy =
-                        Some(map.next_value::<UnknownMetadataFieldPolicy>()?);
+                    unknown_metadata_field_policy = Some(map.next_value::<UnknownMetadataFieldPolicy>()?);
                 }
                 "unknown_filter_field_policy" => {
                     if unknown_filter_field_policy.is_some() {
                         return Err(DeError::duplicate_field("unknown_filter_field_policy"));
                     }
-                    unknown_filter_field_policy =
-                        Some(map.next_value::<UnknownFilterFieldPolicy>()?);
+                    unknown_filter_field_policy = Some(map.next_value::<UnknownFilterFieldPolicy>()?);
                 }
                 _ => {
                     return Err(DeError::unknown_field(

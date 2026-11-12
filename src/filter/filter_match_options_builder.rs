@@ -52,10 +52,7 @@ impl FilterMatchOptionsBuilder {
     ///
     /// The updated builder.
     #[inline]
-    pub const fn numeric_comparison_policy(
-        mut self,
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> Self {
+    pub const fn numeric_comparison_policy(mut self, numeric_comparison_policy: NumericComparisonPolicy) -> Self {
         self.numeric_comparison_policy = numeric_comparison_policy;
         self
     }

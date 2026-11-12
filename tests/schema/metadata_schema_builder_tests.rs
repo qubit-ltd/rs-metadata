@@ -38,12 +38,7 @@ fn test_schema_builder_rejects_duplicate_field_declarations() {
         .build()
         .expect_err("duplicate schema declarations must be rejected");
 
-    assert_eq!(
-        error,
-        MetadataError::DuplicateSchemaField {
-            key: "id".to_string()
-        }
-    );
+    assert_eq!(error, MetadataError::DuplicateSchemaField { key: "id".to_string() });
 }
 
 #[test]
@@ -68,12 +63,7 @@ fn test_schema_builder_reports_first_duplicate_after_further_declarations() {
         .build()
         .expect_err("the first duplicate should remain the reported error");
 
-    assert_eq!(
-        error,
-        MetadataError::DuplicateSchemaField {
-            key: "id".to_string()
-        }
-    );
+    assert_eq!(error, MetadataError::DuplicateSchemaField { key: "id".to_string() });
 }
 
 #[test]
@@ -96,9 +86,7 @@ fn test_schema_builder_exercises_each_constructor_and_error_path() {
         .required("required", DataType::Int64)
         .optional("optional", DataType::String)
         .replace_field("optional", MetadataField::new(DataType::Bool, true));
-    let schema = std::hint::black_box(builder)
-        .build()
-        .expect("schema should build");
+    let schema = std::hint::black_box(builder).build().expect("schema should build");
     assert_eq!(schema.field_type("required"), Some(DataType::Int64));
     assert_eq!(schema.field_type("optional"), Some(DataType::Bool));
 
@@ -109,8 +97,5 @@ fn test_schema_builder_exercises_each_constructor_and_error_path() {
     )
     .build()
     .expect_err("duplicate declaration should fail");
-    assert!(matches!(
-        duplicate,
-        MetadataError::DuplicateSchemaField { .. }
-    ));
+    assert!(matches!(duplicate, MetadataError::DuplicateSchemaField { .. }));
 }

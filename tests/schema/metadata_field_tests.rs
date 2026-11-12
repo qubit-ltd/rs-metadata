@@ -45,10 +45,7 @@ fn test_metadata_field_requires_complete_known_object_fields() {
     let object = to_value(&field).expect("field should serialize");
     let invalid_values = [
         ("missing data_type", json!({"required": true})),
-        (
-            "missing required",
-            json!({"data_type": object["data_type"]}),
-        ),
+        ("missing required", json!({"data_type": object["data_type"]})),
         (
             "unknown field",
             json!({"data_type": object["data_type"], "required": true, "extra": false}),
@@ -57,10 +54,7 @@ fn test_metadata_field_requires_complete_known_object_fields() {
         ("scalar", json!(true)),
         ("empty array", json!([])),
         ("short array", json!([object["data_type"]])),
-        (
-            "long array",
-            json!([object["data_type"], object["required"], "extra"]),
-        ),
+        ("long array", json!([object["data_type"], object["required"], "extra"])),
     ];
 
     for (shape, value) in invalid_values {

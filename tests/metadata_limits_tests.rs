@@ -86,24 +86,15 @@ fn test_metadata_limits_replace_json_profile() {
 #[test]
 fn test_metadata_limits_reject_domain_values_above_hard_maxima() {
     assert!(
-        MetadataLimits::builder()
-            .max_metadata_entries(4_097)
-            .build()
-            .is_err(),
+        MetadataLimits::builder().max_metadata_entries(4_097).build().is_err(),
         "metadata entry limits above the hard maximum must fail"
     );
     assert!(
-        MetadataLimits::builder()
-            .max_schema_fields(4_097)
-            .build()
-            .is_err(),
+        MetadataLimits::builder().max_schema_fields(4_097).build().is_err(),
         "schema field limits above the hard maximum must fail"
     );
     assert!(
-        MetadataLimits::builder()
-            .max_key_bytes(257)
-            .build()
-            .is_err(),
+        MetadataLimits::builder().max_key_bytes(257).build().is_err(),
         "key byte limits above the hard maximum must fail"
     );
 }
@@ -148,18 +139,13 @@ fn test_metadata_limit_validation_rejects_each_value_above_boundary() {
     for (name, build) in [
         (
             "metadata entries",
-            MetadataLimits::builder()
-                .max_metadata_entries(4_097)
-                .build(),
+            MetadataLimits::builder().max_metadata_entries(4_097).build(),
         ),
         (
             "schema fields",
             MetadataLimits::builder().max_schema_fields(4_097).build(),
         ),
-        (
-            "key bytes",
-            MetadataLimits::builder().max_key_bytes(257).build(),
-        ),
+        ("key bytes", MetadataLimits::builder().max_key_bytes(257).build()),
     ] {
         assert!(build.is_err(), "{name} above its cap must fail");
     }
