@@ -13,6 +13,7 @@ use std::io::Write;
 use qubit_budget::ResourceLimit;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
+use qubit_metadata::Metadata;
 use qubit_metadata::MetadataWireEncodeError;
 use qubit_metadata::default_json_encode_limits;
 
@@ -166,4 +167,97 @@ pub fn caps(canonical_len: usize, first_input_byte: u8) -> [usize; 5] {
     let below = canonical_len.saturating_sub(1).max(1);
     let random = usize::from(first_input_byte) % canonical_len.saturating_add(1).max(1) + 1;
     [1, below, canonical_len, canonical_len.saturating_add(1), random]
+}
+
+/// Compares metadata Vec encoding and validation under identical JSON limits.
+#[allow(dead_code)] // This shared source is also compiled by fuzz targets that do not use this oracle.
+pub fn check_validation(metadata: &Metadata, canonical_len: usize, first_input_byte: u8) {
+    let profiles = caps(canonical_len, first_input_byte).map(|cap| {
+        default_json_encode_limits()
+            .into_builder()
+            .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, cap))
+            .build()
+    });
+    let extra = [
+        default_json_encode_limits().into_builder().max_nodes(1).build(),
+        default_json_encode_limits().into_builder().max_string_bytes(1).build(),
+    ];
+    for limits in profiles.into_iter().chain(extra) {
+        let vector = metadata.to_json_vec_with_limits(limits).map(drop);
+        let validation = metadata.validate_json_with_limits(limits);
+        compare_validation_results(&vector, &validation);
+    }
+}
+
+#[allow(dead_code)] // Used by this oracle and its comparator unit tests.
+fn compare_validation_results(
+    vector: &Result<(), MetadataWireEncodeError>,
+    validation: &Result<(), MetadataWireEncodeError>,
+) {
+    match (vector, validation) {
+        (Ok(()), Ok(())) => {}
+        (Err(left), Err(right)) => same_validation_error(left, right),
+        (left, right) => panic!("vec and validation disagree: {left:?} / {right:?}"),
+    }
+}
+
+#[allow(dead_code)] // Reached through compare_validation_results.
+fn same_validation_error(left: &MetadataWireEncodeError, right: &MetadataWireEncodeError) {
+    use MetadataWireEncodeError as E;
+    match (left, right) {
+        (E::Budget(a), E::Budget(b)) => assert_eq!(a.resource(), b.resource()),
+        (E::Quantity { resource: a, .. }, E::Quantity { resource: b, .. }) => assert_eq!(a, b),
+        (E::Domain(a), E::Domain(b)) => assert_eq!(a, b),
+        (E::Json(a), E::Json(b)) => assert_eq!(a.kind(), b.kind()),
+        (E::Syntax(_), E::Syntax(_)) => {}
+        _ => panic!("unexpected validation error pair: {left:?} / {right:?}"),
+    }
+}
+
+#[cfg(test)]
+mod validation_comparator_tests {
+    use qubit_budget::json::JsonResource;
+    use qubit_metadata::MetadataWireEncodeError;
+
+    use super::compare_validation_results;
+
+    fn budget(resource: JsonResource, requested: usize) -> MetadataWireEncodeError {
+        MetadataWireEncodeError::Budget(qubit_budget::BudgetError::Insufficient {
+            resource,
+            limit: 10,
+            remaining: 0,
+            requested,
+        })
+    }
+
+    #[test]
+    fn test_budget_comparison_ignores_internal_counts() {
+        compare_validation_results(
+            &Err(budget(JsonResource::OutputBytes, 4)),
+            &Err(budget(JsonResource::OutputBytes, 9)),
+        );
+    }
+
+    #[test]
+    fn test_budget_comparison_rejects_resource_mismatch() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                compare_validation_results(
+                    &Err(budget(JsonResource::OutputBytes, 4)),
+                    &Err(budget(JsonResource::StringBytes, 4)),
+                );
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_result_comparison_rejects_success_error_mismatch() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                compare_validation_results(&Ok(()), &Err(budget(JsonResource::OutputBytes, 4)));
+            })
+            .is_err()
+        );
+    }
 }

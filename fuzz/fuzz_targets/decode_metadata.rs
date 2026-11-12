@@ -61,4 +61,5 @@ fn check(value: Metadata, data: &[u8], small: bool) {
         |limits| value.to_json_vec_with_limits(limits),
         |writer, limits| value.to_json_writer_with_limits(writer, limits),
     );
+    bounded_encode::check_validation(&value, encoded.len(), data.first().copied().unwrap_or(0));
 }

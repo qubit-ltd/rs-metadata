@@ -12,3 +12,6 @@ mod shared;
 
 pub use shared::caps;
 pub use shared::check;
+pub use shared::check_validation;
+
+const _: fn(&qubit_metadata::Metadata, usize, u8) = check_validation;

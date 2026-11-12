@@ -89,6 +89,22 @@ fn test_bounded_metadata_encode_oracle_covers_output_and_value_budgets() {
     }
 }
 
+#[test]
+fn test_metadata_validation_fuzz_oracle() {
+    let samples = [
+        Metadata::new(),
+        Metadata::new().with("n", 7_i64).with("enabled", true),
+        Metadata::new().with("text", "quote=\" newline=\n 東京 🛰"),
+        Metadata::new().with("json", serde_json::json!({"a": [1, {"b": true}]})),
+    ];
+    for metadata in samples {
+        let canonical = serde_json::to_vec(&metadata).unwrap();
+        for first in [0, 1, 127, 255] {
+            bounded_encode::check_validation(&metadata, canonical.len(), first);
+        }
+    }
+}
+
 #[cfg(feature = "schema")]
 #[test]
 fn test_bounded_schema_encode_oracle() {
