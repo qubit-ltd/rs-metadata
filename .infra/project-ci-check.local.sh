@@ -6,17 +6,17 @@ package_tmp=$(mktemp -d)
 trap 'rm -rf -- "$package_tmp"' EXIT
 export CARGO_TARGET_DIR="$package_tmp/target"
 
-# The sibling crates may be newer than their latest crates.io releases while
-# sharing the version requirements declared by this package. Resolve both
-# package creation and archive tests against those local candidate sources.
-local_dependency_patches=(
-    --config "patch.crates-io.qubit-value.path=\"$project_root/../rs-value\""
-)
-if [[ -f "$project_root/../rs-redact/Cargo.toml" ]]; then
-    local_dependency_patches+=(
-        --config "patch.crates-io.qubit-redact.path=\"$project_root/../rs-redact\""
-    )
-fi
+# Sibling checkouts may provide candidate versions newer than crates.io. Use
+# them when available; otherwise resolve the published registry versions.
+local_dependency_patches=()
+for dependency in qubit-redact qubit-value; do
+    sibling_crate=${dependency#qubit-}
+    if [[ -f "$project_root/../rs-$sibling_crate/Cargo.toml" ]]; then
+        local_dependency_patches+=(
+            --config "patch.crates-io.$dependency.path=\"$project_root/../rs-$sibling_crate\""
+        )
+    fi
+done
 
 python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))' || {
     echo "error: Python 3.12 or later is required to safely extract the package" >&2
@@ -57,7 +57,11 @@ python3 "$project_root/.infra/tests/check-user-guide-consumers-tests.py"
 python3 "$project_root/.infra/tests/check-user-guide-consumers.py" "$package_root" "${local_dependency_patches[@]}"
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --no-default-features --features json --test metadata_fuzz_roundtrip_tests
 cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --all-features --all-targets
-echo "Checking archive with latest candidate dependencies"
-"$project_root/.infra/check-package-with-latest-value-path.sh" "$(cat "$package_tmp/package-archive")"
+if [[ -f "$project_root/../rs-value/Cargo.toml" ]]; then
+    echo "Checking archive with latest candidate qubit-value"
+    "$project_root/.infra/check-package-with-latest-value-path.sh" "$(cat "$package_tmp/package-archive")"
+else
+    echo "No sibling qubit-value checkout; registry archive check will verify the published dependency"
+fi
 echo "Checking the same archive with published registry dependencies"
 "$project_root/.infra/check-package-with-registry-deps.sh" "$(cat "$package_tmp/package-archive")"
