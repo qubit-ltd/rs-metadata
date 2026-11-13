@@ -10,9 +10,13 @@ export CARGO_TARGET_DIR="$package_tmp/target"
 # sharing the version requirements declared by this package. Resolve both
 # package creation and archive tests against those local candidate sources.
 local_dependency_patches=(
-    --config "patch.crates-io.qubit-redact.path=\"$project_root/../rs-redact\""
     --config "patch.crates-io.qubit-value.path=\"$project_root/../rs-value\""
 )
+if [[ -f "$project_root/../rs-redact/Cargo.toml" ]]; then
+    local_dependency_patches+=(
+        --config "patch.crates-io.qubit-redact.path=\"$project_root/../rs-redact\""
+    )
+fi
 
 python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))' || {
     echo "error: Python 3.12 or later is required to safely extract the package" >&2
