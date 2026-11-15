@@ -6,25 +6,13 @@ package_tmp=$(mktemp -d)
 trap 'rm -rf -- "$package_tmp"' EXIT
 export CARGO_TARGET_DIR="$package_tmp/target"
 
-# Sibling checkouts may provide candidate versions newer than crates.io. Use
-# them when available; otherwise resolve the published registry versions.
-local_dependency_patches=()
-for dependency in qubit-redact qubit-value; do
-    sibling_crate=${dependency#qubit-}
-    if [[ -f "$project_root/../rs-$sibling_crate/Cargo.toml" ]]; then
-        local_dependency_patches+=(
-            --config "patch.crates-io.$dependency.path=\"$project_root/../rs-$sibling_crate\""
-        )
-    fi
-done
-
 python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))' || {
     echo "error: Python 3.12 or later is required to safely extract the package" >&2
     exit 2
 }
 
 bash "$project_root/.infra/tests/check-package-with-registry-deps-tests.sh"
-cargo "${local_dependency_patches[@]}" package --manifest-path "$project_root/Cargo.toml" --allow-dirty --no-verify
+cargo package --manifest-path "$project_root/Cargo.toml" --allow-dirty --no-verify
 python3 - "$package_tmp" <<'PYCODE'
 import pathlib
 import sys
@@ -54,14 +42,8 @@ PYCODE
 
 package_root=$(cat "$package_tmp/package-root")
 python3 "$project_root/.infra/tests/check-user-guide-consumers-tests.py"
-python3 "$project_root/.infra/tests/check-user-guide-consumers.py" "$package_root" "${local_dependency_patches[@]}"
-cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --no-default-features --features json --test metadata_fuzz_roundtrip_tests
-cargo "${local_dependency_patches[@]}" test --manifest-path "$package_root/Cargo.toml" --locked --all-features --all-targets
-if [[ -f "$project_root/../rs-value/Cargo.toml" ]]; then
-    echo "Checking archive with latest candidate qubit-value"
-    "$project_root/.infra/check-package-with-latest-value-path.sh" "$(cat "$package_tmp/package-archive")"
-else
-    echo "No sibling qubit-value checkout; registry archive check will verify the published dependency"
-fi
+python3 "$project_root/.infra/tests/check-user-guide-consumers.py" "$package_root"
+cargo test --manifest-path "$package_root/Cargo.toml" --locked --no-default-features --features json --test metadata_fuzz_roundtrip_tests
+cargo test --manifest-path "$package_root/Cargo.toml" --locked --all-features --all-targets
 echo "Checking the same archive with published registry dependencies"
 "$project_root/.infra/check-package-with-registry-deps.sh" "$(cat "$package_tmp/package-archive")"
