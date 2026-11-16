@@ -8,6 +8,7 @@
 //! Borrowed V1 wire representation of [`crate::FilterExpression`].
 
 use qubit_value::Value;
+use qubit_value::ValueRef;
 use qubit_value::ValueWireEncodeError;
 use qubit_value::ValueWirePayloadRefV1;
 use serde::Serialize;
@@ -67,15 +68,26 @@ fn validate_condition(condition: &Condition) -> Result<(), ValueWireEncodeError>
         | Condition::LessEqual { value, .. }
         | Condition::Greater { value, .. }
         | Condition::GreaterEqual { value, .. } => {
-            let _ = ValueWirePayloadRefV1::try_from(value)?;
+            validate_value(value)?;
         }
         Condition::In { values, .. } | Condition::NotIn { values, .. } => {
             for value in values {
-                let _ = ValueWirePayloadRefV1::try_from(value)?;
+                validate_value(value)?;
             }
         }
         Condition::Exists { .. } | Condition::NotExists { .. } => {}
     }
+    Ok(())
+}
+
+/// Preflights V1 representation constraints without rebuilding safe integers.
+fn validate_value(value: &Value) -> Result<(), ValueWireEncodeError> {
+    // Every i64 has a direct V1 representation; no ValueWireEncodeError case
+    // applies to this type. Avoid validating it again before serialization.
+    if matches!(value.view(), ValueRef::Int64(_)) {
+        return Ok(());
+    }
+    let _ = ValueWirePayloadRefV1::try_from(value)?;
     Ok(())
 }
 
