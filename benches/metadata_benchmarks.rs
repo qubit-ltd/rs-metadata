@@ -19,7 +19,6 @@ use qubit_budget::ResourceLimit;
 #[cfg(feature = "json")]
 #[cfg(feature = "json")]
 use qubit_budget::json::JsonResource;
-use qubit_datatype::DataType;
 #[cfg(feature = "json")]
 use qubit_metadata::FilterExpression;
 use qubit_metadata::Metadata;
