@@ -139,7 +139,10 @@ fn test_schema_validate_reports_type_mismatch() {
 
     match single_issue(schema.validate(&meta).unwrap_err()) {
         MetadataError::TypeMismatch {
-            key, expected, actual, ..
+            key,
+            expected,
+            actual,
+            ..
         } => {
             assert_eq!(key, "score");
             assert_eq!(expected, DataType::Int64);
@@ -159,9 +162,11 @@ fn test_schema_validate_reports_unknown_field_by_default() {
 
     assert_eq!(
         schema.validate(&meta),
-        Err(MetadataValidationError::from_issue(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        },))
+        Err(MetadataValidationError::from_issue(
+            MetadataError::UnknownField {
+                key: "extra".to_string(),
+            },
+        ))
     );
 }
 
@@ -211,7 +216,10 @@ fn test_schema_metadata_and_filter_unknown_field_policies_are_independent() {
         .build()
         .expect("schema should build");
 
-    assert_eq!(schema.validate(&Metadata::new().with("dynamic", true)), Ok(()));
+    assert_eq!(
+        schema.validate(&Metadata::new().with("dynamic", true)),
+        Ok(())
+    );
     let expression = FilterExpression::builder()
         .exists("dynamic")
         .build()
@@ -249,9 +257,11 @@ fn test_schema_default_rejects_unknown_fields() {
 
     assert_eq!(
         schema.validate(&meta),
-        Err(MetadataValidationError::from_issue(MetadataError::UnknownField {
-            key: "extra".to_string(),
-        },))
+        Err(MetadataValidationError::from_issue(
+            MetadataError::UnknownField {
+                key: "extra".to_string(),
+            },
+        ))
     );
 }
 
@@ -284,7 +294,9 @@ fn test_schema_json_writer_round_trips_through_bounded_encoders() {
     );
 
     let mut buffer = Vec::new();
-    schema.to_json_writer(&mut buffer).expect("schema should write");
+    schema
+        .to_json_writer(&mut buffer)
+        .expect("schema should write");
     schema
         .to_json_writer_with_limits(&mut buffer, default_json_encode_limits())
         .expect("schema should write with limits");

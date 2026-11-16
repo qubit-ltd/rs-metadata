@@ -44,7 +44,8 @@ use qubit_value::Value;
 #[test]
 fn test_metadata_collection_payload_reports_invalid_json() {
     let input = br#"{"version":1,"values":{"x":{"collection":{"int64":[1]}}}}"#;
-    let error = Metadata::decode_json_slice(input).expect_err("collection payload is not a scalar metadata value");
+    let error = Metadata::decode_json_slice(input)
+        .expect_err("collection payload is not a scalar metadata value");
     assert!(matches!(error, MetadataWireDecodeError::InvalidJson(_)));
 }
 
@@ -66,7 +67,9 @@ fn input_limit(maximum: usize) -> MetadataLimits {
 }
 
 fn number_limit(maximum: usize) -> JsonEncodeLimits {
-    JsonEncodeLimits::builder().max_number_bytes(maximum).build()
+    JsonEncodeLimits::builder()
+        .max_number_bytes(maximum)
+        .build()
 }
 
 #[cfg(feature = "filter")]
@@ -106,8 +109,8 @@ fn test_decode_rejects_input_before_json_parsing() {
 
 #[test]
 fn test_decode_accepts_exact_input_boundary_then_reports_json_error() {
-    let error =
-        Metadata::decode_json_slice_with_limits(b"null", input_limit(4)).expect_err("null is not a metadata envelope");
+    let error = Metadata::decode_json_slice_with_limits(b"null", input_limit(4))
+        .expect_err("null is not a metadata envelope");
     let MetadataWireDecodeError::Decode(error) = error else {
         panic!("null must retain its shared decoding error");
     };
@@ -122,8 +125,9 @@ fn test_filter_domain_limits_remain_separate_from_json_budget() {
         .max_depth(1)
         .build()
         .expect("filter depth limit should build");
-    let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-        .expect_err("nested expression should exceed receiver depth");
+    let error =
+        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
+            .expect_err("nested expression should exceed receiver depth");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -142,8 +146,9 @@ fn test_filter_key_limit_preserves_structured_error() {
         .max_key_bytes(5)
         .build()
         .expect("filter key limit should build");
-    let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-        .expect_err("the filter key should exceed the receiver limit");
+    let error =
+        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
+            .expect_err("the filter key should exceed the receiver limit");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -162,8 +167,9 @@ fn test_filter_node_limit_preserves_structured_error() {
         .max_nodes(1)
         .build()
         .expect("filter node limit should build");
-    let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-        .expect_err("the second node should exceed the receiver limit");
+    let error =
+        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
+            .expect_err("the second node should exceed the receiver limit");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -177,14 +183,16 @@ fn test_filter_node_limit_preserves_structured_error() {
 #[cfg(feature = "filter")]
 #[test]
 fn test_filter_set_values_limit_preserves_structured_error() {
-    let input =
-        filter_input(r#"{"kind":"in","key":"status","values":[{"scalar":{"string":"a"}},{"scalar":{"string":"b"}}]}"#);
+    let input = filter_input(
+        r#"{"kind":"in","key":"status","values":[{"scalar":{"string":"a"}},{"scalar":{"string":"b"}}]}"#,
+    );
     let limits = FilterLimits::builder()
         .max_set_values(1)
         .build()
         .expect("filter set-value limit should build");
-    let error = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-        .expect_err("the second set value should exceed the receiver limit");
+    let error =
+        MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
+            .expect_err("the second set value should exceed the receiver limit");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
@@ -242,7 +250,9 @@ fn test_json_budget_structural_limit_is_structured_source() {
     let structure = StructureLimits::builder()
         .nodes_limit(ResourceLimit::new(JsonResource::Nodes, 1))
         .build();
-    let value = JsonValueLimits::builder().structure_limits(structure).build();
+    let value = JsonValueLimits::builder()
+        .structure_limits(structure)
+        .build();
     let limits = JsonDecodeLimits::builder().value_limits(value).build();
     let metadata_limits = MetadataLimits::builder()
         .json_decode(limits)
@@ -309,16 +319,20 @@ fn test_strict_envelopes_reject_duplicates_and_unknown_fields() {
 #[test]
 fn test_default_json_key_budget_allows_large_nested_keys() {
     let nested_key = "k".repeat(1_024);
-    let input = format!(r#"{{"version":1,"values":{{"payload":{{"scalar":{{"json":{{"{nested_key}":1}}}}}}}}}}"#,);
-    Metadata::decode_json_slice(input.as_bytes()).expect("nested JSON keys should use the generic 256 KiB budget");
+    let input = format!(
+        r#"{{"version":1,"values":{{"payload":{{"scalar":{{"json":{{"{nested_key}":1}}}}}}}}}}"#,
+    );
+    Metadata::decode_json_slice(input.as_bytes())
+        .expect("nested JSON keys should use the generic 256 KiB budget");
 }
 
 #[test]
 fn test_metadata_outer_key_budget_remains_256_bytes() {
     let outer_key = "k".repeat(257);
-    let input = format!(r#"{{"version":1,"values":{{"{outer_key}":{{"scalar":{{"int64":1}}}}}}}}"#,);
-    let error =
-        Metadata::decode_json_slice(input.as_bytes()).expect_err("metadata outer keys must retain the 256-byte cap");
+    let input =
+        format!(r#"{{"version":1,"values":{{"{outer_key}":{{"scalar":{{"int64":1}}}}}}}}"#,);
+    let error = Metadata::decode_json_slice(input.as_bytes())
+        .expect_err("metadata outer keys must retain the 256-byte cap");
     assert!(matches!(
         error,
         MetadataWireDecodeError::Domain(MetadataError::WireLimitExceeded {
@@ -378,7 +392,10 @@ fn test_filter_encode_accepts_uint128_string_under_number_limit() {
         .eq("value", Value::UInt128(123))
         .build()
         .unwrap();
-    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .unwrap();
     let encoded = filter
         .to_json_vec_with_limits(number_limit(2))
         .expect("UInt128 is encoded as a string and should not consume number bytes");
@@ -395,7 +412,10 @@ fn test_filter_encode_accepts_float64_exponent_under_number_limit() {
         .eq("value", Value::Float64(1e100))
         .build()
         .unwrap();
-    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+    let filter = MetadataFilter::builder()
+        .expression(expression)
+        .build()
+        .unwrap();
     let encoded = filter
         .to_json_vec_with_limits(number_limit(10))
         .expect("Float64 uses the compact JSON representation for number bytes");
@@ -413,7 +433,10 @@ fn test_metadata_schema_encode_round_trip() {
         .build()
         .unwrap();
     let schema_json = schema.to_json_vec().unwrap();
-    assert_eq!(MetadataSchema::decode_json_slice(&schema_json).unwrap(), schema);
+    assert_eq!(
+        MetadataSchema::decode_json_slice(&schema_json).unwrap(),
+        schema
+    );
 }
 
 #[cfg(feature = "filter")]
@@ -424,7 +447,10 @@ fn test_metadata_filter_encode_round_trip() {
         .build()
         .unwrap();
     let filter_json = filter.to_json_vec().unwrap();
-    assert_eq!(MetadataFilter::decode_json_slice(&filter_json).unwrap(), filter);
+    assert_eq!(
+        MetadataFilter::decode_json_slice(&filter_json).unwrap(),
+        filter
+    );
 }
 
 #[cfg(feature = "schema")]
@@ -471,6 +497,9 @@ fn test_schema_limits_and_wire_version_are_structured() {
     let error = Metadata::decode_json_slice(br#"{"version":2,"values":{}}"#).expect_err("version");
     assert!(matches!(
         error,
-        MetadataWireDecodeError::UnsupportedVersion { expected: 1, actual: 2 }
+        MetadataWireDecodeError::UnsupportedVersion {
+            expected: 1,
+            actual: 2
+        }
     ));
 }

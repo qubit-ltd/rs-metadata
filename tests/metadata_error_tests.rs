@@ -28,7 +28,10 @@ fn test_display_formats_all_variants() {
             maximum: 4_096,
         }
         .to_string(),
-        format!("Metadata SchemaFields limit {} exceeds the maximum of 4096", usize::MAX)
+        format!(
+            "Metadata SchemaFields limit {} exceeds the maximum of 4096",
+            usize::MAX
+        )
     );
     assert_eq!(
         MetadataError::MissingKey("k".to_string()).to_string(),
@@ -68,7 +71,10 @@ fn test_display_formats_all_variants() {
     let unknown = MetadataError::UnknownField {
         key: "extra".to_string(),
     };
-    assert_eq!(unknown.to_string(), "Metadata key 'extra' is not defined in schema");
+    assert_eq!(
+        unknown.to_string(),
+        "Metadata key 'extra' is not defined in schema"
+    );
 
     let unknown_filter = MetadataError::UnknownFilterField {
         key: "extra".to_string(),
@@ -128,7 +134,10 @@ fn test_display_formats_all_variants() {
     );
 
     assert_eq!(
-        MetadataError::DuplicateSchemaField { key: "id".to_string() }.to_string(),
+        MetadataError::DuplicateSchemaField {
+            key: "id".to_string()
+        }
+        .to_string(),
         "Metadata schema declares field 'id' more than once"
     );
 }
