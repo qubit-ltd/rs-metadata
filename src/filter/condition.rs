@@ -143,7 +143,10 @@ impl Condition {
     ///
     /// Returns the first error produced by `visitor` and stops visiting.
     #[cfg(feature = "json")]
-    pub(crate) fn visit_operands<E>(&self, visitor: &mut impl FnMut(&Value) -> Result<(), E>) -> Result<(), E> {
+    pub(crate) fn visit_operands<E>(
+        &self,
+        visitor: &mut impl FnMut(&Value) -> Result<(), E>,
+    ) -> Result<(), E> {
         match self {
             Self::Equal { value, .. }
             | Self::NotEqual { value, .. }
@@ -231,7 +234,11 @@ impl Condition {
     /// A definite outcome for concrete comparisons and existence predicates,
     /// or [`MatchOutcome::Unknown`] when a comparison depends on an absent or
     /// unset value.
-    pub(crate) fn evaluate(&self, meta: &Metadata, numeric_comparison_policy: NumericComparisonPolicy) -> MatchOutcome {
+    pub(crate) fn evaluate(
+        &self,
+        meta: &Metadata,
+        numeric_comparison_policy: NumericComparisonPolicy,
+    ) -> MatchOutcome {
         match self {
             Condition::Equal { key, value } => evaluate_concrete(meta, key, |stored| {
                 values_equal(stored, value, numeric_comparison_policy)
@@ -239,27 +246,43 @@ impl Condition {
             }),
             Condition::NotEqual { key, value } => evaluate_concrete(meta, key, |stored| {
                 values_equal(stored, value, numeric_comparison_policy)
-                    .map_or(MatchOutcome::Unknown, |equal| MatchOutcome::from_bool(!equal))
+                    .map_or(MatchOutcome::Unknown, |equal| {
+                        MatchOutcome::from_bool(!equal)
+                    })
             }),
             Condition::Less { key, value } => evaluate_concrete(meta, key, |stored| {
-                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
-                    MatchOutcome::from_bool(ordering == Ordering::Less)
-                })
+                compare_values(stored, value, numeric_comparison_policy)
+                    .map_or(MatchOutcome::Unknown, |ordering| {
+                        MatchOutcome::from_bool(ordering == Ordering::Less)
+                    })
             }),
             Condition::LessEqual { key, value } => evaluate_concrete(meta, key, |stored| {
-                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
-                    MatchOutcome::from_bool(matches!(ordering, Ordering::Less | Ordering::Equal))
-                })
+                compare_values(stored, value, numeric_comparison_policy).map_or(
+                    MatchOutcome::Unknown,
+                    |ordering| {
+                        MatchOutcome::from_bool(matches!(
+                            ordering,
+                            Ordering::Less | Ordering::Equal
+                        ))
+                    },
+                )
             }),
             Condition::Greater { key, value } => evaluate_concrete(meta, key, |stored| {
-                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
-                    MatchOutcome::from_bool(ordering == Ordering::Greater)
-                })
+                compare_values(stored, value, numeric_comparison_policy)
+                    .map_or(MatchOutcome::Unknown, |ordering| {
+                        MatchOutcome::from_bool(ordering == Ordering::Greater)
+                    })
             }),
             Condition::GreaterEqual { key, value } => evaluate_concrete(meta, key, |stored| {
-                compare_values(stored, value, numeric_comparison_policy).map_or(MatchOutcome::Unknown, |ordering| {
-                    MatchOutcome::from_bool(matches!(ordering, Ordering::Greater | Ordering::Equal))
-                })
+                compare_values(stored, value, numeric_comparison_policy).map_or(
+                    MatchOutcome::Unknown,
+                    |ordering| {
+                        MatchOutcome::from_bool(matches!(
+                            ordering,
+                            Ordering::Greater | Ordering::Equal
+                        ))
+                    },
+                )
             }),
             Condition::In { key, values } => evaluate_concrete(meta, key, |stored| {
                 evaluate_membership(stored, values, numeric_comparison_policy, false)
@@ -267,8 +290,12 @@ impl Condition {
             Condition::NotIn { key, values } => evaluate_concrete(meta, key, |stored| {
                 evaluate_membership(stored, values, numeric_comparison_policy, true)
             }),
-            Condition::Exists { key } => MatchOutcome::from_bool(concrete_value(meta, key).is_some()),
-            Condition::NotExists { key } => MatchOutcome::from_bool(concrete_value(meta, key).is_none()),
+            Condition::Exists { key } => {
+                MatchOutcome::from_bool(concrete_value(meta, key).is_some())
+            }
+            Condition::NotExists { key } => {
+                MatchOutcome::from_bool(concrete_value(meta, key).is_none())
+            }
         }
     }
 
@@ -331,7 +358,9 @@ pub(super) fn validate_operand(operator: &'static str, value: &Value) -> Metadat
 ///
 /// Returns the first invalid operand error.
 fn validate_operands(operator: &'static str, values: &[Value]) -> MetadataResult<()> {
-    values.iter().try_for_each(|value| validate_operand(operator, value))
+    values
+        .iter()
+        .try_for_each(|value| validate_operand(operator, value))
 }
 
 impl Redact for Condition {
@@ -473,7 +502,11 @@ fn concrete_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a Value> {
 /// comparable but unequal, or `None` when concrete types are incompatible or
 /// numeric comparison fails. Callers interpret `None` as an unknown outcome.
 #[inline]
-fn values_equal(left: &Value, right: &Value, numeric_comparison_policy: NumericComparisonPolicy) -> Option<bool> {
+fn values_equal(
+    left: &Value,
+    right: &Value,
+    numeric_comparison_policy: NumericComparisonPolicy,
+) -> Option<bool> {
     if left.is_numeric() && right.is_numeric() {
         return left
             .numeric_cmp(right, numeric_comparison_policy)
@@ -498,7 +531,11 @@ fn values_equal(left: &Value, right: &Value, numeric_comparison_policy: NumericC
 ///
 /// The relative ordering, or `None` when the values cannot be compared.
 #[inline]
-fn compare_values(left: &Value, right: &Value, numeric_comparison_policy: NumericComparisonPolicy) -> Option<Ordering> {
+fn compare_values(
+    left: &Value,
+    right: &Value,
+    numeric_comparison_policy: NumericComparisonPolicy,
+) -> Option<Ordering> {
     if left.is_numeric() && right.is_numeric() {
         return left.numeric_cmp(right, numeric_comparison_policy).ok();
     }

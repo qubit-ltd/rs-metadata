@@ -203,8 +203,12 @@ impl FilterExpressionWireV1 {
             }
             Self::Exists { key } => FilterExpression::condition(Condition::Exists { key }),
             Self::NotExists { key } => FilterExpression::condition(Condition::NotExists { key }),
-            Self::Not { expression } => Ok(expression.into_expression_unchecked()?.negated_unchecked()),
-            Self::And { children } => Self::combine(children, FilterExpression::and_unchecked, "and"),
+            Self::Not { expression } => {
+                Ok(expression.into_expression_unchecked()?.negated_unchecked())
+            }
+            Self::And { children } => {
+                Self::combine(children, FilterExpression::and_unchecked, "and")
+            }
             Self::Or { children } => Self::combine(children, FilterExpression::or_unchecked, "or"),
         }
     }
@@ -226,7 +230,12 @@ impl FilterExpressionWireV1 {
     ///
     /// Returns [`MetadataError::FilterLimitExceeded`] when any visited node,
     /// key, or membership list exceeds its configured bound.
-    fn validate_limits_at(&self, limits: FilterLimits, depth: usize, node_count: &mut usize) -> MetadataResult<()> {
+    fn validate_limits_at(
+        &self,
+        limits: FilterLimits,
+        depth: usize,
+        node_count: &mut usize,
+    ) -> MetadataResult<()> {
         if depth > limits.max_depth() {
             return Err(MetadataError::FilterLimitExceeded {
                 kind: FilterLimitKind::Depth,
@@ -268,7 +277,9 @@ impl FilterExpressionWireV1 {
                 }
                 Ok(())
             }
-            Self::Not { expression } => expression.validate_limits_at(limits, depth + 1, node_count),
+            Self::Not { expression } => {
+                expression.validate_limits_at(limits, depth + 1, node_count)
+            }
             Self::All | Self::None => Ok(()),
         }
     }
@@ -374,7 +385,10 @@ impl FilterExpressionWireV1 {
                 message: format!("'{operator}' group requires at least two children"),
             });
         };
-        let mut expression = combine(first.into_expression_unchecked()?, second.into_expression_unchecked()?);
+        let mut expression = combine(
+            first.into_expression_unchecked()?,
+            second.into_expression_unchecked()?,
+        );
         for child in children {
             expression = combine(expression, child.into_expression_unchecked()?);
         }

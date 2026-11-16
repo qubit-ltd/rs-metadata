@@ -88,7 +88,10 @@ fn assert_writer_contract(
     expected: &[u8],
     explicit_expected: &[u8],
     default_write: impl FnOnce(&mut ProbeWriter) -> Result<(), MetadataWireEncodeError>,
-    mut explicit_write: impl FnMut(&mut ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+    mut explicit_write: impl FnMut(
+        &mut ProbeWriter,
+        JsonEncodeLimits,
+    ) -> Result<(), MetadataWireEncodeError>,
     mut partial_write: impl FnMut(&mut ProbeWriter) -> Result<(), MetadataWireEncodeError>,
 ) {
     let mut probe = ProbeWriter::new(None);
@@ -109,7 +112,8 @@ fn assert_writer_contract(
         .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
         .build();
     let mut probe = ProbeWriter::new(None);
-    let error = explicit_write(&mut probe, limits).expect_err("output budget should reject the document");
+    let error =
+        explicit_write(&mut probe, limits).expect_err("output budget should reject the document");
     match error {
         MetadataWireEncodeError::Budget(source) => {
             assert_eq!(*source.resource(), JsonResource::OutputBytes);
@@ -120,7 +124,8 @@ fn assert_writer_contract(
     assert_eq!(probe.bytes, PREFIX);
 
     let mut probe = ProbeWriter::new(Some(0));
-    let error = partial_write(&mut probe).expect_err("zero-byte destination cap should fail immediately");
+    let error =
+        partial_write(&mut probe).expect_err("zero-byte destination cap should fail immediately");
     assert!(
         matches!(error, MetadataWireEncodeError::Io(_)),
         "unexpected error: {error:?}"
@@ -134,14 +139,25 @@ fn assert_writer_contract(
         panic!("expected I/O failure, got {error:?}");
     };
     assert_eq!(source.kind(), io::ErrorKind::Other);
-    assert!(source.get_ref().is_some_and(|cause| cause.is::<DestinationFailure>()));
+    assert!(
+        source
+            .get_ref()
+            .is_some_and(|cause| cause.is::<DestinationFailure>())
+    );
     let outer = MetadataWireEncodeError::Io(source);
     let chained = Error::source(&outer).expect("wire error should expose its I/O source");
     let chained = chained
         .downcast_ref::<io::Error>()
         .expect("source should be the I/O error");
-    assert!(chained.get_ref().is_some_and(|cause| cause.is::<DestinationFailure>()));
-    assert!(expected.len() > 3, "encoded document must contain at least three bytes");
+    assert!(
+        chained
+            .get_ref()
+            .is_some_and(|cause| cause.is::<DestinationFailure>())
+    );
+    assert!(
+        expected.len() > 3,
+        "encoded document must contain at least three bytes"
+    );
     let mut expected_prefix = PREFIX.to_vec();
     expected_prefix.extend_from_slice(&expected[..3]);
     assert_eq!(probe.bytes, expected_prefix);
@@ -149,11 +165,15 @@ fn assert_writer_contract(
 }
 
 fn assert_value_budget_failure(
-    write_with_limits: impl FnOnce(&mut ProbeWriter, JsonEncodeLimits) -> Result<(), MetadataWireEncodeError>,
+    write_with_limits: impl FnOnce(
+        &mut ProbeWriter,
+        JsonEncodeLimits,
+    ) -> Result<(), MetadataWireEncodeError>,
 ) {
     let limits = JsonEncodeLimits::builder().max_number_bytes(2).build();
     let mut probe = ProbeWriter::new(None);
-    let error = write_with_limits(&mut probe, limits).expect_err("number value should exceed its budget");
+    let error =
+        write_with_limits(&mut probe, limits).expect_err("number value should exceed its budget");
     match error {
         MetadataWireEncodeError::Budget(source) => {
             assert_eq!(*source.resource(), JsonResource::NumberBytes);
@@ -176,12 +196,19 @@ fn assert_schema_domain_rejection(
         .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 1))
         .build();
     for error in [
-        schema.to_json_vec().expect_err("default vec must reject wire limit"),
+        schema
+            .to_json_vec()
+            .expect_err("default vec must reject wire limit"),
         schema
             .to_json_vec_with_limits(limits)
             .expect_err("explicit vec must reject wire limit"),
     ] {
-        let MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded { kind, value, maximum }) = &error else {
+        let MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
+            kind,
+            value,
+            maximum,
+        }) = &error
+        else {
             panic!("expected domain wire-limit error, got {error:?}");
         };
         assert_eq!(*kind, expected_kind);
@@ -198,7 +225,12 @@ fn assert_schema_domain_rejection(
             schema.to_json_writer(&mut probe)
         }
         .expect_err(name);
-        let MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded { kind, value, maximum }) = &error else {
+        let MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
+            kind,
+            value,
+            maximum,
+        }) = &error
+        else {
             panic!("expected domain wire-limit error, got {error:?}");
         };
         assert_eq!(*kind, expected_kind);
@@ -237,7 +269,9 @@ fn assert_metadata_domain_rejection(
 ) {
     let limits = JsonEncodeLimits::builder().max_number_bytes(2).build();
     for error in [
-        metadata.to_json_vec().expect_err("default vec must reject wire limit"),
+        metadata
+            .to_json_vec()
+            .expect_err("default vec must reject wire limit"),
         metadata
             .to_json_vec_with_limits(limits)
             .expect_err("explicit vec must reject wire limit"),
@@ -299,14 +333,24 @@ fn test_metadata_wire_contract_precedes_value_preflight() {
     for index in 0..4_097 {
         entries_metadata.insert(&format!("k{index}"), 123_i64);
     }
-    assert_metadata_domain_rejection(&entries_metadata, MetadataWireLimitKind::Entries, 4_097, 4_096);
+    assert_metadata_domain_rejection(
+        &entries_metadata,
+        MetadataWireLimitKind::Entries,
+        4_097,
+        4_096,
+    );
 }
 
 #[cfg(feature = "filter")]
 #[test]
 fn test_filter_json_writers_preserve_buffered_contract() {
     let filter = MetadataFilter::builder()
-        .expression(FilterExpression::builder().eq("value", 123_i64).build().unwrap())
+        .expression(
+            FilterExpression::builder()
+                .eq("value", 123_i64)
+                .build()
+                .unwrap(),
+        )
         .build()
         .unwrap();
     let expected = filter.to_json_vec().expect("filter should encode");
@@ -322,7 +366,12 @@ fn test_filter_json_writers_preserve_buffered_contract() {
     );
 
     let filter = MetadataFilter::builder()
-        .expression(FilterExpression::builder().eq("value", 123_i64).build().unwrap())
+        .expression(
+            FilterExpression::builder()
+                .eq("value", 123_i64)
+                .build()
+                .unwrap(),
+        )
         .build()
         .unwrap();
     assert_value_budget_failure(|probe, limits| filter.to_json_writer_with_limits(probe, limits));
@@ -362,7 +411,10 @@ fn test_schema_json_wire_contract_boundaries_and_budget_precedence() {
         builder = builder.optional(&format!("field-{index}"), DataType::Int64);
     }
     let schema = builder.build().unwrap();
-    assert!(schema.to_json_vec().is_ok(), "4,096 fields are within the wire limit");
+    assert!(
+        schema.to_json_vec().is_ok(),
+        "4,096 fields are within the wire limit"
+    );
 
     let mut builder = qubit_metadata::MetadataSchema::builder();
     for index in 0..4_097 {
