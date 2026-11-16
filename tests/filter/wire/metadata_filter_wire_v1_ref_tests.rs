@@ -27,3 +27,13 @@ fn test_metadata_filter_serialization_keeps_wire_version_and_expression() {
     assert_eq!(encoded["expression"]["kind"], "exists");
     assert_eq!(encoded["expression"]["key"], "owner");
 }
+
+#[test]
+fn test_metadata_filter_wire_serialization_matches_canonical_v1_bytes() {
+    let filter = MetadataFilter::all();
+
+    assert_eq!(
+        serde_json::to_string(&filter).unwrap(),
+        r#"{"version":1,"expression":{"kind":"all"},"options":{"numeric_comparison_policy":"exact"}}"#
+    );
+}
