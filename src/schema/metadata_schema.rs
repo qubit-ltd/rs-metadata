@@ -117,12 +117,8 @@ impl Redact for MetadataSchema {
     fn write_redacted(&self, writer: &mut RedactionWriter<'_>) {
         writer.record("MetadataSchema", |fields| {
             fields.nested("fields", &SchemaFields(&self.fields));
-            fields.unmarked("unknown_metadata_field_policy", || {
-                self.unknown_metadata_field_policy
-            });
-            fields.unmarked("unknown_filter_field_policy", || {
-                self.unknown_filter_field_policy
-            });
+            fields.unmarked("unknown_metadata_field_policy", || self.unknown_metadata_field_policy);
+            fields.unmarked("unknown_filter_field_policy", || self.unknown_filter_field_policy);
         });
     }
 }
@@ -281,10 +277,7 @@ impl MetadataSchema {
     ///
     /// The compact JSON bytes representing this schema.
     #[cfg(feature = "json")]
-    pub fn to_json_vec_with_limits(
-        &self,
-        limits: JsonEncodeLimits,
-    ) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
+    pub fn to_json_vec_with_limits(&self, limits: JsonEncodeLimits) -> Result<Vec<u8>, crate::MetadataWireEncodeError> {
         self.validate_wire_contract()
             .map_err(crate::MetadataWireEncodeError::Domain)?;
         let session = JsonEncodeSession::from_limits(limits);
@@ -326,10 +319,7 @@ impl MetadataSchema {
     where
         W: Write,
     {
-        self.to_json_writer_with_limits(
-            writer,
-            crate::metadata_limits::default_json_encode_limits(),
-        )
+        self.to_json_writer_with_limits(writer, crate::metadata_limits::default_json_encode_limits())
     }
 
     /// Encodes this schema to a writer with caller-provided JSON budgets.
@@ -503,24 +493,16 @@ impl MetadataSchema {
     /// [`MetadataError::TypeMismatch`] for a declared type mismatch.
     pub(crate) fn validate_entry(&self, key: &str, value: &Value) -> MetadataResult<()> {
         match self.field(key) {
-            Some(field) if field.is_required() && value.is_unset() => {
-                Err(MetadataError::MissingRequiredField {
-                    key: key.to_string(),
-                    expected: field.data_type(),
-                })
+            Some(field) if field.is_required() && value.is_unset() => Err(MetadataError::MissingRequiredField {
+                key: key.to_string(),
+                expected: field.data_type(),
+            }),
+            Some(field) if field.data_type() != value.data_type() => {
+                Err(MetadataError::type_mismatch(key, field.data_type(), value.data_type()))
             }
-            Some(field) if field.data_type() != value.data_type() => Err(
-                MetadataError::type_mismatch(key, field.data_type(), value.data_type()),
-            ),
             Some(_) => Ok(()),
-            None if matches!(
-                self.unknown_metadata_field_policy,
-                UnknownMetadataFieldPolicy::Reject
-            ) =>
-            {
-                Err(MetadataError::UnknownField {
-                    key: key.to_string(),
-                })
+            None if matches!(self.unknown_metadata_field_policy, UnknownMetadataFieldPolicy::Reject) => {
+                Err(MetadataError::UnknownField { key: key.to_string() })
             }
             None => Ok(()),
         }
@@ -587,8 +569,7 @@ impl Serialize for MetadataSchema {
     where
         S: Serializer,
     {
-        self.validate_wire_contract()
-            .map_err(<S::Error as SerError>::custom)?;
+        self.validate_wire_contract().map_err(<S::Error as SerError>::custom)?;
         MetadataSchemaWireV1 {
             version: METADATA_SCHEMA_WIRE_VERSION_V1,
             fields: &self.fields,
@@ -625,9 +606,7 @@ impl<'de> Deserialize<'de> for MetadataSchema {
         let wire: MetadataSchemaWireV1<StrictStringMap<MetadataField>> =
             MetadataSchemaWireV1::deserialize(deserializer)?;
         if wire.version != METADATA_SCHEMA_WIRE_VERSION_V1 {
-            return Err(de::Error::custom(
-                "unsupported MetadataSchema wire format version",
-            ));
+            return Err(de::Error::custom("unsupported MetadataSchema wire format version"));
         }
         Ok(Self::new(
             wire.fields.into_inner(),

@@ -103,13 +103,7 @@ fn measured<F: Fn() -> Result<(), MetadataWireEncodeError>>(
         calls[index] = CALLS.load(Ordering::Relaxed);
         requested_bytes[index] = REQUESTED_BYTES.load(Ordering::Relaxed);
     }
-    (
-        output_bytes,
-        Distribution {
-            calls,
-            requested_bytes,
-        },
-    )
+    (output_bytes, Distribution { calls, requested_bytes })
 }
 
 fn main() {
@@ -147,10 +141,7 @@ fn main() {
     }
 }
 
-fn validate_without_output(
-    metadata: &Metadata,
-    limits: JsonEncodeLimits,
-) -> Result<(), MetadataWireEncodeError> {
+fn validate_without_output(metadata: &Metadata, limits: JsonEncodeLimits) -> Result<(), MetadataWireEncodeError> {
     metadata.validate_json_with_limits(limits)
 }
 
@@ -178,11 +169,9 @@ fn error_signature_ref(error: &MetadataWireEncodeError) -> ErrorSignature {
     match error {
         MetadataWireEncodeError::Budget(error) => ErrorSignature::Budget(*error.resource()),
         MetadataWireEncodeError::Quantity { resource, .. } => ErrorSignature::Quantity(*resource),
-        MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
-            kind,
-            value,
-            maximum,
-        }) => ErrorSignature::DomainWire(*kind, *value, *maximum),
+        MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded { kind, value, maximum }) => {
+            ErrorSignature::DomainWire(*kind, *value, *maximum)
+        }
         MetadataWireEncodeError::Domain(_) => ErrorSignature::DomainOther,
         MetadataWireEncodeError::Syntax(_) => ErrorSignature::Syntax,
         MetadataWireEncodeError::Json(error) => ErrorSignature::Json(error.kind()),
@@ -204,11 +193,7 @@ fn verify_candidate_equivalence() {
     special.set("escaped", "quote=\" slash=\\ newline=\n tab=\t");
     special.set("unicode", "café 東京 🛰");
     special.set("nested", serde_json::json!({"outer": [1, {"inner": true}]}));
-    cases.push((
-        "escaped_unicode_nested",
-        special,
-        default_json_encode_limits(),
-    ));
+    cases.push(("escaped_unicode_nested", special, default_json_encode_limits()));
 
     cases.push((
         "non_finite",
@@ -220,11 +205,7 @@ fn verify_candidate_equivalence() {
     for index in 0..=4096 {
         too_many_entries.set(&format!("key_{index:02}"), "x");
     }
-    cases.push((
-        "v1_entry_limit",
-        too_many_entries,
-        default_json_encode_limits(),
-    ));
+    cases.push(("v1_entry_limit", too_many_entries, default_json_encode_limits()));
     let long_key = "k".repeat(257);
     cases.push((
         "v1_key_limit",
@@ -321,8 +302,7 @@ fn verify_candidate_equivalence() {
     }
 
     // V1 wire-contract errors precede nested JSON value-budget failures.
-    let mut wire_and_value_violation =
-        Metadata::new().with("json", Value::Json(serde_json::json!("too long")));
+    let mut wire_and_value_violation = Metadata::new().with("json", Value::Json(serde_json::json!("too long")));
     for index in 0..4096 {
         wire_and_value_violation.set(&format!("key_{index:02}"), "x");
     }
@@ -331,11 +311,7 @@ fn verify_candidate_equivalence() {
         .value_limits(JsonValueLimits::builder().max_string_bytes(1).build())
         .build();
     assert_eq!(
-        compare_candidate(
-            "multiple_wire_and_value_violations",
-            &wire_and_value_violation,
-            limits
-        ),
+        compare_candidate("multiple_wire_and_value_violations", &wire_and_value_violation, limits),
         ErrorSignature::DomainWire(MetadataWireLimitKind::Entries, 4097, 4096)
     );
 
@@ -361,11 +337,7 @@ fn verify_candidate_equivalence() {
         .into_builder()
         .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, 128))
         .build();
-    let first = compare_candidate(
-        "output_before_later_non_finite",
-        &output_then_serialize,
-        limits,
-    );
+    let first = compare_candidate("output_before_later_non_finite", &output_then_serialize, limits);
     assert_eq!(first, ErrorSignature::Budget(JsonResource::OutputBytes));
 
     let mut serialize_then_output = Metadata::new();
@@ -435,17 +407,13 @@ fn samples() -> Vec<(String, Metadata)> {
     for index in 0..32 {
         near_limit.set(&format!("f{index:02}"), "x".repeat(480));
     }
-    let bytes = serde_json::to_vec(&near_limit)
-        .expect("near-limit sample JSON")
-        .len();
+    let bytes = serde_json::to_vec(&near_limit).expect("near-limit sample JSON").len();
     result.push((format!("near_16k_{bytes}_bytes"), near_limit));
     let mut over_limit = Metadata::new();
     for index in 0..32 {
         over_limit.set(&format!("f{index:02}"), "x".repeat(510));
     }
-    let bytes = serde_json::to_vec(&over_limit)
-        .expect("over-limit sample JSON")
-        .len();
+    let bytes = serde_json::to_vec(&over_limit).expect("over-limit sample JSON").len();
     result.push((format!("over_16k_{bytes}_bytes"), over_limit));
     result
 }

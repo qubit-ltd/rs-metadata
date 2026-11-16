@@ -20,7 +20,9 @@ use crate::MetadataFilter;
 /// Borrowed V1 metadata-filter envelope used only for serialization.
 #[derive(Clone, Copy)]
 pub(crate) struct MetadataFilterWireV1Ref<'a> {
+    /// Filter whose expression and options are serialized.
     filter: &'a MetadataFilter,
+    /// Preflighted borrowed expression used to serialize the V1 field.
     expression: FilterExpressionWireV1Ref<'a>,
 }
 
@@ -49,6 +51,10 @@ impl Serialize for MetadataFilterWireV1Ref<'_> {
     /// # Parameters
     ///
     /// * `serializer` - Serializer receiving the envelope.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `S` - Serializer implementation receiving the envelope fields.
     ///
     /// # Errors
     ///

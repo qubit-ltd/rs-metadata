@@ -14,16 +14,19 @@ use qubit_value::ValueWirePayloadRefV1;
 use serde::Serialize;
 use serde::Serializer;
 use serde::ser::Error as SerError;
-use serde::ser::SerializeSeq;
 use serde::ser::SerializeStruct;
 
+use super::internal::SequenceRef;
 use crate::Condition;
 use crate::FilterExpression;
 use crate::FilterExpressionView;
 
 /// Borrowed V1 expression node used only for serialization.
 #[derive(Clone, Copy)]
-pub(crate) struct FilterExpressionWireV1Ref<'a>(&'a FilterExpression);
+pub(crate) struct FilterExpressionWireV1Ref<'a>(
+    /// Expression borrowed while its canonical V1 representation is serialized.
+    &'a FilterExpression,
+);
 
 impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
     /// Error returned when a condition value cannot be represented in V1.
@@ -33,7 +36,8 @@ impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
     ///
     /// # Parameters
     ///
-    /// * `expression` - Expression whose values remain borrowed for serialization.
+    /// * `expression` - Expression whose values remain borrowed for
+    ///   serialization.
     ///
     /// # Errors
     ///
@@ -44,7 +48,28 @@ impl<'a> TryFrom<&'a FilterExpression> for FilterExpressionWireV1Ref<'a> {
     }
 }
 
+impl<'a> FilterExpressionWireV1Ref<'a> {
+    /// Creates a borrowed expression view after its enclosing tree is
+    /// preflighted.
+    ///
+    /// # Parameters
+    ///
+    /// * `expression` - Child expression covered by the enclosing tree
+    ///   preflight.
+    pub(super) const fn borrow(expression: &'a FilterExpression) -> Self {
+        Self(expression)
+    }
+}
+
 /// Validates every operand in depth-first wire order without allocating.
+///
+/// # Parameters
+///
+/// * `expression` - Expression whose condition values are checked.
+///
+/// # Errors
+///
+/// Returns the first V1 representation error in depth-first wire order.
 fn validate_expression(expression: &FilterExpression) -> Result<(), ValueWireEncodeError> {
     match expression.view() {
         FilterExpressionView::True | FilterExpressionView::False => Ok(()),
@@ -60,6 +85,14 @@ fn validate_expression(expression: &FilterExpression) -> Result<(), ValueWireEnc
 }
 
 /// Validates every value in one condition in wire order without allocating.
+///
+/// # Parameters
+///
+/// * `condition` - Condition whose values are checked.
+///
+/// # Errors
+///
+/// Returns the first V1 representation error in condition wire order.
 fn validate_condition(condition: &Condition) -> Result<(), ValueWireEncodeError> {
     match condition {
         Condition::Equal { value, .. }
@@ -81,6 +114,14 @@ fn validate_condition(condition: &Condition) -> Result<(), ValueWireEncodeError>
 }
 
 /// Preflights V1 representation constraints without rebuilding safe integers.
+///
+/// # Parameters
+///
+/// * `value` - Condition value whose V1 representation is checked.
+///
+/// # Errors
+///
+/// Returns the value's V1 representation error when it cannot be encoded.
 fn validate_value(value: &Value) -> Result<(), ValueWireEncodeError> {
     // Every i64 has a direct V1 representation; no ValueWireEncodeError case
     // applies to this type. Avoid validating it again before serialization.
@@ -91,39 +132,6 @@ fn validate_value(value: &Value) -> Result<(), ValueWireEncodeError> {
     Ok(())
 }
 
-struct ValuesRef<'a>(&'a [Value]);
-
-/// Serializes borrowed membership values without collecting them.
-impl Serialize for ValuesRef<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut sequence = serializer.serialize_seq(Some(self.0.len()))?;
-        for value in self.0 {
-            let payload = ValueWirePayloadRefV1::try_from(value).map_err(S::Error::custom)?;
-            sequence.serialize_element(&payload)?;
-        }
-        sequence.end()
-    }
-}
-
-struct ChildrenRef<'a>(&'a [FilterExpression]);
-
-/// Serializes borrowed child expressions without collecting them.
-impl Serialize for ChildrenRef<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut sequence = serializer.serialize_seq(Some(self.0.len()))?;
-        for child in self.0 {
-            sequence.serialize_element(&FilterExpressionWireV1Ref(child))?;
-        }
-        sequence.end()
-    }
-}
-
 impl Serialize for FilterExpressionWireV1Ref<'_> {
     /// Serializes one expression node with the canonical V1 field order.
     ///
@@ -131,9 +139,14 @@ impl Serialize for FilterExpressionWireV1Ref<'_> {
     ///
     /// * `serializer` - Serializer receiving this expression node.
     ///
+    /// # Type Parameters
+    ///
+    /// * `S` - Serializer implementation receiving the expression fields.
+    ///
     /// # Errors
     ///
-    /// Returns the serializer error if a field or nested node cannot be serialized.
+    /// Returns the serializer error if a field or nested node cannot be
+    /// serialized.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -149,19 +162,17 @@ impl Serialize for FilterExpressionWireV1Ref<'_> {
                 node.serialize_field("kind", "none")?;
                 node.end()
             }
-            FilterExpressionView::Condition(condition) => {
-                serialize_condition(condition, serializer)
-            }
+            FilterExpressionView::Condition(condition) => serialize_condition(condition, serializer),
             FilterExpressionView::And(children) => {
                 let mut node = serializer.serialize_struct("FilterExpression", 2)?;
                 node.serialize_field("kind", "and")?;
-                node.serialize_field("children", &ChildrenRef(children))?;
+                node.serialize_field("children", &SequenceRef::Children(children))?;
                 node.end()
             }
             FilterExpressionView::Or(children) => {
                 let mut node = serializer.serialize_struct("FilterExpression", 2)?;
                 node.serialize_field("kind", "or")?;
-                node.serialize_field("children", &ChildrenRef(children))?;
+                node.serialize_field("children", &SequenceRef::Children(children))?;
                 node.end()
             }
             FilterExpressionView::Not(inner) => {
@@ -175,41 +186,54 @@ impl Serialize for FilterExpressionWireV1Ref<'_> {
 }
 
 /// Serializes a condition node using its canonical V1 operator name.
+///
+/// # Type Parameters
+///
+/// * `S` - Serializer implementation receiving the condition fields.
+///
+/// # Parameters
+///
+/// * `condition` - Condition to serialize.
+/// * `serializer` - Serializer receiving the condition fields.
+///
+/// # Errors
+///
+/// Returns the serializer error when a condition field cannot be serialized.
 fn serialize_condition<S>(condition: &Condition, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     match condition {
         Condition::Equal { key, value } => serialize_value_condition("eq", key, value, serializer),
-        Condition::NotEqual { key, value } => {
-            serialize_value_condition("ne", key, value, serializer)
-        }
+        Condition::NotEqual { key, value } => serialize_value_condition("ne", key, value, serializer),
         Condition::Less { key, value } => serialize_value_condition("lt", key, value, serializer),
-        Condition::LessEqual { key, value } => {
-            serialize_value_condition("le", key, value, serializer)
-        }
-        Condition::Greater { key, value } => {
-            serialize_value_condition("gt", key, value, serializer)
-        }
-        Condition::GreaterEqual { key, value } => {
-            serialize_value_condition("ge", key, value, serializer)
-        }
+        Condition::LessEqual { key, value } => serialize_value_condition("le", key, value, serializer),
+        Condition::Greater { key, value } => serialize_value_condition("gt", key, value, serializer),
+        Condition::GreaterEqual { key, value } => serialize_value_condition("ge", key, value, serializer),
         Condition::In { key, values } => serialize_values_condition("in", key, values, serializer),
-        Condition::NotIn { key, values } => {
-            serialize_values_condition("not_in", key, values, serializer)
-        }
+        Condition::NotIn { key, values } => serialize_values_condition("not_in", key, values, serializer),
         Condition::Exists { key } => serialize_key_condition("exists", key, serializer),
         Condition::NotExists { key } => serialize_key_condition("not_exists", key, serializer),
     }
 }
 
 /// Serializes a comparison node containing one borrowed value.
-fn serialize_value_condition<S>(
-    kind: &'static str,
-    key: &str,
-    value: &Value,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+///
+/// # Type Parameters
+///
+/// * `S` - Serializer implementation receiving the condition fields.
+///
+/// # Parameters
+///
+/// * `kind` - Canonical V1 operator name.
+/// * `key` - Condition key.
+/// * `value` - Comparison operand borrowed for serialization.
+/// * `serializer` - Serializer receiving the condition fields.
+///
+/// # Errors
+///
+/// Returns the serializer error when a condition field cannot be serialized.
+fn serialize_value_condition<S>(kind: &'static str, key: &str, value: &Value, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -222,6 +246,21 @@ where
 }
 
 /// Serializes a membership node containing a borrowed value sequence.
+///
+/// # Type Parameters
+///
+/// * `S` - Serializer implementation receiving the condition fields.
+///
+/// # Parameters
+///
+/// * `kind` - Canonical V1 operator name.
+/// * `key` - Condition key.
+/// * `values` - Membership operands borrowed for serialization.
+/// * `serializer` - Serializer receiving the condition fields.
+///
+/// # Errors
+///
+/// Returns the serializer error when a condition field cannot be serialized.
 fn serialize_values_condition<S>(
     kind: &'static str,
     key: &str,
@@ -234,16 +273,26 @@ where
     let mut node = serializer.serialize_struct("FilterExpression", 3)?;
     node.serialize_field("kind", kind)?;
     node.serialize_field("key", key)?;
-    node.serialize_field("values", &ValuesRef(values))?;
+    node.serialize_field("values", &SequenceRef::Values(values))?;
     node.end()
 }
 
 /// Serializes an existence node containing only its key.
-fn serialize_key_condition<S>(
-    kind: &'static str,
-    key: &str,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+///
+/// # Type Parameters
+///
+/// * `S` - Serializer implementation receiving the condition fields.
+///
+/// # Parameters
+///
+/// * `kind` - Canonical V1 operator name.
+/// * `key` - Existence-test key.
+/// * `serializer` - Serializer receiving the condition fields.
+///
+/// # Errors
+///
+/// Returns the serializer error when a condition field cannot be serialized.
+fn serialize_key_condition<S>(kind: &'static str, key: &str, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

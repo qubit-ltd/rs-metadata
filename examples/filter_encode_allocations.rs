@@ -95,13 +95,7 @@ fn measured<F: Fn() -> Vec<u8>>(encode: F) -> (usize, Distribution) {
         requested_bytes[index] = REQUESTED_BYTES.load(Ordering::Relaxed);
     }
 
-    (
-        output_bytes,
-        Distribution {
-            calls,
-            requested_bytes,
-        },
-    )
+    (output_bytes, Distribution { calls, requested_bytes })
 }
 
 fn main() {
@@ -118,8 +112,7 @@ fn main() {
 
     let samples = filter_encoding_samples();
     for (name, filter) in samples {
-        let ordinary =
-            measured(|| serde_json::to_vec(black_box(&filter)).expect("ordinary JSON encoding"));
+        let ordinary = measured(|| serde_json::to_vec(black_box(&filter)).expect("ordinary JSON encoding"));
         let bounded = measured(|| {
             filter
                 .to_json_vec_with_limits(default_json_encode_limits())
@@ -199,12 +192,8 @@ fn filter_encoding_samples() -> Vec<(String, MetadataFilter)> {
         for level in 0..depth {
             expression = match level % 3 {
                 0 => expression.try_not().expect("bounded nested NOT"),
-                1 => expression
-                    .try_and(leaf(depth + level + 1))
-                    .expect("bounded nested AND"),
-                _ => expression
-                    .try_or(leaf(depth + level + 1))
-                    .expect("bounded nested OR"),
+                1 => expression.try_and(leaf(depth + level + 1)).expect("bounded nested AND"),
+                _ => expression.try_or(leaf(depth + level + 1)).expect("bounded nested OR"),
             };
         }
         samples.push(into_filter(format!("nested_{depth}"), expression));

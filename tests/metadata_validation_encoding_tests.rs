@@ -46,14 +46,10 @@ fn signature(result: Result<(), MetadataWireEncodeError>) -> Signature {
     match result {
         Ok(()) => Signature::Success,
         Err(MetadataWireEncodeError::Budget(error)) => Signature::Budget(error),
-        Err(MetadataWireEncodeError::Quantity { resource, source }) => {
-            Signature::Quantity(resource, source)
+        Err(MetadataWireEncodeError::Quantity { resource, source }) => Signature::Quantity(resource, source),
+        Err(MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded { kind, value, maximum })) => {
+            Signature::Wire(kind, value, maximum)
         }
-        Err(MetadataWireEncodeError::Domain(MetadataError::WireLimitExceeded {
-            kind,
-            value,
-            maximum,
-        })) => Signature::Wire(kind, value, maximum),
         Err(MetadataWireEncodeError::Domain(_)) => Signature::Domain,
         Err(MetadataWireEncodeError::Syntax(_)) => Signature::Syntax,
         Err(MetadataWireEncodeError::Json(error)) => Signature::Json(error.kind()),
@@ -304,14 +300,8 @@ fn test_validation_only_matches_structured_errors_and_validation_order() {
     assert_eq!(&actual.validation, &expected);
 
     let boundary = Metadata::new().with("edge", "quote=\" café");
-    let encoded_len = serde_json::to_vec(&boundary)
-        .expect("serialize boundary")
-        .len();
-    for (cap, expect_success) in [
-        (encoded_len - 1, false),
-        (encoded_len, true),
-        (encoded_len + 1, true),
-    ] {
+    let encoded_len = serde_json::to_vec(&boundary).expect("serialize boundary").len();
+    for (cap, expect_success) in [(encoded_len - 1, false), (encoded_len, true), (encoded_len + 1, true)] {
         let limits = default_json_encode_limits()
             .into_builder()
             .output_bytes_limit(ResourceLimit::new(JsonResource::OutputBytes, cap))
@@ -344,8 +334,7 @@ fn test_validation_only_matches_structured_errors_and_validation_order() {
     }
 
     // Wire contract is checked before value budgets.
-    let mut wire_and_value =
-        Metadata::new().with("json", Value::Json(serde_json::json!("too long")));
+    let mut wire_and_value = Metadata::new().with("json", Value::Json(serde_json::json!("too long")));
     for index in 0..4096 {
         wire_and_value.set(&format!("key_{index:04}"), "x");
     }

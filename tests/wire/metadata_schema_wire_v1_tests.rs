@@ -55,8 +55,7 @@ fn test_metadata_schema_v1_round_trip() {
 
     #[cfg(feature = "json")]
     assert_eq!(
-        MetadataSchema::decode_json_slice(encoded.as_bytes())
-            .expect("the bounded JSON schema should decode"),
+        MetadataSchema::decode_json_slice(encoded.as_bytes()).expect("the bounded JSON schema should decode"),
         schema
     );
 }
@@ -127,10 +126,7 @@ fn test_metadata_schema_rejects_invalid_field_shapes() {
     let encoded_field = to_value(&field).expect("field should serialize");
     let invalid_shapes = [
         ("missing data_type", json!({"required": true})),
-        (
-            "missing required",
-            json!({"data_type": encoded_field["data_type"]}),
-        ),
+        ("missing required", json!({"data_type": encoded_field["data_type"]})),
         (
             "unknown field",
             json!({"data_type": encoded_field["data_type"], "required": true, "extra": false}),
@@ -141,11 +137,7 @@ fn test_metadata_schema_rejects_invalid_field_shapes() {
         ("short array", json!([encoded_field["data_type"]])),
         (
             "long array",
-            json!([
-                encoded_field["data_type"],
-                encoded_field["required"],
-                "extra"
-            ]),
+            json!([encoded_field["data_type"], encoded_field["required"], "extra"]),
         ),
     ];
 
@@ -248,8 +240,7 @@ fn test_metadata_schema_accepts_reordered_field_object() {
         .required("tenant", DataType::String)
         .build()
         .expect("schema should build");
-    let field =
-        to_value(MetadataField::new(DataType::String, true)).expect("field should serialize");
+    let field = to_value(MetadataField::new(DataType::String, true)).expect("field should serialize");
     let data_type = to_string(&field["data_type"]).expect("data type should serialize");
     let input = format!(
         r#"{{"version":1,"fields":{{"tenant":{{"required":true,"data_type":{data_type}}}}},"unknown_metadata_field_policy":"reject","unknown_filter_field_policy":"reject"}}"#
@@ -319,21 +310,12 @@ fn test_metadata_schema_deserialization_enforces_hard_entry_boundary() {
         if count == 4_096 {
             let schema = decoded.expect("4096 fields should decode");
             for index in 0..count {
-                assert_eq!(
-                    schema.field_type(&format!("key-{index:04}")),
-                    Some(DataType::String)
-                );
+                assert_eq!(schema.field_type(&format!("key-{index:04}")), Some(DataType::String));
             }
-            assert!(
-                schema.field("key-4096").is_none(),
-                "no extra field should appear"
-            );
+            assert!(schema.field("key-4096").is_none(), "no extra field should appear");
         } else {
             let error = decoded.expect_err("4097 fields should exceed the hard limit");
-            assert!(
-                error.to_string().contains("4096 entries"),
-                "wrong limit error: {error}"
-            );
+            assert!(error.to_string().contains("4096 entries"), "wrong limit error: {error}");
         }
     }
 }

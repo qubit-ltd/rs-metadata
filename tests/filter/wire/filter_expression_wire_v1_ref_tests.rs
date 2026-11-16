@@ -71,10 +71,7 @@ fn test_expression_serialization_matches_canonical_v1_bytes_for_every_node() {
             r#"{"kind":"ge","key":"k","value":{"scalar":{"int64":1}}}"#,
         ),
         (
-            FilterExpression::builder()
-                .in_set("k", [1_i64, 2_i64])
-                .build()
-                .unwrap(),
+            FilterExpression::builder().in_set("k", [1_i64, 2_i64]).build().unwrap(),
             r#"{"kind":"in","key":"k","values":[{"scalar":{"int64":1}},{"scalar":{"int64":2}}]}"#,
         ),
         (
@@ -107,23 +104,15 @@ fn test_expression_serialization_matches_canonical_v1_bytes_for_every_node() {
             r#"{"kind":"or","children":[{"kind":"exists","key":"a"},{"kind":"exists","key":"b"}]}"#,
         ),
         (
-            FilterExpression::builder()
-                .exists("a")
-                .not()
-                .build()
-                .unwrap(),
+            FilterExpression::builder().exists("a").not().build().unwrap(),
             r#"{"kind":"not","expression":{"kind":"exists","key":"a"}}"#,
         ),
     ];
 
     for (expression, expected) in expressions {
-        let filter = MetadataFilter::builder()
-            .expression(expression)
-            .build()
-            .unwrap();
-        let expected = format!(
-            r#"{{"version":1,"expression":{expected},"options":{{"numeric_comparison_policy":"exact"}}}}"#
-        );
+        let filter = MetadataFilter::builder().expression(expression).build().unwrap();
+        let expected =
+            format!(r#"{{"version":1,"expression":{expected},"options":{{"numeric_comparison_policy":"exact"}}}}"#);
         let encoded = serde_json::to_string(&filter).unwrap();
         assert_eq!(encoded, expected);
         assert_eq!(serde_json::to_vec(&filter).unwrap(), expected.as_bytes());
@@ -155,10 +144,7 @@ fn test_nested_json_value_and_escaped_unicode_match_canonical_v1_bytes() {
         .and_group(|group| group.exists("owner"))
         .build()
         .unwrap();
-    let filter = MetadataFilter::builder()
-        .expression(expression)
-        .build()
-        .unwrap();
+    let filter = MetadataFilter::builder().expression(expression).build().unwrap();
     let expected = r#"{"version":1,"expression":{"kind":"and","children":[{"kind":"eq","key":"key\"雪","value":{"scalar":{"json":{"text":"quote\" line\n 雪","z":{"a":1,"b":2}}}}},{"kind":"exists","key":"owner"}]},"options":{"numeric_comparison_policy":"exact"}}"#;
 
     assert_eq!(serde_json::to_string(&filter).unwrap(), expected);
@@ -193,10 +179,6 @@ fn test_filter_output_budget_fails_before_writer_is_touched() {
     let mut writer = Vec::new();
 
     assert!(filter.to_json_vec_with_limits(limits).is_err());
-    assert!(
-        filter
-            .to_json_writer_with_limits(&mut writer, limits)
-            .is_err()
-    );
+    assert!(filter.to_json_writer_with_limits(&mut writer, limits).is_err());
     assert!(writer.is_empty());
 }

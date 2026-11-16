@@ -13,10 +13,7 @@ use qubit_metadata::FilterMatchOptions;
 #[test]
 fn test_default_options_use_exact_numeric_comparison() {
     let options = FilterMatchOptions::default();
-    assert_eq!(
-        options.numeric_comparison_policy(),
-        NumericComparisonPolicy::Exact
-    );
+    assert_eq!(options.numeric_comparison_policy(), NumericComparisonPolicy::Exact);
 }
 
 #[test]
@@ -40,10 +37,7 @@ fn test_filter_match_options_serde_accepts_only_strict_objects() {
         let from_value = serde_json::from_value::<FilterMatchOptions>(value).unwrap();
         assert_eq!(from_value, options);
         let encoded = serde_json::to_value(options).unwrap();
-        assert_eq!(
-            encoded,
-            serde_json::from_str::<serde_json::Value>(&json).unwrap()
-        );
+        assert_eq!(encoded, serde_json::from_str::<serde_json::Value>(&json).unwrap());
     }
 
     for json in [
@@ -52,15 +46,9 @@ fn test_filter_match_options_serde_accepts_only_strict_objects() {
         r#"{"extra":true,"numeric_comparison_policy":"exact"}"#,
         r#"{"numeric_comparison_policy":"invalid"}"#,
     ] {
-        assert!(
-            serde_json::from_str::<FilterMatchOptions>(json).is_err(),
-            "{json}"
-        );
+        assert!(serde_json::from_str::<FilterMatchOptions>(json).is_err(), "{json}");
         let value = serde_json::from_str::<serde_json::Value>(json).unwrap();
-        assert!(
-            serde_json::from_value::<FilterMatchOptions>(value).is_err(),
-            "{json}"
-        );
+        assert!(serde_json::from_value::<FilterMatchOptions>(value).is_err(), "{json}");
     }
 
     assert!(

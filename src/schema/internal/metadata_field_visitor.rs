@@ -35,9 +35,7 @@ const FIELD_NAMES: &[&str] = &["data_type", "required"];
 ///
 /// Returns the deserializer error when the input is not an object, a required
 /// field is missing, a field is duplicated or unknown, or a value is invalid.
-pub(crate) fn deserialize_metadata_field<'de, D>(
-    deserializer: D,
-) -> Result<(DataType, bool), D::Error>
+pub(crate) fn deserialize_metadata_field<'de, D>(deserializer: D) -> Result<(DataType, bool), D::Error>
 where
     D: Deserializer<'de>,
 {
