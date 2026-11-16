@@ -133,6 +133,8 @@ mod internal;
 mod metadata;
 mod metadata_error;
 #[cfg(feature = "json")]
+mod metadata_limit_kind;
+#[cfg(feature = "json")]
 mod metadata_limits;
 #[cfg(feature = "json")]
 mod metadata_limits_builder;
@@ -177,6 +179,8 @@ pub use filter::MetadataFilter;
 pub use filter::MetadataFilterBuilder;
 pub use metadata::Metadata;
 pub use metadata_error::MetadataError;
+#[cfg(feature = "json")]
+pub use metadata_limit_kind::MetadataLimitKind;
 #[cfg(feature = "json")]
 pub use metadata_limits::DEFAULT_MAX_JSON_BYTES;
 #[cfg(feature = "json")]

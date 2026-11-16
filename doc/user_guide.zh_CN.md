@@ -430,11 +430,55 @@ qubit-metadata = { version = "0.7", features = ["json"] }
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+use std::error::Error;
+
 use qubit_metadata::Metadata;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataLimitKind;
 use qubit_metadata::MetadataLimits;
 use qubit_metadata::MetadataWireDecodeError;
 
 pub fn main() -> Result<(), MetadataWireDecodeError> {
+    // Zero is valid; the protocol maximum is valid too.
+    let _valid_limits = MetadataLimits::builder()
+        .max_metadata_entries(0)
+        .max_schema_fields(4_096)
+        .max_key_bytes(256)
+        .build()
+        .expect("zero and protocol-maximum caps are valid");
+
+    // Match configuration failures by category and retain both numbers.
+    let error = MetadataLimits::builder()
+        .max_schema_fields(usize::MAX)
+        .build()
+        .expect_err("an over-limit schema cap must fail");
+    assert!(matches!(
+        error,
+        MetadataError::InvalidMetadataLimit {
+            kind: MetadataLimitKind::SchemaFields,
+            value: usize::MAX,
+            maximum: 4_096,
+        }
+    ));
+
+    let invalid_limits = MetadataLimits::builder()
+        .max_metadata_entries(4_097)
+        .build()
+        .map_err(MetadataWireDecodeError::InvalidLimits)
+        .expect_err("an invalid configuration is retained as a wire error");
+    let source = Error::source(&invalid_limits).expect("InvalidLimits retains its source");
+    let structured = source
+        .downcast_ref::<MetadataError>()
+        .expect("the source is the original MetadataError");
+    assert!(matches!(
+        structured,
+        MetadataError::InvalidMetadataLimit {
+            kind: MetadataLimitKind::MetadataEntries,
+            value: 4_097,
+            maximum: 4_096,
+        }
+    ));
+
     let limits = MetadataLimits::builder()
         .max_metadata_entries(128)
         .max_key_bytes(128)
@@ -469,7 +513,16 @@ Filter limits 是接收端瞬态策略，不会被序列化。单个 JSON
 
 如果 limits 来自运维配置或配置文件，应使用
 `MetadataLimits::builder().build()?`，在配置阶段拒绝超过协议硬上限的领域限制，
-与 `FilterLimitsBuilder::build` 一致。
+与 `FilterLimitsBuilder::build` 一致。错误类型为 `MetadataError::InvalidMetadataLimit { kind, value, maximum }`：
+`kind` 标识 `MetadataEntries`、`SchemaFields` 或 `KeyBytes`；`value` 是请求的限制值，
+`maximum` 是对应的协议上限。零值合法，上限值本身也合法。处理特定配置错误时，应匹配这三个字段。
+
+这是 Rust 源码兼容性变更：之前显式声明
+`Result<MetadataLimits, serde_json::Error>` 或依赖转换为 JSON 错误的代码，应改用
+`MetadataResult<MetadataLimits>`（或外层 `Box<dyn Error>`）；`?` 会将 `MetadataError`
+转换为该外层错误类型。若要将无效配置包装为解码错误，可映射为
+`MetadataWireDecodeError::InvalidLimits`；其 `Error::source()` 可向下转型为原始的
+`MetadataError`，保留结构化字段。V1 wire 格式和序列化值均不变。
 
 ### 定向 JSON 预算
 

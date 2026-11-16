@@ -15,9 +15,16 @@ use crate::MetadataWireDecodeError;
 fn test_metadata_decoder_rejects_invalid_internal_limits() {
     let limits = MetadataLimits::from_builder(MetadataLimitsBuilder::default().max_metadata_entries(4_097));
     assert!(limits.validate().is_err());
-    let error = Metadata::decode_json_slice_with_limits(b"{}", limits)
+    let error = Metadata::decode_json_slice_with_limits(b"not-json", limits)
         .expect_err("invalid internal limits must fail before envelope decoding");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::InvalidLimits(crate::MetadataError::InvalidMetadataLimit {
+            kind: crate::MetadataLimitKind::MetadataEntries,
+            value: 4_097,
+            maximum: 4_096
+        })
+    ));
 }
 
 #[test]
@@ -46,9 +53,15 @@ fn test_schema_decoder_rejects_invalid_internal_limits() {
     use crate::MetadataSchema;
 
     let limits = MetadataLimits::from_builder(MetadataLimitsBuilder::default().max_schema_fields(4_097));
-    let error = MetadataSchema::decode_json_slice_with_limits(b"{}", limits)
+    let error = MetadataSchema::decode_json_slice_with_limits(b"not-json", limits)
         .expect_err("invalid internal limits must fail before envelope decoding");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::InvalidLimits(crate::MetadataError::InvalidMetadataLimit {
+            kind: crate::MetadataLimitKind::SchemaFields,
+            ..
+        })
+    ));
 }
 
 #[cfg(feature = "filter")]
@@ -58,7 +71,13 @@ fn test_filter_decoder_rejects_invalid_internal_limits() {
     use crate::MetadataFilter;
 
     let limits = MetadataLimits::from_builder(MetadataLimitsBuilder::default().max_key_bytes(257));
-    let error = MetadataFilter::decode_json_slice_with_limits(b"{}", limits, FilterLimits::MAX)
+    let error = MetadataFilter::decode_json_slice_with_limits(b"not-json", limits, FilterLimits::MAX)
         .expect_err("invalid internal limits must fail before envelope decoding");
-    assert!(matches!(error, MetadataWireDecodeError::InvalidLimits(_)));
+    assert!(matches!(
+        error,
+        MetadataWireDecodeError::InvalidLimits(crate::MetadataError::InvalidMetadataLimit {
+            kind: crate::MetadataLimitKind::KeyBytes,
+            ..
+        })
+    ));
 }

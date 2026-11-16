@@ -12,8 +12,9 @@ use qubit_budget::json::JsonDecodeLimits;
 use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 use qubit_budget::json::JsonValueLimits;
-use serde::de::Error as _;
 
+use crate::MetadataError;
+use crate::MetadataLimitKind;
 use crate::metadata_limits_builder::MetadataLimitsBuilder;
 
 /// Default maximum number of bytes in a complete metadata JSON document.
@@ -52,7 +53,7 @@ pub const DEFAULT_MAX_KEY_BYTES: usize = 256;
 /// ```
 /// use qubit_metadata::MetadataLimits;
 ///
-/// # fn main() -> Result<(), serde_json::Error> {
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
 /// let limits = MetadataLimits::builder().max_key_bytes(128).build()?;
 /// assert_eq!(limits.max_key_bytes(), 128);
 /// # Ok(())
@@ -180,26 +181,29 @@ impl MetadataLimits {
     ///
     /// # Errors
     ///
-    /// Returns a JSON error when the metadata-entry, schema-field, or key-byte
-    /// limit exceeds its corresponding protocol maximum.
-    pub fn validate(&self) -> Result<(), serde_json::Error> {
+    /// Returns a structured error when the metadata-entry, schema-field, or
+    /// key-byte limit exceeds its corresponding protocol maximum.
+    pub fn validate(&self) -> crate::MetadataResult<()> {
         if self.max_metadata_entries > DEFAULT_MAX_METADATA_ENTRIES {
-            return Err(serde_json::Error::custom(format!(
-                "metadata entries limit {} exceeds {}",
-                self.max_metadata_entries, DEFAULT_MAX_METADATA_ENTRIES,
-            )));
+            return Err(MetadataError::InvalidMetadataLimit {
+                kind: MetadataLimitKind::MetadataEntries,
+                value: self.max_metadata_entries,
+                maximum: DEFAULT_MAX_METADATA_ENTRIES,
+            });
         }
         if self.max_schema_fields > DEFAULT_MAX_SCHEMA_FIELDS {
-            return Err(serde_json::Error::custom(format!(
-                "schema fields limit {} exceeds {}",
-                self.max_schema_fields, DEFAULT_MAX_SCHEMA_FIELDS,
-            )));
+            return Err(MetadataError::InvalidMetadataLimit {
+                kind: MetadataLimitKind::SchemaFields,
+                value: self.max_schema_fields,
+                maximum: DEFAULT_MAX_SCHEMA_FIELDS,
+            });
         }
         if self.max_key_bytes > DEFAULT_MAX_KEY_BYTES {
-            return Err(serde_json::Error::custom(format!(
-                "metadata key limit {} exceeds {}",
-                self.max_key_bytes, DEFAULT_MAX_KEY_BYTES,
-            )));
+            return Err(MetadataError::InvalidMetadataLimit {
+                kind: MetadataLimitKind::KeyBytes,
+                value: self.max_key_bytes,
+                maximum: DEFAULT_MAX_KEY_BYTES,
+            });
         }
         Ok(())
     }

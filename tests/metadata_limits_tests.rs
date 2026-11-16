@@ -15,6 +15,8 @@ use qubit_budget::json::JsonEncodeLimits;
 use qubit_budget::json::JsonResource;
 use qubit_json::decode::JsonDecoder;
 use qubit_json::encode::JsonEncoder;
+use qubit_metadata::MetadataError;
+use qubit_metadata::MetadataLimitKind;
 use qubit_metadata::MetadataLimits;
 
 #[test]
@@ -158,8 +160,68 @@ fn test_metadata_limits_build_rejects_invalid_domain_configuration() {
         .build()
         .expect_err("invalid domain limits must fail during configuration");
 
+    assert_eq!(
+        error,
+        MetadataError::InvalidMetadataLimit {
+            kind: MetadataLimitKind::MetadataEntries,
+            value: 4_097,
+            maximum: 4_096,
+        }
+    );
+}
+
+#[test]
+fn test_metadata_limits_errors_are_structured_and_preserve_validation_order() {
+    let cases = [
+        (
+            MetadataLimits::builder().max_metadata_entries(4_097),
+            MetadataLimitKind::MetadataEntries,
+            4_097,
+            4_096,
+        ),
+        (
+            MetadataLimits::builder().max_schema_fields(4_097),
+            MetadataLimitKind::SchemaFields,
+            4_097,
+            4_096,
+        ),
+        (
+            MetadataLimits::builder().max_key_bytes(257),
+            MetadataLimitKind::KeyBytes,
+            257,
+            256,
+        ),
+        (
+            MetadataLimits::builder().max_key_bytes(usize::MAX),
+            MetadataLimitKind::KeyBytes,
+            usize::MAX,
+            256,
+        ),
+    ];
+    for (builder, kind, value, maximum) in cases {
+        assert_eq!(
+            builder.build().unwrap_err(),
+            MetadataError::InvalidMetadataLimit { kind, value, maximum }
+        );
+    }
+    assert_eq!(
+        MetadataLimits::builder()
+            .max_metadata_entries(usize::MAX)
+            .max_schema_fields(usize::MAX)
+            .build()
+            .unwrap_err(),
+        MetadataError::InvalidMetadataLimit {
+            kind: MetadataLimitKind::MetadataEntries,
+            value: usize::MAX,
+            maximum: 4_096
+        }
+    );
     assert!(
-        error.to_string().contains("metadata entries limit"),
-        "the build error must identify the invalid metadata entry limit"
+        MetadataLimits::builder()
+            .max_metadata_entries(0)
+            .max_schema_fields(0)
+            .max_key_bytes(0)
+            .build()
+            .is_ok()
     );
 }

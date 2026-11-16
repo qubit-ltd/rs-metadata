@@ -14,6 +14,8 @@ use qubit_value::ValueError;
 
 #[cfg(feature = "filter")]
 use crate::FilterLimitKind;
+#[cfg(feature = "json")]
+use crate::MetadataLimitKind;
 use crate::MetadataWireLimitKind;
 
 /// Errors produced by explicit metadata accessors and schema validation.
@@ -60,6 +62,16 @@ pub enum MetadataError {
         /// Observed resource value.
         value: usize,
         /// Largest value accepted by the V1 wire contract.
+        maximum: usize,
+    },
+    /// A configured metadata-domain limit exceeds its protocol maximum.
+    #[cfg(feature = "json")]
+    InvalidMetadataLimit {
+        /// Resource category being configured.
+        kind: MetadataLimitKind,
+        /// Requested resource limit.
+        value: usize,
+        /// Protocol maximum for the resource.
         maximum: usize,
     },
     /// A required schema field is missing from a metadata object.
@@ -195,6 +207,11 @@ impl fmt::Display for MetadataError {
             Self::WireLimitExceeded { kind, value, maximum } => write!(
                 formatter,
                 "Metadata wire {kind:?} value {value} exceeds the maximum of {maximum}"
+            ),
+            #[cfg(feature = "json")]
+            Self::InvalidMetadataLimit { kind, value, maximum } => write!(
+                formatter,
+                "Metadata {kind:?} limit {value} exceeds the maximum of {maximum}"
             ),
             #[cfg(feature = "schema")]
             Self::MissingRequiredField { key, expected } => {

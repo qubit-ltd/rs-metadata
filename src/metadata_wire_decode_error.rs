@@ -78,7 +78,7 @@ pub enum MetadataWireDecodeError {
     /// The caller supplied metadata limits outside the protocol hard caps.
     InvalidLimits(
         /// Validation error for the supplied metadata limits.
-        serde_json::Error,
+        MetadataError,
     ),
     /// A decoded metadata-filter envelope violated its structured contract.
     #[cfg(feature = "filter")]
@@ -138,10 +138,12 @@ impl Error for MetadataWireDecodeError {
     /// # Returns
     ///
     /// Returns `Some` for failures that retain an underlying source, including
-    /// detailed read failures, domain, budget, quantity, syntax, Serde, and
-    /// optional filter failures. Returns `None` for unsupported wire versions
-    /// and read failures whose diagnostic policy did not retain the original
-    /// I/O error.
+    /// detailed read failures, domain, invalid-limit, budget, quantity, syntax,
+    /// Serde, and optional filter failures. The source of an `InvalidLimits`
+    /// error is its original [`MetadataError`], which can be downcast to
+    /// inspect structured configuration-limit fields. Returns `None` for
+    /// unsupported wire versions and read failures whose diagnostic policy did
+    /// not retain the original I/O error.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Read { source, .. } => source.as_deref().map(|error| error as &(dyn Error + 'static)),

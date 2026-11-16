@@ -139,6 +139,23 @@ fn test_domain_error_exposes_structured_source_without_values() {
 }
 
 #[test]
+fn test_invalid_limits_preserves_structured_error_as_source() {
+    use qubit_metadata::MetadataLimitKind;
+
+    let source = MetadataError::InvalidMetadataLimit {
+        kind: MetadataLimitKind::SchemaFields,
+        value: usize::MAX,
+        maximum: 4_096,
+    };
+    let error = MetadataWireDecodeError::InvalidLimits(source.clone());
+    assert_eq!(error.to_string(), source.to_string());
+    assert_eq!(
+        error.source().and_then(|source| source.downcast_ref::<MetadataError>()),
+        Some(&source)
+    );
+}
+
+#[test]
 fn test_unsupported_version_has_safe_diagnostic_and_no_synthetic_source() {
     let error = Metadata::decode_json_slice(br#"{"version":7,"values":{}}"#).expect_err("version");
     assert_eq!(error.to_string(), "Unsupported metadata wire version 7; expected 1");

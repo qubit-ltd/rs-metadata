@@ -89,6 +89,19 @@ depth, node, sequence/map, string/key/number/payload, and domain limits.
 In-memory metadata is not intrinsically bounded; V1 wire maps enforce their
 canonical entry and key limits.
 
+`MetadataLimitsBuilder::build` and `MetadataLimits::validate` return
+`MetadataResult`, with invalid configuration represented by
+`MetadataError::InvalidMetadataLimit { kind, value, maximum }`. The category is
+`MetadataEntries`, `SchemaFields`, or `KeyBytes`; `value` is the requested cap
+and `maximum` is the corresponding V1 protocol maximum. Zero is valid, as is
+the maximum itself. Callers can match these fields without parsing diagnostic
+text. This is a Rust source compatibility change for code that explicitly
+declared a `serde_json::Error` result or relied on conversion to that type:
+return `MetadataResult` or an outer error type that accepts `MetadataError` via
+`?`. When wrapped in `MetadataWireDecodeError::InvalidLimits`, the source chain
+retains the original `MetadataError` for downcasting. This configuration error
+change does not alter the V1 wire format or serialized values.
+
 ### Dedicated metadata JSON helpers
 
 The dedicated metadata slice decoder first materializes a unique-key JSON

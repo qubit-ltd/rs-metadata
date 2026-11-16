@@ -62,6 +62,16 @@ filter 的 `options` 同样要求恰含 `numeric_comparison_policy` 的对象；
 默认 profile 包含 byte、depth、node、sequence/map、string/key/number/payload 以及领域限制。
 内存中的 metadata 本身不设这些 wire 上限；V1 wire map 会执行规范的条目数和 key 长度限制。
 
+`MetadataLimitsBuilder::build` 和 `MetadataLimits::validate` 返回
+`MetadataResult`；无效配置由
+`MetadataError::InvalidMetadataLimit { kind, value, maximum }` 表示。
+类别为 `MetadataEntries`、`SchemaFields` 或 `KeyBytes`；`value` 是请求的限制值，
+`maximum` 是对应的 V1 协议上限。零值和上限值本身均合法。调用方可直接匹配这些字段，
+无需解析诊断文本。显式声明返回 `serde_json::Error` 或依赖转换为该类型的代码会遇到
+Rust 源码兼容性变更：应返回 `MetadataResult`，或使用可通过 `?` 接收 `MetadataError`
+的外层错误类型。包装为 `MetadataWireDecodeError::InvalidLimits` 时，source 链保留原始
+`MetadataError`，可通过 downcast 获取。该配置错误变更不会改变 V1 wire 格式或序列化值。
+
 ### 专用 metadata JSON helper
 
 专用 metadata slice decoder 首先在共享 JSON 预算下物化无重复键的 JSON 源树，再应用 wire

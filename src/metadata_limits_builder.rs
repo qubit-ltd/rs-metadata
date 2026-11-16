@@ -24,7 +24,7 @@ use crate::metadata_limits::default_json_encode_limits;
 /// ```
 /// use qubit_metadata::MetadataLimits;
 ///
-/// # fn main() -> Result<(), serde_json::Error> {
+/// # fn main() -> qubit_metadata::MetadataResult<()> {
 /// let limits = MetadataLimits::builder().max_metadata_entries(128).build()?;
 /// assert_eq!(limits.max_metadata_entries(), 128);
 /// # Ok(())
@@ -128,7 +128,7 @@ impl MetadataLimitsBuilder {
     /// Returns a configuration error when a domain limit exceeds its protocol
     /// hard cap. Validation happens while building the limits.
     #[inline]
-    pub fn build(self) -> Result<MetadataLimits, serde_json::Error> {
+    pub fn build(self) -> crate::MetadataResult<MetadataLimits> {
         let limits = MetadataLimits::from_builder(self);
         limits.validate()?;
         Ok(limits)

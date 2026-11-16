@@ -12,12 +12,24 @@
 use qubit_datatype::DataType;
 use qubit_metadata::FilterLimitKind;
 use qubit_metadata::MetadataError;
+#[cfg(feature = "json")]
+use qubit_metadata::MetadataLimitKind;
 use qubit_metadata::MetadataWireLimitKind;
 use qubit_value::ValueError;
 use qubit_value::ValueMissing;
 
 #[test]
 fn test_display_formats_all_variants() {
+    #[cfg(feature = "json")]
+    assert_eq!(
+        MetadataError::InvalidMetadataLimit {
+            kind: MetadataLimitKind::SchemaFields,
+            value: usize::MAX,
+            maximum: 4_096,
+        }
+        .to_string(),
+        format!("Metadata SchemaFields limit {} exceeds the maximum of 4096", usize::MAX)
+    );
     assert_eq!(
         MetadataError::MissingKey("k".to_string()).to_string(),
         "Metadata key not found: k"
