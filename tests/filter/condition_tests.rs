@@ -149,23 +149,12 @@ fn test_membership_with_incomparable_candidates_stays_unknown() {
 fn test_stored_nan_comparisons_remain_unknown_under_negation() {
     let expressions = [
         ("ne", FilterExpression::builder().ne("score", 0_f64)),
-        (
-            "not_eq",
-            FilterExpression::builder().eq("score", 0_f64).not(),
-        ),
-        (
-            "not_in",
-            FilterExpression::builder().not_in_set("score", [0_f64]),
-        ),
-        (
-            "not_ne",
-            FilterExpression::builder().ne("score", 0_f64).not(),
-        ),
+        ("not_eq", FilterExpression::builder().eq("score", 0_f64).not()),
+        ("not_in", FilterExpression::builder().not_in_set("score", [0_f64])),
+        ("not_ne", FilterExpression::builder().ne("score", 0_f64).not()),
         (
             "not_not_in",
-            FilterExpression::builder()
-                .not_in_set("score", [0_f64])
-                .not(),
+            FilterExpression::builder().not_in_set("score", [0_f64]).not(),
         ),
     ];
     let filters: Vec<_> = expressions
@@ -176,10 +165,7 @@ fn test_stored_nan_comparisons_remain_unknown_under_negation() {
         })
         .collect();
 
-    for (stored_type, stored) in [
-        ("f32", Value::Float32(f32::NAN)),
-        ("f64", Value::Float64(f64::NAN)),
-    ] {
+    for (stored_type, stored) in [("f32", Value::Float32(f32::NAN)), ("f64", Value::Float64(f64::NAN))] {
         let metadata = Metadata::new().with("score", stored);
         for (operator, predicate) in &filters {
             assert!(
@@ -194,14 +180,8 @@ fn test_stored_nan_comparisons_remain_unknown_under_negation() {
 fn test_mixed_membership_prefers_definite_match_in_both_candidate_orders() {
     let metadata = Metadata::new().with("age", 18_i64);
     let orders = [
-        (
-            "unknown_first",
-            vec![Value::String("bad".to_owned()), Value::Int64(18)],
-        ),
-        (
-            "match_first",
-            vec![Value::Int64(18), Value::String("bad".to_owned())],
-        ),
+        ("unknown_first", vec![Value::String("bad".to_owned()), Value::Int64(18)]),
+        ("match_first", vec![Value::Int64(18), Value::String("bad".to_owned())]),
     ];
 
     for (order, candidates) in orders {
@@ -218,23 +198,17 @@ fn test_mixed_membership_prefers_definite_match_in_both_candidate_orders() {
             ),
             (
                 "negated_in",
-                FilterExpression::builder()
-                    .in_set("age", candidates.clone())
-                    .not(),
+                FilterExpression::builder().in_set("age", candidates.clone()).not(),
                 false,
             ),
             (
                 "negated_not_in",
-                FilterExpression::builder()
-                    .not_in_set("age", candidates)
-                    .not(),
+                FilterExpression::builder().not_in_set("age", candidates).not(),
                 true,
             ),
         ];
         for (operator, builder, expected) in expressions {
-            let expression = builder
-                .build()
-                .expect("mixed concrete operands should build");
+            let expression = builder.build().expect("mixed concrete operands should build");
             assert_eq!(
                 filter(expression).matches(&metadata),
                 expected,

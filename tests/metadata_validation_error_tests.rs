@@ -87,9 +87,7 @@ fn test_validation_error_display_propagates_formatter_errors() {
 
 #[test]
 fn test_validation_diagnostics_have_a_cumulative_bound() {
-    let issue = MetadataError::UnknownField {
-        key: "x".repeat(256),
-    };
+    let issue = MetadataError::UnknownField { key: "x".repeat(256) };
     let error = MetadataValidationError::from_issues(vec![issue; 32_640]).unwrap();
     for text in [error.to_string(), format!("{error:?}")] {
         assert!(

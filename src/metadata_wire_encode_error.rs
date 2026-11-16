@@ -135,9 +135,7 @@ impl From<JsonEncodeError<JsonResource>> for MetadataWireEncodeError {
         match error.into_source() {
             JsonEncodeErrorSource::Budget(source) => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
-                MeasuredBudgetError::Quantity { resource, source } => {
-                    Self::Quantity { resource, source }
-                }
+                MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
             },
             JsonEncodeErrorSource::InvalidRawJson(source) => Self::Syntax(source),
             JsonEncodeErrorSource::Serialize(source) => Self::Json(source),
@@ -160,9 +158,7 @@ impl From<MeasuredBudgetError<JsonResource, usize>> for MetadataWireEncodeError 
     fn from(error: MeasuredBudgetError<JsonResource, usize>) -> Self {
         match error {
             MeasuredBudgetError::Budget(error) => Self::Budget(error),
-            MeasuredBudgetError::Quantity { resource, source } => {
-                Self::Quantity { resource, source }
-            }
+            MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
         }
     }
 }

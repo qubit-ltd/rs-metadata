@@ -62,15 +62,8 @@ fn test_optional_and_default_reads_do_not_hide_type_errors() {
         .unwrap_err();
     assert!(std::error::Error::source(&error).is_some());
     assert!(!error.to_string().contains("secret-invalid"));
-    let raw = metadata
-        .get_raw("invalid")
-        .unwrap()
-        .get_ref::<str>()
-        .unwrap();
-    assert_eq!(
-        metadata.get_ref::<str>("invalid").unwrap().as_ptr(),
-        raw.as_ptr()
-    );
+    let raw = metadata.get_raw("invalid").unwrap().get_ref::<str>().unwrap();
+    assert_eq!(metadata.get_ref::<str>("invalid").unwrap().as_ptr(), raw.as_ptr());
 }
 
 #[test]
@@ -99,28 +92,14 @@ fn test_conversion_optional_uses_policy_and_defaults_are_lazy() {
         .with("blank", " ")
         .with("number", 42_i32)
         .with("invalid", "invalid");
+    assert_eq!(metadata.get_optional::<String>("blank").unwrap(), Some(" ".to_owned()));
     assert_eq!(
-        metadata.get_optional::<String>("blank").unwrap(),
-        Some(" ".to_owned())
-    );
-    assert_eq!(
-        metadata
-            .convert_optional_with::<i32>("blank", &policy, limits)
-            .unwrap(),
+        metadata.convert_optional_with::<i32>("blank", &policy, limits).unwrap(),
         None
     );
     let called = Cell::new(0);
-    assert_eq!(
-        metadata
-            .get_or::<i32>("number", CountedDefault(&called))
-            .unwrap(),
-        42
-    );
-    assert!(
-        metadata
-            .get_or::<i32>("invalid", CountedDefault(&called))
-            .is_err()
-    );
+    assert_eq!(metadata.get_or::<i32>("number", CountedDefault(&called)).unwrap(), 42);
+    assert!(metadata.get_or::<i32>("invalid", CountedDefault(&called)).is_err());
     assert!(
         metadata
             .convert_or_with::<i32>("invalid", CountedDefault(&called), &policy, limits)
@@ -134,10 +113,7 @@ fn test_conversion_optional_uses_policy_and_defaults_are_lazy() {
         7
     );
     assert_eq!(called.get(), 1);
-    assert_eq!(
-        metadata.get_or::<String>("absent", "default").unwrap(),
-        "default"
-    );
+    assert_eq!(metadata.get_or::<String>("absent", "default").unwrap(), "default");
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -208,10 +184,7 @@ fn test_with_accepts_value_and_domain_newtype() {
         .with("raw", Value::String("stored".to_owned()))
         .with("tenant_id", TenantId(42));
 
-    assert_eq!(
-        metadata.get_raw("raw"),
-        Some(&Value::String("stored".to_owned()))
-    );
+    assert_eq!(metadata.get_raw("raw"), Some(&Value::String("stored".to_owned())));
     assert_eq!(metadata.get::<u64>("tenant_id"), Ok(42));
 }
 
@@ -311,14 +284,8 @@ fn test_get_reports_unset_value_as_missing() {
         panic!("value access")
     };
     assert_eq!(key, "count");
-    assert_eq!(
-        source.missing().unwrap().source_type(),
-        Some(DataType::Int64)
-    );
-    assert_eq!(
-        source.missing().unwrap().target_type(),
-        Some(DataType::Int64)
-    );
+    assert_eq!(source.missing().unwrap().source_type(), Some(DataType::Int64));
+    assert_eq!(source.missing().unwrap().target_type(), Some(DataType::Int64));
 }
 
 #[test]
@@ -421,19 +388,11 @@ fn test_checked_writes_preserve_metadata_on_rejection() {
         for use_set in [false, true] {
             let mut metadata = baseline.clone();
             let result = if use_set {
-                metadata
-                    .set_checked(&schema, key, value.clone())
-                    .map(|_| ())
+                metadata.set_checked(&schema, key, value.clone()).map(|_| ())
             } else {
-                metadata
-                    .insert_checked(&schema, key, value.clone())
-                    .map(|_| ())
+                metadata.insert_checked(&schema, key, value.clone()).map(|_| ())
             };
-            assert_eq!(
-                result,
-                Err(expected.clone()),
-                "wrong error for {key}, set={use_set}"
-            );
+            assert_eq!(result, Err(expected.clone()), "wrong error for {key}, set={use_set}");
             assert_eq!(
                 metadata, baseline,
                 "rejected write changed data for {key}, set={use_set}"
@@ -454,10 +413,7 @@ fn test_set_checked_rejects_type_mismatch() {
 
     match error {
         MetadataError::TypeMismatch {
-            key,
-            expected,
-            actual,
-            ..
+            key, expected, actual, ..
         } => {
             assert_eq!(key, "key");
             assert_eq!(expected, DataType::String);
@@ -497,9 +453,7 @@ fn test_with_checked_rejects_unknown_field() {
         .required("known", DataType::String)
         .build()
         .expect("schema should build");
-    let error = Metadata::new()
-        .with_checked(&schema, "unknown", "value")
-        .unwrap_err();
+    let error = Metadata::new().with_checked(&schema, "unknown", "value").unwrap_err();
 
     assert_eq!(
         error,
@@ -529,10 +483,7 @@ fn test_get_raw_and_set_value_support_mutable_chaining() {
     meta.set("raw", Value::String("stored".to_string()))
         .set("count", Value::Int64(7));
 
-    assert_eq!(
-        meta.get_raw("raw"),
-        Some(&Value::String("stored".to_string()))
-    );
+    assert_eq!(meta.get_raw("raw"), Some(&Value::String("stored".to_string())));
     assert_eq!(meta.get::<String>("raw").as_deref(), Ok("stored"));
     assert_eq!(meta.get::<i64>("count"), Ok(7));
 }
@@ -551,10 +502,7 @@ fn test_insert_value_returns_previous_value() {
 fn test_with_value_builds_metadata_fluently() {
     let meta = Metadata::new().with("raw", Value::String("stored".to_string()));
 
-    assert_eq!(
-        meta.get_raw("raw"),
-        Some(&Value::String("stored".to_string()))
-    );
+    assert_eq!(meta.get_raw("raw"), Some(&Value::String("stored".to_string())));
 }
 
 #[test]
@@ -641,10 +589,7 @@ fn test_remove_and_clear_work() {
 #[test]
 fn test_metadata_iterators_and_conversions_expose_owned_and_borrowed_entries() {
     let mut metadata = Metadata::new();
-    metadata.extend([
-        ("b".to_string(), Value::Int64(2)),
-        ("a".to_string(), Value::Int64(1)),
-    ]);
+    metadata.extend([("b".to_string(), Value::Int64(2)), ("a".to_string(), Value::Int64(1))]);
     assert_eq!(metadata.keys().collect::<Vec<_>>(), vec!["a", "b"]);
     assert_eq!(metadata.values().count(), 2);
     assert_eq!(metadata.iter().count(), 2);
@@ -661,11 +606,8 @@ fn test_metadata_iterators_and_conversions_expose_owned_and_borrowed_entries() {
 #[test]
 fn test_metadata_default_json_helpers_round_trip_and_write() {
     let metadata = Metadata::new().with("name", "alice");
-    let encoded = metadata
-        .to_json_vec()
-        .expect("default JSON encoding should succeed");
-    let decoded =
-        Metadata::decode_json_slice(&encoded).expect("default JSON decoding should succeed");
+    let encoded = metadata.to_json_vec().expect("default JSON encoding should succeed");
+    let decoded = Metadata::decode_json_slice(&encoded).expect("default JSON decoding should succeed");
     assert_eq!(decoded, metadata);
 
     let mut output = Vec::new();
@@ -688,12 +630,9 @@ fn test_metadata_json_helpers_round_trip_float_and_json_domain_values() {
         Value::Json(serde_json::json!({"ratio": 1.25, "nested": [2.5, -3.75]})),
     );
     let input = metadata.to_json_vec().expect("the metadata should encode");
-    let restored = Metadata::decode_json_slice(&input)
-        .expect("the JSON decoder should preserve floating values");
+    let restored = Metadata::decode_json_slice(&input).expect("the JSON decoder should preserve floating values");
     assert_eq!(
-        restored
-            .to_json_vec()
-            .expect("the restored metadata should encode"),
+        restored.to_json_vec().expect("the restored metadata should encode"),
         input
     );
     assert_eq!(restored, metadata);
@@ -722,11 +661,7 @@ fn test_iterators_return_sorted_entries() {
     let values: Vec<&Value> = meta.values().collect();
     assert_eq!(
         values,
-        vec![
-            &Value::Int64(1),
-            &Value::Bool(true),
-            &Value::String("last".to_string())
-        ]
+        vec![&Value::Int64(1), &Value::Bool(true), &Value::String("last".to_string())]
     );
 }
 
@@ -810,10 +745,7 @@ fn test_into_inner_returns_underlying_map() {
 
 #[test]
 fn test_from_iterator_and_extend_work() {
-    let pairs = vec![
-        ("a".to_string(), Value::Int64(1)),
-        ("b".to_string(), Value::Int64(2)),
-    ];
+    let pairs = vec![("a".to_string(), Value::Int64(1)), ("b".to_string(), Value::Int64(2))];
     let mut meta: Metadata = pairs.into_iter().collect();
 
     meta.extend(vec![("c".to_string(), Value::Int64(3))]);
@@ -865,24 +797,17 @@ fn test_strict_read_preserves_type_and_borrows_string() {
         borrowed.as_ptr(),
         metadata.get_ref::<str>("port").expect("string").as_ptr()
     ));
-    let error = metadata
-        .get::<i64>("port")
-        .expect_err("no implicit parsing");
+    let error = metadata.get::<i64>("port").expect_err("no implicit parsing");
     assert!(matches!(error, MetadataError::ValueAccess { source, .. }
         if matches!(*source, ValueError::TypeMismatch { .. })));
-    assert_eq!(
-        metadata.convert::<i64>("port").expect("legacy conversion"),
-        8080
-    );
+    assert_eq!(metadata.convert::<i64>("port").expect("legacy conversion"), 8080);
 }
 
 #[test]
 fn test_explicit_conversion_preserves_source_and_policy() {
     use qubit_datatype::NumericConversionPolicy;
     let metadata = Metadata::new().with("score", 1.5_f64);
-    let error = metadata
-        .convert::<i32>("score")
-        .expect_err("exact conversion");
+    let error = metadata.convert::<i32>("score").expect_err("exact conversion");
     assert!(error.source().expect("value source").is::<ValueError>());
     assert!(matches!(error, MetadataError::ValueAccess { source, .. }
         if matches!(*source, ValueError::Conversion(_))));
@@ -962,11 +887,7 @@ fn test_conversion_wrappers_preserve_precision_and_budget_errors() {
             ConversionLimits::default_ref(),
             DataConversionErrorKind::InvalidValue,
         ),
-        (
-            Value::from("12345"),
-            &tight,
-            DataConversionErrorKind::LimitExceeded,
-        ),
+        (Value::from("12345"), &tight, DataConversionErrorKind::LimitExceeded),
     ];
     for (value, limits, kind) in cases {
         let expected = value.to_with::<i64>(policy, limits).unwrap_err();
@@ -991,11 +912,7 @@ fn test_conversion_wrappers_preserve_precision_and_budget_errors() {
                     source: Box::new(expected.clone()),
                 }
             );
-            let value_source = actual
-                .source()
-                .unwrap()
-                .downcast_ref::<ValueError>()
-                .unwrap();
+            let value_source = actual.source().unwrap().downcast_ref::<ValueError>().unwrap();
             assert_eq!(value_source, &expected);
             let conversion_source = value_source
                 .source()

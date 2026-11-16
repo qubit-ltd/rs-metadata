@@ -82,9 +82,7 @@ impl FilterMatchOptions {
     ///
     /// Options containing the supplied policy.
     #[inline]
-    pub(crate) const fn from_numeric_comparison_policy(
-        numeric_comparison_policy: NumericComparisonPolicy,
-    ) -> Self {
+    pub(crate) const fn from_numeric_comparison_policy(numeric_comparison_policy: NumericComparisonPolicy) -> Self {
         Self {
             numeric_comparison_policy,
         }

@@ -192,11 +192,7 @@ impl fmt::Display for MetadataError {
                 formatter,
                 "Metadata key '{key}' expected {expected} but actual {actual}: {message}"
             ),
-            Self::WireLimitExceeded {
-                kind,
-                value,
-                maximum,
-            } => write!(
+            Self::WireLimitExceeded { kind, value, maximum } => write!(
                 formatter,
                 "Metadata wire {kind:?} value {value} exceeds the maximum of {maximum}"
             ),
@@ -230,10 +226,7 @@ impl fmt::Display for MetadataError {
             ),
             #[cfg(feature = "filter")]
             Self::InvalidFilterExpression { message } => {
-                write!(
-                    formatter,
-                    "Metadata filter expression is invalid: {message}"
-                )
+                write!(formatter, "Metadata filter expression is invalid: {message}")
             }
             #[cfg(feature = "filter")]
             Self::InvalidFilterOperand {
@@ -249,29 +242,18 @@ impl fmt::Display for MetadataError {
                 write!(formatter, "Metadata filter requires an expression")
             }
             #[cfg(feature = "filter")]
-            Self::InvalidFilterLimit {
-                kind,
-                value,
-                maximum,
-            } => write!(
+            Self::InvalidFilterLimit { kind, value, maximum } => write!(
                 formatter,
                 "Metadata filter {kind:?} limit {value} is outside 1..={maximum}"
             ),
             #[cfg(feature = "filter")]
-            Self::FilterLimitExceeded {
-                kind,
-                value,
-                maximum,
-            } => write!(
+            Self::FilterLimitExceeded { kind, value, maximum } => write!(
                 formatter,
                 "Metadata filter {kind:?} value {value} exceeds the maximum of {maximum}"
             ),
             #[cfg(feature = "schema")]
             Self::DuplicateSchemaField { key } => {
-                write!(
-                    formatter,
-                    "Metadata schema declares field '{key}' more than once"
-                )
+                write!(formatter, "Metadata schema declares field '{key}' more than once")
             }
         }
     }

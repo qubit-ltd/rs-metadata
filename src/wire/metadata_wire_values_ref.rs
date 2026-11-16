@@ -47,8 +47,7 @@ impl Serialize for MetadataWireValuesRef<'_> {
     {
         let mut values = serializer.serialize_map(Some(self.0.len()))?;
         for (key, value) in self.0 {
-            let payload =
-                ValueWirePayloadRefV1::try_from(value).map_err(<S::Error as SerError>::custom)?;
+            let payload = ValueWirePayloadRefV1::try_from(value).map_err(<S::Error as SerError>::custom)?;
             values.serialize_entry(key, &payload)?;
         }
         values.end()
