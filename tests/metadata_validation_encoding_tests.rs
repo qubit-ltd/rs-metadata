@@ -284,6 +284,25 @@ fn test_validation_only_matches_structured_errors_and_validation_order() {
         assert_eq!(actual.encoded, Signature::Budget(expected_error));
     }
 
+    // Each JSON value contributes two payload bytes, below the three-byte
+    // limit on its own; the shared preflight must reject their four-byte sum.
+    let metadata = Metadata::new()
+        .with("first", Value::Json(serde_json::json!("aa")))
+        .with("second", Value::Json(serde_json::json!("bb")));
+    let limits = default_json_encode_limits()
+        .into_builder()
+        .value_limits(JsonValueLimits::builder().max_payload_bytes(3).build())
+        .build();
+    let actual = assert_equivalent(&metadata, limits);
+    let expected = Signature::Budget(BudgetError::LimitExceeded {
+        resource: JsonResource::PayloadBytes,
+        observed: Observation::AtLeast(4),
+        maximum: 3,
+    });
+    assert_eq!(&actual.encoded, &expected);
+    assert_eq!(&actual.writer, &expected);
+    assert_eq!(&actual.validation, &expected);
+
     let boundary = Metadata::new().with("edge", "quote=\" café");
     let encoded_len = serde_json::to_vec(&boundary)
         .expect("serialize boundary")
