@@ -48,12 +48,16 @@ fn test_metadata_filter_json_round_trips_float_and_json_domain_values() {
         .build()
         .expect("the filter should build");
     let input = filter.to_json_vec().expect("the filter should encode");
-    let restored = MetadataFilter::decode_json_slice(&input).expect("the JSON decoder should preserve floating values");
+    let restored = MetadataFilter::decode_json_slice(&input)
+        .expect("the JSON decoder should preserve floating values");
     assert_eq!(restored, filter);
 }
 
 /// Deserializes a filter under explicit receiver limits.
-fn deserialize_with_filter_limits(encoded: &str, limits: FilterLimits) -> Result<MetadataFilter, Error> {
+fn deserialize_with_filter_limits(
+    encoded: &str,
+    limits: FilterLimits,
+) -> Result<MetadataFilter, Error> {
     let mut deserializer = Deserializer::from_str(encoded);
     MetadataFilter::deserialize_with_filter_limits(&mut deserializer, limits)
 }
@@ -69,8 +73,8 @@ fn test_receiver_accepts_small_expression_with_wider_sender_limits() {
         .build()
         .expect("receiver limits should be valid");
 
-    let decoded =
-        deserialize_with_filter_limits(&encoded, receiver).expect("actual expression should fit receiver limits");
+    let decoded = deserialize_with_filter_limits(&encoded, receiver)
+        .expect("actual expression should fit receiver limits");
     assert_eq!(decoded.limits(), receiver);
 }
 
@@ -84,7 +88,11 @@ fn test_receiver_rejects_expression_exceeding_its_key_limit() {
 
     let error = deserialize_with_filter_limits(&encoded, receiver)
         .expect_err("receiver should reject a key exceeding its limit");
-    assert!(error.to_string().contains("KeyBytes value 6 exceeds the maximum of 5"));
+    assert!(
+        error
+            .to_string()
+            .contains("KeyBytes value 6 exceeds the maximum of 5")
+    );
 }
 
 #[test]
@@ -96,10 +104,17 @@ fn test_filter_wire_rejects_sender_limits_field() {
         "limits": {"max_key_bytes": 5}
     });
 
-    let error = from_value::<MetadataFilter>(encoded).expect_err("V1 filters must reject sender-supplied limits");
+    let error = from_value::<MetadataFilter>(encoded)
+        .expect_err("V1 filters must reject sender-supplied limits");
     let message = error.to_string();
-    assert!(message.contains("unknown field"), "unexpected error: {message}");
-    assert!(message.contains("limits"), "missing field context: {message}");
+    assert!(
+        message.contains("unknown field"),
+        "unexpected error: {message}"
+    );
+    assert!(
+        message.contains("limits"),
+        "missing field context: {message}"
+    );
 }
 
 #[test]
@@ -138,7 +153,11 @@ fn test_receiver_rejects_raw_nodes_elided_by_normalization() {
 
     let error = deserialize_with_filter_limits(encoded, receiver)
         .expect_err("receiver should reject raw nodes before normalization");
-    assert!(error.to_string().contains("Nodes value 2 exceeds the maximum of 1"));
+    assert!(
+        error
+            .to_string()
+            .contains("Nodes value 2 exceeds the maximum of 1")
+    );
 }
 
 #[test]
@@ -283,8 +302,12 @@ fn test_filter_fuzz_positive_seeds_round_trip() {
         ),
     ];
     for (name, input) in cases {
-        let value = MetadataFilter::decode_json_slice_with_limits(input, MetadataLimits::default(), receiver_limits)
-            .unwrap_or_else(|error| panic!("{name} seed must decode: {error}"));
+        let value = MetadataFilter::decode_json_slice_with_limits(
+            input,
+            MetadataLimits::default(),
+            receiver_limits,
+        )
+        .unwrap_or_else(|error| panic!("{name} seed must decode: {error}"));
         let encoded = to_string(&value).expect("seed filter must serialize");
         let restored = MetadataFilter::decode_json_slice_with_limits(
             encoded.as_bytes(),

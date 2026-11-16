@@ -20,7 +20,9 @@ pub fn main() -> Result<(), MetadataWireDecodeError> {
         limits,
     )?;
     assert_eq!(
-        metadata.get_ref::<str>("tenant_id").expect("tenant_id is a string"),
+        metadata
+            .get_ref::<str>("tenant_id")
+            .expect("tenant_id is a string"),
         "acme"
     );
     Ok(())

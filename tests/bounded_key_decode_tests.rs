@@ -65,21 +65,26 @@ fn assert_domain_key_error(error: MetadataWireDecodeError, value: usize, maximum
 
 #[test]
 fn test_metadata_keys_use_utf8_byte_limits_and_accept_exact_boundary() {
-    let limits = MetadataLimits::builder().max_key_bytes(16).build().expect("limits");
+    let limits = MetadataLimits::builder()
+        .max_key_bytes(16)
+        .build()
+        .expect("limits");
     for length in [15, 16] {
         let input = serde_json::to_vec(&metadata_with_key(&"k".repeat(length))).expect("wire");
         Metadata::decode_json_slice_with_limits(&input, limits).expect("key should fit");
     }
     let input = serde_json::to_vec(&metadata_with_key(&"k".repeat(17))).expect("wire");
     assert_domain_key_error(
-        Metadata::decode_json_slice_with_limits(&input, limits).expect_err("key should exceed limit"),
+        Metadata::decode_json_slice_with_limits(&input, limits)
+            .expect_err("key should exceed limit"),
         17,
         16,
     );
 
     let input = serde_json::to_vec(&metadata_with_key(&"北".repeat(8))).expect("wire");
     assert_domain_key_error(
-        Metadata::decode_json_slice_with_limits(&input, limits).expect_err("24 UTF-8 bytes should exceed limit"),
+        Metadata::decode_json_slice_with_limits(&input, limits)
+            .expect_err("24 UTF-8 bytes should exceed limit"),
         24,
         16,
     );
@@ -97,21 +102,26 @@ fn test_metadata_keys_use_utf8_byte_limits_and_accept_exact_boundary() {
 #[cfg(feature = "schema")]
 #[test]
 fn test_schema_keys_use_utf8_byte_limits_and_accept_exact_boundary() {
-    let limits = MetadataLimits::builder().max_key_bytes(16).build().expect("limits");
+    let limits = MetadataLimits::builder()
+        .max_key_bytes(16)
+        .build()
+        .expect("limits");
     for length in [15, 16] {
         let input = serde_json::to_vec(&schema_with_key(&"k".repeat(length))).expect("wire");
         MetadataSchema::decode_json_slice_with_limits(&input, limits).expect("key should fit");
     }
     let input = serde_json::to_vec(&schema_with_key(&"k".repeat(17))).expect("wire");
     assert_domain_key_error(
-        MetadataSchema::decode_json_slice_with_limits(&input, limits).expect_err("key should exceed limit"),
+        MetadataSchema::decode_json_slice_with_limits(&input, limits)
+            .expect_err("key should exceed limit"),
         17,
         16,
     );
 
     let input = serde_json::to_vec(&schema_with_key(&"北".repeat(8))).expect("wire");
     assert_domain_key_error(
-        MetadataSchema::decode_json_slice_with_limits(&input, limits).expect_err("24 UTF-8 bytes should exceed limit"),
+        MetadataSchema::decode_json_slice_with_limits(&input, limits)
+            .expect_err("24 UTF-8 bytes should exceed limit"),
         24,
         16,
     );
@@ -129,11 +139,18 @@ fn test_schema_keys_use_utf8_byte_limits_and_accept_exact_boundary() {
 #[cfg(feature = "filter")]
 #[test]
 fn test_filter_keys_use_utf8_byte_limits_and_accept_exact_boundary() {
-    let limits = FilterLimits::builder().max_key_bytes(16).build().expect("limits");
+    let limits = FilterLimits::builder()
+        .max_key_bytes(16)
+        .build()
+        .expect("limits");
     for length in [15, 16] {
         let input = serde_json::to_vec(&filter_with_key(&"k".repeat(length))).expect("wire");
-        let decoded = MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-            .expect("key should fit");
+        let decoded = MetadataFilter::decode_json_slice_with_limits(
+            &input,
+            MetadataLimits::default(),
+            limits,
+        )
+        .expect("key should fit");
         assert_eq!(decoded, filter_with_key(&"k".repeat(length)));
     }
     let input = serde_json::to_vec(&filter_with_key(&"k".repeat(17))).expect("wire");
@@ -156,8 +173,12 @@ fn test_filter_keys_use_utf8_byte_limits_and_accept_exact_boundary() {
         escaped.into_bytes(),
     ] {
         assert!(matches!(
-            MetadataFilter::decode_json_slice_with_limits(&input, MetadataLimits::default(), limits)
-                .expect_err("24 UTF-8 bytes should exceed limit"),
+            MetadataFilter::decode_json_slice_with_limits(
+                &input,
+                MetadataLimits::default(),
+                limits
+            )
+            .expect_err("24 UTF-8 bytes should exceed limit"),
             MetadataWireDecodeError::Filter(MetadataError::FilterLimitExceeded {
                 kind: FilterLimitKind::KeyBytes,
                 value: 24,
@@ -174,10 +195,12 @@ fn test_ordinary_serde_metadata_key_limit_retains_255_256_257_boundary() {
         serde_json::from_slice::<Metadata>(&input).expect("key should fit hard limit");
     }
     let input = serde_json::to_vec(&metadata_with_key(&"k".repeat(256))).expect("wire");
-    let input = String::from_utf8(input)
-        .expect("valid UTF-8")
-        .replace(&format!("\"{}\"", "k".repeat(256)), &format!("\"{}\"", "k".repeat(257)));
-    let error = serde_json::from_slice::<Metadata>(input.as_bytes()).expect_err("key should exceed hard limit");
+    let input = String::from_utf8(input).expect("valid UTF-8").replace(
+        &format!("\"{}\"", "k".repeat(256)),
+        &format!("\"{}\"", "k".repeat(257)),
+    );
+    let error = serde_json::from_slice::<Metadata>(input.as_bytes())
+        .expect_err("key should exceed hard limit");
     assert!(error.to_string().contains("257"));
     assert!(error.to_string().contains("256"));
 }

@@ -144,7 +144,9 @@ impl Error for MetadataWireDecodeError {
     /// I/O error.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Read { source, .. } => source.as_deref().map(|error| error as &(dyn Error + 'static)),
+            Self::Read { source, .. } => source
+                .as_deref()
+                .map(|error| error as &(dyn Error + 'static)),
             Self::Domain(error) => Some(error),
             Self::UnsupportedVersion { .. } => None,
             Self::Budget(error) => Some(error),
@@ -174,7 +176,9 @@ impl From<JsonDecodeError<JsonResource>> for MetadataWireDecodeError {
             JsonDecodeErrorSource::Read { kind, source, .. } => Self::Read { kind, source },
             JsonDecodeErrorSource::Budget { source, .. } => match source {
                 MeasuredBudgetError::Budget(error) => Self::Budget(error),
-                MeasuredBudgetError::Quantity { resource, source } => Self::Quantity { resource, source },
+                MeasuredBudgetError::Quantity { resource, source } => {
+                    Self::Quantity { resource, source }
+                }
             },
             JsonDecodeErrorSource::InvalidJson { syntax, .. } => Self::Syntax(syntax),
             _ => Self::Decode(error),
