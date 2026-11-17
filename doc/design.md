@@ -198,17 +198,8 @@ Applications should enable only the layers used at each boundary.
 
 ## Compatibility policy
 
-Compatibility has three separate dimensions: the V1 wire version and canonical
-object output, the set of input representations accepted by decoders, and the
-error/API contracts exposed to callers. Stable wire version and canonical
-output do not guarantee an unchanged input-acceptance range. A registry-backed
-consumer using `qubit-metadata 0.6.2` and this 0.7.0 checkout read the same
-fixtures in `tests/fixtures/compatibility/`: 0.6.2 accepts positional schema
-field arrays and positional filter `options`, but rejects positional schema
-envelopes; current decoders reject all three positional forms. The same run
-observed error-class changes for invalid UTF-8 and wrong top-level input, and
-for bounded entry/key encode limits. Details and migration steps are in the
-[0.7 migration checklist](migration_0.7.md#compatibility-checks-before-upgrading).
-This verifies only 0.6.2 → this 0.7.0 checkout. It does not determine behavior
-for every 0.6.x release or which release first changed acceptance or error
-classification. Rust API changes remain a separate compatibility dimension.
+Compatibility has three dimensions: the V1 wire version and canonical object
+output, the input representations accepted by decoders, and the error/API
+contracts exposed to callers. A stable wire version and canonical output do
+not guarantee that every historical input representation remains accepted.
+Rust API compatibility is a separate dimension.

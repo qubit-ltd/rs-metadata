@@ -1,6 +1,6 @@
 # qubit-metadata User Guide
 
-[中文用户手册](user_guide.zh_CN.md) · [Migrating from 0.6 to 0.7](migration_0.7.md) · [Migrating to 0.6](migration_0.6.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
+[中文用户手册](user_guide.zh_CN.md) · [README](../README.md) · [API documentation](https://docs.rs/qubit-metadata)
 
 This guide targets `qubit-metadata` 0.7 and Rust 1.94 or later. It is for
 Rust developers who need to attach typed, queryable metadata to records,
@@ -290,14 +290,6 @@ assert!(filter.matches(&metadata));
 The expression is `status == "ready" AND (score >= 80 OR tag == "rust")`.
 Other builder predicates are `ne`, `gt`, `lt`, `le`, `exists`, `not_exists`,
 `in_set`, `not_in_set`, and `not`.
-
-## Migrating from earlier APIs
-
-If you upgrade from releases before 0.6, or still have call sites that relied on
-implicit conversion, optional `get`, or `MetadataError::MissingValue`, continue
-with [Migrating to 0.6: explicit reads and boundary diagnostics](migration_0.6.md)
-after the core workflow above. New projects can skip that note and stay in the
-sections below.
 
 ## Advanced usage
 
@@ -866,10 +858,9 @@ generic budget facts in the returned `MetadataWireDecodeError`.
 
 ### A getter no longer returns `Option`
 
-Version 0.6 makes `get` strict and fallible. Use `get_optional` when absence is
-acceptable and propagate its `Result`; use `convert_optional_with` when you
-need policy-controlled conversion. Invalid values are errors, not `None`. See
-the [0.6 migration guide](migration_0.6.md) for the full API mapping table.
+Use `get_optional` when absence is acceptable and propagate its `Result`; use
+`convert_optional_with` when you need policy-controlled conversion. Invalid
+values are errors, not `None`.
 
 ## Limitations and best practices
 
@@ -890,7 +881,6 @@ the [0.6 migration guide](migration_0.6.md) for the full API mapping table.
 
 - Read the [README](../README.md) for the project overview and installation summary.
 - Browse the [API documentation](https://docs.rs/qubit-metadata) for the full public surface.
-- Read [Migrating to 0.6](migration_0.6.md) when upgrading older call sites.
 - Read the [design document](design.md) for module and compatibility invariants.
 - Run `cargo test --all-features` before changing feature-gated behavior.
 - See the [Chinese user guide](user_guide.zh_CN.md) for the same workflow in Simplified Chinese.

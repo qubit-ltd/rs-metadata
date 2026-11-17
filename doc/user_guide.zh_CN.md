@@ -1,6 +1,6 @@
 # qubit-metadata 用户手册
 
-[English User Guide](user_guide.md) · [从 0.6 升级到 0.7](migration_0.7.zh_CN.md) · [迁移到 0.6](migration_0.6.zh_CN.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
+[English User Guide](user_guide.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-metadata)
 
 本手册面向使用 `qubit-metadata` 0.7 和 Rust 1.94 及以上版本的 Rust 开发者。它适合
 需要给记录、消息或文档分片附加可类型化、可查询 metadata，同时又不希望把 metadata
@@ -271,13 +271,6 @@ assert!(filter.matches(&metadata));
 
 该表达式等价于 `status == "ready" AND (score >= 80 OR tag == "rust")`。其他 builder
 谓词包括 `ne`、`gt`、`lt`、`le`、`exists`、`not_exists`、`in_set`、`not_in_set` 和 `not`。
-
-## 从旧版 API 迁移
-
-若从 0.6 之前的版本升级，或仍有依赖隐式转换、返回 `Option` 的 `get`、
-`MetadataError::MissingValue` 的调用点，请在完成上述核心工作流后继续阅读
-[迁移到 0.6：明确读取方式与边界诊断](migration_0.6.zh_CN.md)。新项目可跳过该文档，
-直接使用下文各节。
 
 ## 进阶用法
 
@@ -773,9 +766,8 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 
 ### getter 不再返回 `Option`
 
-0.6 的 `get` 改为可能失败的严格读取。允许缺失时使用 `get_optional` 并传播 `Result`；
-需要按策略转换时使用 `convert_optional_with`。非法值返回错误，不再折叠为 `None`。
-完整 API 对照见 [0.6 迁移说明](migration_0.6.zh_CN.md)。
+允许缺失时使用 `get_optional` 并传播 `Result`；需要按策略转换时使用
+`convert_optional_with`。非法值返回错误，不会折叠为 `None`。
 
 ## 限制与最佳实践
 
@@ -793,7 +785,6 @@ Filter 兼容性检查和已存 metadata 校验的目的不同。前者为构造
 
 - 阅读 [README](../README.zh_CN.md) 了解项目概览和安装摘要。
 - 浏览 [API 文档](https://docs.rs/qubit-metadata) 查看完整公共 API。
-- 升级旧调用点时阅读[迁移到 0.6](migration_0.6.zh_CN.md)。
 - 阅读[设计文档](design.zh_CN.md)了解模块边界和兼容性不变量。
 - 修改 feature-gated 行为前运行 `cargo test --all-features`。
 - 查看[英文用户手册](user_guide.md)获取相同流程的英文版本。

@@ -134,4 +134,4 @@ slice 解码入口也会在 wire 物化后的 payload 无法转换为 scalar met
 
 ## 兼容策略
 
-兼容性分为三个维度：V1 wire 版本与规范对象输出、decoder 接受的输入表示范围，以及对调用方公开的错误/API 契约。wire 版本和规范输出稳定，不代表输入接受范围不变。registry 中独立消费者以 `qubit-metadata 0.6.2` 和本仓库 0.7.0 checkout 读取了相同的 `tests/fixtures/compatibility/` 输入：0.6.2 接受位置式 schema 字段数组和位置式 filter `options`，但拒绝位置式 schema envelope；当前 decoder 拒绝这三种位置形式。同次运行还观察到非法 UTF-8、顶层类型不符以及有界条目/key 编码限额的错误分类变化。详情和迁移步骤见[0.7 兼容性核查清单](migration_0.7.zh_CN.md#升级前的兼容性核查)。这只验证了 0.6.2 → 本仓库 0.7.0 checkout，不能推断所有 0.6.x 版本行为，也未确定首次改变接受范围或错误分类的版本。Rust API 变化仍是独立的兼容性维度。
+兼容性分为三个维度：V1 wire 版本与规范对象输出、decoder 接受的输入表示范围，以及对调用方公开的错误/API 契约。wire 版本和规范输出稳定，不代表所有历史输入表示都会继续被接受。Rust API 兼容性是独立的维度。
